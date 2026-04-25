@@ -1,0 +1,37 @@
+name: Build and publish app
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
+
+      - name: Build solution
+        run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore
+
+      - name: Publish app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true --output ${{ github.workspace }}\publish
+
+      - name: Upload published app
+        uses: actions/upload-artifact@v4
+        with:
+          name: JoinGameAfk-win-x64
+          path: ${{ github.workspace }}\publish
+          if-no-files-found: error
