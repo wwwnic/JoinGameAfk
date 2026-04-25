@@ -1,0 +1,281 @@
+<Page x:Class="JoinGameAfk.View.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="Transparent">
+
+    <Page.Resources>
+        <Style x:Key="SectionCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#12121A" />
+            <Setter Property="BorderBrush" Value="#1E1E2A" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+        </Style>
+
+        <Style x:Key="SectionDescriptionStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="#CBD5E1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="InputTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="AccentButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="24,12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="InfoIndicatorStyle" TargetType="Button">
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Background" Value="#1D4ED8" />
+            <Setter Property="BorderBrush" Value="#60A5FA" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
+            <Setter Property="ToolTipService.ShowDuration" Value="20000" />
+            <Setter Property="ToolTipService.Placement" Value="Mouse" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HasDropShadow" Value="True" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="10">
+            <TextBlock Text="Settings"
+                       FontSize="22" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,6" />
+            <TextBlock Text="Configure default automation timing and the global app polling interval."
+                       FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,0,0,20" />
+
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Ready Check"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                    </StackPanel>
+
+                    <Grid MaxWidth="520">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="180" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Auto accept delay (sec):"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <Button Style="{StaticResource InfoIndicatorStyle}"
+                                    Content="i"
+                                    ToolTip="Example: 2 means the app waits 2 seconds before accepting the ready check." />
+                        </StackPanel>
+
+                        <TextBox x:Name="ReadyCheckAcceptDelayBox"
+                                 Grid.Column="1"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 ToolTip="Number of seconds to wait before auto-accepting a ready check." />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Champion Hover"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                    </StackPanel>
+
+                    <Grid MaxWidth="520">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="180" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Champion hover delay (sec):"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <Button Style="{StaticResource InfoIndicatorStyle}"
+                                    Content="i"
+                                    ToolTip="Example: 2 means the app waits 2 seconds after detecting your action before hovering the configured champion." />
+                        </StackPanel>
+
+                        <TextBox x:Name="ChampionHoverDelayBox"
+                                 Grid.Column="1"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 ToolTip="Number of seconds to wait before auto-hovering a configured champion." />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Pick And Ban Locking"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <CheckBox x:Name="AutoLockSelectionCheckBox"
+                                  Content="Enable automatic pick and ban lock"
+                                  Foreground="#CBD5E1"
+                                  VerticalAlignment="Center"
+                                  ToolTip="When enabled, the app locks your current pick or ban using the timer values below. If you manually change champion, the app keeps your selection and falls back to a near last-second lock." />
+                        <Button Style="{StaticResource InfoIndicatorStyle}"
+                                Content="i"
+                                ToolTip="Disable this if you want automatic hover only. The pick and ban lock timers below are ignored while this is off." />
+                    </StackPanel>
+
+                    <TextBlock Text="Uses the pick and ban timers below only when enabled. If you manually change champion, the app keeps your selection and falls back to a near last-second lock."
+                               Style="{StaticResource SectionDescriptionStyle}"
+                               Margin="0,0,0,12" />
+
+                    <Grid MaxWidth="520">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="180" />
+                            <ColumnDefinition Width="80" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,10">
+                            <TextBlock Text="Pick lock timer (sec):"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <Button Style="{StaticResource InfoIndicatorStyle}"
+                                    Content="i"
+                                    ToolTip="Used only when automatic lock is enabled. Example: 11 means the app locks your pick when 11 seconds or less remain. If you manually change champion, the app falls back to a near last-second lock for your current selection." />
+                        </StackPanel>
+                        <TextBox x:Name="PickLockDelayBox"
+                                 Grid.Row="0"
+                                 Grid.Column="1"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 Margin="0,0,0,10"
+                                 ToolTip="Number of seconds remaining at which the app locks your pick." />
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                            <TextBlock Text="Ban lock timer (sec):"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <Button Style="{StaticResource InfoIndicatorStyle}"
+                                    Content="i"
+                                    ToolTip="Used only when automatic lock is enabled. Example: 11 means the app locks your ban when 11 seconds or less remain. If you manually change champion, the app falls back to a near last-second lock for your current selection." />
+                        </StackPanel>
+                        <TextBox x:Name="BanLockDelayBox"
+                                 Grid.Row="1"
+                                 Grid.Column="1"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 ToolTip="Number of seconds remaining at which the app locks your ban." />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="App Polling"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                    </StackPanel>
+
+                    <Grid MaxWidth="520">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="180" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="App polling rate (ms):"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <Button Style="{StaticResource InfoIndicatorStyle}"
+                                    Content="i"
+                                    ToolTip="Example: 1000 means the app refreshes data every 1 second while in champ select." />
+                        </StackPanel>
+
+                        <TextBox x:Name="ChampSelectPollIntervalBox"
+                                 Grid.Column="1"
+                                 Style="{StaticResource InputTextBoxStyle}"
+                                 ToolTip="Polling interval in milliseconds for champ select monitoring." />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Button x:Name="SaveButton" Content="Save Settings" Click="SaveButton_Click"
+                    Margin="0,16,0,0"
+                    Background="#2E7D32"
+                    Style="{StaticResource AccentButtonStyle}"
+                    HorizontalAlignment="Left" />
+
+            <TextBlock x:Name="SavedLabel" Text="Settings saved." Foreground="#4CAF50"
+                       FontSize="12" Margin="0,8,0,0" Visibility="Collapsed" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>
