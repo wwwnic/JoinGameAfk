@@ -1,15 +1,13 @@
 # JoinGameAfk
 
-> A small Windows desktop helper for League Client phase watching, ready check auto-accept, and champion select automation.
+> A Windows desktop helper for league of legends, ready check auto-accept, and champion select automation.
 
 **License:** MIT  
 **Status:** Freeware / Open source  
 **Platform:** Windows  
-**Framework:** .NET 9 + WPF
 
 > [!IMPORTANT]
-> This README is based on the current source code in this repository. Where project or legal details were not present in the codebase, placeholders were added so they can be completed later.
-
+> Users should review the code and build it if they want maximum confidence.
 ---
 
 ## What this app does
@@ -28,9 +26,7 @@ In short: it is a local desktop assistant for champion select flow management.
 
 ---
 
-## What it does **not** appear to do
-
-Based on the current code review, this app does **not** appear to:
+## What this app is not doing in v1.0.0
 
 - send data to a custom remote server
 - require a cloud account
@@ -45,10 +41,6 @@ The current network calls in source are directed to the **local League Client AP
 That port and local auth token are discovered from the local League Client process at runtime.
 
 ---
-
-## Why someone should trust it
-
-Trust comes from transparency, not promises. Based on the current repository contents:
 
 ### 1. The app is small and focused
 The current codebase is centered around a narrow feature set:
@@ -76,12 +68,6 @@ From the current source, configuration is stored locally as JSON files in the ap
 - `champions.json`
 
 This makes the app easier to inspect, back up, and remove.
-
-### 4. No hidden backend is visible in current code
-The current repository does not show any external telemetry service, web backend, login flow, or hosted API requirement.
-
-> [!NOTE]
-> This is a source-based statement, not a legal guarantee. Users should still review the code and build it themselves if they want maximum confidence.
 
 ---
 
@@ -182,10 +168,6 @@ Observed action types include:
 - hover champion
 - complete pick/ban action
 
-### Telemetry
-**Placeholder:** No dedicated telemetry/privacy statement file was found in this repository.  
-From the current code review, no external telemetry pipeline was identified.
-
 ---
 
 ## Safety and limitations
@@ -197,11 +179,6 @@ Please use the app carefully.
 - Timing-sensitive actions can fail if the client API changes or becomes unavailable.
 - If you manually change your pick/ban, the app may switch to a fallback locking behavior based on your current selection.
 - Polling too aggressively may be unnecessary; the settings page already constrains the polling interval to a safer range.
-
-### Important limitation
-This project currently appears tailored to the League Client local API and Windows desktop environment.
-
-It is **not** a general game automation framework.
 
 ---
 
@@ -248,9 +225,6 @@ dotnet build
 ```powershell
 dotnet run --project .\JoinGameAfk\JoinGameAfk.csproj
 ```
-
-> [!TIP]
-> Running from source is one of the best ways to verify what the app actually does.
 
 ---
 
@@ -303,21 +277,11 @@ as long as the MIT license terms are included.
 
 **Placeholder:** Add a `LICENSE` file with the full MIT text if it is not already present in the repository.
 
-Suggested copyright line:
-
-```text
-Copyright (c) [YEAR] [OWNER NAME]
-```
-
 ---
 
 ## Non-affiliation
 
-**Placeholder:** If this project is published publicly, consider adding a formal disclaimer such as:
-
 > This project is an independent open-source tool and is not affiliated with, endorsed by, or sponsored by Riot Games.
-
-Only keep that statement if it is accurate for your project.
 
 ---
 
@@ -329,48 +293,11 @@ Users should understand these implementation details:
 - the app uses the local remoting auth token exposed by the running client process
 - the app disables certificate validation for local client HTTPS calls to `127.0.0.1`
 
-That last point is common for local client API tooling, but it is still worth being explicit about so users know exactly what is happening.
-
-If you want stronger trust from users, recommended next steps are:
-
-- publish the full MIT `LICENSE`
-- tag releases consistently
-- document exact binaries and hashes
-- add a privacy statement
-- add a short threat model / security notes page
-- document which permissions are required and why
-
----
-
-## Roadmap ideas
-
-**Placeholder roadmap - update as needed**
-
-- [ ] Add full MIT `LICENSE` file
-- [ ] Add release notes / changelog
-- [ ] Add screenshots or GIFs
-- [ ] Add export/import for settings
-- [ ] Add better error reporting for client connection issues
-- [ ] Add tests for settings and champion priority logic
-- [ ] Add optional portable release packaging
-- [ ] Add explicit privacy and security documentation
-
 ---
 
 ## Contributing
 
 Contributions are welcome.
-
-Suggested contribution areas:
-
-- UI polish
-- better logging and diagnostics
-- improved resilience against League Client changes
-- automated tests
-- documentation improvements
-- packaging and release workflow
-
-**Placeholder:** Add contribution guidelines if you want outside pull requests to follow a specific workflow.
 
 ---
 
@@ -393,28 +320,6 @@ Yes. The project is source-available in this repository, and the app also shows 
 
 ---
 
-## Maintainer
-
-**Placeholder:** [Your name / alias / organization]  
-**Placeholder:** [Project website or GitHub profile]  
-**Placeholder:** [Contact email or issue tracker link]
-
----
-
-## Support the project
-
-**Placeholder:** If you want, add one of the following:
-
-- GitHub Sponsors
-- Ko-fi
-- Buy Me a Coffee
-- donation link
-- "No donations, just star the repo"
-
----
-
 ## Final note
 
 This project earns trust best by staying simple, readable, and explicit about what it automates.
-
-If you publish it, keep the README, license, release notes, and privacy/security notes aligned with the actual code. That matters more than marketing language.
