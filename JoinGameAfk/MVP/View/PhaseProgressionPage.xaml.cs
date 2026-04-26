@@ -17,6 +17,7 @@ namespace JoinGameAfk.View
         private static readonly SolidColorBrush OfflineFg = new((Color)ColorConverter.ConvertFromString("#FCA5A5"));
 
         private PhaseController? _phaseController;
+        private ChampSelectSettings? _settings;
         private ClientPhase _currentPhase;
         private bool _isClientConnected;
         private bool _isWatcherRunning;
@@ -28,6 +29,13 @@ namespace JoinGameAfk.View
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
+        }
+
+        internal void SetSettings(ChampSelectSettings settings)
+        {
+            _settings = settings;
+            _settings.Saved += RefreshTimingText;
+            RefreshTimingText();
         }
 
         internal void SetController(PhaseController controller)
@@ -88,10 +96,23 @@ namespace JoinGameAfk.View
             {
                 UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
                 UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
-                BanStatusValueText.Text = status.BanStatusText;
-                BanLockValueText.Text = status.BanLockText;
-                PickStatusValueText.Text = status.PickStatusText;
-                PickLockValueText.Text = status.PickLockText;
+
+                ChampSelectSubPhaseText.Text = status.ChampSelectSubPhase;
+                ChampSelectTimerText.Text = status.TimeLeftSeconds >= 0
+                    ? $"{status.TimeLeftSeconds}s"
+                    : "";
+            });
+        }
+
+        private void RefreshTimingText()
+        {
+            if (_settings is null)
+                return;
+
+            Dispatcher.Invoke(() =>
+            {
+                PickLockValueText.Text = $"The champion will be locked when the timer hits {_settings.PickLockDelaySeconds}s.";
+                BanLockValueText.Text = $"The ban will be locked when the timer hits {_settings.BanLockDelaySeconds}s.";
             });
         }
 

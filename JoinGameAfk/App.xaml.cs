@@ -20,6 +20,7 @@ namespace JoinGameAfk
                 fDashboardPage = new PhaseProgressionPage();
                 fLogsPage = new LogsPage();
                 fDashboardPage.SetLogsPage(fLogsPage);
+                fDashboardPage.SetSettings(champSelectSettings);
 
                 var phaseController = new PhaseController(fDashboardPage, fLogsPage, champSelectSettings);
                 fDashboardPage.SetController(phaseController);

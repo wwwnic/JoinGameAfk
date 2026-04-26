@@ -69,55 +69,57 @@ public class ChampSelect : IPhaseHandler
             long rawTimeLeftMs = GetAdjustedTimeLeftMs(root);
             long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, champSelectPhase, rawTimeLeftMs);
 
-            LastDashboardStatus = BuildDashboardStatus(mergedPickIds, mergedBanIds);
-
             if (!_hasLoggedSessionSummary)
             {
                 Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
                 _hasLoggedSessionSummary = true;
             }
 
-            if (!root.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array)
-                return;
+            string? localPlayerActiveActionType = null;
 
-            foreach (var actionGroup in actions.EnumerateArray())
+            if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
             {
-                if (actionGroup.ValueKind != JsonValueKind.Array)
-                    continue;
-
-                foreach (var action in actionGroup.EnumerateArray())
+                foreach (var actionGroup in actions.EnumerateArray())
                 {
-                    if (!TryGetInt32(action, "actorCellId", out int actorCellId) || actorCellId != localPlayerCellId)
+                    if (actionGroup.ValueKind != JsonValueKind.Array)
                         continue;
 
-                    if (!TryGetBool(action, "completed", out bool completed) || completed)
-                        continue;
-
-                    string type = action.TryGetProperty("type", out var typeProperty)
-                        ? typeProperty.GetString() ?? string.Empty
-                        : string.Empty;
-
-                    if (!TryGetInt32(action, "id", out int actionId))
-                        continue;
-
-                    bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgress) && inProgress;
-                    int currentChampionId = TryGetInt32(action, "championId", out int championId)
-                        ? championId
-                        : 0;
-
-                    if (actorCellId != localPlayerCellId)
-                        continue;
-
-                    if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
+                    foreach (var action in actionGroup.EnumerateArray())
                     {
-                        HandlePickAction(actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
-                    }
-                    else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
-                    {
-                        HandleBanAction(actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
+                        if (!TryGetInt32(action, "actorCellId", out int actorCellId) || actorCellId != localPlayerCellId)
+                            continue;
+
+                        if (!TryGetBool(action, "completed", out bool completed) || completed)
+                            continue;
+
+                        string type = action.TryGetProperty("type", out var typeProperty)
+                            ? typeProperty.GetString() ?? string.Empty
+                            : string.Empty;
+
+                        if (!TryGetInt32(action, "id", out int actionId))
+                            continue;
+
+                        bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgress) && inProgress;
+                        int currentChampionId = TryGetInt32(action, "championId", out int championId)
+                            ? championId
+                            : 0;
+
+                        if (isInProgress && localPlayerActiveActionType is null)
+                            localPlayerActiveActionType = type;
+
+                        if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
+                        {
+                            HandlePickAction(actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
+                        }
+                        else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
+                        {
+                            HandleBanAction(actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
+                        }
                     }
                 }
             }
+
+            LastDashboardStatus = BuildDashboardStatus(mergedPickIds, mergedBanIds, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
         }
         catch (Exception ex)
         {
@@ -125,16 +127,39 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private static DashboardStatus BuildDashboardStatus(IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds)
+    private DashboardStatus BuildDashboardStatus(IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
     {
         return new DashboardStatus
         {
             PickChampionPriority = pickIds.Select(ChampionCatalog.FormatWithName).ToList(),
             BanChampionPriority = banIds.Select(ChampionCatalog.FormatWithName).ToList(),
-            PickStatusText = pickIds.Count > 0 ? "Champion select active" : "No picks configured",
-            BanStatusText = banIds.Count > 0 ? "Champion select active" : "No bans configured",
-            PickChampionText = "Not configured",
-            BanChampionText = "Not configured",
+            PickChampionText = "No picks configured",
+            BanChampionText = "No bans configured",
+            ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType),
+            TimeLeftSeconds = (int)(timeLeftMs / 1000),
+        };
+    }
+
+    private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType)
+    {
+        if (string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+            return "Hover";
+
+        if (localPlayerActiveActionType is not null)
+        {
+            return localPlayerActiveActionType switch
+            {
+                "ban" => "Ban",
+                "pick" => "Pick",
+                _ => "Waiting",
+            };
+        }
+
+        return champSelectPhase.ToUpperInvariant() switch
+        {
+            "BAN_PICK" => "Waiting",
+            "FINALIZATION" => "Waiting",
+            _ => "Waiting",
         };
     }
 

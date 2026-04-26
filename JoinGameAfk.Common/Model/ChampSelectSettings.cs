@@ -104,6 +104,8 @@ namespace JoinGameAfk.Model
             return merged;
         }
 
+        public event Action? Saved;
+
         public void Save()
         {
             var dir = Path.GetDirectoryName(SettingsFilePath)!;
@@ -112,6 +114,7 @@ namespace JoinGameAfk.Model
 
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsFilePath, json);
+            Saved?.Invoke();
         }
 
         public static ChampSelectSettings Load()
