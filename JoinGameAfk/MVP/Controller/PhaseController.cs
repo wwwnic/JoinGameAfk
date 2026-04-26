@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Diagnostics;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
@@ -11,6 +12,7 @@ namespace JoinGameAfk.MVP.Controller
     public class PhaseController
     {
         private readonly PhaseProgressionPage fPhaseProgressionPage;
+        private readonly LogsPage _logsPage;
         private readonly ChampSelectSettings _champSelectSettings;
         private readonly List<IPhaseHandler> _phaseHandlers;
 
@@ -23,9 +25,10 @@ namespace JoinGameAfk.MVP.Controller
 
         public bool IsRunning => _isRunning;
 
-        public PhaseController(PhaseProgressionPage phaseProgressionPage, ChampSelectSettings champSelectSettings)
+        public PhaseController(PhaseProgressionPage phaseProgressionPage, LogsPage logsPage, ChampSelectSettings champSelectSettings)
         {
             fPhaseProgressionPage = phaseProgressionPage;
+            _logsPage = logsPage;
             _champSelectSettings = champSelectSettings;
             _phaseHandlers = [];
         }
@@ -43,6 +46,7 @@ namespace JoinGameAfk.MVP.Controller
             fPhaseProgressionPage.SetWatcherState(true);
             fPhaseProgressionPage.SetClientConnection(false);
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
 
             _cts = new CancellationTokenSource();
             _ = RunLoopAsync(_cts.Token);
@@ -57,6 +61,7 @@ namespace JoinGameAfk.MVP.Controller
             fPhaseProgressionPage.SetWatcherState(false);
             fPhaseProgressionPage.SetClientConnection(false);
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
         }
 
         private async Task RunLoopAsync(CancellationToken ct)
@@ -68,6 +73,8 @@ namespace JoinGameAfk.MVP.Controller
 
             while (!ct.IsCancellationRequested)
             {
+                var iterationStopwatch = Stopwatch.StartNew();
+
                 try
                 {
                     if (http == null || !http.HasAuthToken())
@@ -83,6 +90,7 @@ namespace JoinGameAfk.MVP.Controller
                                 _lastHandledPhase = ClientPhase.Unknown;
                                 fPhaseProgressionPage.SetClientConnection(false);
                                 fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+                                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
                             }
 
                             await Task.Delay(3000, ct);
@@ -118,6 +126,9 @@ namespace JoinGameAfk.MVP.Controller
                     var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
                     bool isChampSelectFlow = phase is ClientPhase.ChampSelect or ClientPhase.Planning;
 
+                    if (!isChampSelectFlow)
+                        fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+
                     if (handler != null && _lastHandledPhase != phase)
                     {
                         string? actionMessage = GetActionMessage(phase);
@@ -135,7 +146,9 @@ namespace JoinGameAfk.MVP.Controller
                     int delayMs = isChampSelectFlow
                         ? Math.Clamp(_champSelectSettings.ChampSelectPollIntervalMs, 100, 5000)
                         : 2000;
-                    await Task.Delay(delayMs, ct);
+
+                    int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
+                    await Task.Delay(remainingDelayMs, ct);
                 }
                 catch (TaskCanceledException)
                 {
@@ -150,6 +163,7 @@ namespace JoinGameAfk.MVP.Controller
                     _lastHandledPhase = ClientPhase.Unknown;
                     fPhaseProgressionPage.SetClientConnection(false);
                     fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+                    fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
                     http = null;
                     await Task.Delay(5000, ct);
                 }
@@ -167,13 +181,13 @@ namespace JoinGameAfk.MVP.Controller
 
         private void Log(string message)
         {
-            fPhaseProgressionPage.WriteLine(message);
+            _logsPage.WriteLine(message);
             Console.WriteLine(message);
         }
 
         private void LogError(string message)
         {
-            fPhaseProgressionPage.WriteErrorLine(message);
+            _logsPage.WriteErrorLine(message);
             Console.Error.WriteLine(message);
         }
 
@@ -193,20 +207,6 @@ namespace JoinGameAfk.MVP.Controller
             catch { }
 
             return ClientPhase.Unknown;
-        }
-
-        private static string GetPhaseSummary(ClientPhase phase)
-        {
-            return phase switch
-            {
-                ClientPhase.Lobby => "Lobby detected.",
-                ClientPhase.Matchmaking => "Queue started. Waiting for ready check.",
-                ClientPhase.ReadyCheck => "Ready check detected.",
-                ClientPhase.ChampSelect => "Champion Select detected.",
-                ClientPhase.Planning => "Planning phase detected.",
-                ClientPhase.InGame => "Game started.",
-                _ => "Waiting for a usable League session."
-            };
         }
 
         private static string? GetActionMessage(ClientPhase phase)

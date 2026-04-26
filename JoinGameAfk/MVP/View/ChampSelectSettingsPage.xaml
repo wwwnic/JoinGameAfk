@@ -48,46 +48,13 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   Text="Champion Select"
-                   FontSize="22"
-                   FontWeight="Bold"
-                   Foreground="#E2E8F0"
-                   Margin="0,0,0,6" />
-
-        <TextBlock Grid.Row="1"
-                   Text="Configure which champions to pick and ban for each assigned position. Select a pick or ban list, then search champions below and click to add them. Drag champions with the mouse to reorder priority. Champion changes are saved automatically."
-                   FontSize="12"
-                   Foreground="#94A3B8"
-                   TextWrapping="Wrap"
-                   Margin="0,0,0,16" />
-
-        <Border Grid.Row="2"
-                Style="{StaticResource SectionCardStyle}"
-                Margin="0,0,0,10"
-                Padding="16,12">
-            <TextBlock x:Name="ActiveTargetLabel"
-                       Text="Select a pick or ban list, then search champions and click to add them. Drag champions to reorder them."
-                       FontSize="12"
-                       Foreground="#64B5F6"
-                       FontStyle="Italic"
-                       TextWrapping="Wrap" />
-        </Border>
-
         <Border Grid.Row="3"
                 Grid.RowSpan="2"
                 Style="{StaticResource SectionCardStyle}"
                 Margin="0,0,0,16">
             <StackPanel>
-                <TextBlock Text="Champion Preferences"
-                           Style="{StaticResource SectionTitleStyle}"
-                           Margin="0,0,0,4" />
 
-                <TextBlock Text="Choose your pick and ban priorities for each position."
-                           Style="{StaticResource SectionDescriptionStyle}"
-                           Margin="0,0,0,12" />
-
-                <Grid Margin="0,0,0,16">
+                    <Grid Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="110" />
                         <ColumnDefinition Width="*" />
@@ -142,7 +109,7 @@
                                         DragOver="ChampionList_DragOver"
                                         Drop="ChampionList_Drop">
                                     <StackPanel>
-                                        <TextBlock Text="Use search below to add champions"
+                                        <TextBlock Text="Empty"
                                                    FontSize="11"
                                                    Foreground="#64748B"
                                                    FontStyle="Italic"
@@ -235,7 +202,7 @@
                                         DragOver="ChampionList_DragOver"
                                         Drop="ChampionList_Drop">
                                     <StackPanel>
-                                        <TextBlock Text="Use search below to add champions"
+                                        <TextBlock Text="Empty"
                                                    FontSize="11"
                                                    Foreground="#64748B"
                                                    FontStyle="Italic"

@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 using JoinGameAfk.Enums;
+using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
 
 namespace JoinGameAfk.View
@@ -26,11 +27,17 @@ namespace JoinGameAfk.View
             SetWatcherState(false);
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
+            UpdateDashboardStatus(new DashboardStatus());
         }
 
         internal void SetController(PhaseController controller)
         {
             _phaseController = controller;
+        }
+
+        internal void SetLogsPage(LogsPage logsPage)
+        {
+            EmbeddedLogsFrame.Content = logsPage;
         }
 
         private void ToggleButton_Click(object sender, RoutedEventArgs e)
@@ -48,7 +55,7 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 _currentPhase = phase;
-                StatusText.Text = GetStatusLine(phase);
+                RefreshStatusText();
                 PhaseChanged?.Invoke(phase);
             });
         }
@@ -60,7 +67,7 @@ namespace JoinGameAfk.View
                 _isWatcherRunning = isRunning;
                 ToggleButton.Content = isRunning ? "Stop" : "Start";
                 ToggleButton.Background = isRunning ? StopBrush : StartBrush;
-                StatusText.Text = GetStatusLine(_currentPhase);
+                RefreshStatusText();
             });
         }
 
@@ -71,30 +78,41 @@ namespace JoinGameAfk.View
                 _isClientConnected = isConnected;
                 ConnectionText.Text = isConnected ? "Client connected" : "Client offline";
                 ConnectionText.Foreground = isConnected ? ConnectedFg : OfflineFg;
-                StatusText.Text = GetStatusLine(_currentPhase);
+                RefreshStatusText();
             });
         }
 
-        public void ShowAction(string action)
-        {
-        }
-
-        public void WriteLine(string message)
+        public void UpdateDashboardStatus(DashboardStatus status)
         {
             Dispatcher.Invoke(() =>
             {
-                LogTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}\n");
-                LogTextBox.ScrollToEnd();
+                UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
+                UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
+                BanStatusValueText.Text = status.BanStatusText;
+                BanLockValueText.Text = status.BanLockText;
+                PickStatusValueText.Text = status.PickStatusText;
+                PickLockValueText.Text = status.PickLockText;
             });
         }
 
-        public void WriteErrorLine(string message)
+        private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<string> champions, string fallbackText)
         {
-            Dispatcher.Invoke(() =>
-            {
-                LogTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] ERROR: {message}\n");
-                LogTextBox.ScrollToEnd();
-            });
+            itemsControl.ItemsSource = champions;
+
+            bool hasChampions = champions.Count > 0;
+            placeholderText.Visibility = hasChampions ? Visibility.Collapsed : Visibility.Visible;
+
+            if (hasChampions)
+                return;
+
+            placeholderText.Text = string.IsNullOrWhiteSpace(fallbackText)
+                ? string.Empty
+                : fallbackText;
+        }
+
+        private void RefreshStatusText()
+        {
+            StatusText.Text = GetStatusLine(_currentPhase);
         }
 
         private string GetStatusLine(ClientPhase phase)

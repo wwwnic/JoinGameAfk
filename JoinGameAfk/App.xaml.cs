@@ -9,6 +9,7 @@ namespace JoinGameAfk
     {
         private MainWindow fMainWindow;
         private PhaseProgressionPage fDashboardPage;
+        private LogsPage fLogsPage;
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -17,8 +18,10 @@ namespace JoinGameAfk
                 var champSelectSettings = ChampSelectSettings.Load();
 
                 fDashboardPage = new PhaseProgressionPage();
+                fLogsPage = new LogsPage();
+                fDashboardPage.SetLogsPage(fLogsPage);
 
-                var phaseController = new PhaseController(fDashboardPage, champSelectSettings);
+                var phaseController = new PhaseController(fDashboardPage, fLogsPage, champSelectSettings);
                 fDashboardPage.SetController(phaseController);
 
                 var champSelectPage = new ChampSelectSettingsPage(champSelectSettings);

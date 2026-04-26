@@ -254,11 +254,14 @@ namespace JoinGameAfk.View
             if (!IsLoaded)
                 return;
 
-            double availableHeight = ActualHeight
-                - ChampionReferenceBorder.TranslatePoint(new Point(0, 0), this).Y
-                - PageScrollViewer.Padding.Top
-                - PageScrollViewer.Padding.Bottom
-                - 20;
+            double viewportHeight = PageScrollViewer.ViewportHeight > 0
+                ? PageScrollViewer.ViewportHeight
+                : ActualHeight;
+
+            double availableHeight = viewportHeight
+                - ChampionReferenceBorder.TranslatePoint(new Point(0, 0), PageScrollViewer).Y
+                - ContentGrid.Margin.Bottom
+                - 28;
 
             ChampionReferenceBorder.MaxHeight = Math.Max(140, availableHeight);
         }
@@ -266,10 +269,7 @@ namespace JoinGameAfk.View
         private bool TryAddChampionToActiveTarget(ChampionInfo champion)
         {
             if (_activeTargetRow is null)
-            {
-                ActiveTargetLabel.Text = "Select a pick or ban list first, then search and add a champion.";
                 return false;
-            }
 
             InsertChampion(_activeTargetRow, _activeTargetIsPick, champion, null);
             ChampionSearchBox.Focus();
@@ -298,8 +298,6 @@ namespace JoinGameAfk.View
                 item.BanBackgroundBrush = ReferenceEquals(item, row) && !isPick ? ActiveTargetBackgroundBrush : InactiveTargetBackgroundBrush;
             }
 
-            string action = isPick ? "pick" : "ban";
-            ActiveTargetLabel.Text = $"Adding champions to {row.PositionName} {action} list. Search below, then click champions to add them. Drag champions to reorder priority.";
             ChampionSearchBox.Focus();
             ChampionSearchBox.SelectAll();
         }
