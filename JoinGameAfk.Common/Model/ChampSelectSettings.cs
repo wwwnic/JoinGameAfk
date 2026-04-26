@@ -69,6 +69,41 @@ namespace JoinGameAfk.Model
             return Preferences.GetValueOrDefault(Position.Default) ?? new PositionPreference();
         }
 
+        public List<int> GetMergedPickChampionIds(Position position)
+        {
+            return GetMergedChampionIds(position, pref => pref.PickChampionIds);
+        }
+
+        public List<int> GetMergedBanChampionIds(Position position)
+        {
+            return GetMergedChampionIds(position, pref => pref.BanChampionIds);
+        }
+
+        private List<int> GetMergedChampionIds(Position position, Func<PositionPreference, List<int>> selector)
+        {
+            var rolePref = position != Position.Default
+                && Preferences.TryGetValue(position, out var rp)
+                ? selector(rp)
+                : [];
+
+            var defaultPref = Preferences.TryGetValue(Position.Default, out var dp)
+                ? selector(dp)
+                : [];
+
+            if (rolePref.Count == 0)
+                return [.. defaultPref];
+
+            var seen = new HashSet<int>(rolePref);
+            var merged = new List<int>(rolePref);
+            foreach (var id in defaultPref)
+            {
+                if (seen.Add(id))
+                    merged.Add(id);
+            }
+
+            return merged;
+        }
+
         public void Save()
         {
             var dir = Path.GetDirectoryName(SettingsFilePath)!;

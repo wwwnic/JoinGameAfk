@@ -33,6 +33,8 @@ public class ChampSelect : IPhaseHandler
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 
+    public DashboardStatus LastDashboardStatus { get; private set; } = new();
+
     public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null)
     {
         _http = http;
@@ -59,15 +61,19 @@ public class ChampSelect : IPhaseHandler
                 return;
 
             Position assignedPosition = GetAssignedPosition(root, localPlayerCellId);
+            var mergedPickIds = _settings.GetMergedPickChampionIds(assignedPosition);
+            var mergedBanIds = _settings.GetMergedBanChampionIds(assignedPosition);
             var preference = _settings.GetPreference(assignedPosition);
             string champSelectPhase = GetChampSelectPhase(root);
             long totalTimeMs = GetTotalTimeInPhaseMs(root);
             long rawTimeLeftMs = GetAdjustedTimeLeftMs(root);
             long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, champSelectPhase, rawTimeLeftMs);
 
+            LastDashboardStatus = BuildDashboardStatus(mergedPickIds, mergedBanIds);
+
             if (!_hasLoggedSessionSummary)
             {
-                Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(preference.PickChampionIds)}], bans=[{FormatChampionIds(preference.BanChampionIds)}], autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
+                Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
                 _hasLoggedSessionSummary = true;
             }
 
@@ -102,13 +108,13 @@ public class ChampSelect : IPhaseHandler
                     if (actorCellId != localPlayerCellId)
                         continue;
 
-                    if (type == "pick" && preference.PickChampionIds.Count > 0 && !_hasPicked)
+                    if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                     {
-                        HandlePickAction(actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, preference.PickChampionIds);
+                        HandlePickAction(actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
                     }
-                    else if (type == "ban" && preference.BanChampionIds.Count > 0 && !_hasBanned)
+                    else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                     {
-                        HandleBanAction(actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, preference.BanChampionIds);
+                        HandleBanAction(actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
                     }
                 }
             }
@@ -117,6 +123,19 @@ public class ChampSelect : IPhaseHandler
         {
             Log($"Champ Select handler error: {ex.Message}");
         }
+    }
+
+    private static DashboardStatus BuildDashboardStatus(IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds)
+    {
+        return new DashboardStatus
+        {
+            PickChampionPriority = pickIds.Select(ChampionCatalog.FormatWithName).ToList(),
+            BanChampionPriority = banIds.Select(ChampionCatalog.FormatWithName).ToList(),
+            PickStatusText = pickIds.Count > 0 ? "Champion select active" : "No picks configured",
+            BanStatusText = banIds.Count > 0 ? "Champion select active" : "No bans configured",
+            PickChampionText = "Not configured",
+            BanChampionText = "Not configured",
+        };
     }
 
     public void Reset()

@@ -137,10 +137,14 @@ namespace JoinGameAfk.MVP.Controller
 
                         handler.Handle();
                         _lastHandledPhase = phase;
+
+                        if (handler is ChampSelect cs)
+                            fPhaseProgressionPage.UpdateDashboardStatus(cs.LastDashboardStatus);
                     }
                     else if (champSelect != null && isChampSelectFlow)
                     {
                         champSelect.Handle();
+                        fPhaseProgressionPage.UpdateDashboardStatus(champSelect.LastDashboardStatus);
                     }
 
                     int delayMs = isChampSelectFlow
