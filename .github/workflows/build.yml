@@ -28,12 +28,23 @@ jobs:
       - name: Build solution
         run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore
 
-      - name: Publish app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish
+      - name: Publish single-file app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
+
+      - name: Rename single-file executable
+        run: Copy-Item -Path ${{ github.workspace }}\publish-single\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
+
+      - name: Publish split app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-split
+
+      - name: Create split zip
+        run: Compress-Archive -Path publish-split\* -DestinationPath JoinGameAfk-win-x64.zip
 
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: publish/JoinGameAfk.exe
+          files: |
+            JoinGameAfk.exe
+            JoinGameAfk-win-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
