@@ -159,11 +159,33 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource PriorityChampionChipStyle}">
-                                                        <TextBlock Text="{Binding}"
+                                                    <Border>
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource PriorityChampionChipStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                                        <Setter Property="Background" Value="#351417" />
+                                                                        <Setter Property="BorderBrush" Value="#DC2626" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding Name}"
                                                                    FontSize="12"
-                                                                   Foreground="#CBD5E1"
-                                                                   VerticalAlignment="Center" />
+                                                                    VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="#CBD5E1" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                                            <Setter Property="Foreground" Value="#FCA5A5" />
+                                                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                                            <Setter Property="ToolTip" Value="Not currently pickable." />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -206,11 +228,33 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Style="{StaticResource PriorityChampionChipStyle}">
-                                                        <TextBlock Text="{Binding}"
+                                                    <Border>
+                                                        <Border.Style>
+                                                            <Style TargetType="Border" BasedOn="{StaticResource PriorityChampionChipStyle}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                                        <Setter Property="Background" Value="#351417" />
+                                                                        <Setter Property="BorderBrush" Value="#DC2626" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock Text="{Binding Name}"
                                                                    FontSize="12"
-                                                                   Foreground="#CBD5E1"
-                                                                   VerticalAlignment="Center" />
+                                                                    VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Foreground" Value="#CBD5E1" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                                                                            <Setter Property="Foreground" Value="#FCA5A5" />
+                                                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                                            <Setter Property="ToolTip" Value="Not currently bannable." />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

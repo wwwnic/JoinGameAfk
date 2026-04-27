@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
@@ -30,6 +31,10 @@ public class ChampSelect : IPhaseHandler
     private int _pendingBanHoverActionId;
     private DateTime _pickHoverReadyAtUtc;
     private DateTime _banHoverReadyAtUtc;
+    private int _pickRetryStateActionId;
+    private int _banRetryStateActionId;
+    private readonly HashSet<int> _failedPickChampionIds = [];
+    private readonly HashSet<int> _failedBanChampionIds = [];
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 
@@ -76,6 +81,8 @@ public class ChampSelect : IPhaseHandler
             }
 
             string? localPlayerActiveActionType = null;
+            int localPickActionId = 0;
+            int localBanActionId = 0;
 
             if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
             {
@@ -107,19 +114,25 @@ public class ChampSelect : IPhaseHandler
                         if (isInProgress && localPlayerActiveActionType is null)
                             localPlayerActiveActionType = type;
 
+                        if (type == "pick" && localPickActionId == 0)
+                            localPickActionId = actionId;
+
+                        if (type == "ban" && localBanActionId == 0)
+                            localBanActionId = actionId;
+
                         if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                         {
-                            HandlePickAction(actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
+                            HandlePickAction(root, localPlayerCellId, actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
                         }
                         else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                         {
-                            HandleBanAction(actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
+                            HandleBanAction(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
                         }
                     }
                 }
             }
 
-            LastDashboardStatus = BuildDashboardStatus(mergedPickIds, mergedBanIds, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
+            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, mergedPickIds, mergedBanIds, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
         }
         catch (Exception ex)
         {
@@ -127,17 +140,29 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private DashboardStatus BuildDashboardStatus(IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
+    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
     {
         return new DashboardStatus
         {
-            PickChampionPriority = pickIds.Select(ChampionCatalog.FormatWithName).ToList(),
-            BanChampionPriority = banIds.Select(ChampionCatalog.FormatWithName).ToList(),
+            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickIds, _failedPickChampionIds),
+            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banIds, _failedBanChampionIds),
             PickChampionText = "No picks configured",
             BanChampionText = "No bans configured",
             ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType),
             TimeLeftSeconds = (int)(timeLeftMs / 1000),
         };
+    }
+
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<int> championIds, IReadOnlySet<int> failedChampionIds)
+    {
+        return championIds
+            .Select(championId => new DashboardChampionPlanItem
+            {
+                Name = FormatChampion(championId),
+                IsAvailable = !failedChampionIds.Contains(championId)
+                    && !IsChampionUnavailable(root, localPlayerCellId, actionId, championId)
+            })
+            .ToList();
     }
 
     private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType)
@@ -186,10 +211,28 @@ public class ChampSelect : IPhaseHandler
         _pendingBanHoverActionId = 0;
         _pickHoverReadyAtUtc = DateTime.MinValue;
         _banHoverReadyAtUtc = DateTime.MinValue;
+        _pickRetryStateActionId = 0;
+        _banRetryStateActionId = 0;
+        _failedPickChampionIds.Clear();
+        _failedBanChampionIds.Clear();
     }
 
-    private void HandlePickAction(int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
+    private void HandlePickAction(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
     {
+        EnsureRetryStateForAction(actionId, isPickAction: true);
+
+        if (_hasHoveredPick
+            && !_manualPickSelectionOverride
+            && _hoveredPickChampionId != 0
+            && IsChampionUnavailable(root, localPlayerCellId, actionId, _hoveredPickChampionId))
+        {
+            _failedPickChampionIds.Add(_hoveredPickChampionId);
+            LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(_hoveredPickChampionId)} is no longer available. Trying next configured champion.");
+            ResetPickHover();
+            _pendingPickHoverActionId = actionId;
+            _pickHoverReadyAtUtc = DateTime.UtcNow;
+        }
+
         if (currentChampionId == 0 && _hasHoveredPick && !_manualPickSelectionOverride)
         {
             ResetPickHover();
@@ -211,7 +254,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastPickStatusMessage, $"Pick hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(actionId, preferredChampionIds, isPickAction: true, actionLabel: "Pick");
+                TryHoverChampion(actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick");
             }
             else
             {
@@ -262,12 +305,31 @@ public class ChampSelect : IPhaseHandler
         catch (Exception ex)
         {
             Log($"Pick lock failed for {FormatChampion(championIdToLock)} on actionId={actionId}: {ex.Message}");
+            if (ShouldExcludeChampionAfterRequestFailure(ex))
+                _failedPickChampionIds.Add(championIdToLock);
+
             ResetPickHover();
+            _pendingPickHoverActionId = actionId;
+            _pickHoverReadyAtUtc = DateTime.UtcNow;
         }
     }
 
-    private void HandleBanAction(int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
+    private void HandleBanAction(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
     {
+        EnsureRetryStateForAction(actionId, isPickAction: false);
+
+        if (_hasHoveredBan
+            && !_manualBanSelectionOverride
+            && _hoveredBanChampionId != 0
+            && IsChampionUnavailable(root, localPlayerCellId, actionId, _hoveredBanChampionId))
+        {
+            _failedBanChampionIds.Add(_hoveredBanChampionId);
+            LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(_hoveredBanChampionId)} is no longer available. Trying next configured champion.");
+            ResetBanHover();
+            _pendingBanHoverActionId = actionId;
+            _banHoverReadyAtUtc = DateTime.UtcNow;
+        }
+
         if (currentChampionId == 0 && _hasHoveredBan && !_manualBanSelectionOverride)
         {
             ResetBanHover();
@@ -289,7 +351,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(actionId, preferredChampionIds, isPickAction: false, actionLabel: "Ban");
+                TryHoverChampion(actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban");
             }
             else
             {
@@ -344,14 +406,22 @@ public class ChampSelect : IPhaseHandler
         catch (Exception ex)
         {
             Log($"Ban lock failed for {FormatChampion(championIdToLock)} on actionId={actionId}: {ex.Message}");
+            if (ShouldExcludeChampionAfterRequestFailure(ex))
+                _failedBanChampionIds.Add(championIdToLock);
+
             ResetBanHover();
+            _pendingBanHoverActionId = actionId;
+            _banHoverReadyAtUtc = DateTime.UtcNow;
         }
     }
 
-    private void TryHoverChampion(int actionId, IReadOnlyCollection<int> championIds, bool isPickAction, string actionLabel)
+    private void TryHoverChampion(int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel)
     {
         foreach (var championId in championIds)
         {
+            if (excludedChampionIds.Contains(championId))
+                continue;
+
             try
             {
                 Log($"{actionLabel}: trying {FormatChampion(championId)} on actionId={actionId}.");
@@ -373,9 +443,112 @@ public class ChampSelect : IPhaseHandler
             }
             catch (Exception ex)
             {
+                if (ShouldExcludeChampionAfterRequestFailure(ex))
+                    excludedChampionIds.Add(championId);
+
                 Log($"{actionLabel}: hover failed for {FormatChampion(championId)} on actionId={actionId}: {ex.Message}");
             }
         }
+    }
+
+    private void EnsureRetryStateForAction(int actionId, bool isPickAction)
+    {
+        if (isPickAction)
+        {
+            if (_pickRetryStateActionId == actionId)
+                return;
+
+            _pickRetryStateActionId = actionId;
+            _failedPickChampionIds.Clear();
+            return;
+        }
+
+        if (_banRetryStateActionId == actionId)
+            return;
+
+        _banRetryStateActionId = actionId;
+        _failedBanChampionIds.Clear();
+    }
+
+    private static bool IsChampionUnavailable(JsonElement root, int localPlayerCellId, int localActionId, int championId)
+    {
+        if (championId == 0)
+            return false;
+
+        if (IsChampionSelectedByAnotherPlayer(root, "myTeam", championId, localPlayerCellId)
+            || IsChampionSelectedByAnotherPlayer(root, "theirTeam", championId, localPlayerCellId))
+        {
+            return true;
+        }
+
+        if (!root.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array)
+            return false;
+
+        foreach (var actionGroup in actions.EnumerateArray())
+        {
+            if (actionGroup.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var action in actionGroup.EnumerateArray())
+            {
+                if (!TryGetInt32(action, "championId", out int actionChampionId) || actionChampionId != championId)
+                    continue;
+
+                if (TryGetInt32(action, "actorCellId", out int actorCellId)
+                    && actorCellId == localPlayerCellId
+                    && TryGetInt32(action, "id", out int actionId)
+                    && actionId == localActionId)
+                {
+                    continue;
+                }
+
+                string type = action.TryGetProperty("type", out var typeProperty)
+                    ? typeProperty.GetString() ?? string.Empty
+                    : string.Empty;
+
+                if (string.Equals(type, "pick", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase)
+                    && TryGetBool(action, "completed", out bool completed)
+                    && completed)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsChampionSelectedByAnotherPlayer(JsonElement root, string teamPropertyName, int championId, int localPlayerCellId)
+    {
+        if (!root.TryGetProperty(teamPropertyName, out var teamMembers) || teamMembers.ValueKind != JsonValueKind.Array)
+            return false;
+
+        foreach (var member in teamMembers.EnumerateArray())
+        {
+            if (TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId)
+                continue;
+
+            if (TryGetInt32(member, "championId", out int memberChampionId) && memberChampionId == championId)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool ShouldExcludeChampionAfterRequestFailure(Exception ex)
+    {
+        return ex is HttpRequestException
+        {
+            StatusCode: HttpStatusCode.BadRequest
+                or HttpStatusCode.Conflict
+                or HttpStatusCode.Forbidden
+                or HttpStatusCode.Gone
+                or HttpStatusCode.NotFound
+                or HttpStatusCode.UnprocessableEntity
+        };
     }
 
     private void ResetPickHover()

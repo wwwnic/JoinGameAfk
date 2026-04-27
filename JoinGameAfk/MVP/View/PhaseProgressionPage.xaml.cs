@@ -116,7 +116,7 @@ namespace JoinGameAfk.View
             });
         }
 
-        private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<string> champions, string fallbackText)
+        private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)
         {
             itemsControl.ItemsSource = champions;
 
