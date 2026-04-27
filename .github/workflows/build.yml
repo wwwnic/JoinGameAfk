@@ -29,7 +29,7 @@ jobs:
         run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore
 
       - name: Publish single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
 
       - name: Rename single-file executable
         run: Copy-Item -Path ${{ github.workspace }}\publish-single\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
