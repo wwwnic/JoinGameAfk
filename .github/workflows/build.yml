@@ -29,14 +29,11 @@ jobs:
         run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore
 
       - name: Publish app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true --output ${{ github.workspace }}\publish
-
-      - name: Create zip
-        run: Compress-Archive -Path publish\* -DestinationPath JoinGameAfk-win-x64.zip
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish
 
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: JoinGameAfk-win-x64.zip
+          files: publish/JoinGameAfk.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

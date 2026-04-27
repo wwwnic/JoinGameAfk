@@ -268,6 +268,30 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{StaticResource SectionCardStyle}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Storage"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                    </StackPanel>
+
+                    <TextBlock Text="Settings and champion files are stored in your AppData folder so single-file deployment can stay as one exe."
+                               Style="{StaticResource SectionDescriptionStyle}"
+                               Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="StoragePathTextBlock"
+                               Foreground="#CBD5E1"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,12" />
+
+                    <Button Content="Open Storage Folder"
+                            Click="OpenStorageFolderButton_Click"
+                            Background="#2563EB"
+                            Style="{StaticResource AccentButtonStyle}"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </Border>
+
             <Button x:Name="SaveButton" Content="Save Settings" Click="SaveButton_Click"
                     Margin="0,16,0,0"
                     Background="#2E7D32"

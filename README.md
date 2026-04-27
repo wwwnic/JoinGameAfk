@@ -62,7 +62,11 @@ The app exposes:
 - editable configuration pages
 
 ### 3. Settings are plain local files
-From the current source, configuration is stored locally as JSON files in the app folder, including:
+From the current source, configuration is stored locally as JSON files in:
+
+- `%LocalAppData%\JoinGameAfk`
+
+including:
 
 - `champselectsettings.json`
 - `champions.json`
@@ -220,6 +224,14 @@ Notable components:
 dotnet build
 ```
 
+### Publish as a single executable
+
+```powershell
+dotnet publish .\JoinGameAfk\JoinGameAfk.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true
+```
+
+The published app can stay as a single exe because editable files are stored in `%LocalAppData%\JoinGameAfk` instead of next to the executable.
+
 ### Run
 
 ```powershell
@@ -233,16 +245,19 @@ dotnet run --project .\JoinGameAfk\JoinGameAfk.csproj
 1. Start the app
 2. Open the **Champion Select** page and configure pick/ban priorities for each position
 3. Open the **Settings** page and adjust delays/timers if needed
-4. Return to **Dashboard**
-5. Click **Start**
-6. Launch or keep the League Client open
-7. Watch the dashboard log for connection and phase activity
+4. Use **Open Storage Folder** from the Settings page if you want to inspect or back up the JSON files
+5. Return to **Dashboard**
+6. Click **Start**
+7. Launch or keep the League Client open
+8. Watch the dashboard log for connection and phase activity
 
 ---
 
 ## Configuration files
 
-From the current codebase, these files may exist in the app directory:
+From the current codebase, these files are stored in `%LocalAppData%\JoinGameAfk`.
+
+The Settings page also includes a button to open this folder directly.
 
 ### `champselectsettings.json`
 Stores:
@@ -259,6 +274,8 @@ Stores:
 Stores champion IDs and display names used by the UI.
 
 If the file is missing, the app can fall back to a built-in default champion list and recreate the file.
+
+If older versions created these files next to the executable, the app now migrates them to `%LocalAppData%\JoinGameAfk` automatically when possible.
 
 ---
 
@@ -310,7 +327,7 @@ Yes. The current implementation waits for the local League Client process and th
 It can start and watch phases, but champion select automation is only useful after you configure preferred picks/bans.
 
 ### Where are my settings saved?
-Based on the current code, settings are stored in the app folder in `champselectsettings.json`.
+Settings are stored in `%LocalAppData%\JoinGameAfk\champselectsettings.json`.
 
 ### Does it upload my data anywhere?
 From the current source review, no external upload or telemetry service was identified.

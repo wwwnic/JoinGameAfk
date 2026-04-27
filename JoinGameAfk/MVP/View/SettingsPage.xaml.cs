@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.View
@@ -13,6 +15,7 @@ namespace JoinGameAfk.View
             InitializeComponent();
             _settings = settings;
 
+            StoragePathTextBlock.Text = AppStorage.DirectoryPath;
             ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
             AutoLockSelectionCheckBox.IsChecked = _settings.AutoLockSelectionEnabled;
             PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();
@@ -36,6 +39,23 @@ namespace JoinGameAfk.View
 
             _settings.Save();
             SavedLabel.Visibility = Visibility.Visible;
+        }
+
+        private void OpenStorageFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                AppStorage.EnsureDirectoryExists();
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = AppStorage.DirectoryPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open storage folder: {ex.Message}", "Open Folder Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

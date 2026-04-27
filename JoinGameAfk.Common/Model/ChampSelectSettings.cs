@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 
 namespace JoinGameAfk.Model
@@ -12,12 +13,11 @@ namespace JoinGameAfk.Model
     public class ChampSelectSettings
     {
         private static readonly string SettingsFilePath = Path.Combine(
-            AppContext.BaseDirectory,
+            AppStorage.DirectoryPath,
             "champselectsettings.json");
 
         private static readonly string LegacySettingsFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "JoinGameAfk",
+            AppContext.BaseDirectory,
             "champselectsettings.json");
 
         /// <summary>
@@ -108,9 +108,7 @@ namespace JoinGameAfk.Model
 
         public void Save()
         {
-            var dir = Path.GetDirectoryName(SettingsFilePath)!;
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
+            AppStorage.EnsureDirectoryExists();
 
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsFilePath, json);
@@ -132,6 +130,13 @@ namespace JoinGameAfk.Model
                     var json = File.ReadAllText(LegacySettingsFilePath);
                     var settings = JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings();
                     settings.Save();
+
+                    try
+                    {
+                        File.Delete(LegacySettingsFilePath);
+                    }
+                    catch { }
+
                     return settings;
                 }
             }

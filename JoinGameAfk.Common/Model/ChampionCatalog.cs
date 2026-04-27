@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JoinGameAfk.Constant;
 
 namespace JoinGameAfk.Model
 {
@@ -233,7 +234,7 @@ namespace JoinGameAfk.Model
         {
             try
             {
-                string filePath = Path.Combine(AppContext.BaseDirectory, ChampionFileName);
+                string filePath = AppStorage.ChampionFilePath;
                 EnsureChampionFileExists(filePath);
 
                 if (!File.Exists(filePath))
@@ -261,8 +262,15 @@ namespace JoinGameAfk.Model
             if (File.Exists(filePath))
                 return;
 
-            string directoryPath = Path.GetDirectoryName(filePath) ?? AppContext.BaseDirectory;
-            Directory.CreateDirectory(directoryPath);
+            string legacyFilePath = Path.Combine(AppContext.BaseDirectory, ChampionFileName);
+            if (File.Exists(legacyFilePath))
+            {
+                AppStorage.EnsureDirectoryExists();
+                File.Copy(legacyFilePath, filePath, overwrite: false);
+                return;
+            }
+
+            AppStorage.EnsureDirectoryExists();
 
             string json = JsonSerializer.Serialize(DefaultChampions, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);

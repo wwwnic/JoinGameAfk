@@ -11,10 +11,6 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
-    <None Update="Assets\champions.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <TargetPath>champions.json</TargetPath>
-    </None>
   </ItemGroup>
 
   <ItemGroup>
