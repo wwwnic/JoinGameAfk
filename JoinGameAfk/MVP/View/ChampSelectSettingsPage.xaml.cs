@@ -419,8 +419,13 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            if (GetChampionCollection(row, isPick).Count == 0)
-                ShowInsertionIndicator(row, isPick, null, insertAfter: true, 0);
+            var collection = GetChampionCollection(row, isPick);
+
+            // When dragging over empty space within the list container (not over a specific item),
+            // show the insertion indicator at the end of the list.
+            // (If the list is empty, this falls back to the row-level drop indicator.)
+            if (_dragHoverRow != row || _dragHoverIsPick != isPick)
+                ShowInsertionIndicator(row, isPick, null, insertAfter: true, collection.Count);
 
             SetActiveTarget(row, isPick);
             UpdateDragPreviewPosition(e.GetPosition(this));
