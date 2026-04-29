@@ -7,6 +7,7 @@
       SizeChanged="Page_SizeChanged"
       PreviewTextInput="Page_PreviewTextInput"
       PreviewKeyDown="Page_PreviewKeyDown"
+      PreviewMouseMove="Page_PreviewMouseMove"
       PreviewMouseLeftButtonUp="Page_PreviewMouseLeftButtonUp"
       DragOver="Page_DragOver"
       DragLeave="Page_DragLeave">
@@ -90,6 +91,12 @@
                     <Setter Property="BorderBrush" Value="#475569" />
                     <Setter Property="ToolTip" Value="Drag to reorder" />
                 </Trigger>
+                <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
+                    <Setter Property="Background" Value="#3A1114" />
+                    <Setter Property="BorderBrush" Value="#EF4444" />
+                    <Setter Property="TextElement.Foreground" Value="#FECACA" />
+                    <Setter Property="ToolTip" Value="This existing champion will be replaced if you drop here." />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled}" Value="True">
                     <Setter Property="Background" Value="#2A1114" />
                     <Setter Property="Cursor" Value="Hand" />
@@ -116,6 +123,7 @@
             <Setter Property="Cursor" Value="SizeAll" />
             <Setter Property="Foreground" Value="#E2E8F0" />
             <Setter Property="Margin" Value="3" />
+            <Setter Property="MinHeight" Value="28" />
             <Setter Property="Padding" Value="8,4" />
             <Setter Property="ToolTip" Value="Click to add to the selected list, or drag into a pick/ban list." />
             <Setter Property="Template">
@@ -265,6 +273,7 @@
                                                                 Visibility="{Binding InsertBeforeIndicatorVisibility}" />
 
                                                         <Border Grid.Column="1"
+                                                                Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
                                                                 MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
@@ -344,6 +353,7 @@
                                                                 Visibility="{Binding InsertBeforeIndicatorVisibility}" />
 
                                                         <Border Grid.Column="1"
+                                                                Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
                                                                 MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
@@ -384,6 +394,9 @@
 
         <Border Grid.Row="5"
                 Grid.RowSpan="4"
+                AllowDrop="True"
+                PreviewDragOver="SearchArea_PreviewDragOver"
+                PreviewDrop="SearchArea_PreviewDrop"
                 Style="{StaticResource SectionCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
