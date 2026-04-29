@@ -32,6 +32,18 @@ namespace JoinGameAfk.View
         private bool _dragHoverInsertAfter;
         private int? _dragHoverTargetIndex;
 
+        public static readonly DependencyProperty IsDeleteModeEnabledProperty = DependencyProperty.Register(
+            nameof(IsDeleteModeEnabled),
+            typeof(bool),
+            typeof(ChampSelectSettingsPage),
+            new PropertyMetadata(false));
+
+        public bool IsDeleteModeEnabled
+        {
+            get => (bool)GetValue(IsDeleteModeEnabledProperty);
+            set => SetValue(IsDeleteModeEnabledProperty, value);
+        }
+
         public ChampSelectSettingsPage(ChampSelectSettings settings)
         {
             InitializeComponent();
@@ -117,6 +129,24 @@ namespace JoinGameAfk.View
             {
                 e.Handled = true;
             }
+        }
+
+        private void ChampionItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!IsDeleteModeEnabled)
+                return;
+
+            if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
+                return;
+
+            var collection = GetChampionCollection(champion.Row, champion.IsPick);
+            if (collection.Remove(champion))
+            {
+                UpdateRowTextFromCollection(champion.Row, champion.IsPick);
+                SaveChampionPreferences();
+            }
+
+            e.Handled = true;
         }
 
         private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -304,6 +334,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (IsDeleteModeEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 

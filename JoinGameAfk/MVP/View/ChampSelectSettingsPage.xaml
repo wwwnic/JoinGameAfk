@@ -30,6 +30,84 @@
             <Setter Property="Foreground" Value="#94A3B8" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
+
+        <Style x:Key="DeleteModeToggleButtonStyle" TargetType="ToggleButton">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="BorderBrush" Value="#475569" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="ToolTip" Value="Enable delete mode" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                TextElement.Foreground="{TemplateBinding Foreground}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#263449" />
+                    <Setter Property="BorderBrush" Value="#64748B" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#7F1D1D" />
+                    <Setter Property="BorderBrush" Value="#EF4444" />
+                    <Setter Property="Foreground" Value="#FEE2E2" />
+                    <Setter Property="ToolTip" Value="Delete mode is on. Click a champion to remove it immediately." />
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsChecked" Value="True" />
+                        <Condition Property="IsMouseOver" Value="True" />
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#991B1B" />
+                    <Setter Property="BorderBrush" Value="#F87171" />
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ChampionPillBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Cursor" Value="SizeAll" />
+            <Setter Property="TextElement.Foreground" Value="#CBD5E1" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#182338" />
+                    <Setter Property="BorderBrush" Value="#475569" />
+                    <Setter Property="ToolTip" Value="Drag to reorder" />
+                </Trigger>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled}" Value="True">
+                    <Setter Property="Background" Value="#2A1114" />
+                    <Setter Property="Cursor" Value="Hand" />
+                    <Setter Property="BorderBrush" Value="#EF4444" />
+                    <Setter Property="TextElement.Foreground" Value="#FECACA" />
+                    <Setter Property="ToolTip" Value="Click to delete" />
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled}" Value="True" />
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#450F12" />
+                    <Setter Property="BorderBrush" Value="#F87171" />
+                    <Setter Property="TextElement.Foreground" Value="#FEE2E2" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
     </Page.Resources>
 
     <ScrollViewer x:Name="PageScrollViewer"
@@ -59,6 +137,7 @@
                         <ColumnDefinition Width="110" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Column="0"
@@ -76,6 +155,14 @@
                                FontWeight="SemiBold"
                                Foreground="#CBD5E1"
                                Margin="6,0,0,6" />
+
+                    <ToggleButton x:Name="DeleteModeToggle"
+                                  Grid.Column="3"
+                                  Content="Delete mode"
+                                  Margin="12,0,0,6"
+                                  VerticalAlignment="Top"
+                                  IsChecked="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Style="{StaticResource DeleteModeToggleButtonStyle}" />
                 </Grid>
 
                 <ItemsControl x:Name="PositionList">
@@ -142,28 +229,14 @@
                                                                 Visibility="{Binding InsertBeforeIndicatorVisibility}" />
 
                                                         <Border Grid.Column="1"
-                                                                Background="#0F172A"
-                                                                BorderBrush="#334155"
-                                                                BorderThickness="1"
-                                                                CornerRadius="10"
-                                                                Padding="8,4"
-                                                                Cursor="SizeAll"
+                                                                Style="{StaticResource ChampionPillBorderStyle}"
+                                                                MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <TextBlock Text="{Binding DisplayText}"
                                                                            FontSize="12"
-                                                                           Foreground="#CBD5E1"
                                                                            VerticalAlignment="Center" />
-                                                                <Button Content="×"
-                                                                        Click="RemoveChampionButton_Click"
-                                                                        Margin="8,0,0,0"
-                                                                        Padding="4,0"
-                                                                        MinWidth="20"
-                                                                        Background="#1E293B"
-                                                                        Foreground="#E2E8F0"
-                                                                        BorderBrush="#475569"
-                                                                        Cursor="Hand" />
                                                             </StackPanel>
                                                         </Border>
 
@@ -235,28 +308,14 @@
                                                                 Visibility="{Binding InsertBeforeIndicatorVisibility}" />
 
                                                         <Border Grid.Column="1"
-                                                                Background="#0F172A"
-                                                                BorderBrush="#334155"
-                                                                BorderThickness="1"
-                                                                CornerRadius="10"
-                                                                Padding="8,4"
-                                                                Cursor="SizeAll"
+                                                                Style="{StaticResource ChampionPillBorderStyle}"
+                                                                MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <StackPanel Orientation="Horizontal">
                                                                 <TextBlock Text="{Binding DisplayText}"
                                                                            FontSize="12"
-                                                                           Foreground="#CBD5E1"
                                                                            VerticalAlignment="Center" />
-                                                                <Button Content="×"
-                                                                        Click="RemoveChampionButton_Click"
-                                                                        Margin="8,0,0,0"
-                                                                        Padding="4,0"
-                                                                        MinWidth="20"
-                                                                        Background="#1E293B"
-                                                                        Foreground="#E2E8F0"
-                                                                        BorderBrush="#475569"
-                                                                        Cursor="Hand" />
                                                             </StackPanel>
                                                         </Border>
 
