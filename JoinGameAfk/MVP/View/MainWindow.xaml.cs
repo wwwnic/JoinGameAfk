@@ -17,11 +17,15 @@ namespace JoinGameAfk.View
         private static readonly SolidColorBrush InactiveTabBg = new((Color)ColorConverter.ConvertFromString("#0F172A"));
         private static readonly SolidColorBrush ActiveTabFg = new((Color)ColorConverter.ConvertFromString("#E2E8F0"));
         private static readonly SolidColorBrush InactiveTabFg = new((Color)ColorConverter.ConvertFromString("#94A3B8"));
+        private static readonly SolidColorBrush ActiveTabBorder = new((Color)ColorConverter.ConvertFromString("#60A5FA"));
+        private static readonly SolidColorBrush InactiveTabBorder = new((Color)ColorConverter.ConvertFromString("#1E293B"));
         private static readonly SolidColorBrush LobbyPhaseBrush = new((Color)ColorConverter.ConvertFromString("#3B82F6"));
         private static readonly SolidColorBrush ReadyCheckPhaseBrush = new((Color)ColorConverter.ConvertFromString("#2E7D32"));
         private static readonly SolidColorBrush HoverPhaseBrush = new((Color)ColorConverter.ConvertFromString("#F59E0B"));
         private static readonly SolidColorBrush BanPhaseBrush = new((Color)ColorConverter.ConvertFromString("#DC2626"));
         private static readonly SolidColorBrush DefaultPhaseBrush = new((Color)ColorConverter.ConvertFromString("#FFFFFF"));
+        private static readonly Geometry MaximizeWindowIcon = Geometry.Parse("M6,6 H18 V18 H6 Z");
+        private static readonly Geometry RestoreWindowIcon = Geometry.Parse("M8,6 H18 V16 H16 V8 H8 Z M6,10 H14 V18 H6 Z");
 
         private readonly Button[] _tabs;
         private readonly Frame[] _frames;
@@ -39,6 +43,7 @@ namespace JoinGameAfk.View
 
             SourceInitialized += MainWindow_SourceInitialized;
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
+            ActivateTab(0);
             UpdateMaximizeRestoreButton();
         }
 
@@ -58,6 +63,7 @@ namespace JoinGameAfk.View
             {
                 _tabs[i].Background = i == index ? ActiveTabBg : InactiveTabBg;
                 _tabs[i].Foreground = i == index ? ActiveTabFg : InactiveTabFg;
+                _tabs[i].BorderBrush = i == index ? ActiveTabBorder : InactiveTabBorder;
                 _frames[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
             }
         }
@@ -97,7 +103,9 @@ namespace JoinGameAfk.View
 
         private void UpdateMaximizeRestoreButton()
         {
-            MaximizeRestoreButton.Content = WindowState == WindowState.Maximized ? "❐" : "□";
+            bool isMaximized = WindowState == WindowState.Maximized;
+            MaximizeRestoreIcon.Data = isMaximized ? RestoreWindowIcon : MaximizeWindowIcon;
+            MaximizeRestoreButton.ToolTip = isMaximized ? "Restore" : "Maximize";
         }
 
         private IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)

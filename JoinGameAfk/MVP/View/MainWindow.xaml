@@ -21,16 +21,15 @@
 
     <Window.Resources>
         <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="42" />
-            <Setter Property="Height" Value="32" />
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="30" />
             <Setter Property="Margin" Value="6,0,0,0" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#E2E8F0" />
-            <Setter Property="Background" Value="#111827" />
-            <Setter Property="BorderBrush" Value="#1F2937" />
+            <Setter Property="Foreground" Value="#CBD5E1" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="BorderBrush" Value="#1E293B" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -45,9 +44,11 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#1E293B" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#334155" />
+                                <Setter Property="Foreground" Value="#F8FAFC" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.85" />
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -58,8 +59,9 @@
         <Style x:Key="CloseButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource TitleBarButtonStyle}">
-            <Setter Property="Background" Value="#3F1D24" />
+            <Setter Property="Background" Value="#2A1114" />
             <Setter Property="BorderBrush" Value="#7F1D1D" />
+            <Setter Property="Foreground" Value="#FCA5A5" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -74,9 +76,47 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#B91C1C" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#F87171" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.85" />
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TabButtonStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="Foreground" Value="#94A3B8" />
+            <Setter Property="BorderBrush" Value="#1E293B" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="TabBorder" Property="Opacity" Value="0.76" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -85,13 +125,11 @@
         </Style>
     </Window.Resources>
 
-    <Border x:Name="WindowBorder"
-            Background="#05070D"
-            BorderBrush="#1E1E2A"
-            BorderThickness="1"
-            CornerRadius="16">
+    <Border x:Name="WindowBorder">
         <Border.Style>
             <Style TargetType="Border">
+                <Setter Property="Background" Value="#05070D" />
+                <Setter Property="BorderBrush" Value="#1E1E2A" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="16" />
                 <Style.Triggers>
@@ -102,6 +140,7 @@
                 </Style.Triggers>
             </Style>
         </Border.Style>
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -110,25 +149,36 @@
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0"
-                  Margin="12,8,12,6"
+                  Margin="14,10,14,8"
                   Background="Transparent">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="14" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="12" />
+                    <ColumnDefinition Width="14" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
-                    <Border x:Name="TitlePhaseIndicator"
-                            Width="12"
-                            Height="12"
-                            Margin="0,0,10,0"
-                            Background="#FFFFFF"
-                            CornerRadius="6" />
+                    <Border Width="28"
+                            Height="28"
+                            Background="#0F172A"
+                            BorderBrush="#1E293B"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Margin="0,0,10,0">
+                        <Grid>
+                            <Border x:Name="TitlePhaseIndicator"
+                                    Width="10"
+                                    Height="10"
+                                    Background="#FFFFFF"
+                                    CornerRadius="5"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
                     <TextBlock Text="JoinGameAfk"
                                VerticalAlignment="Center"
                                FontSize="15"
@@ -137,7 +187,7 @@
                 </StackPanel>
 
                 <Border Grid.Column="2"
-                        Height="28"
+                        Height="30"
                         VerticalAlignment="Center"
                         Background="Transparent"
                         MouseLeftButtonDown="TitleBar_MouseLeftButtonDown" />
@@ -146,57 +196,70 @@
                             Orientation="Horizontal"
                             HorizontalAlignment="Right">
                     <Button Style="{StaticResource TitleBarButtonStyle}"
-                            Content="—"
-                            Click="MinimizeButton_Click" />
+                            ToolTip="Minimize"
+                            Click="MinimizeButton_Click">
+                        <Path Data="M5,12 H19"
+                              Width="14"
+                              Height="14"
+                              Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="2"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round" />
+                    </Button>
                     <Button x:Name="MaximizeRestoreButton"
                             Style="{StaticResource TitleBarButtonStyle}"
-                            Content="□"
-                            Click="MaximizeRestoreButton_Click" />
+                            ToolTip="Maximize"
+                            Click="MaximizeRestoreButton_Click">
+                        <Path x:Name="MaximizeRestoreIcon"
+                              Data="M6,6 H18 V18 H6 Z"
+                              Width="13"
+                              Height="13"
+                              Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="2"
+                              StrokeLineJoin="Round" />
+                    </Button>
                     <Button Style="{StaticResource CloseButtonStyle}"
-                            Content="✕"
-                            Click="CloseButton_Click" />
+                            ToolTip="Close"
+                            Click="CloseButton_Click">
+                        <Path Data="M6,6 L18,18 M18,6 L6,18"
+                              Width="13"
+                              Height="13"
+                              Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="2"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round" />
+                    </Button>
                 </StackPanel>
             </Grid>
 
-            <WrapPanel Grid.Row="1"
-                       Margin="16,0,16,10"
-                       Orientation="Horizontal">
-                <Button x:Name="TabDashboard"
-                        Content="Dashboard"
-                        Click="TabDashboard_Click"
-                        Padding="14,6"
-                        Margin="0,0,6,6"
-                        FontSize="13"
-                        FontWeight="SemiBold"
-                        Background="#1E293B"
-                        Foreground="#E2E8F0"
-                        BorderThickness="0"
-                        Cursor="Hand" />
-                <Button x:Name="TabChampSelect"
-                        Content="Champion Select"
-                        Click="TabChampSelect_Click"
-                        Padding="14,6"
-                        Margin="0,0,6,6"
-                        FontSize="13"
-                        FontWeight="SemiBold"
-                        Background="#0F172A"
-                        Foreground="#94A3B8"
-                        BorderThickness="0"
-                        Cursor="Hand" />
-                <Button x:Name="TabSettings"
-                        Content="Settings"
-                        Click="TabSettings_Click"
-                        Padding="14,6"
-                        Margin="0,0,6,6"
-                        FontSize="13"
-                        FontWeight="SemiBold"
-                        Background="#0F172A"
-                        Foreground="#94A3B8"
-                        BorderThickness="0"
-                        Cursor="Hand" />
-            </WrapPanel>
+            <Border Grid.Row="1"
+                    Margin="16,0,16,12"
+                    Background="#0B0E14"
+                    BorderBrush="#232836"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Padding="6">
+                <WrapPanel Orientation="Horizontal">
+                    <Button x:Name="TabDashboard"
+                            Content="Dashboard"
+                            Click="TabDashboard_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                    <Button x:Name="TabChampSelect"
+                            Content="Champion Select"
+                            Click="TabChampSelect_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                    <Button x:Name="TabSettings"
+                            Content="Settings"
+                            Click="TabSettings_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                </WrapPanel>
+            </Border>
 
-            <Grid Grid.Row="2" Margin="16,0,16,16">
+            <Grid Grid.Row="2"
+                  Margin="16,0,16,16">
                 <Frame x:Name="DashboardFrame"
                        NavigationUIVisibility="Hidden"
                        Background="Transparent"
