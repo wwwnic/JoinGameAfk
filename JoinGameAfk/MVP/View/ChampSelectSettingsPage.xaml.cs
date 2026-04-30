@@ -33,6 +33,9 @@ namespace JoinGameAfk.View
         private bool _activeTargetIsPick;
         private Point _dragStartPoint;
         private ChampionSelectionItem? _draggedChampion;
+        private ChampionSelectionItem? _pendingSelectionChampion;
+        private ModifierKeys _pendingSelectionModifiers;
+        private bool _pendingSelectionShouldToggle;
         private ChampionInfo? _draggedReferenceChampion;
         private bool _suppressReferenceChampionClick;
         private bool _isChampionDragActive;
@@ -399,11 +402,11 @@ namespace JoinGameAfk.View
             ChampionSearchBox.SelectAll();
         }
 
-        private void UpdateChampionSelection(ChampionSelectionItem champion, ModifierKeys modifiers)
+        private void UpdateChampionSelection(ChampionSelectionItem champion, ModifierKeys modifiers, bool shouldToggleSelection)
         {
             bool isControlPressed = (modifiers & ModifierKeys.Control) == ModifierKeys.Control;
             bool isShiftPressed = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
-            bool shouldToggleSelection = isControlPressed || ShouldTreatClickAsControlSelection(champion, isShiftPressed);
+            shouldToggleSelection |= isControlPressed;
 
             if (isShiftPressed
                 && _selectionAnchorChampion is not null
@@ -540,11 +543,12 @@ namespace JoinGameAfk.View
                 return;
 
             ModifierKeys modifiers = Keyboard.Modifiers;
+            bool isShiftPressed = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
             bool isSelectionModifierPressed = (modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) != ModifierKeys.None;
 
-            UpdateChampionSelection(champion, modifiers);
-            SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
-
+            _pendingSelectionChampion = champion;
+            _pendingSelectionModifiers = modifiers;
+            _pendingSelectionShouldToggle = ShouldTreatClickAsControlSelection(champion, isShiftPressed);
             _draggedChampion = isSelectionModifierPressed ? null : champion;
             _dragStartPoint = e.GetPosition(this);
 
@@ -565,9 +569,37 @@ namespace JoinGameAfk.View
                 return;
 
             var champion = _draggedChampion;
+            ClearPendingChampionSelection();
             StartChampionDrag((DependencyObject)sender, ChampionDragData.FromSelection(champion), currentPosition);
 
             e.Handled = true;
+        }
+
+        private bool TryCommitPendingChampionSelection(DependencyObject? source)
+        {
+            if (_pendingSelectionChampion is not ChampionSelectionItem pendingChampion)
+                return false;
+
+            bool isPendingChampionTarget = TryFindChampionItemTarget(source, out _, out var targetChampion)
+                && ReferenceEquals(targetChampion, pendingChampion);
+
+            if (!isPendingChampionTarget)
+            {
+                ClearPendingChampionSelection();
+                return false;
+            }
+
+            UpdateChampionSelection(pendingChampion, _pendingSelectionModifiers, _pendingSelectionShouldToggle);
+            SetActiveTarget(pendingChampion.Row, pendingChampion.IsPick, focusSearch: false);
+            ClearPendingChampionSelection();
+            return true;
+        }
+
+        private void ClearPendingChampionSelection()
+        {
+            _pendingSelectionChampion = null;
+            _pendingSelectionModifiers = ModifierKeys.None;
+            _pendingSelectionShouldToggle = false;
         }
 
         private void ChampionItem_DragOver(object sender, DragEventArgs e)
@@ -761,6 +793,9 @@ namespace JoinGameAfk.View
                 e.Handled = true;
                 return;
             }
+
+            if (TryCommitPendingChampionSelection(e.OriginalSource as DependencyObject))
+                e.Handled = true;
 
             ClearDragState();
             HideDragPreview();
@@ -1121,6 +1156,7 @@ namespace JoinGameAfk.View
             _isChampionDragActive = false;
             _activeChampionDragData = null;
             _draggedChampion = null;
+            ClearPendingChampionSelection();
             _draggedReferenceChampion = null;
             RefreshTargetBrushes();
         }
