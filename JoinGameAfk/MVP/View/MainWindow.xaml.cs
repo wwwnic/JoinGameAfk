@@ -70,13 +70,33 @@ namespace JoinGameAfk.View
 
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
+            if (IsInsideTitleBarButton(e.OriginalSource as DependencyObject))
+                return;
+
             if (e.ClickCount == 2)
             {
                 ToggleWindowState();
                 return;
             }
 
-            DragMove();
+            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
+                DragMove();
+        }
+
+        private static bool IsInsideTitleBarButton(DependencyObject? source)
+        {
+            DependencyObject? current = source;
+            while (current != null)
+            {
+                if (current is Button)
+                    return true;
+
+                current = current is FrameworkElement frameworkElement && frameworkElement.Parent != null
+                    ? frameworkElement.Parent
+                    : VisualTreeHelper.GetParent(current);
+            }
+
+            return false;
         }
 
         private void MinimizeButton_Click(object sender, RoutedEventArgs e)
