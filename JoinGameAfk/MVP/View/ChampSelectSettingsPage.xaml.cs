@@ -17,6 +17,7 @@ namespace JoinGameAfk.View
     {
         private const double DragAutoScrollEdgeDistance = 56;
         private const double DragAutoScrollStep = 28;
+        private const double ChampionReferenceListMinHeight = 140;
         private const string ChampionPillTag = "ChampionPill";
 
         private static readonly SolidColorBrush ActiveTargetBrush = new((Color)ColorConverter.ConvertFromString("#3B82F6"));
@@ -44,6 +45,7 @@ namespace JoinGameAfk.View
         private bool _dragHoverIsPick;
         private bool _dragHoverInsertAfter;
         private int? _dragHoverTargetIndex;
+        private bool _isChampionReferenceHeightUpdatePending;
 
         public static readonly DependencyProperty IsDeleteModeEnabledProperty = DependencyProperty.Register(
             nameof(IsDeleteModeEnabled),
@@ -103,12 +105,13 @@ namespace JoinGameAfk.View
                 SetActiveTarget(_rows[0], isPick: true);
             }
 
-            Loaded += (_, _) => UpdateChampionReferenceListHeight();
+            Loaded += (_, _) => QueueChampionReferenceListHeightUpdate();
+            PageScrollViewer.SizeChanged += (_, _) => QueueChampionReferenceListHeightUpdate();
         }
 
         private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            UpdateChampionReferenceListHeight();
+            QueueChampionReferenceListHeightUpdate();
         }
 
         private void ChampionSearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -336,6 +339,21 @@ namespace JoinGameAfk.View
             return -1;
         }
 
+        private void QueueChampionReferenceListHeightUpdate()
+        {
+            if (_isChampionReferenceHeightUpdatePending)
+                return;
+
+            _isChampionReferenceHeightUpdatePending = true;
+            Dispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    _isChampionReferenceHeightUpdatePending = false;
+                    UpdateChampionReferenceListHeight();
+                }));
+        }
+
         private void UpdateChampionReferenceListHeight()
         {
             if (!IsLoaded)
@@ -343,14 +361,22 @@ namespace JoinGameAfk.View
 
             double viewportHeight = PageScrollViewer.ViewportHeight > 0
                 ? PageScrollViewer.ViewportHeight
-                : ActualHeight;
+                : PageScrollViewer.ActualHeight > 0
+                    ? PageScrollViewer.ActualHeight
+                    : ActualHeight;
+
+            if (viewportHeight <= 0)
+                return;
+
+            double bottomSpacing = ContentGrid.Margin.Bottom
+                + ChampionSearchCard.Padding.Bottom
+                + ChampionSearchCard.BorderThickness.Bottom;
 
             double availableHeight = viewportHeight
                 - ChampionReferenceBorder.TranslatePoint(new Point(0, 0), PageScrollViewer).Y
-                - ContentGrid.Margin.Bottom
-                - 28;
+                - bottomSpacing;
 
-            ChampionReferenceBorder.MaxHeight = Math.Max(140, availableHeight);
+            ChampionReferenceBorder.Height = Math.Max(ChampionReferenceListMinHeight, availableHeight);
         }
 
         private bool TryAddChampionToActiveTarget(ChampionInfo champion)

@@ -392,7 +392,8 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="5"
+        <Border x:Name="ChampionSearchCard"
+                Grid.Row="5"
                 Grid.RowSpan="4"
                 AllowDrop="True"
                 PreviewDragOver="SearchArea_PreviewDragOver"
