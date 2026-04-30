@@ -62,6 +62,18 @@ namespace JoinGameAfk.View
             private set => SetValue(HasSelectedChampionsProperty, value);
         }
 
+        public static readonly DependencyProperty IsSearchDeleteDropTargetProperty = DependencyProperty.Register(
+            nameof(IsSearchDeleteDropTarget),
+            typeof(bool),
+            typeof(ChampSelectSettingsPage),
+            new PropertyMetadata(false));
+
+        public bool IsSearchDeleteDropTarget
+        {
+            get => (bool)GetValue(IsSearchDeleteDropTargetProperty);
+            private set => SetValue(IsSearchDeleteDropTargetProperty, value);
+        }
+
         public ChampSelectSettingsPage(ChampSelectSettings settings)
         {
             InitializeComponent();
@@ -525,6 +537,34 @@ namespace JoinGameAfk.View
             return true;
         }
 
+        private bool DeleteDraggedChampion(ChampionDragData champion)
+        {
+            if (champion.SourceItem is not ChampionSelectionItem sourceItem)
+                return false;
+
+            var collection = GetChampionCollection(sourceItem.Row, sourceItem.IsPick);
+            if (!collection.Remove(sourceItem))
+                return false;
+
+            if (ReferenceEquals(_selectionAnchorChampion, sourceItem))
+                _selectionAnchorChampion = null;
+
+            UpdateRowTextFromCollection(sourceItem.Row, sourceItem.IsPick);
+            SaveChampionPreferences();
+            RefreshSelectedChampionState();
+            return true;
+        }
+
+        private static bool CanDeleteChampionFromSearchArea(ChampionDragData champion)
+        {
+            return champion.SourceItem is not null;
+        }
+
+        private bool IsPointerOverSearchDeleteArea(Point pagePosition)
+        {
+            return IsPointInsideElement(ChampionSearchCard, TranslatePoint(pagePosition, ChampionSearchCard));
+        }
+
         private void RefreshSelectedChampionState()
         {
             int selectedChampionCount = _rows.Sum(row =>
@@ -715,6 +755,7 @@ namespace JoinGameAfk.View
             if (!TryGetChampionDragData(e, out _))
                 return;
 
+            IsSearchDeleteDropTarget = false;
             ClearInsertionIndicator();
             if (!UpdateDragFeedback(e))
             {
@@ -735,6 +776,7 @@ namespace JoinGameAfk.View
             Point position = e.GetPosition(this);
             if (!IsPointInsideElement(this, position))
             {
+                IsSearchDeleteDropTarget = false;
                 ClearInsertionIndicator();
                 HideDragPreview();
                 e.Effects = DragDropEffects.None;
@@ -744,26 +786,32 @@ namespace JoinGameAfk.View
 
         private void SearchArea_PreviewDragOver(object sender, DragEventArgs e)
         {
-            if (!TryGetChampionDragData(e, out _))
+            if (!TryGetChampionDragData(e, out var champion))
                 return;
 
             ClearInsertionIndicator();
+            IsSearchDeleteDropTarget = CanDeleteChampionFromSearchArea(champion);
             if (!UpdateDragFeedback(e))
             {
+                IsSearchDeleteDropTarget = false;
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
             }
 
-            e.Effects = DragDropEffects.None;
+            e.Effects = IsSearchDeleteDropTarget ? DragDropEffects.Move : DragDropEffects.None;
             e.Handled = true;
         }
 
         private void SearchArea_PreviewDrop(object sender, DragEventArgs e)
         {
-            if (!TryGetChampionDragData(e, out _))
+            if (!TryGetChampionDragData(e, out var champion))
                 return;
 
+            if (CanDeleteChampionFromSearchArea(champion))
+                DeleteDraggedChampion(champion);
+
+            IsSearchDeleteDropTarget = false;
             ClearInsertionIndicator();
             e.Effects = DragDropEffects.None;
             e.Handled = true;
@@ -976,7 +1024,11 @@ namespace JoinGameAfk.View
                     if (pagePosition is Point position)
                         UpdateManualChampionDrag(position);
 
-                    if (_dragHoverRow is not null && _dragHoverTargetIndex is int targetIndex)
+                    if (IsSearchDeleteDropTarget && CanDeleteChampionFromSearchArea(_activeChampionDragData))
+                    {
+                        DeleteDraggedChampion(_activeChampionDragData);
+                    }
+                    else if (_dragHoverRow is not null && _dragHoverTargetIndex is int targetIndex)
                     {
                         DropChampionOnTarget(
                             _activeChampionDragData,
@@ -1019,8 +1071,19 @@ namespace JoinGameAfk.View
                 return;
 
             if (!UpdateDragFeedback(pagePosition))
+            {
+                IsSearchDeleteDropTarget = false;
                 return;
+            }
 
+            if (CanDeleteChampionFromSearchArea(champion) && IsPointerOverSearchDeleteArea(pagePosition))
+            {
+                ClearInsertionIndicator();
+                IsSearchDeleteDropTarget = true;
+                return;
+            }
+
+            IsSearchDeleteDropTarget = false;
             DependencyObject? hitElement = InputHitTest(pagePosition) as DependencyObject;
             if (TryFindChampionItemTarget(hitElement, out var itemElement, out var targetChampion))
             {
@@ -1153,6 +1216,7 @@ namespace JoinGameAfk.View
         private void ClearDragState()
         {
             ClearInsertionIndicator();
+            IsSearchDeleteDropTarget = false;
             _isChampionDragActive = false;
             _activeChampionDragData = null;
             _draggedChampion = null;

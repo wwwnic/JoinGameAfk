@@ -20,6 +20,26 @@
             <Setter Property="Padding" Value="16" />
         </Style>
 
+        <Style x:Key="SearchDeleteDropCardStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource SectionCardStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                    <Setter Property="Background" Value="#2A1114" />
+                    <Setter Property="BorderBrush" Value="#EF4444" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SearchDeleteOverlayStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -389,7 +409,7 @@
                 AllowDrop="True"
                 PreviewDragOver="SearchArea_PreviewDragOver"
                 PreviewDrop="SearchArea_PreviewDrop"
-                Style="{StaticResource SectionCardStyle}">
+                Style="{StaticResource SearchDeleteDropCardStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -451,6 +471,28 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </ScrollViewer>
+                </Border>
+
+                <Border Grid.RowSpan="4"
+                        Style="{StaticResource SearchDeleteOverlayStyle}"
+                        Background="#992A1114"
+                        BorderBrush="#EF4444"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        IsHitTestVisible="False">
+                    <Viewbox Width="42"
+                             Height="42"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center">
+                        <Canvas Width="24" Height="24">
+                            <Path Stroke="#FEE2E2"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="M3,6 L5,6 M5,6 L21,6 M19,6 L21,6 M8,6 L8,4 L16,4 L16,6 M6,6 L7,21 L17,21 L18,6 M10,11 L10,17 M14,11 L14,17" />
+                        </Canvas>
+                    </Viewbox>
                 </Border>
             </Grid>
         </Border>
