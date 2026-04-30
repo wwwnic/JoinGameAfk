@@ -13,26 +13,38 @@ namespace JoinGameAfk.View
         private const int MonitorDefaultToNearest = 0x00000002;
         private const int WmGetMinMaxInfoMessage = 0x0024;
 
-        private static readonly SolidColorBrush ActiveTabBg = new((Color)ColorConverter.ConvertFromString("#1E293B"));
-        private static readonly SolidColorBrush InactiveTabBg = new((Color)ColorConverter.ConvertFromString("#0F172A"));
-        private static readonly SolidColorBrush ActiveTabFg = new((Color)ColorConverter.ConvertFromString("#E2E8F0"));
-        private static readonly SolidColorBrush InactiveTabFg = new((Color)ColorConverter.ConvertFromString("#94A3B8"));
-        private static readonly SolidColorBrush ActiveTabBorder = new((Color)ColorConverter.ConvertFromString("#60A5FA"));
-        private static readonly SolidColorBrush InactiveTabBorder = new((Color)ColorConverter.ConvertFromString("#1E293B"));
-        private static readonly SolidColorBrush LobbyPhaseBrush = new((Color)ColorConverter.ConvertFromString("#3B82F6"));
-        private static readonly SolidColorBrush ReadyCheckPhaseBrush = new((Color)ColorConverter.ConvertFromString("#2E7D32"));
-        private static readonly SolidColorBrush HoverPhaseBrush = new((Color)ColorConverter.ConvertFromString("#F59E0B"));
-        private static readonly SolidColorBrush BanPhaseBrush = new((Color)ColorConverter.ConvertFromString("#DC2626"));
-        private static readonly SolidColorBrush DefaultPhaseBrush = new((Color)ColorConverter.ConvertFromString("#FFFFFF"));
         private static readonly Geometry MaximizeWindowIcon = Geometry.Parse("M6,6 H18 V18 H6 Z");
         private static readonly Geometry RestoreWindowIcon = Geometry.Parse("M8,6 H18 V16 H16 V8 H8 Z M6,10 H14 V18 H6 Z");
 
         private readonly Button[] _tabs;
         private readonly Frame[] _frames;
+        private readonly Brush _activeTabBg;
+        private readonly Brush _inactiveTabBg;
+        private readonly Brush _activeTabFg;
+        private readonly Brush _inactiveTabFg;
+        private readonly Brush _activeTabBorder;
+        private readonly Brush _inactiveTabBorder;
+        private readonly Brush _lobbyPhaseBrush;
+        private readonly Brush _readyCheckPhaseBrush;
+        private readonly Brush _hoverPhaseBrush;
+        private readonly Brush _banPhaseBrush;
+        private readonly Brush _defaultPhaseBrush;
 
         public MainWindow(PhaseProgressionPage dashboardPage, ChampSelectSettingsPage champSelectPage, SettingsPage settingsPage)
         {
             InitializeComponent();
+
+            _activeTabBg = ResourceBrush("TabActiveBackgroundBrush", Brushes.SlateGray);
+            _inactiveTabBg = ResourceBrush("TabInactiveBackgroundBrush", Brushes.Transparent);
+            _activeTabFg = ResourceBrush("TabActiveForegroundBrush", Brushes.White);
+            _inactiveTabFg = ResourceBrush("TabInactiveForegroundBrush", Brushes.Gray);
+            _activeTabBorder = ResourceBrush("TabActiveBorderBrush", Brushes.DodgerBlue);
+            _inactiveTabBorder = ResourceBrush("TabInactiveBorderBrush", Brushes.Transparent);
+            _lobbyPhaseBrush = ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue);
+            _readyCheckPhaseBrush = ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen);
+            _hoverPhaseBrush = ResourceBrush("PhaseHoverBrush", Brushes.DarkOrange);
+            _banPhaseBrush = ResourceBrush("PhaseBanBrush", Brushes.Firebrick);
+            _defaultPhaseBrush = ResourceBrush("PhaseDefaultBrush", Brushes.White);
 
             DashboardFrame.Content = dashboardPage;
             ChampSelectFrame.Content = champSelectPage;
@@ -61,9 +73,9 @@ namespace JoinGameAfk.View
         {
             for (int i = 0; i < _tabs.Length; i++)
             {
-                _tabs[i].Background = i == index ? ActiveTabBg : InactiveTabBg;
-                _tabs[i].Foreground = i == index ? ActiveTabFg : InactiveTabFg;
-                _tabs[i].BorderBrush = i == index ? ActiveTabBorder : InactiveTabBorder;
+                _tabs[i].Background = i == index ? _activeTabBg : _inactiveTabBg;
+                _tabs[i].Foreground = i == index ? _activeTabFg : _inactiveTabFg;
+                _tabs[i].BorderBrush = i == index ? _activeTabBorder : _inactiveTabBorder;
                 _frames[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
             }
         }
@@ -167,13 +179,18 @@ namespace JoinGameAfk.View
             {
                 TitlePhaseIndicator.Background = phase switch
                 {
-                    ClientPhase.Lobby or ClientPhase.Matchmaking => LobbyPhaseBrush,
-                    ClientPhase.ReadyCheck => ReadyCheckPhaseBrush,
-                    ClientPhase.Planning => HoverPhaseBrush,
-                    ClientPhase.ChampSelect => BanPhaseBrush,
-                    _ => DefaultPhaseBrush
+                    ClientPhase.Lobby or ClientPhase.Matchmaking => _lobbyPhaseBrush,
+                    ClientPhase.ReadyCheck => _readyCheckPhaseBrush,
+                    ClientPhase.Planning => _hoverPhaseBrush,
+                    ClientPhase.ChampSelect => _banPhaseBrush,
+                    _ => _defaultPhaseBrush
                 };
             });
+        }
+
+        private Brush ResourceBrush(string key, Brush fallback)
+        {
+            return TryFindResource(key) as Brush ?? fallback;
         }
 
         [DllImport("user32.dll")]

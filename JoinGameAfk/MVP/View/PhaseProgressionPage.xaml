@@ -2,100 +2,6 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
-    <Page.Resources>
-        <Style x:Key="AccentButtonStyle" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="MinHeight" Value="42" />
-            <Setter Property="Padding" Value="22,11" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.75" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="DashboardCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="#0B0E14" />
-            <Setter Property="BorderBrush" Value="#232836" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="16" />
-        </Style>
-
-        <Style x:Key="PriorityListContainerStyle" TargetType="Border">
-            <Setter Property="Background" Value="#111827" />
-            <Setter Property="BorderBrush" Value="#334155" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="6" />
-            <Setter Property="MinHeight" Value="46" />
-            <Setter Property="VerticalAlignment" Value="Top" />
-            <Setter Property="SnapsToDevicePixels" Value="True" />
-            <Setter Property="UseLayoutRounding" Value="True" />
-        </Style>
-
-        <Style x:Key="PriorityChampionChipStyle" TargetType="Border">
-            <Setter Property="Background" Value="#182338" />
-            <Setter Property="BorderBrush" Value="#334155" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="10,0" />
-            <Setter Property="Margin" Value="0,3,6,3" />
-            <Setter Property="MinHeight" Value="28" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="SnapsToDevicePixels" Value="True" />
-            <Setter Property="UseLayoutRounding" Value="True" />
-            <Setter Property="TextElement.Foreground" Value="#CBD5E1" />
-        </Style>
-
-        <Style x:Key="ChampionChipTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="LineHeight" Value="16" />
-            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
-        </Style>
-
-        <Style x:Key="EyebrowTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#64748B" />
-        </Style>
-
-        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#E2E8F0" />
-        </Style>
-
-        <Style x:Key="MutedTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="#94A3B8" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-    </Page.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -106,8 +12,8 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="#12121A"
-                BorderBrush="#1E1E2A"
+                Background="{StaticResource AppSurfaceAltBrush}"
+                BorderBrush="{StaticResource AppSubtleBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="14"
                 Padding="18,16">
@@ -123,7 +29,7 @@
                 <Button x:Name="ToggleButton"
                         Grid.Column="0"
                         Width="116"
-                        Background="#2E7D32"
+                        Background="{StaticResource WatcherStartBrush}"
                         Content="Start"
                         Style="{StaticResource AccentButtonStyle}"
                         Click="ToggleButton_Click" />
@@ -137,19 +43,19 @@
                                Margin="0,3,0,0"
                                FontSize="22"
                                FontWeight="SemiBold"
-                               Foreground="#F8FAFC" />
+                               Foreground="{StaticResource TextPrimaryBrush}" />
                     <TextBlock x:Name="ConnectionText"
                                Margin="0,4,0,0"
                                Text="Client offline"
                                FontSize="12"
                                FontWeight="SemiBold"
-                               Foreground="#FCA5A5" />
+                               Foreground="{StaticResource PhaseOfflineForegroundBrush}" />
                 </StackPanel>
 
                 <Border Grid.Column="4"
                         MinWidth="150"
-                        Background="#0F172A"
-                        BorderBrush="#1E293B"
+                        Background="{StaticResource AppSurfaceInsetBrush}"
+                        BorderBrush="{StaticResource AppMutedBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="10"
                         Padding="14,10"
@@ -182,7 +88,7 @@
                                    Text=""
                                    FontSize="14"
                                    FontWeight="SemiBold"
-                                   Foreground="#F8FAFC"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
                                    TextWrapping="Wrap" />
                         <TextBlock x:Name="ChampSelectTimerText"
                                    Grid.Row="2"
@@ -190,7 +96,7 @@
                                    Text=""
                                    FontSize="14"
                                    FontWeight="SemiBold"
-                                   Foreground="#93C5FD"
+                                   Foreground="{StaticResource AccentBlueSoftBrush}"
                                    HorizontalAlignment="Right" />
                     </Grid>
                 </Border>
@@ -217,7 +123,7 @@
                         <Border Grid.Column="0"
                                 Width="4"
                                 Height="34"
-                                Background="#60A5FA"
+                                Background="{StaticResource AccentBlueBrush}"
                                 CornerRadius="2" />
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Pick plan"
@@ -233,7 +139,7 @@
                             <TextBlock x:Name="PickChampionPlaceholderText"
                                        Text="Waiting for champion select."
                                        FontSize="12"
-                                       Foreground="#64748B"
+                                       Foreground="{StaticResource TextSubtleBrush}"
                                        FontStyle="Italic"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center"
@@ -252,9 +158,9 @@
                                                 <Style TargetType="Border" BasedOn="{StaticResource PriorityChampionChipStyle}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                            <Setter Property="Background" Value="#351417" />
-                                                            <Setter Property="BorderBrush" Value="#DC2626" />
-                                                            <Setter Property="TextElement.Foreground" Value="#FCA5A5" />
+                                                            <Setter Property="Background" Value="{StaticResource DangerSurfaceRaisedBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
+                                                            <Setter Property="TextElement.Foreground" Value="{StaticResource DangerTextBrush}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -278,8 +184,8 @@
                         </Grid>
                     </Border>
 
-                    <Border Background="#0F172A"
-                            BorderBrush="#1E293B"
+                    <Border Background="{StaticResource AppSurfaceInsetBrush}"
+                            BorderBrush="{StaticResource AppMutedBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="9"
                             Padding="12"
@@ -290,7 +196,7 @@
                             <TextBlock x:Name="PickLockValueText"
                                        Margin="0,5,0,0"
                                        FontSize="13"
-                                       Foreground="#CBD5E1"
+                                       Foreground="{StaticResource TextSoftBrush}"
                                        Text="-"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -311,7 +217,7 @@
                         <Border Grid.Column="0"
                                 Width="4"
                                 Height="34"
-                                Background="#EF4444"
+                                Background="{StaticResource DangerAccentBrush}"
                                 CornerRadius="2" />
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Ban plan"
@@ -327,7 +233,7 @@
                             <TextBlock x:Name="BanChampionPlaceholderText"
                                        Text="Waiting for champion select."
                                        FontSize="12"
-                                       Foreground="#64748B"
+                                       Foreground="{StaticResource TextSubtleBrush}"
                                        FontStyle="Italic"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center"
@@ -346,9 +252,9 @@
                                                 <Style TargetType="Border" BasedOn="{StaticResource PriorityChampionChipStyle}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                            <Setter Property="Background" Value="#351417" />
-                                                            <Setter Property="BorderBrush" Value="#DC2626" />
-                                                            <Setter Property="TextElement.Foreground" Value="#FCA5A5" />
+                                                            <Setter Property="Background" Value="{StaticResource DangerSurfaceRaisedBrush}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource DangerBrush}" />
+                                                            <Setter Property="TextElement.Foreground" Value="{StaticResource DangerTextBrush}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -372,8 +278,8 @@
                         </Grid>
                     </Border>
 
-                    <Border Background="#0F172A"
-                            BorderBrush="#1E293B"
+                    <Border Background="{StaticResource AppSurfaceInsetBrush}"
+                            BorderBrush="{StaticResource AppMutedBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="9"
                             Padding="12"
@@ -384,7 +290,7 @@
                             <TextBlock x:Name="BanLockValueText"
                                        Margin="0,5,0,0"
                                        FontSize="13"
-                                       Foreground="#CBD5E1"
+                                       Foreground="{StaticResource TextSoftBrush}"
                                        Text="-"
                                        TextWrapping="Wrap" />
                         </StackPanel>
@@ -413,14 +319,14 @@
                     <Border Grid.Column="0"
                             Width="8"
                             Height="8"
-                            Background="#7DD3A3"
+                            Background="{StaticResource AccentGreenTextBrush}"
                             CornerRadius="4"
                             VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2"
                                Text="Live log"
                                FontSize="13"
                                FontWeight="SemiBold"
-                               Foreground="#CBD5E1" />
+                               Foreground="{StaticResource TextSoftBrush}" />
                 </Grid>
 
                 <Frame x:Name="EmbeddedLogsFrame"

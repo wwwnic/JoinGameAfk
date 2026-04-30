@@ -11,20 +11,25 @@ namespace JoinGameAfk.View
     {
         public event Action<ClientPhase>? PhaseChanged;
 
-        private static readonly SolidColorBrush StartBrush = new((Color)ColorConverter.ConvertFromString("#2E7D32"));
-        private static readonly SolidColorBrush StopBrush = new((Color)ColorConverter.ConvertFromString("#C62828"));
-        private static readonly SolidColorBrush ConnectedFg = new((Color)ColorConverter.ConvertFromString("#4ADE80"));
-        private static readonly SolidColorBrush OfflineFg = new((Color)ColorConverter.ConvertFromString("#FCA5A5"));
-
         private PhaseController? _phaseController;
         private ChampSelectSettings? _settings;
         private ClientPhase _currentPhase;
         private bool _isClientConnected;
         private bool _isWatcherRunning;
+        private readonly Brush _startBrush;
+        private readonly Brush _stopBrush;
+        private readonly Brush _connectedForegroundBrush;
+        private readonly Brush _offlineForegroundBrush;
 
         public PhaseProgressionPage()
         {
             InitializeComponent();
+
+            _startBrush = ResourceBrush("WatcherStartBrush", Brushes.ForestGreen);
+            _stopBrush = ResourceBrush("WatcherStopBrush", Brushes.Firebrick);
+            _connectedForegroundBrush = ResourceBrush("PhaseConnectedForegroundBrush", Brushes.LimeGreen);
+            _offlineForegroundBrush = ResourceBrush("PhaseOfflineForegroundBrush", Brushes.LightCoral);
+
             SetWatcherState(false);
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
@@ -74,7 +79,7 @@ namespace JoinGameAfk.View
             {
                 _isWatcherRunning = isRunning;
                 ToggleButton.Content = isRunning ? "Stop" : "Start";
-                ToggleButton.Background = isRunning ? StopBrush : StartBrush;
+                ToggleButton.Background = isRunning ? _stopBrush : _startBrush;
                 RefreshStatusText();
             });
         }
@@ -85,7 +90,7 @@ namespace JoinGameAfk.View
             {
                 _isClientConnected = isConnected;
                 ConnectionText.Text = isConnected ? "Client connected" : "Client offline";
-                ConnectionText.Foreground = isConnected ? ConnectedFg : OfflineFg;
+                ConnectionText.Foreground = isConnected ? _connectedForegroundBrush : _offlineForegroundBrush;
                 RefreshStatusText();
             });
         }
@@ -150,6 +155,11 @@ namespace JoinGameAfk.View
                 _ when _isWatcherRunning => "Watching",
                 _ => "Stopped"
             };
+        }
+
+        private Brush ResourceBrush(string key, Brush fallback)
+        {
+            return TryFindResource(key) as Brush ?? fallback;
         }
     }
 }

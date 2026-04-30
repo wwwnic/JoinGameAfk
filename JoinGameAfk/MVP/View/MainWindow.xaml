@@ -7,7 +7,7 @@
         Height="900"
         MinWidth="560"
         MinHeight="440"
-        Background="#05070D"
+        Background="{StaticResource AppBackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
         WindowStyle="None">
@@ -19,128 +19,8 @@
                             UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
 
-    <Window.Resources>
-        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="38" />
-            <Setter Property="Height" Value="30" />
-            <Setter Property="Margin" Value="6,0,0,0" />
-            <Setter Property="Foreground" Value="#CBD5E1" />
-            <Setter Property="Background" Value="#0F172A" />
-            <Setter Property="BorderBrush" Value="#1E293B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#1E293B" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#334155" />
-                                <Setter Property="Foreground" Value="#F8FAFC" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="CloseButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource TitleBarButtonStyle}">
-            <Setter Property="Background" Value="#2A1114" />
-            <Setter Property="BorderBrush" Value="#7F1D1D" />
-            <Setter Property="Foreground" Value="#FCA5A5" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#B91C1C" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#F87171" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="TabButtonStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="34" />
-            <Setter Property="Padding" Value="16,7" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Background" Value="#0F172A" />
-            <Setter Property="Foreground" Value="#94A3B8" />
-            <Setter Property="BorderBrush" Value="#1E293B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="TabBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="9"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabBorder" Property="Opacity" Value="0.9" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="TabBorder" Property="Opacity" Value="0.76" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
-    <Border x:Name="WindowBorder">
-        <Border.Style>
-            <Style TargetType="Border">
-                <Setter Property="Background" Value="#05070D" />
-                <Setter Property="BorderBrush" Value="#1E1E2A" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="16" />
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WindowState}" Value="Maximized">
-                        <Setter Property="BorderThickness" Value="0" />
-                        <Setter Property="CornerRadius" Value="0" />
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Border.Style>
-
+    <Border x:Name="WindowBorder"
+            Style="{StaticResource AppWindowBorderStyle}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -166,8 +46,8 @@
                                 VerticalAlignment="Center">
                         <Border Width="28"
                                 Height="28"
-                                Background="#0F172A"
-                                BorderBrush="#1E293B"
+                                Background="{StaticResource AppSurfaceInsetBrush}"
+                                BorderBrush="{StaticResource AppMutedBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Margin="0,0,10,0">
@@ -175,7 +55,7 @@
                                 <Border x:Name="TitlePhaseIndicator"
                                         Width="10"
                                         Height="10"
-                                        Background="#FFFFFF"
+                                        Background="{StaticResource PhaseDefaultBrush}"
                                         CornerRadius="5"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center" />
@@ -185,7 +65,7 @@
                                    VerticalAlignment="Center"
                                    FontSize="15"
                                    FontWeight="SemiBold"
-                                   Foreground="#F8FAFC" />
+                                   Foreground="{StaticResource TextPrimaryBrush}" />
                     </StackPanel>
 
                     <Border Grid.Column="2"
@@ -239,8 +119,8 @@
 
             <Border Grid.Row="1"
                     Margin="16,0,16,12"
-                    Background="#0B0E14"
-                    BorderBrush="#232836"
+                    Background="{StaticResource AppSurfaceBrush}"
+                    BorderBrush="{StaticResource AppBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="6">

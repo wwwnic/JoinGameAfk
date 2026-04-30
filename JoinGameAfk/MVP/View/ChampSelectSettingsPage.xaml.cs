@@ -21,16 +21,16 @@ namespace JoinGameAfk.View
         private const double ScrollableHeightVisibilityThreshold = 1;
         private const string ChampionPillTag = "ChampionPill";
 
-        private static readonly SolidColorBrush ActiveTargetBrush = new((Color)ColorConverter.ConvertFromString("#3B82F6"));
-        private static readonly SolidColorBrush InactiveTargetBrush = new((Color)ColorConverter.ConvertFromString("#334155"));
-        private static readonly SolidColorBrush DropHoverTargetBrush = new((Color)ColorConverter.ConvertFromString("#60A5FA"));
-        private static readonly SolidColorBrush ActiveTargetBackgroundBrush = new((Color)ColorConverter.ConvertFromString("#0F1B2D"));
-        private static readonly SolidColorBrush InactiveTargetBackgroundBrush = new((Color)ColorConverter.ConvertFromString("#111827"));
-        private static readonly SolidColorBrush DropHoverBackgroundBrush = new((Color)ColorConverter.ConvertFromString("#102A43"));
         private readonly ChampSelectSettings _settings;
         private readonly List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private readonly List<PositionRow> _rows;
+        private readonly Brush _activeTargetBrush;
+        private readonly Brush _inactiveTargetBrush;
+        private readonly Brush _dropHoverTargetBrush;
+        private readonly Brush _activeTargetBackgroundBrush;
+        private readonly Brush _inactiveTargetBackgroundBrush;
+        private readonly Brush _dropHoverBackgroundBrush;
         private PositionRow? _activeTargetRow;
         private bool _activeTargetIsPick;
         private Point _dragStartPoint;
@@ -81,6 +81,12 @@ namespace JoinGameAfk.View
         {
             InitializeComponent();
             _settings = settings;
+            _activeTargetBrush = ResourceBrush("TargetActiveBrush", Brushes.DodgerBlue);
+            _inactiveTargetBrush = ResourceBrush("TargetInactiveBrush", Brushes.SlateGray);
+            _dropHoverTargetBrush = ResourceBrush("TargetDropHoverBrush", Brushes.DeepSkyBlue);
+            _activeTargetBackgroundBrush = ResourceBrush("TargetActiveBackgroundBrush", Brushes.Transparent);
+            _inactiveTargetBackgroundBrush = ResourceBrush("TargetInactiveBackgroundBrush", Brushes.Transparent);
+            _dropHoverBackgroundBrush = ResourceBrush("TargetDropHoverBackgroundBrush", Brushes.Transparent);
 
             _allChampions = ChampionCatalog.All
                 .OrderBy(champion => champion.Name)
@@ -110,10 +116,10 @@ namespace JoinGameAfk.View
 
                 UpdateRowTextFromCollection(row, isPick: true);
                 UpdateRowTextFromCollection(row, isPick: false);
-                row.PickBorderBrush = InactiveTargetBrush;
-                row.BanBorderBrush = InactiveTargetBrush;
-                row.PickBackgroundBrush = InactiveTargetBackgroundBrush;
-                row.BanBackgroundBrush = InactiveTargetBackgroundBrush;
+                row.PickBorderBrush = _inactiveTargetBrush;
+                row.BanBorderBrush = _inactiveTargetBrush;
+                row.PickBackgroundBrush = _inactiveTargetBackgroundBrush;
+                row.BanBackgroundBrush = _inactiveTargetBackgroundBrush;
                 _rows.Add(row);
             }
 
@@ -1561,10 +1567,10 @@ namespace JoinGameAfk.View
                 bool pickActive = ReferenceEquals(_activeTargetRow, row) && _activeTargetIsPick;
                 bool banActive = ReferenceEquals(_activeTargetRow, row) && !_activeTargetIsPick;
 
-                row.PickBorderBrush = pickDropHover ? DropHoverTargetBrush : pickActive ? ActiveTargetBrush : InactiveTargetBrush;
-                row.BanBorderBrush = banDropHover ? DropHoverTargetBrush : banActive ? ActiveTargetBrush : InactiveTargetBrush;
-                row.PickBackgroundBrush = pickDropHover ? DropHoverBackgroundBrush : pickActive ? ActiveTargetBackgroundBrush : InactiveTargetBackgroundBrush;
-                row.BanBackgroundBrush = banDropHover ? DropHoverBackgroundBrush : banActive ? ActiveTargetBackgroundBrush : InactiveTargetBackgroundBrush;
+                row.PickBorderBrush = pickDropHover ? _dropHoverTargetBrush : pickActive ? _activeTargetBrush : _inactiveTargetBrush;
+                row.BanBorderBrush = banDropHover ? _dropHoverTargetBrush : banActive ? _activeTargetBrush : _inactiveTargetBrush;
+                row.PickBackgroundBrush = pickDropHover ? _dropHoverBackgroundBrush : pickActive ? _activeTargetBackgroundBrush : _inactiveTargetBackgroundBrush;
+                row.BanBackgroundBrush = banDropHover ? _dropHoverBackgroundBrush : banActive ? _activeTargetBackgroundBrush : _inactiveTargetBackgroundBrush;
             }
         }
 
@@ -1589,6 +1595,11 @@ namespace JoinGameAfk.View
                 row.PickChampionIds = text;
             else
                 row.BanChampionIds = text;
+        }
+
+        private Brush ResourceBrush(string key, Brush fallback)
+        {
+            return TryFindResource(key) as Brush ?? fallback;
         }
 
         private sealed class ChampionDragData
