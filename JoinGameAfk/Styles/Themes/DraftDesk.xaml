@@ -1,0 +1,78 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#05070D" />
+    <SolidColorBrush x:Key="AppSurfaceBrush" Color="#0B0E14" />
+    <SolidColorBrush x:Key="AppSurfaceAltBrush" Color="#12121A" />
+    <SolidColorBrush x:Key="AppSurfaceRaisedBrush" Color="#111827" />
+    <SolidColorBrush x:Key="AppSurfaceInsetBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="AppInputBrush" Color="#182338" />
+    <SolidColorBrush x:Key="AppInputHoverBrush" Color="#22304A" />
+    <SolidColorBrush x:Key="AppInputPressedBrush" Color="#17223A" />
+    <SolidColorBrush x:Key="AppInputFocusBrush" Color="#1E293B" />
+
+    <SolidColorBrush x:Key="AppSubtleBorderBrush" Color="#1E1E2A" />
+    <SolidColorBrush x:Key="AppBorderBrush" Color="#232836" />
+    <SolidColorBrush x:Key="AppMutedBorderBrush" Color="#1E293B" />
+    <SolidColorBrush x:Key="AppStrongBorderBrush" Color="#334155" />
+    <SolidColorBrush x:Key="AppHoverBorderBrush" Color="#475569" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F8FAFC" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="TextSoftBrush" Color="#CBD5E1" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8" />
+    <SolidColorBrush x:Key="TextSubtleBrush" Color="#64748B" />
+    <SolidColorBrush x:Key="TextInverseBrush" Color="#FFFFFF" />
+
+    <SolidColorBrush x:Key="AccentBlueBrush" Color="#60A5FA" />
+    <SolidColorBrush x:Key="AccentBlueSoftBrush" Color="#93C5FD" />
+    <SolidColorBrush x:Key="AccentBluePaleBrush" Color="#BFDBFE" />
+    <SolidColorBrush x:Key="AccentBlueTextBrush" Color="#EFF6FF" />
+    <SolidColorBrush x:Key="AccentBlueDeepBrush" Color="#1E3A8A" />
+    <SolidColorBrush x:Key="AccentBlueStrongBrush" Color="#1D4ED8" />
+    <SolidColorBrush x:Key="AccentBlueActionBrush" Color="#2563EB" />
+    <SolidColorBrush x:Key="AccentBlueInfoBrush" Color="#102647" />
+
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#2E7D32" />
+    <SolidColorBrush x:Key="AccentGreenTextBrush" Color="#7DD3A3" />
+    <SolidColorBrush x:Key="AccentConnectedBrush" Color="#4ADE80" />
+    <SolidColorBrush x:Key="AccentAmberBrush" Color="#F59E0B" />
+
+    <SolidColorBrush x:Key="DangerBrush" Color="#DC2626" />
+    <SolidColorBrush x:Key="DangerStrongBrush" Color="#C62828" />
+    <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#2A1114" />
+    <SolidColorBrush x:Key="DangerOverlayBrush" Color="#992A1114" />
+    <SolidColorBrush x:Key="DangerSurfaceRaisedBrush" Color="#351417" />
+    <SolidColorBrush x:Key="DangerSurfaceDeepBrush" Color="#3A1114" />
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#7F1D1D" />
+    <SolidColorBrush x:Key="DangerAccentBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="DangerHoverBrush" Color="#991B1B" />
+    <SolidColorBrush x:Key="DangerCloseHoverBrush" Color="#B91C1C" />
+    <SolidColorBrush x:Key="DangerLightBrush" Color="#F87171" />
+    <SolidColorBrush x:Key="DangerTextBrush" Color="#FCA5A5" />
+    <SolidColorBrush x:Key="DangerTextSoftBrush" Color="#FECACA" />
+    <SolidColorBrush x:Key="DangerTextPaleBrush" Color="#FEE2E2" />
+
+    <SolidColorBrush x:Key="TabActiveBackgroundBrush" Color="#1E293B" />
+    <SolidColorBrush x:Key="TabInactiveBackgroundBrush" Color="#0F172A" />
+    <SolidColorBrush x:Key="TabActiveForegroundBrush" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="TabInactiveForegroundBrush" Color="#94A3B8" />
+    <SolidColorBrush x:Key="TabActiveBorderBrush" Color="#60A5FA" />
+    <SolidColorBrush x:Key="TabInactiveBorderBrush" Color="#1E293B" />
+
+    <SolidColorBrush x:Key="WatcherStartBrush" Color="#2E7D32" />
+    <SolidColorBrush x:Key="WatcherStopBrush" Color="#C62828" />
+    <SolidColorBrush x:Key="PhaseConnectedForegroundBrush" Color="#4ADE80" />
+    <SolidColorBrush x:Key="PhaseOfflineForegroundBrush" Color="#FCA5A5" />
+    <SolidColorBrush x:Key="PhaseLobbyBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="PhaseReadyCheckBrush" Color="#2E7D32" />
+    <SolidColorBrush x:Key="PhaseHoverBrush" Color="#F59E0B" />
+    <SolidColorBrush x:Key="PhaseBanBrush" Color="#DC2626" />
+    <SolidColorBrush x:Key="PhaseDefaultBrush" Color="#FFFFFF" />
+
+    <SolidColorBrush x:Key="TargetActiveBrush" Color="#3B82F6" />
+    <SolidColorBrush x:Key="TargetInactiveBrush" Color="#334155" />
+    <SolidColorBrush x:Key="TargetDropHoverBrush" Color="#60A5FA" />
+    <SolidColorBrush x:Key="TargetActiveBackgroundBrush" Color="#0F1B2D" />
+    <SolidColorBrush x:Key="TargetInactiveBackgroundBrush" Color="#111827" />
+    <SolidColorBrush x:Key="TargetDropHoverBackgroundBrush" Color="#102A43" />
+</ResourceDictionary>

@@ -51,6 +51,11 @@ namespace JoinGameAfk.Model
         /// </summary>
         public int ChampSelectPollIntervalMs { get; set; } = 1000;
 
+        /// <summary>
+        /// Visual theme selected for the WPF application.
+        /// </summary>
+        public string ThemeKey { get; set; } = "draft-desk";
+
         public Dictionary<Position, PositionPreference> Preferences { get; set; } = new()
         {
             { Position.Default, new PositionPreference() },

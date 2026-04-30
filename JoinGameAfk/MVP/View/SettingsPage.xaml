@@ -11,11 +11,12 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
-                    Background="{StaticResource AppSurfaceBrush}"
-                    BorderBrush="{StaticResource AppBorderBrush}"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="18,16"
@@ -40,14 +41,14 @@
                         <Button x:Name="SaveButton"
                                 Content="Save Settings"
                                 Click="SaveButton_Click"
-                                Background="{StaticResource AccentGreenBrush}"
+                                Background="{DynamicResource AccentGreenBrush}"
                                 Style="{StaticResource AccentButtonStyle}"
                                 Padding="24,10"
                                 HorizontalAlignment="Right" />
 
                         <TextBlock x:Name="SavedLabel"
                                    Text="Settings saved."
-                                   Foreground="{StaticResource AccentGreenTextBrush}"
+                                   Foreground="{DynamicResource AccentGreenTextBrush}"
                                    FontSize="12"
                                    FontWeight="SemiBold"
                                    Margin="0,7,0,0"
@@ -58,6 +59,41 @@
             </Border>
 
             <Border Grid.Row="1"
+                    Style="{StaticResource SectionCardStyle}"
+                    Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Text="Appearance"
+                               Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="App color theme."
+                               Style="{StaticResource SectionDescriptionStyle}"
+                               Margin="0,4,0,0" />
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Theme"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Choose the app palette. Saving a new theme reloads the window."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <ComboBox x:Name="ThemeComboBox"
+                                      Grid.Column="2"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedValuePath="Key"
+                                      Style="{StaticResource AppComboBoxStyle}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,14">
                 <StackPanel>
@@ -97,7 +133,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="2"
+            <Border Grid.Row="3"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,14">
                 <StackPanel>
@@ -116,20 +152,26 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0">
-                                <StackPanel Orientation="Horizontal">
-                                    <CheckBox x:Name="AutoLockSelectionCheckBox"
-                                              Content="Lock picks and bans automatically"
-                                              Style="{StaticResource AppCheckBoxStyle}"
-                                              ToolTip="When enabled, the app locks the current pick or ban using the timers below." />
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Lock picks and bans automatically"
+                                               Style="{StaticResource FieldLabelStyle}" />
                                     <Button Style="{StaticResource InfoIndicatorStyle}"
                                             Content="?"
                                             Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
                                             ToolTip="Turn this off if you want hover automation without automatic lock-in." />
                                 </StackPanel>
                                 <TextBlock Text="Uses your current selected champion when the timer reaches the lock point."
                                            Style="{StaticResource FieldHintStyle}"
-                                           Margin="30,3,0,0" />
+                                           Margin="0,3,0,0" />
                             </StackPanel>
+
+                            <CheckBox x:Name="AutoLockSelectionCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="When enabled, the app locks the current pick or ban using the timers below." />
                         </Grid>
                     </Border>
 
@@ -163,8 +205,8 @@
 
                     <UniformGrid Columns="2"
                                  Margin="0,10,0,0">
-                        <Border Background="{StaticResource AppSurfaceRaisedBrush}"
-                                BorderBrush="{StaticResource AppStrongBorderBrush}"
+                        <Border Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="12"
@@ -196,8 +238,8 @@
                             </Grid>
                         </Border>
 
-                        <Border Background="{StaticResource AppSurfaceRaisedBrush}"
-                                BorderBrush="{StaticResource AppStrongBorderBrush}"
+                        <Border Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="12"
@@ -232,7 +274,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="3"
+            <Border Grid.Row="4"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,14">
                 <StackPanel>
@@ -272,7 +314,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="4"
+            <Border Grid.Row="5"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,14">
                 <StackPanel>
@@ -291,14 +333,14 @@
 
                             <TextBlock x:Name="StoragePathTextBlock"
                                        Grid.Row="0"
-                                       Foreground="{StaticResource TextSoftBrush}"
+                                       Foreground="{DynamicResource TextSoftBrush}"
                                        FontSize="12"
                                        TextWrapping="Wrap" />
 
                             <Button Grid.Row="1"
                                     Content="Open Storage Folder"
                                     Click="OpenStorageFolderButton_Click"
-                                    Background="{StaticResource AppInputFocusBrush}"
+                                    Background="{DynamicResource AppInputFocusBrush}"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Padding="18,9"
                                     Margin="0,12,0,0"

@@ -7,7 +7,7 @@
         Height="900"
         MinWidth="560"
         MinHeight="440"
-        Background="{StaticResource AppBackgroundBrush}"
+        Background="{DynamicResource AppBackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
         WindowStyle="None">
@@ -46,8 +46,8 @@
                                 VerticalAlignment="Center">
                         <Border Width="28"
                                 Height="28"
-                                Background="{StaticResource AppSurfaceInsetBrush}"
-                                BorderBrush="{StaticResource AppMutedBorderBrush}"
+                                Background="{DynamicResource AppSurfaceInsetBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Margin="0,0,10,0">
@@ -55,7 +55,7 @@
                                 <Border x:Name="TitlePhaseIndicator"
                                         Width="10"
                                         Height="10"
-                                        Background="{StaticResource PhaseDefaultBrush}"
+                                        Background="{DynamicResource PhaseDefaultBrush}"
                                         CornerRadius="5"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center" />
@@ -65,7 +65,7 @@
                                    VerticalAlignment="Center"
                                    FontSize="15"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" />
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
                     </StackPanel>
 
                     <Border Grid.Column="2"
@@ -119,8 +119,8 @@
 
             <Border Grid.Row="1"
                     Margin="16,0,16,12"
-                    Background="{StaticResource AppSurfaceBrush}"
-                    BorderBrush="{StaticResource AppBorderBrush}"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="6">

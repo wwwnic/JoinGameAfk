@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
 {
@@ -25,12 +26,12 @@ namespace JoinGameAfk.View
         private readonly List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private readonly List<PositionRow> _rows;
-        private readonly Brush _activeTargetBrush;
-        private readonly Brush _inactiveTargetBrush;
-        private readonly Brush _dropHoverTargetBrush;
-        private readonly Brush _activeTargetBackgroundBrush;
-        private readonly Brush _inactiveTargetBackgroundBrush;
-        private readonly Brush _dropHoverBackgroundBrush;
+        private Brush _activeTargetBrush = Brushes.DodgerBlue;
+        private Brush _inactiveTargetBrush = Brushes.SlateGray;
+        private Brush _dropHoverTargetBrush = Brushes.DeepSkyBlue;
+        private Brush _activeTargetBackgroundBrush = Brushes.Transparent;
+        private Brush _inactiveTargetBackgroundBrush = Brushes.Transparent;
+        private Brush _dropHoverBackgroundBrush = Brushes.Transparent;
         private PositionRow? _activeTargetRow;
         private bool _activeTargetIsPick;
         private Point _dragStartPoint;
@@ -81,12 +82,9 @@ namespace JoinGameAfk.View
         {
             InitializeComponent();
             _settings = settings;
-            _activeTargetBrush = ResourceBrush("TargetActiveBrush", Brushes.DodgerBlue);
-            _inactiveTargetBrush = ResourceBrush("TargetInactiveBrush", Brushes.SlateGray);
-            _dropHoverTargetBrush = ResourceBrush("TargetDropHoverBrush", Brushes.DeepSkyBlue);
-            _activeTargetBackgroundBrush = ResourceBrush("TargetActiveBackgroundBrush", Brushes.Transparent);
-            _inactiveTargetBackgroundBrush = ResourceBrush("TargetInactiveBackgroundBrush", Brushes.Transparent);
-            _dropHoverBackgroundBrush = ResourceBrush("TargetDropHoverBackgroundBrush", Brushes.Transparent);
+            RefreshThemeBrushes();
+            Unloaded += (_, _) => AppThemeManager.ThemeChanged -= RefreshTheme;
+            AppThemeManager.ThemeChanged += RefreshTheme;
 
             _allChampions = ChampionCatalog.All
                 .OrderBy(champion => champion.Name)
@@ -1572,6 +1570,25 @@ namespace JoinGameAfk.View
                 row.PickBackgroundBrush = pickDropHover ? _dropHoverBackgroundBrush : pickActive ? _activeTargetBackgroundBrush : _inactiveTargetBackgroundBrush;
                 row.BanBackgroundBrush = banDropHover ? _dropHoverBackgroundBrush : banActive ? _activeTargetBackgroundBrush : _inactiveTargetBackgroundBrush;
             }
+        }
+
+        private void RefreshTheme()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                RefreshThemeBrushes();
+                RefreshTargetBrushes();
+            });
+        }
+
+        private void RefreshThemeBrushes()
+        {
+            _activeTargetBrush = ResourceBrush("TargetActiveBrush", Brushes.DodgerBlue);
+            _inactiveTargetBrush = ResourceBrush("TargetInactiveBrush", Brushes.SlateGray);
+            _dropHoverTargetBrush = ResourceBrush("TargetDropHoverBrush", Brushes.DeepSkyBlue);
+            _activeTargetBackgroundBrush = ResourceBrush("TargetActiveBackgroundBrush", Brushes.Transparent);
+            _inactiveTargetBackgroundBrush = ResourceBrush("TargetInactiveBackgroundBrush", Brushes.Transparent);
+            _dropHoverBackgroundBrush = ResourceBrush("TargetDropHoverBackgroundBrush", Brushes.Transparent);
         }
 
         private void SaveChampionPreferences()
