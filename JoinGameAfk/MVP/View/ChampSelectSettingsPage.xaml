@@ -32,17 +32,17 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <Style x:Key="DeleteModeToggleButtonStyle" TargetType="ToggleButton">
+        <Style x:Key="DeleteSelectedButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="10,4" />
-            <Setter Property="Background" Value="#1E293B" />
-            <Setter Property="BorderBrush" Value="#475569" />
+            <Setter Property="Background" Value="#7F1D1D" />
+            <Setter Property="BorderBrush" Value="#EF4444" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#E2E8F0" />
-            <Setter Property="ToolTip" Value="Enable delete mode" />
+            <Setter Property="Foreground" Value="#FEE2E2" />
+            <Setter Property="ToolTip" Value="Delete selected champions" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
+                    <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -57,23 +57,16 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#263449" />
-                    <Setter Property="BorderBrush" Value="#64748B" />
-                </Trigger>
-                <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="Background" Value="#7F1D1D" />
-                    <Setter Property="BorderBrush" Value="#EF4444" />
-                    <Setter Property="Foreground" Value="#FEE2E2" />
-                    <Setter Property="ToolTip" Value="Delete mode is on. Click a champion to remove it immediately." />
-                </Trigger>
-                <MultiTrigger>
-                    <MultiTrigger.Conditions>
-                        <Condition Property="IsChecked" Value="True" />
-                        <Condition Property="IsMouseOver" Value="True" />
-                    </MultiTrigger.Conditions>
                     <Setter Property="Background" Value="#991B1B" />
                     <Setter Property="BorderBrush" Value="#F87171" />
-                </MultiTrigger>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#1E293B" />
+                    <Setter Property="BorderBrush" Value="#334155" />
+                    <Setter Property="Foreground" Value="#64748B" />
+                    <Setter Property="Cursor" Value="Arrow" />
+                    <Setter Property="ToolTip" Value="Select one or more champions to delete." />
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -112,22 +105,6 @@
                     <Setter Property="TextElement.Foreground" Value="#FECACA" />
                     <Setter Property="ToolTip" Value="This existing champion will be replaced if you drop here." />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled}" Value="True">
-                    <Setter Property="Background" Value="#2A1114" />
-                    <Setter Property="Cursor" Value="Hand" />
-                    <Setter Property="BorderBrush" Value="#EF4444" />
-                    <Setter Property="TextElement.Foreground" Value="#FECACA" />
-                    <Setter Property="ToolTip" Value="Click to delete" />
-                </DataTrigger>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled}" Value="True" />
-                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Background" Value="#450F12" />
-                    <Setter Property="BorderBrush" Value="#F87171" />
-                    <Setter Property="TextElement.Foreground" Value="#FEE2E2" />
-                </MultiDataTrigger>
             </Style.Triggers>
         </Style>
 
@@ -215,13 +192,14 @@
                                Foreground="#CBD5E1"
                                Margin="6,0,0,6" />
 
-                    <ToggleButton x:Name="DeleteModeToggle"
-                                  Grid.Column="3"
-                                  Content="Delete mode"
-                                  Margin="12,0,0,6"
-                                  VerticalAlignment="Top"
-                                  IsChecked="{Binding ElementName=RootPage, Path=IsDeleteModeEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  Style="{StaticResource DeleteModeToggleButtonStyle}" />
+                    <Button x:Name="DeleteSelectedButton"
+                            Grid.Column="3"
+                            Content="Delete selected"
+                            Margin="12,0,0,6"
+                            VerticalAlignment="Top"
+                            Click="DeleteSelectedButton_Click"
+                            IsEnabled="{Binding ElementName=RootPage, Path=HasSelectedChampions}"
+                            Style="{StaticResource DeleteSelectedButtonStyle}" />
                 </Grid>
 
                 <ItemsControl x:Name="PositionList">
@@ -290,7 +268,6 @@
                                                         <Border Grid.Column="1"
                                                                 Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
-                                                                MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <StackPanel Orientation="Horizontal">
@@ -370,7 +347,6 @@
                                                         <Border Grid.Column="1"
                                                                 Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
-                                                                MouseLeftButtonDown="ChampionItem_MouseLeftButtonDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <StackPanel Orientation="Horizontal">

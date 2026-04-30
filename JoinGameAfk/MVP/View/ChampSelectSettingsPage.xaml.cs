@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using JoinGameAfk.Enums;
@@ -48,16 +47,16 @@ namespace JoinGameAfk.View
         private int? _dragHoverTargetIndex;
         private bool _isChampionReferenceHeightUpdatePending;
 
-        public static readonly DependencyProperty IsDeleteModeEnabledProperty = DependencyProperty.Register(
-            nameof(IsDeleteModeEnabled),
+        public static readonly DependencyProperty HasSelectedChampionsProperty = DependencyProperty.Register(
+            nameof(HasSelectedChampions),
             typeof(bool),
             typeof(ChampSelectSettingsPage),
             new PropertyMetadata(false));
 
-        public bool IsDeleteModeEnabled
+        public bool HasSelectedChampions
         {
-            get => (bool)GetValue(IsDeleteModeEnabledProperty);
-            set => SetValue(IsDeleteModeEnabledProperty, value);
+            get => (bool)GetValue(HasSelectedChampionsProperty);
+            private set => SetValue(HasSelectedChampionsProperty, value);
         }
 
         public ChampSelectSettingsPage(ChampSelectSettings settings)
@@ -148,25 +147,12 @@ namespace JoinGameAfk.View
             }
         }
 
-        private void ChampionItem_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void DeleteSelectedButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!IsDeleteModeEnabled)
-                return;
-
-            if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
-                return;
-
-            var collection = GetChampionCollection(champion.Row, champion.IsPick);
-            if (collection.Remove(champion))
+            if (DeleteSelectedChampions())
             {
-                if (ReferenceEquals(_selectionAnchorChampion, champion))
-                    _selectionAnchorChampion = null;
-
-                UpdateRowTextFromCollection(champion.Row, champion.IsPick);
-                SaveChampionPreferences();
+                e.Handled = true;
             }
-
-            e.Handled = true;
         }
 
         private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -184,6 +170,12 @@ namespace JoinGameAfk.View
             if (_isChampionDragActive && e.Key == Key.Escape)
             {
                 FinishChampionDrag(drop: false);
+                e.Handled = true;
+                return;
+            }
+
+            if (!_isChampionDragActive && !IsSearchBoxFocused() && e.Key == Key.Delete && DeleteSelectedChampions())
+            {
                 e.Handled = true;
                 return;
             }
@@ -274,24 +266,12 @@ namespace JoinGameAfk.View
             if ((sender as FrameworkElement)?.DataContext is not PositionRow row)
                 return;
 
-            if (!TryFindChampionItemTarget(e.OriginalSource as DependencyObject, out _, out _))
+            bool isControlPressed = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            if (!isControlPressed && !TryFindChampionItemTarget(e.OriginalSource as DependencyObject, out _, out _))
                 ClearChampionSelection();
 
             bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             SetActiveTarget(row, isPick);
-        }
-
-        private void RemoveChampionButton_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
-                return;
-
-            var collection = GetChampionCollection(champion.Row, champion.IsPick);
-            if (collection.Remove(champion))
-            {
-                UpdateRowTextFromCollection(champion.Row, champion.IsPick);
-                SaveChampionPreferences();
-            }
         }
 
         private void UpdateChampionFilter()
@@ -423,6 +403,7 @@ namespace JoinGameAfk.View
         {
             bool isControlPressed = (modifiers & ModifierKeys.Control) == ModifierKeys.Control;
             bool isShiftPressed = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+            bool shouldToggleSelection = isControlPressed || ShouldTreatClickAsControlSelection(champion, isShiftPressed);
 
             if (isShiftPressed
                 && _selectionAnchorChampion is not null
@@ -434,19 +415,30 @@ namespace JoinGameAfk.View
                 foreach (var item in range)
                     item.IsSelected = true;
 
+                RefreshSelectedChampionState();
                 return;
             }
 
-            if (isControlPressed)
+            if (shouldToggleSelection)
             {
                 champion.IsSelected = !champion.IsSelected;
                 _selectionAnchorChampion = champion;
+                RefreshSelectedChampionState();
                 return;
             }
 
             ClearChampionSelection();
             champion.IsSelected = true;
             _selectionAnchorChampion = champion;
+            RefreshSelectedChampionState();
+        }
+
+        private bool ShouldTreatClickAsControlSelection(ChampionSelectionItem champion, bool isShiftPressed)
+        {
+            return !isShiftPressed
+                && HasSelectedChampions
+                && ReferenceEquals(_activeTargetRow, champion.Row)
+                && _activeTargetIsPick == champion.IsPick;
         }
 
         private static bool TryGetSelectionRange(
@@ -487,16 +479,63 @@ namespace JoinGameAfk.View
 
             if (resetAnchor)
                 _selectionAnchorChampion = null;
+
+            RefreshSelectedChampionState();
+        }
+
+        private bool DeleteSelectedChampions()
+        {
+            bool removedAny = false;
+
+            foreach (var row in _rows)
+            {
+                removedAny |= DeleteSelectedChampions(row, isPick: true);
+                removedAny |= DeleteSelectedChampions(row, isPick: false);
+            }
+
+            if (!removedAny)
+            {
+                RefreshSelectedChampionState();
+                return false;
+            }
+
+            _selectionAnchorChampion = null;
+            SaveChampionPreferences();
+            RefreshSelectedChampionState();
+            return true;
+        }
+
+        private static bool DeleteSelectedChampions(PositionRow row, bool isPick)
+        {
+            var collection = GetChampionCollection(row, isPick);
+            var selectedChampions = collection
+                .Where(champion => champion.IsSelected)
+                .ToList();
+
+            if (selectedChampions.Count == 0)
+                return false;
+
+            foreach (var champion in selectedChampions)
+                collection.Remove(champion);
+
+            UpdateRowTextFromCollection(row, isPick);
+            return true;
+        }
+
+        private void RefreshSelectedChampionState()
+        {
+            int selectedChampionCount = _rows.Sum(row =>
+                row.PickChampions.Count(champion => champion.IsSelected)
+                + row.BanChampions.Count(champion => champion.IsSelected));
+
+            HasSelectedChampions = selectedChampionCount > 0;
+            DeleteSelectedButton.Content = selectedChampionCount > 0
+                ? $"Delete selected ({selectedChampionCount})"
+                : "Delete selected";
         }
 
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (IsDeleteModeEnabled)
-            {
-                _draggedChampion = null;
-                return;
-            }
-
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 
@@ -801,6 +840,8 @@ namespace JoinGameAfk.View
             if (sourceIndex < 0)
                 return;
 
+            bool wasSelected = champion.IsSelected;
+            bool wasSelectionAnchor = ReferenceEquals(_selectionAnchorChampion, champion);
             bool sameCollection = ReferenceEquals(sourceCollection, targetCollection);
             int destinationIndex = targetIndex ?? targetCollection.Count;
             if (sameCollection)
@@ -830,11 +871,16 @@ namespace JoinGameAfk.View
 
                 destinationIndex = Math.Clamp(destinationIndex, 0, targetCollection.Count);
                 var movedItem = CreateSelectionItem(targetRow, champion.ChampionId, targetIsPick);
+                movedItem.IsSelected = wasSelected;
                 targetCollection.Insert(destinationIndex, movedItem);
+                if (wasSelectionAnchor)
+                    _selectionAnchorChampion = movedItem;
+
                 UpdateRowTextFromCollection(targetRow, targetIsPick);
             }
 
             SaveChampionPreferences();
+            RefreshSelectedChampionState();
             SetActiveTarget(targetRow, targetIsPick);
         }
 
