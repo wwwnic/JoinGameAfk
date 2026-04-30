@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 
@@ -8,12 +9,24 @@ namespace JoinGameAfk.View
 {
     public partial class SettingsPage : Page
     {
+        private static readonly TimeSpan SavedMessageDuration = TimeSpan.FromSeconds(3);
+
         private readonly ChampSelectSettings _settings;
+        private readonly DispatcherTimer _savedMessageTimer;
 
         public SettingsPage(ChampSelectSettings settings)
         {
             InitializeComponent();
             _settings = settings;
+            _savedMessageTimer = new DispatcherTimer
+            {
+                Interval = SavedMessageDuration
+            };
+            _savedMessageTimer.Tick += (_, _) =>
+            {
+                _savedMessageTimer.Stop();
+                SavedLabel.Visibility = Visibility.Collapsed;
+            };
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
             ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
@@ -38,7 +51,14 @@ namespace JoinGameAfk.View
                 : 1000;
 
             _settings.Save();
+            ShowSavedMessage();
+        }
+
+        private void ShowSavedMessage()
+        {
+            _savedMessageTimer.Stop();
             SavedLabel.Visibility = Visibility.Visible;
+            _savedMessageTimer.Start();
         }
 
         private void OpenStorageFolderButton_Click(object sender, RoutedEventArgs e)
