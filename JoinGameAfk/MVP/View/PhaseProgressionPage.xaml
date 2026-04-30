@@ -43,22 +43,38 @@
         </Style>
 
         <Style x:Key="PriorityListContainerStyle" TargetType="Border">
-            <Setter Property="Background" Value="#0F172A" />
-            <Setter Property="BorderBrush" Value="#1E293B" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="9" />
-            <Setter Property="Padding" Value="10" />
-            <Setter Property="MinHeight" Value="70" />
+            <Setter Property="Background" Value="#111827" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="MinHeight" Value="46" />
             <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
         <Style x:Key="PriorityChampionChipStyle" TargetType="Border">
             <Setter Property="Background" Value="#182338" />
             <Setter Property="BorderBrush" Value="#334155" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="9,5" />
-            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Margin" Value="0,3,6,3" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+            <Setter Property="TextElement.Foreground" Value="#CBD5E1" />
+        </Style>
+
+        <Style x:Key="ChampionChipTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="LineHeight" Value="16" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
         </Style>
 
         <Style x:Key="EyebrowTextStyle" TargetType="TextBlock">
@@ -220,8 +236,10 @@
                                        Foreground="#64748B"
                                        FontStyle="Italic"
                                        TextWrapping="Wrap"
+                                       VerticalAlignment="Center"
                                        Visibility="Visible" />
-                            <ItemsControl x:Name="PickChampionPriorityList">
+                            <ItemsControl x:Name="PickChampionPriorityList"
+                                          VerticalAlignment="Center">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel />
@@ -236,20 +254,16 @@
                                                         <DataTrigger Binding="{Binding IsAvailable}" Value="False">
                                                             <Setter Property="Background" Value="#351417" />
                                                             <Setter Property="BorderBrush" Value="#DC2626" />
+                                                            <Setter Property="TextElement.Foreground" Value="#FCA5A5" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#CBD5E1" />
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ChampionChipTextStyle}">
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                <Setter Property="Foreground" Value="#FCA5A5" />
                                                                 <Setter Property="TextDecorations" Value="Strikethrough" />
                                                                 <Setter Property="ToolTip" Value="Not currently pickable." />
                                                             </DataTrigger>
@@ -316,8 +330,10 @@
                                        Foreground="#64748B"
                                        FontStyle="Italic"
                                        TextWrapping="Wrap"
+                                       VerticalAlignment="Center"
                                        Visibility="Visible" />
-                            <ItemsControl x:Name="BanChampionPriorityList">
+                            <ItemsControl x:Name="BanChampionPriorityList"
+                                          VerticalAlignment="Center">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel />
@@ -332,20 +348,16 @@
                                                         <DataTrigger Binding="{Binding IsAvailable}" Value="False">
                                                             <Setter Property="Background" Value="#351417" />
                                                             <Setter Property="BorderBrush" Value="#DC2626" />
+                                                            <Setter Property="TextElement.Foreground" Value="#FCA5A5" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock Text="{Binding Name}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}">
                                                 <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#CBD5E1" />
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource ChampionChipTextStyle}">
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                <Setter Property="Foreground" Value="#FCA5A5" />
                                                                 <Setter Property="TextDecorations" Value="Strikethrough" />
                                                                 <Setter Property="ToolTip" Value="Not currently bannable." />
                                                             </DataTrigger>

@@ -91,11 +91,16 @@
         </Style>
 
         <Style x:Key="ChampionPillBorderStyle" TargetType="Border">
-            <Setter Property="Background" Value="#0F172A" />
+            <Setter Property="Background" Value="#182338" />
             <Setter Property="BorderBrush" Value="#334155" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
             <Setter Property="Cursor" Value="SizeAll" />
             <Setter Property="TextElement.Foreground" Value="#CBD5E1" />
             <Style.Triggers>
@@ -128,15 +133,28 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="ChampionChipTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="LineHeight" Value="16" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+        </Style>
+
         <Style x:Key="ChampionReferenceButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#1E293B" />
-            <Setter Property="BorderBrush" Value="#475569" />
+            <Setter Property="Background" Value="#182338" />
+            <Setter Property="BorderBrush" Value="#334155" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="SizeAll" />
             <Setter Property="Foreground" Value="#E2E8F0" />
-            <Setter Property="Margin" Value="3" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,3,6,3" />
             <Setter Property="MinHeight" Value="28" />
-            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
             <Setter Property="ToolTip" Value="Click to add to the selected list, or drag into a pick/ban list." />
             <Setter Property="Template">
                 <Setter.Value>
@@ -246,18 +264,18 @@
                                         BorderThickness="2"
                                         CornerRadius="8"
                                         AllowDrop="True"
-                                        Padding="8"
+                                        Padding="6"
                                         Margin="6,0,0,0"
-                                        MinHeight="56"
+                                        MinHeight="46"
                                         MouseLeftButtonDown="ChampionTarget_MouseLeftButtonDown"
                                         DragOver="ChampionList_DragOver"
                                         Drop="ChampionList_Drop">
-                                    <StackPanel>
+                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Empty"
                                                    FontSize="11"
                                                    Foreground="#64748B"
                                                    FontStyle="Italic"
-                                                   Margin="0,0,0,6"
+                                                   VerticalAlignment="Center"
                                                    Visibility="{Binding PickPlaceholderVisibility}" />
                                         <ItemsControl ItemsSource="{Binding PickChampions}">
                                             <ItemsControl.ItemsPanel>
@@ -267,7 +285,8 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid Margin="0,0,6,6"
+                                                    <Grid Margin="0,3,6,3"
+                                                          VerticalAlignment="Center"
                                                           Background="Transparent"
                                                           AllowDrop="True"
                                                           DragOver="ChampionItem_DragOver"
@@ -290,11 +309,8 @@
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <TextBlock Text="{Binding DisplayText}"
-                                                                           FontSize="12"
-                                                                           VerticalAlignment="Center" />
-                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding DisplayText}"
+                                                                       Style="{StaticResource ChampionChipTextStyle}" />
                                                         </Border>
 
                                                         <Border Grid.Column="2"
@@ -325,18 +341,18 @@
                                         BorderThickness="2"
                                         CornerRadius="8"
                                         AllowDrop="True"
-                                        Padding="8"
+                                        Padding="6"
                                         Margin="6,0,0,0"
-                                        MinHeight="56"
+                                        MinHeight="46"
                                         MouseLeftButtonDown="ChampionTarget_MouseLeftButtonDown"
                                         DragOver="ChampionList_DragOver"
                                         Drop="ChampionList_Drop">
-                                    <StackPanel>
+                                    <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="Empty"
                                                    FontSize="11"
                                                    Foreground="#64748B"
                                                    FontStyle="Italic"
-                                                   Margin="0,0,0,6"
+                                                   VerticalAlignment="Center"
                                                    Visibility="{Binding BanPlaceholderVisibility}" />
                                         <ItemsControl ItemsSource="{Binding BanChampions}">
                                             <ItemsControl.ItemsPanel>
@@ -346,7 +362,8 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Grid Margin="0,0,6,6"
+                                                    <Grid Margin="0,3,6,3"
+                                                          VerticalAlignment="Center"
                                                           Background="Transparent"
                                                           AllowDrop="True"
                                                           DragOver="ChampionItem_DragOver"
@@ -369,11 +386,8 @@
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
-                                                            <StackPanel Orientation="Horizontal">
-                                                                <TextBlock Text="{Binding DisplayText}"
-                                                                           FontSize="12"
-                                                                           VerticalAlignment="Center" />
-                                                            </StackPanel>
+                                                            <TextBlock Text="{Binding DisplayText}"
+                                                                       Style="{StaticResource ChampionChipTextStyle}" />
                                                         </Border>
 
                                                         <Border Grid.Column="2"
@@ -462,7 +476,7 @@
                                             PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
                                             PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
                                             Style="{StaticResource ChampionReferenceButtonStyle}">
-                                        <TextBlock FontSize="12">
+                                        <TextBlock Style="{StaticResource ChampionChipTextStyle}">
                                             <Run Text="+ " Foreground="#60A5FA" />
                                             <Run Text="{Binding Name, Mode=OneWay}" />
                                         </TextBlock>
