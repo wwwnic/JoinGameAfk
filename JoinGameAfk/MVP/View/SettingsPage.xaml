@@ -17,8 +17,8 @@
         </Style>
 
         <Style x:Key="SectionCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="#12121A" />
-            <Setter Property="BorderBrush" Value="#1E1E2A" />
+            <Setter Property="Background" Value="#0B0E14" />
+            <Setter Property="BorderBrush" Value="#232836" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="16" />
@@ -38,8 +38,8 @@
         </Style>
 
         <Style x:Key="SettingRowStyle" TargetType="Border">
-            <Setter Property="Background" Value="#0F172A" />
-            <Setter Property="BorderBrush" Value="#1E293B" />
+            <Setter Property="Background" Value="#111827" />
+            <Setter Property="BorderBrush" Value="#334155" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12" />
@@ -381,8 +381,8 @@
 
                     <UniformGrid Columns="2"
                                  Margin="0,10,0,0">
-                        <Border Background="#0F172A"
-                                BorderBrush="#1E293B"
+                        <Border Background="#111827"
+                                BorderBrush="#334155"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="12"
@@ -414,8 +414,8 @@
                             </Grid>
                         </Border>
 
-                        <Border Background="#0F172A"
-                                BorderBrush="#1E293B"
+                        <Border Background="#111827"
+                                BorderBrush="#334155"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="12"
