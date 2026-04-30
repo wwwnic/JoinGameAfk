@@ -91,6 +91,21 @@
                     <Setter Property="BorderBrush" Value="#475569" />
                     <Setter Property="ToolTip" Value="Drag to reorder" />
                 </Trigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#1E3A8A" />
+                    <Setter Property="BorderBrush" Value="#93C5FD" />
+                    <Setter Property="TextElement.Foreground" Value="#EFF6FF" />
+                    <Setter Property="ToolTip" Value="Selected" />
+                </DataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsSelected}" Value="True" />
+                        <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#1D4ED8" />
+                    <Setter Property="BorderBrush" Value="#BFDBFE" />
+                    <Setter Property="TextElement.Foreground" Value="#FFFFFF" />
+                </MultiDataTrigger>
                 <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
                     <Setter Property="Background" Value="#3A1114" />
                     <Setter Property="BorderBrush" Value="#EF4444" />

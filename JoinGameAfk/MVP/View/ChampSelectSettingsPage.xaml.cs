@@ -41,6 +41,7 @@ namespace JoinGameAfk.View
         private UIElement? _dragCaptureElement;
         private ChampionSelectionItem? _dragHoverChampion;
         private ChampionSelectionItem? _duplicateDropChampion;
+        private ChampionSelectionItem? _selectionAnchorChampion;
         private PositionRow? _dragHoverRow;
         private bool _dragHoverIsPick;
         private bool _dragHoverInsertAfter;
@@ -158,6 +159,9 @@ namespace JoinGameAfk.View
             var collection = GetChampionCollection(champion.Row, champion.IsPick);
             if (collection.Remove(champion))
             {
+                if (ReferenceEquals(_selectionAnchorChampion, champion))
+                    _selectionAnchorChampion = null;
+
                 UpdateRowTextFromCollection(champion.Row, champion.IsPick);
                 SaveChampionPreferences();
             }
@@ -269,6 +273,9 @@ namespace JoinGameAfk.View
         {
             if ((sender as FrameworkElement)?.DataContext is not PositionRow row)
                 return;
+
+            if (!TryFindChampionItemTarget(e.OriginalSource as DependencyObject, out _, out _))
+                ClearChampionSelection();
 
             bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             SetActiveTarget(row, isPick);
@@ -412,6 +419,76 @@ namespace JoinGameAfk.View
             ChampionSearchBox.SelectAll();
         }
 
+        private void UpdateChampionSelection(ChampionSelectionItem champion, ModifierKeys modifiers)
+        {
+            bool isControlPressed = (modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            bool isShiftPressed = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            if (isShiftPressed
+                && _selectionAnchorChampion is not null
+                && TryGetSelectionRange(_selectionAnchorChampion, champion, out var range))
+            {
+                if (!isControlPressed)
+                    ClearChampionSelection(resetAnchor: false);
+
+                foreach (var item in range)
+                    item.IsSelected = true;
+
+                return;
+            }
+
+            if (isControlPressed)
+            {
+                champion.IsSelected = !champion.IsSelected;
+                _selectionAnchorChampion = champion;
+                return;
+            }
+
+            ClearChampionSelection();
+            champion.IsSelected = true;
+            _selectionAnchorChampion = champion;
+        }
+
+        private static bool TryGetSelectionRange(
+            ChampionSelectionItem anchor,
+            ChampionSelectionItem champion,
+            [NotNullWhen(true)] out List<ChampionSelectionItem>? range)
+        {
+            range = null;
+            if (!ReferenceEquals(anchor.Row, champion.Row) || anchor.IsPick != champion.IsPick)
+                return false;
+
+            var collection = GetChampionCollection(champion.Row, champion.IsPick);
+            int anchorIndex = collection.IndexOf(anchor);
+            int championIndex = collection.IndexOf(champion);
+            if (anchorIndex < 0 || championIndex < 0)
+                return false;
+
+            int startIndex = Math.Min(anchorIndex, championIndex);
+            int endIndex = Math.Max(anchorIndex, championIndex);
+            range = collection
+                .Skip(startIndex)
+                .Take(endIndex - startIndex + 1)
+                .ToList();
+
+            return true;
+        }
+
+        private void ClearChampionSelection(bool resetAnchor = true)
+        {
+            foreach (var row in _rows)
+            {
+                foreach (var champion in row.PickChampions)
+                    champion.IsSelected = false;
+
+                foreach (var champion in row.BanChampions)
+                    champion.IsSelected = false;
+            }
+
+            if (resetAnchor)
+                _selectionAnchorChampion = null;
+        }
+
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (IsDeleteModeEnabled)
@@ -423,8 +500,17 @@ namespace JoinGameAfk.View
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 
-            _draggedChampion = champion;
+            ModifierKeys modifiers = Keyboard.Modifiers;
+            bool isSelectionModifierPressed = (modifiers & (ModifierKeys.Control | ModifierKeys.Shift)) != ModifierKeys.None;
+
+            UpdateChampionSelection(champion, modifiers);
+            SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
+
+            _draggedChampion = isSelectionModifierPressed ? null : champion;
             _dragStartPoint = e.GetPosition(this);
+
+            if (isSelectionModifierPressed)
+                e.Handled = true;
         }
 
         private void ChampionItem_MouseMove(object sender, MouseEventArgs e)
@@ -1353,6 +1439,7 @@ namespace JoinGameAfk.View
         private Visibility _insertBeforeIndicatorVisibility = Visibility.Collapsed;
         private Visibility _insertAfterIndicatorVisibility = Visibility.Collapsed;
         private bool _isDuplicateDropTarget;
+        private bool _isSelected;
 
         public int ChampionId { get; init; }
         public string DisplayText { get; init; } = "";
@@ -1375,6 +1462,12 @@ namespace JoinGameAfk.View
         {
             get => _isDuplicateDropTarget;
             set => SetProperty(ref _isDuplicateDropTarget, value);
+        }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set => SetProperty(ref _isSelected, value);
         }
 
         private void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
