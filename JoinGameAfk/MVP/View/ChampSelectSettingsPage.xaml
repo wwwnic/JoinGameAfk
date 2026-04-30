@@ -52,6 +52,43 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
+        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="#182338" />
+            <Setter Property="Foreground" Value="#E2E8F0" />
+            <Setter Property="CaretBrush" Value="#E2E8F0" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="InputBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="InputBorder" Property="BorderBrush" Value="#60A5FA" />
+                                <Setter TargetName="InputBorder" Property="Background" Value="#1E293B" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="InputBorder" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="DeleteSelectedButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="10,4" />
             <Setter Property="Background" Value="#7F1D1D" />
@@ -446,13 +483,8 @@
                          Grid.Row="2"
                          TextChanged="ChampionSearchBox_TextChanged"
                          PreviewKeyDown="ChampionSearchBox_PreviewKeyDown"
-                         Padding="8,6"
-                         FontSize="13"
-                         Background="#1E293B"
-                         CaretBrush="#E2E8F0"
-                         Foreground="#E2E8F0"
-                         BorderBrush="#334155"
-                         Margin="0,0,0,8" />
+                         Margin="0,0,0,8"
+                         Style="{StaticResource SearchTextBoxStyle}" />
 
                 <Border x:Name="ChampionReferenceBorder"
                         Grid.Row="3"
