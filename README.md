@@ -259,9 +259,12 @@ From the current codebase, these files are stored in `%LocalAppData%\JoinGameAfk
 
 The Settings page also includes a button to open this folder directly.
 
+Both configuration files include a `Version` field. Current schema version is `1`.
+
 ### `champselectsettings.json`
 Stores:
 
+- configuration schema version
 - ready check delay
 - hover delay
 - pick lock delay
@@ -271,7 +274,10 @@ Stores:
 - pick/ban preferences by role
 
 ### `champions.json`
-Stores champion IDs and display names used by the UI.
+Stores:
+
+- configuration schema version
+- champion IDs and display names used by the UI
 
 If the file is missing, the app can fall back to a built-in default champion list and recreate the file.
 

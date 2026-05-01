@@ -7,8 +7,6 @@ namespace JoinGameAfk.Model
 
     public static class ChampionCatalog
     {
-        private const string ChampionFileName = "champions.json";
-
         private static readonly IReadOnlyList<ChampionInfo> DefaultChampions =
         [
             new(266, "Aatrox"),
@@ -240,16 +238,21 @@ namespace JoinGameAfk.Model
                 if (!File.Exists(filePath))
                     return null;
 
-                var champions = JsonSerializer.Deserialize<List<ChampionInfo>>(File.ReadAllText(filePath));
-                if (champions is null || champions.Count == 0)
+                var catalogFile = DeserializeCatalogFile(File.ReadAllText(filePath));
+                if (catalogFile is null || catalogFile.Champions.Count == 0)
                     return null;
 
-                return champions
+                var champions = catalogFile.Champions
                     .Where(champion => champion.Id > 0 && !string.IsNullOrWhiteSpace(champion.Name))
                     .GroupBy(champion => champion.Id)
                     .Select(group => group.First() with { Name = group.First().Name.Trim() })
                     .OrderBy(champion => champion.Name)
                     .ToList();
+
+                if (catalogFile.Version < AppStorage.ChampionFileVersion)
+                    SaveCatalogFile(filePath, champions);
+
+                return champions;
             }
             catch
             {
@@ -262,7 +265,7 @@ namespace JoinGameAfk.Model
             if (File.Exists(filePath))
                 return;
 
-            string legacyFilePath = Path.Combine(AppContext.BaseDirectory, ChampionFileName);
+            string legacyFilePath = Path.Combine(AppContext.BaseDirectory, AppStorage.ChampionFileName);
             if (File.Exists(legacyFilePath))
             {
                 AppStorage.EnsureDirectoryExists();
@@ -271,8 +274,33 @@ namespace JoinGameAfk.Model
             }
 
             AppStorage.EnsureDirectoryExists();
+            SaveCatalogFile(filePath, DefaultChampions);
+        }
 
-            string json = JsonSerializer.Serialize(DefaultChampions, new JsonSerializerOptions { WriteIndented = true });
+        private static ChampionCatalogFile? DeserializeCatalogFile(string json)
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind switch
+            {
+                JsonValueKind.Array => new ChampionCatalogFile
+                {
+                    Version = 0,
+                    Champions = JsonSerializer.Deserialize<List<ChampionInfo>>(json) ?? []
+                },
+                JsonValueKind.Object => JsonSerializer.Deserialize<ChampionCatalogFile>(json),
+                _ => null
+            };
+        }
+
+        private static void SaveCatalogFile(string filePath, IReadOnlyList<ChampionInfo> champions)
+        {
+            var catalogFile = new ChampionCatalogFile
+            {
+                Version = AppStorage.ChampionFileVersion,
+                Champions = champions.ToList()
+            };
+
+            string json = JsonSerializer.Serialize(catalogFile, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json);
         }
 
@@ -280,5 +308,12 @@ namespace JoinGameAfk.Model
             IReadOnlyList<ChampionInfo> All,
             IReadOnlyDictionary<int, ChampionInfo> ById,
             IReadOnlyDictionary<string, ChampionInfo> ByName);
+
+        private sealed class ChampionCatalogFile
+        {
+            public int Version { get; set; } = AppStorage.ChampionFileVersion;
+
+            public List<ChampionInfo> Champions { get; set; } = [];
+        }
     }
 }

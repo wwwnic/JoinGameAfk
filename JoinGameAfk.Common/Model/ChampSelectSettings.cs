@@ -12,13 +12,11 @@ namespace JoinGameAfk.Model
 
     public class ChampSelectSettings
     {
-        private static readonly string SettingsFilePath = Path.Combine(
-            AppStorage.DirectoryPath,
-            "champselectsettings.json");
-
         private static readonly string LegacySettingsFilePath = Path.Combine(
             AppContext.BaseDirectory,
-            "champselectsettings.json");
+            AppStorage.SettingsFileName);
+
+        public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
         /// <summary>
         /// Number of seconds to wait before automatically accepting a ready check.
@@ -114,9 +112,10 @@ namespace JoinGameAfk.Model
         public void Save()
         {
             AppStorage.EnsureDirectoryExists();
+            Version = AppStorage.SettingsFileVersion;
 
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFilePath, json);
+            File.WriteAllText(AppStorage.SettingsFilePath, json);
             Saved?.Invoke();
         }
 
@@ -124,16 +123,16 @@ namespace JoinGameAfk.Model
         {
             try
             {
-                if (File.Exists(SettingsFilePath))
+                if (File.Exists(AppStorage.SettingsFilePath))
                 {
-                    var json = File.ReadAllText(SettingsFilePath);
-                    return JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings();
+                    var json = File.ReadAllText(AppStorage.SettingsFilePath);
+                    return NormalizeVersion(JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings());
                 }
 
                 if (File.Exists(LegacySettingsFilePath))
                 {
                     var json = File.ReadAllText(LegacySettingsFilePath);
-                    var settings = JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings();
+                    var settings = NormalizeVersion(JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings());
                     settings.Save();
 
                     try
@@ -148,6 +147,14 @@ namespace JoinGameAfk.Model
             catch { }
 
             return new ChampSelectSettings();
+        }
+
+        private static ChampSelectSettings NormalizeVersion(ChampSelectSettings settings)
+        {
+            if (settings.Version <= 0)
+                settings.Version = AppStorage.SettingsFileVersion;
+
+            return settings;
         }
     }
 }

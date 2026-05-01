@@ -2,13 +2,19 @@ namespace JoinGameAfk.Constant
 {
     public static class AppStorage
     {
+        public const int SettingsFileVersion = 1;
+        public const int ChampionFileVersion = 1;
+
+        public const string SettingsFileName = "champselectsettings.json";
+        public const string ChampionFileName = "champions.json";
+
         public static string DirectoryPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "JoinGameAfk");
 
-        public static string SettingsFilePath => Path.Combine(DirectoryPath, "champselectsettings.json");
+        public static string SettingsFilePath => Path.Combine(DirectoryPath, SettingsFileName);
 
-        public static string ChampionFilePath => Path.Combine(DirectoryPath, "champions.json");
+        public static string ChampionFilePath => Path.Combine(DirectoryPath, ChampionFileName);
 
         public static void EnsureDirectoryExists()
         {
