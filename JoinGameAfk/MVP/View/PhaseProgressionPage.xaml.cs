@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
@@ -17,6 +18,7 @@ namespace JoinGameAfk.View
         private ClientPhase _currentPhase;
         private bool _isClientConnected;
         private bool _isWatcherRunning;
+        private const double MinimumLogRowHeight = 150;
 
         public PhaseProgressionPage()
         {
@@ -26,6 +28,7 @@ namespace JoinGameAfk.View
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
+            Loaded += (_, _) => QueueLogRowResize();
             Unloaded += (_, _) => AppThemeManager.ThemeChanged -= RefreshTheme;
             AppThemeManager.ThemeChanged += RefreshTheme;
         }
@@ -72,7 +75,7 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 _isWatcherRunning = isRunning;
-                ToggleButton.Content = isRunning ? "Stop" : "Start";
+                ToggleButton.Content = isRunning ? "Stop watcher" : "Start watcher";
                 ToggleButton.Background = isRunning
                     ? ResourceBrush("WatcherStopBrush", Brushes.Firebrick)
                     : ResourceBrush("WatcherStartBrush", Brushes.ForestGreen);
@@ -100,10 +103,13 @@ namespace JoinGameAfk.View
                 UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
                 UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
 
-                ChampSelectSubPhaseText.Text = status.ChampSelectSubPhase;
+                ChampSelectSubPhaseText.Text = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
+                    ? "Idle"
+                    : status.ChampSelectSubPhase;
                 ChampSelectTimerText.Text = status.TimeLeftSeconds >= 0
-                    ? $"{status.TimeLeftSeconds}s"
-                    : "";
+                    ? $"{status.TimeLeftSeconds}"
+                    : "--";
+                QueueLogRowResize();
             });
         }
 
@@ -114,8 +120,8 @@ namespace JoinGameAfk.View
 
             Dispatcher.Invoke(() =>
             {
-                PickLockValueText.Text = $"The champion will be locked when the timer hits {_settings.PickLockDelaySeconds}s.";
-                BanLockValueText.Text = $"The ban will be locked when the timer hits {_settings.BanLockDelaySeconds}s.";
+                PickLockValueText.Text = $"Locks when the timer hits {_settings.PickLockDelaySeconds}s.";
+                BanLockValueText.Text = $"Locks when the timer hits {_settings.BanLockDelaySeconds}s.";
             });
         }
 
@@ -164,6 +170,31 @@ namespace JoinGameAfk.View
         {
             SetWatcherState(_isWatcherRunning);
             SetClientConnection(_isClientConnected);
+        }
+
+        private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            QueueLogRowResize();
+        }
+
+        private void QueueLogRowResize()
+        {
+            Dispatcher.InvokeAsync(UpdateLogRowHeight, DispatcherPriority.Loaded);
+        }
+
+        private void UpdateLogRowHeight()
+        {
+            if (ActualHeight <= 0 || HeaderPanel.ActualHeight <= 0 || DraftLayoutGrid.ActualHeight <= 0)
+                return;
+
+            double availableHeight = ActualHeight
+                - HeaderPanel.ActualHeight
+                - DraftLayoutGrid.ActualHeight
+                - 24;
+            double targetHeight = Math.Max(MinimumLogRowHeight, availableHeight);
+
+            if (!LogRow.Height.IsAbsolute || Math.Abs(LogRow.Height.Value - targetHeight) > 0.5)
+                LogRow.Height = new GridLength(targetHeight);
         }
     }
 }
