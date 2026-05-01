@@ -105,8 +105,6 @@ namespace JoinGameAfk.View
                 index = 0;
 
             _activeTabIndex = index;
-            Brush activeTabBg = ResourceBrush("TabActiveBackgroundBrush", Brushes.SlateGray);
-            Brush inactiveTabBg = ResourceBrush("TabInactiveBackgroundBrush", Brushes.Transparent);
             Brush activeTabFg = ResourceBrush("TabActiveForegroundBrush", Brushes.White);
             Brush inactiveTabFg = ResourceBrush("TabInactiveForegroundBrush", Brushes.Gray);
             Brush activeTabBorder = ResourceBrush("TabActiveBorderBrush", Brushes.DodgerBlue);
@@ -114,10 +112,12 @@ namespace JoinGameAfk.View
 
             for (int i = 0; i < _tabs.Length; i++)
             {
-                _tabs[i].Background = i == index ? activeTabBg : inactiveTabBg;
-                _tabs[i].Foreground = i == index ? activeTabFg : inactiveTabFg;
-                _tabs[i].BorderBrush = i == index ? activeTabBorder : inactiveTabBorder;
-                _frames[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
+                bool isActive = i == index;
+                _tabs[i].Tag = isActive ? "Active" : null;
+                _tabs[i].Background = Brushes.Transparent;
+                _tabs[i].Foreground = isActive ? activeTabFg : inactiveTabFg;
+                _tabs[i].BorderBrush = isActive ? activeTabBorder : inactiveTabBorder;
+                _frames[i].Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 
