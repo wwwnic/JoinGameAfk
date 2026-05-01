@@ -94,11 +94,22 @@ namespace JoinGameAfk.View
         private void LoadThemeOptions()
         {
             ThemeComboBox.ItemsSource = AppThemeManager.Themes;
-            ThemeComboBox.SelectedValue = AppThemeManager.NormalizeThemeKey(_settings.ThemeKey);
+            SelectTheme(AppThemeManager.CurrentThemeKey);
+        }
+
+        private void SelectTheme(string? themeKey)
+        {
+            string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey);
+            ThemeComboBox.SelectedItem = AppThemeManager.Themes.FirstOrDefault(theme =>
+                string.Equals(theme.Key, normalizedThemeKey, StringComparison.OrdinalIgnoreCase))
+                ?? AppThemeManager.Themes[0];
         }
 
         private string GetSelectedThemeKey()
         {
+            if (ThemeComboBox.SelectedItem is AppThemeDefinition selectedTheme)
+                return AppThemeManager.NormalizeThemeKey(selectedTheme.Key);
+
             return AppThemeManager.NormalizeThemeKey(ThemeComboBox.SelectedValue as string);
         }
 

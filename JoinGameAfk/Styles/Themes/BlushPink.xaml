@@ -59,7 +59,7 @@
     <SolidColorBrush x:Key="TabActiveBorderBrush" Color="#B43F68" />
     <SolidColorBrush x:Key="TabInactiveBorderBrush" Color="#EAD2DA" />
 
-    <SolidColorBrush x:Key="WatcherStartBrush" Color="#477A62" />
+    <SolidColorBrush x:Key="WatcherStartBrush" Color="#6D6BE8" />
     <SolidColorBrush x:Key="WatcherStopBrush" Color="#9F2F49" />
     <SolidColorBrush x:Key="PhaseConnectedForegroundBrush" Color="#2F8F67" />
     <SolidColorBrush x:Key="PhaseOfflineForegroundBrush" Color="#B93756" />
