@@ -4,7 +4,7 @@
       Background="Transparent">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <Grid Margin="10">
+        <Grid Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -20,7 +20,7 @@
                     BorderThickness="1"
                     CornerRadius="12"
                     Padding="18,16"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -60,7 +60,7 @@
 
             <Border Grid.Row="1"
                     Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Appearance"
                                Style="{StaticResource SectionTitleStyle}" />
@@ -96,7 +96,7 @@
 
             <Border Grid.Row="2"
                     Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Matchmaking"
                                Style="{StaticResource SectionTitleStyle}" />
@@ -136,7 +136,7 @@
 
             <Border Grid.Row="3"
                     Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Champion Select"
                                Style="{StaticResource SectionTitleStyle}" />
@@ -277,7 +277,7 @@
 
             <Border Grid.Row="4"
                     Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Performance"
                                Style="{StaticResource SectionTitleStyle}" />
@@ -317,7 +317,7 @@
 
             <Border Grid.Row="5"
                     Style="{StaticResource SectionCardStyle}"
-                    Margin="0,0,0,14">
+                    Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Storage"
                                Style="{StaticResource SectionTitleStyle}" />
