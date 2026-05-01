@@ -12,6 +12,7 @@ namespace JoinGameAfk.Theme
         [
             new AppThemeDefinition(DefaultThemeKey, "Draft Desk", "Styles/Themes/DraftDesk.xaml"),
             new AppThemeDefinition("blush-pink", "Blush Quartz", "Styles/Themes/BlushPink.xaml"),
+            new AppThemeDefinition("rose-noir", "Rose Noir", "Styles/Themes/RoseNoir.xaml"),
             new AppThemeDefinition("rift-light", "Rift Light", "Styles/Themes/RiftLight.xaml"),
             new AppThemeDefinition("neon-circuit", "Neon Circuit", "Styles/Themes/NeonCircuit.xaml"),
             new AppThemeDefinition("color-safe-light", "Color Safe Light", "Styles/Themes/ColorSafeLight.xaml"),
