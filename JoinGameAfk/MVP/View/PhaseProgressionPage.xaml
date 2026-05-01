@@ -15,7 +15,7 @@
         <Style x:Key="DraftPanelHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="TextWrapping" Value="NoWrap" />
         </Style>
 
@@ -73,7 +73,7 @@
                BasedOn="{StaticResource PriorityChampionChipStyle}">
             <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextPaleBrush}" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
         </Style>
 
         <Style x:Key="HeaderBanPlaceholderStyle" TargetType="TextBlock">
@@ -97,7 +97,7 @@
         <Style x:Key="ActiveRoleChipStyle" TargetType="Border" BasedOn="{StaticResource RoleChipStyle}">
             <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBluePaleBrush}" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
         </Style>
 
         <Style x:Key="ActionPanelStyle" TargetType="Border">
@@ -430,7 +430,7 @@
                                                    Width="42"
                                                    FontSize="12"
                                                    FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentBluePaleBrush}"
+                                                   Foreground="{DynamicResource AccentBlueTextBrush}"
                                                    TextAlignment="Center"
                                                    TextWrapping="Wrap"
                                                    HorizontalAlignment="Center"
@@ -551,7 +551,7 @@
                                                                     <TextBlock Text="{Binding Name[0]}"
                                                                                FontSize="9"
                                                                                FontWeight="Bold"
-                                                                               Foreground="{DynamicResource AccentBluePaleBrush}"
+                                                                               Foreground="{DynamicResource AccentBlueTextBrush}"
                                                                                HorizontalAlignment="Center"
                                                                                VerticalAlignment="Center" />
                                                                 </Border>
@@ -679,7 +679,7 @@
                                                                     <TextBlock Text="{Binding Name[0]}"
                                                                                FontSize="9"
                                                                                FontWeight="Bold"
-                                                                               Foreground="{DynamicResource DangerTextPaleBrush}"
+                                                                               Foreground="{DynamicResource DangerTextBrush}"
                                                                                HorizontalAlignment="Center"
                                                                                VerticalAlignment="Center" />
                                                                 </Border>
