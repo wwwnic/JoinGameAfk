@@ -64,7 +64,7 @@
                 <StackPanel>
                     <TextBlock Text="Appearance"
                                Style="{StaticResource SectionTitleStyle}" />
-                    <TextBlock Text="App color theme."
+                    <TextBlock Text="Soft, vibrant, and classic app color themes."
                                Style="{StaticResource SectionDescriptionStyle}"
                                Margin="0,4,0,0" />
 
@@ -85,6 +85,7 @@
 
                             <ComboBox x:Name="ThemeComboBox"
                                       Grid.Column="2"
+                                      Width="220"
                                       DisplayMemberPath="DisplayName"
                                       SelectedValuePath="Key"
                                       Style="{StaticResource AppComboBoxStyle}" />
