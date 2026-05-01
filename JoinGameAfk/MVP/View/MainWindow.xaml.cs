@@ -1,7 +1,8 @@
-﻿using System;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using JoinGameAfk.Enums;
@@ -52,6 +53,51 @@ namespace JoinGameAfk.View
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
         private void TabChampSelect_Click(object sender, RoutedEventArgs e) => ActivateTab(1);
         private void TabSettings_Click(object sender, RoutedEventArgs e) => ActivateTab(2);
+
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.FocusedElement is ButtonBase button && button.IsEnabled)
+            {
+                ActivateButtonFromKeyboard(button);
+                e.Handled = true;
+                return;
+            }
+
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
+                return;
+
+            int? tabIndex = e.Key switch
+            {
+                Key.D1 or Key.NumPad1 => 0,
+                Key.D2 or Key.NumPad2 => 1,
+                Key.D3 or Key.NumPad3 => 2,
+                _ => null
+            };
+
+            if (tabIndex is not int index)
+                return;
+
+            ActivateTab(index);
+            _tabs[index].Focus();
+            e.Handled = true;
+        }
+
+        private static void ActivateButtonFromKeyboard(ButtonBase button)
+        {
+            if (button is ToggleButton toggleButton)
+            {
+                toggleButton.IsChecked = toggleButton.IsThreeState
+                    ? toggleButton.IsChecked switch
+                    {
+                        true => false,
+                        false => null,
+                        _ => true
+                    }
+                    : toggleButton.IsChecked != true;
+            }
+
+            button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, button));
+        }
 
         public void ActivateTab(int index)
         {

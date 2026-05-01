@@ -205,7 +205,10 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            if (!_isChampionDragActive && !IsSearchBoxFocused() && e.Key == Key.Delete && DeleteSelectedChampions())
+            if (!_isChampionDragActive
+                && !IsSearchBoxFocused()
+                && IsChampionDeleteKey(e.Key)
+                && TryDeleteFocusedOrSelectedChampion())
             {
                 e.Handled = true;
                 return;
@@ -241,7 +244,7 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            if (e.Key == Key.Enter && AddFirstFilteredChampion())
+            if (e.Key == Key.Enter && !IsFocusWithinChampionPlan() && AddFirstFilteredChampion())
             {
                 e.Handled = true;
             }
@@ -303,6 +306,84 @@ namespace JoinGameAfk.View
 
             bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             SetActiveTarget(row, isPick);
+        }
+
+        private void ChampionTarget_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (!TryResolveChampionTarget(sender, out var row, out bool isPick))
+                return;
+
+            SetActiveTarget(row, isPick, focusSearch: false);
+            (sender as FrameworkElement)?.BringIntoView();
+        }
+
+        private void ChampionTarget_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter && e.Key != Key.Space)
+                return;
+
+            if (!TryResolveChampionTarget(sender, out var row, out bool isPick))
+                return;
+
+            SetActiveTarget(row, isPick, focusSearch: false);
+            if (!string.IsNullOrWhiteSpace(ChampionSearchBox.Text) && AddFirstFilteredChampion())
+            {
+                e.Handled = true;
+                return;
+            }
+
+            FocusSearchBox();
+            e.Handled = true;
+        }
+
+        private static bool TryResolveChampionTarget(object? sender, [NotNullWhen(true)] out PositionRow? row, out bool isPick)
+        {
+            row = null;
+            isPick = false;
+
+            if ((sender as FrameworkElement)?.DataContext is not PositionRow targetRow)
+                return false;
+
+            row = targetRow;
+            isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
+            return true;
+        }
+
+        private void ChampionItem_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
+                return;
+
+            SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
+            (sender as FrameworkElement)?.BringIntoView();
+        }
+
+        private void ChampionItem_KeyDown(object sender, KeyEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
+                return;
+
+            if (e.Key == Key.Enter || e.Key == Key.Space)
+            {
+                UpdateChampionSelection(
+                    champion,
+                    Keyboard.Modifiers,
+                    shouldToggleSelection: e.Key == Key.Space);
+                SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
+                e.Handled = true;
+                return;
+            }
+
+            if (!IsChampionDeleteKey(e.Key))
+                return;
+
+            if (TryDeleteFocusedOrSelectedChampion(champion))
+                e.Handled = true;
+        }
+
+        private static bool IsChampionDeleteKey(Key key)
+        {
+            return key is Key.Back or Key.Delete;
         }
 
         private void UpdateChampionFilter()
@@ -568,6 +649,83 @@ namespace JoinGameAfk.View
             _selectionAnchorChampion = null;
             SaveChampionPreferences();
             RefreshSelectedChampionState();
+            return true;
+        }
+
+        private bool TryDeleteFocusedOrSelectedChampion(ChampionSelectionItem? fallbackChampion = null)
+        {
+            TryGetFocusedChampionTarget(out var focusedRow, out bool focusedIsPick, out var focusedChampion);
+
+            if (DeleteSelectedChampions())
+            {
+                if (focusedRow is not null)
+                    SetActiveTarget(focusedRow, focusedIsPick, focusSearch: false);
+
+                return true;
+            }
+
+            ChampionSelectionItem? championToDelete = focusedChampion ?? fallbackChampion;
+            if (championToDelete is not null)
+                return DeleteChampion(championToDelete);
+
+            if (focusedRow is not null)
+                return DeleteLastChampionFromTarget(focusedRow, focusedIsPick);
+
+            return false;
+        }
+
+        private bool TryGetFocusedChampionTarget(
+            [NotNullWhen(true)] out PositionRow? row,
+            out bool isPick,
+            out ChampionSelectionItem? champion)
+        {
+            row = null;
+            isPick = false;
+            champion = null;
+
+            if (Keyboard.FocusedElement is not DependencyObject focusedElement)
+                return false;
+
+            if (TryFindChampionItemTarget(focusedElement, out _, out var focusedChampion))
+            {
+                row = focusedChampion.Row;
+                isPick = focusedChampion.IsPick;
+                champion = focusedChampion;
+                return true;
+            }
+
+            if (TryFindChampionListTarget(focusedElement, out _, out var focusedRow, out bool focusedIsPick))
+            {
+                row = focusedRow;
+                isPick = focusedIsPick;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool DeleteLastChampionFromTarget(PositionRow row, bool isPick)
+        {
+            var collection = GetChampionCollection(row, isPick);
+            if (collection.Count == 0)
+                return false;
+
+            return DeleteChampion(collection[collection.Count - 1]);
+        }
+
+        private bool DeleteChampion(ChampionSelectionItem champion)
+        {
+            var collection = GetChampionCollection(champion.Row, champion.IsPick);
+            if (!collection.Remove(champion))
+                return false;
+
+            if (ReferenceEquals(_selectionAnchorChampion, champion))
+                _selectionAnchorChampion = null;
+
+            UpdateRowTextFromCollection(champion.Row, champion.IsPick);
+            SaveChampionPreferences();
+            RefreshSelectedChampionState();
+            SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
             return true;
         }
 
@@ -903,6 +1061,13 @@ namespace JoinGameAfk.View
         private bool IsSearchBoxFocused()
         {
             return ReferenceEquals(Keyboard.FocusedElement, ChampionSearchBox);
+        }
+
+        private bool IsFocusWithinChampionPlan()
+        {
+            return Keyboard.FocusedElement is DependencyObject focusedElement
+                && (TryFindChampionItemTarget(focusedElement, out _, out _)
+                    || TryFindChampionListTarget(focusedElement, out _, out _, out _));
         }
 
         private void FocusSearchBox()

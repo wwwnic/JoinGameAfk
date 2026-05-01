@@ -113,6 +113,11 @@
                                         BorderThickness="2"
                                         CornerRadius="8"
                                         AllowDrop="True"
+                                        Focusable="True"
+                                        GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
+                                        KeyDown="ChampionTarget_KeyDown"
+                                        ToolTip="Focus this list, then type a champion name and press Enter to add it here."
+                                        AutomationProperties.Name="{Binding PositionName, StringFormat={}{0} pick champions}"
                                         Padding="6"
                                         Margin="6,0,0,0"
                                         MinHeight="46"
@@ -156,6 +161,9 @@
                                                         <Border Grid.Column="1"
                                                                 Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
+                                                                AutomationProperties.Name="{Binding DisplayText}"
+                                                                GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
+                                                                KeyDown="ChampionItem_KeyDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <TextBlock Text="{Binding DisplayText}"
@@ -190,6 +198,11 @@
                                         BorderThickness="2"
                                         CornerRadius="8"
                                         AllowDrop="True"
+                                        Focusable="True"
+                                        GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
+                                        KeyDown="ChampionTarget_KeyDown"
+                                        ToolTip="Focus this list, then type a champion name and press Enter to add it here."
+                                        AutomationProperties.Name="{Binding PositionName, StringFormat={}{0} ban champions}"
                                         Padding="6"
                                         Margin="6,0,0,0"
                                         MinHeight="46"
@@ -233,6 +246,9 @@
                                                         <Border Grid.Column="1"
                                                                 Tag="ChampionPill"
                                                                 Style="{StaticResource ChampionPillBorderStyle}"
+                                                                AutomationProperties.Name="{Binding DisplayText}"
+                                                                GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
+                                                                KeyDown="ChampionItem_KeyDown"
                                                                 PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                 MouseMove="ChampionItem_MouseMove">
                                                             <TextBlock Text="{Binding DisplayText}"
@@ -317,6 +333,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Click="ChampionReferenceButton_Click"
+                                            AutomationProperties.Name="{Binding Name}"
                                             PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
                                             PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
                                             Style="{StaticResource ChampionReferenceButtonStyle}">

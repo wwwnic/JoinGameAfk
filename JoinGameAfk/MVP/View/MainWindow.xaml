@@ -10,7 +10,9 @@
         Background="{DynamicResource AppBackgroundBrush}"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
-        WindowStyle="None">
+        WindowStyle="None"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        KeyboardNavigation.TabNavigation="Cycle">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
                             CornerRadius="0"
@@ -78,6 +80,7 @@
                                 HorizontalAlignment="Right">
                         <Button Style="{StaticResource TitleBarButtonStyle}"
                                 ToolTip="Minimize"
+                                AutomationProperties.Name="Minimize"
                                 Click="MinimizeButton_Click">
                             <Path Data="M5,12 H19"
                                   Width="14"
@@ -91,6 +94,7 @@
                         <Button x:Name="MaximizeRestoreButton"
                                 Style="{StaticResource TitleBarButtonStyle}"
                                 ToolTip="Maximize"
+                                AutomationProperties.Name="Maximize"
                                 Click="MaximizeRestoreButton_Click">
                             <Path x:Name="MaximizeRestoreIcon"
                                   Data="M6,6 H18 V18 H6 Z"
@@ -103,6 +107,7 @@
                         </Button>
                         <Button Style="{StaticResource CloseButtonStyle}"
                                 ToolTip="Close"
+                                AutomationProperties.Name="Close"
                                 Click="CloseButton_Click">
                             <Path Data="M6,6 L18,18 M18,6 L6,18"
                                   Width="13"
@@ -127,14 +132,17 @@
                 <WrapPanel Orientation="Horizontal">
                     <Button x:Name="TabDashboard"
                             Content="Dashboard"
+                            AutomationProperties.Name="Dashboard tab"
                             Click="TabDashboard_Click"
                             Style="{StaticResource TabButtonStyle}" />
                     <Button x:Name="TabChampSelect"
                             Content="Champion Select"
+                            AutomationProperties.Name="Champion Select tab"
                             Click="TabChampSelect_Click"
                             Style="{StaticResource TabButtonStyle}" />
                     <Button x:Name="TabSettings"
                             Content="Settings"
+                            AutomationProperties.Name="Settings tab"
                             Click="TabSettings_Click"
                             Style="{StaticResource TabButtonStyle}" />
                 </WrapPanel>

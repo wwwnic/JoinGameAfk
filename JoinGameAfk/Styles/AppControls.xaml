@@ -40,6 +40,12 @@
                             <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
                             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                            <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.78" />
                         </Trigger>
@@ -70,6 +76,12 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource DangerCloseHoverBrush}" />
                             <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource DangerLightBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource DangerCloseHoverBrush}" />
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource DangerTextPaleBrush}" />
+                            <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2" />
                             <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -108,6 +120,11 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="TabBorder" Property="Opacity" Value="0.9" />
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                            <Setter TargetName="TabBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                            <Setter TargetName="TabBorder" Property="BorderThickness" Value="2" />
+                        </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="TabBorder" Property="Opacity" Value="0.76" />
                         </Trigger>
@@ -131,6 +148,8 @@
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="ButtonBorder"
                             Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                            BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
                             CornerRadius="10"
                             Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}">
                         <ContentPresenter HorizontalAlignment="Center"
@@ -139,6 +158,10 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                            <Setter TargetName="ButtonBorder" Property="BorderThickness" Value="2" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.75" />
@@ -223,6 +246,7 @@
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="Cursor" Value="SizeAll" />
+        <Setter Property="Focusable" Value="True" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSoftBrush}" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -240,6 +264,20 @@
                 <MultiDataTrigger.Conditions>
                     <Condition Binding="{Binding IsSelected}" Value="True" />
                     <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Background" Value="{DynamicResource AccentBlueStrongBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+            </MultiDataTrigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="ToolTip" Value="Press Enter or Space to select. Press Backspace or Delete to remove champions." />
+            </Trigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsSelected}" Value="True" />
+                    <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsKeyboardFocused}" Value="True" />
                 </MultiDataTrigger.Conditions>
                 <Setter Property="Background" Value="{DynamicResource AccentBlueStrongBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
@@ -272,7 +310,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                    <Border x:Name="ButtonBorder"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
                             BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
                             BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
                             CornerRadius="8"
@@ -288,6 +327,12 @@
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter Property="Background" Value="{DynamicResource AppInputPressedBrush}" />
@@ -307,7 +352,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                    <Border x:Name="ButtonBorder"
+                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
                             BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
                             BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
                             CornerRadius="6"
@@ -323,6 +369,11 @@
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="{DynamicResource DangerHoverBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource DangerLightBrush}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter Property="Background" Value="{DynamicResource DangerHoverBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource DangerTextPaleBrush}" />
+                <Setter Property="BorderThickness" Value="2" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
@@ -689,11 +740,23 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
                         </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                            <Setter TargetName="CheckBorder" Property="BorderThickness" Value="2" />
+                        </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="CheckBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
                             <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
                             <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
                         </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True" />
+                                <Condition Property="IsKeyboardFocused" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+                            <Setter TargetName="CheckBorder" Property="BorderThickness" Value="2" />
+                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="CheckBorder" Property="Opacity" Value="0.55" />
                             <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
