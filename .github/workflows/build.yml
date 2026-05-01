@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
@@ -40,9 +42,40 @@ jobs:
       - name: Create split zip
         run: Compress-Archive -Path publish-split\* -DestinationPath JoinGameAfk-win-x64.zip
 
+      - name: Generate release notes
+        shell: pwsh
+        run: |
+          $currentTag = "${{ github.ref_name }}"
+          $previousTag = git describe --tags --abbrev=0 "$currentTag^" 2>$null
+
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($previousTag)) {
+            $previousTag = $null
+          }
+
+          $commitRange = if ($previousTag) { "$previousTag..$currentTag" } else { $currentTag }
+          $commits = git log $commitRange --pretty=format:'- %s (`%h`) by %an'
+
+          "# $currentTag" | Out-File release-notes.md -Encoding utf8
+          "" | Out-File release-notes.md -Append -Encoding utf8
+
+          if ($previousTag) {
+            "Changes since ``$previousTag``:" | Out-File release-notes.md -Append -Encoding utf8
+          } else {
+            "Changes included in this release:" | Out-File release-notes.md -Append -Encoding utf8
+          }
+
+          "" | Out-File release-notes.md -Append -Encoding utf8
+
+          if ($commits) {
+            $commits | Out-File release-notes.md -Append -Encoding utf8
+          } else {
+            "- No commits found for this release." | Out-File release-notes.md -Append -Encoding utf8
+          }
+
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
+          body_path: release-notes.md
           files: |
             JoinGameAfk.exe
             JoinGameAfk-win-x64.zip
