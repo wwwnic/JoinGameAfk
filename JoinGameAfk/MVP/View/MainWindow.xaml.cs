@@ -228,14 +228,14 @@ namespace JoinGameAfk.View
         {
             if (msg == WmGetMinMaxInfoMessage)
             {
-                ApplyMaximizedBounds(hwnd, lParam);
+                ApplyMinMaxInfo(hwnd, lParam);
                 handled = true;
             }
 
             return IntPtr.Zero;
         }
 
-        private static void ApplyMaximizedBounds(IntPtr hwnd, IntPtr lParam)
+        private void ApplyMinMaxInfo(IntPtr hwnd, IntPtr lParam)
         {
             var minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
 
@@ -254,7 +254,29 @@ namespace JoinGameAfk.View
                 minMaxInfo.ptMaxSize.Y = Math.Abs(workArea.Bottom - workArea.Top);
             }
 
+            ApplyMinimumTrackSize(ref minMaxInfo);
             Marshal.StructureToPtr(minMaxInfo, lParam, true);
+        }
+
+        private void ApplyMinimumTrackSize(ref MINMAXINFO minMaxInfo)
+        {
+            double scaleX = 1;
+            double scaleY = 1;
+
+            if (PresentationSource.FromVisual(this) is HwndSource source
+                && source.CompositionTarget is not null)
+            {
+                Matrix transform = source.CompositionTarget.TransformToDevice;
+                scaleX = transform.M11;
+                scaleY = transform.M22;
+            }
+
+            minMaxInfo.ptMinTrackSize.X = Math.Max(
+                minMaxInfo.ptMinTrackSize.X,
+                (int)Math.Ceiling(MinWidth * scaleX));
+            minMaxInfo.ptMinTrackSize.Y = Math.Max(
+                minMaxInfo.ptMinTrackSize.Y,
+                (int)Math.Ceiling(MinHeight * scaleY));
         }
 
         public void UpdatePhaseIndicator(ClientPhase phase)
