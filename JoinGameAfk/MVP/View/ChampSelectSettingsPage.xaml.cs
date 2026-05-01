@@ -19,7 +19,6 @@ namespace JoinGameAfk.View
         private const double DragAutoScrollStep = 28;
         private const double ChampionReferenceListMinHeight = 140;
         private const double ChampionReferenceHeightBuffer = 2;
-        private const double ScrollableHeightVisibilityThreshold = 1;
         private const string ChampionPillTag = "ChampionPill";
 
         private readonly ChampSelectSettings _settings;
@@ -52,7 +51,6 @@ namespace JoinGameAfk.View
         private bool _dragHoverInsertAfter;
         private int? _dragHoverTargetIndex;
         private bool _isChampionReferenceHeightUpdatePending;
-        private bool _isChampionReferenceScrollBarUpdatePending;
 
         public static readonly DependencyProperty HasSelectedChampionsProperty = DependencyProperty.Register(
             nameof(HasSelectedChampions),
@@ -130,14 +128,8 @@ namespace JoinGameAfk.View
             Loaded += (_, _) =>
             {
                 QueueChampionReferenceListHeightUpdate();
-                QueueChampionReferenceScrollBarVisibilityUpdate();
             };
-            PageScrollViewer.SizeChanged += (_, _) =>
-            {
-                QueueChampionReferenceListHeightUpdate();
-                QueueChampionReferenceScrollBarVisibilityUpdate();
-            };
-            ChampionReferenceScrollViewer.ScrollChanged += (_, _) => QueueChampionReferenceScrollBarVisibilityUpdate();
+            PageScrollViewer.SizeChanged += (_, _) => QueueChampionReferenceListHeightUpdate();
         }
 
         private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -404,7 +396,6 @@ namespace JoinGameAfk.View
                     .Select(result => result.Champion)];
 
             ChampionReferenceList.ItemsSource = _filteredChampions;
-            QueueChampionReferenceScrollBarVisibilityUpdate();
         }
 
         private static int GetChampionSearchScore(ChampionInfo champion, string search)
@@ -478,39 +469,6 @@ namespace JoinGameAfk.View
                 - ChampionReferenceHeightBuffer;
 
             ChampionReferenceBorder.Height = Math.Max(ChampionReferenceListMinHeight, Math.Floor(availableHeight));
-            QueueChampionReferenceScrollBarVisibilityUpdate();
-        }
-
-        private void QueueChampionReferenceScrollBarVisibilityUpdate()
-        {
-            if (_isChampionReferenceScrollBarUpdatePending)
-                return;
-
-            _isChampionReferenceScrollBarUpdatePending = true;
-            Dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Loaded,
-                new Action(() =>
-                {
-                    _isChampionReferenceScrollBarUpdatePending = false;
-                    UpdateChampionReferenceScrollBarVisibility();
-                }));
-        }
-
-        private void UpdateChampionReferenceScrollBarVisibility()
-        {
-            if (!IsLoaded)
-                return;
-
-            double scrollableHeight = Math.Max(
-                ChampionReferenceScrollViewer.ScrollableHeight,
-                ChampionReferenceScrollViewer.ExtentHeight - ChampionReferenceScrollViewer.ViewportHeight);
-
-            var visibility = scrollableHeight > ScrollableHeightVisibilityThreshold
-                ? ScrollBarVisibility.Auto
-                : ScrollBarVisibility.Hidden;
-
-            if (ChampionReferenceScrollViewer.VerticalScrollBarVisibility != visibility)
-                ChampionReferenceScrollViewer.VerticalScrollBarVisibility = visibility;
         }
 
         private bool TryAddChampionToActiveTarget(ChampionInfo champion)

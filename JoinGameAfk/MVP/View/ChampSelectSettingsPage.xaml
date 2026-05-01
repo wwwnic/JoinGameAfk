@@ -34,8 +34,7 @@
     </Page.Resources>
 
     <ScrollViewer x:Name="PageScrollViewer"
-                  VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled">
+                  Style="{StaticResource StableVerticalScrollViewerStyle}">
         <Grid x:Name="ContentGrid" Margin="0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -322,8 +321,7 @@
                         CornerRadius="8"
                         Padding="8">
                     <ScrollViewer x:Name="ChampionReferenceScrollViewer"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
+                                  Style="{StaticResource StableVerticalScrollViewerStyle}">
                         <ItemsControl x:Name="ChampionReferenceList">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
