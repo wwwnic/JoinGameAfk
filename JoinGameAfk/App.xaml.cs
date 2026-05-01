@@ -38,17 +38,20 @@ namespace JoinGameAfk
             fDashboardPage = new PhaseProgressionPage();
             fLogsPage = new LogsPage();
             fDashboardPage.SetLogsPage(fLogsPage);
-            fDashboardPage.SetSettings(champSelectSettings);
 
             fPhaseController = new PhaseController(fDashboardPage, fLogsPage, champSelectSettings);
-            fDashboardPage.SetController(fPhaseController);
 
             var champSelectPage = new ChampSelectSettingsPage(champSelectSettings);
             var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme);
 
             var mainWindow = new MainWindow(fDashboardPage, champSelectPage, settingsPage);
+            mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
+            fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
+            fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
             mainWindow.UpdatePhaseIndicator(ClientPhase.Unknown);
+            mainWindow.SetWatcherState(false);
+            mainWindow.SetClientConnection(false);
             mainWindow.ActivateTab(activeTabIndex);
 
             return mainWindow;

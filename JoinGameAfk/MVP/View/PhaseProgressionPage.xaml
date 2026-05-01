@@ -20,16 +20,16 @@
         </Style>
 
         <Style x:Key="DraftSlotStyle" TargetType="Border">
-            <Setter Property="MinHeight" Value="54" />
-            <Setter Property="Padding" Value="9,8" />
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="Padding" Value="11,9" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
         <Style x:Key="DraftAvatarStyle" TargetType="Border">
-            <Setter Property="Width" Value="34" />
-            <Setter Property="Height" Value="34" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
             <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -38,7 +38,7 @@
         </Style>
 
         <Style x:Key="DraftAvatarTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
             <Setter Property="HorizontalAlignment" Value="Center" />
@@ -46,9 +46,10 @@
         </Style>
 
         <Style x:Key="DraftRoleTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
 
         <Style x:Key="DraftChampionTextStyle" TargetType="TextBlock">
@@ -56,6 +57,31 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="HeaderBanPanelStyle" TargetType="Border">
+            <Setter Property="MinHeight" Value="68" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+
+        <Style x:Key="HeaderBanChipStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource PriorityChampionChipStyle}">
+            <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextPaleBrush}" />
+        </Style>
+
+        <Style x:Key="HeaderBanPlaceholderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+            <Setter Property="FontStyle" Value="Italic" />
+            <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
         <Style x:Key="RoleChipStyle" TargetType="Border">
@@ -82,23 +108,6 @@
             <Setter Property="Padding" Value="12" />
         </Style>
 
-        <Style x:Key="TinyStatusPillStyle" TargetType="Border">
-            <Setter Property="MinHeight" Value="24" />
-            <Setter Property="Padding" Value="9,0" />
-            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="7" />
-        </Style>
-
-        <Style x:Key="HeaderActionButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource AccentButtonStyle}">
-            <Setter Property="Width" Value="124" />
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="Padding" Value="12,7" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
     </Page.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -121,42 +130,50 @@
                     Padding="16,11">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="150" />
-                        <ColumnDefinition Width="14" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
                         <ColumnDefinition Width="132" />
-                        <ColumnDefinition Width="14" />
-                        <ColumnDefinition Width="*" MinWidth="150" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Grid Grid.Column="0"
-                          VerticalAlignment="Center">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="12" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0"
+                            Style="{StaticResource HeaderBanPanelStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                        <Button x:Name="ToggleButton"
-                                Grid.Column="0"
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Background="{DynamicResource WatcherStartBrush}"
-                                Content="Start watcher"
-                                Style="{StaticResource HeaderActionButtonStyle}"
-                                Click="ToggleButton_Click" />
+                            <TextBlock Text="YOUR BANS"
+                                       Style="{StaticResource DraftPanelHeaderStyle}" />
 
-                        <StackPanel Grid.Column="2"
-                                    VerticalAlignment="Center">
-                            <TextBlock Text="CURRENT PHASE"
-                                       Style="{StaticResource EyebrowTextStyle}" />
-                            <TextBlock x:Name="StatusText"
-                                       Text="Stopped"
-                                       Margin="0,2,0,0"
-                                       FontSize="20"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}" />
-                        </StackPanel>
-                    </Grid>
+                            <Grid Grid.Row="2">
+                                <TextBlock x:Name="MyTeamBansPlaceholderText"
+                                           Text="No bans yet."
+                                           Style="{StaticResource HeaderBanPlaceholderStyle}"
+                                           VerticalAlignment="Center" />
+                                <ItemsControl x:Name="MyTeamBansList"
+                                              VerticalAlignment="Top">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource HeaderBanChipStyle}">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Style="{StaticResource ChampionChipTextStyle}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Grid>
+                    </Border>
 
                     <Border Grid.Column="2"
                             MinHeight="68"
@@ -183,9 +200,51 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Grid.Column="4"
+                            Style="{StaticResource HeaderBanPanelStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="6" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="ENEMY BANS"
+                                       Style="{StaticResource DraftPanelHeaderStyle}"
+                                       HorizontalAlignment="Right" />
+
+                            <Grid Grid.Row="2">
+                                <TextBlock x:Name="TheirTeamBansPlaceholderText"
+                                           Text="No bans yet."
+                                           Style="{StaticResource HeaderBanPlaceholderStyle}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" />
+                                <ItemsControl x:Name="TheirTeamBansList"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Top">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource HeaderBanChipStyle}">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Style="{StaticResource ChampionChipTextStyle}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
                     <StackPanel Grid.Column="4"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
+                                VerticalAlignment="Center"
+                                Visibility="Collapsed">
                         <TextBlock x:Name="ConnectionText"
                                    Visibility="Collapsed"
                                    Text="Client offline"
@@ -245,7 +304,8 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="Top"
                                                    Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text="Waiting"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}" />
                                     </StackPanel>
                                 </Grid>
@@ -266,7 +326,8 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="Jungle"
                                                    Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text="Waiting"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}" />
                                     </StackPanel>
                                 </Grid>
@@ -289,7 +350,8 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="Mid"
                                                    Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text="Local role"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}" />
                                     </StackPanel>
                                 </Grid>
@@ -310,13 +372,13 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="ADC"
                                                    Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text="Waiting"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}" />
                                     </StackPanel>
                                 </Grid>
                             </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}"
-                                    BorderThickness="0">
+                            <Border Style="{StaticResource DraftSlotStyle}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -332,7 +394,8 @@
                                                 VerticalAlignment="Center">
                                         <TextBlock Text="Support"
                                                    Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text="Waiting"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}" />
                                     </StackPanel>
                                 </Grid>
@@ -472,8 +535,6 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="10" />
                                         <RowDefinition Height="*" />
-                                        <RowDefinition Height="10" />
-                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <Grid Grid.Row="0">
@@ -502,8 +563,8 @@
                                             BorderBrush="{DynamicResource AppMutedBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
-                                            Padding="8"
-                                            MinHeight="96">
+                                            Padding="6"
+                                            MinHeight="76">
                                         <Grid>
                                             <TextBlock x:Name="PickChampionPlaceholderText"
                                                        Text="Waiting for champion select."
@@ -522,28 +583,29 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,0,0,6"
-                                                                Padding="7,6"
+                                                        <Border Margin="0,0,0,5"
+                                                                Padding="8,0"
+                                                                MinHeight="28"
                                                                 Background="{DynamicResource AppInputBrush}"
                                                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                                                 BorderThickness="1"
                                                                 CornerRadius="7">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="26" />
-                                                                    <ColumnDefinition Width="8" />
+                                                                    <ColumnDefinition Width="18" />
+                                                                    <ColumnDefinition Width="7" />
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <Border Grid.Column="0"
-                                                                        Width="26"
-                                                                        Height="26"
+                                                                        Width="18"
+                                                                        Height="18"
                                                                         Background="{DynamicResource AccentBlueInfoBrush}"
                                                                         BorderBrush="{DynamicResource AccentBlueBrush}"
                                                                         BorderThickness="1"
-                                                                        CornerRadius="7">
+                                                                        CornerRadius="5">
                                                                     <TextBlock Text="{Binding Name[0]}"
-                                                                               FontSize="11"
+                                                                               FontSize="9"
                                                                                FontWeight="Bold"
                                                                                Foreground="{DynamicResource AccentBluePaleBrush}"
                                                                                HorizontalAlignment="Center"
@@ -591,17 +653,6 @@
                                             </ItemsControl>
                                         </Grid>
                                     </Border>
-
-                                    <StackPanel Grid.Row="4">
-                                        <TextBlock Text="Next action"
-                                                   Style="{StaticResource EyebrowTextStyle}" />
-                                        <TextBlock x:Name="PickLockValueText"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSoftBrush}"
-                                                   Text="-"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
                                 </Grid>
                             </Border>
 
@@ -612,8 +663,6 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="10" />
                                         <RowDefinition Height="*" />
-                                        <RowDefinition Height="10" />
-                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <Grid Grid.Row="0">
@@ -642,8 +691,8 @@
                                             BorderBrush="{DynamicResource AppMutedBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="8"
-                                            Padding="8"
-                                            MinHeight="96">
+                                            Padding="6"
+                                            MinHeight="76">
                                         <Grid>
                                             <TextBlock x:Name="BanChampionPlaceholderText"
                                                        Text="Waiting for champion select."
@@ -662,28 +711,29 @@
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate>
-                                                        <Border Margin="0,0,0,6"
-                                                                Padding="7,6"
+                                                        <Border Margin="0,0,0,5"
+                                                                Padding="8,0"
+                                                                MinHeight="28"
                                                                 Background="{DynamicResource AppInputBrush}"
                                                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                                                 BorderThickness="1"
                                                                 CornerRadius="7">
                                                             <Grid>
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="26" />
-                                                                    <ColumnDefinition Width="8" />
+                                                                    <ColumnDefinition Width="18" />
+                                                                    <ColumnDefinition Width="7" />
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <Border Grid.Column="0"
-                                                                        Width="26"
-                                                                        Height="26"
+                                                                        Width="18"
+                                                                        Height="18"
                                                                         Background="{DynamicResource DangerSurfaceBrush}"
                                                                         BorderBrush="{DynamicResource DangerAccentBrush}"
                                                                         BorderThickness="1"
-                                                                        CornerRadius="7">
+                                                                        CornerRadius="5">
                                                                     <TextBlock Text="{Binding Name[0]}"
-                                                                               FontSize="11"
+                                                                               FontSize="9"
                                                                                FontWeight="Bold"
                                                                                Foreground="{DynamicResource DangerTextPaleBrush}"
                                                                                HorizontalAlignment="Center"
@@ -730,17 +780,6 @@
                                             </ItemsControl>
                                         </Grid>
                                     </Border>
-
-                                    <StackPanel Grid.Row="4">
-                                        <TextBlock Text="Next action"
-                                                   Style="{StaticResource EyebrowTextStyle}" />
-                                        <TextBlock x:Name="BanLockValueText"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSoftBrush}"
-                                                   Text="-"
-                                                   TextWrapping="Wrap" />
-                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </Grid>
@@ -784,7 +823,8 @@
                                         <TextBlock Text="Top"
                                                    Style="{StaticResource DraftRoleTextStyle}"
                                                    HorizontalAlignment="Right" />
-                                        <TextBlock Text="Unknown"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}"
                                                    HorizontalAlignment="Right" />
                                     </StackPanel>
@@ -808,7 +848,8 @@
                                         <TextBlock Text="Jungle"
                                                    Style="{StaticResource DraftRoleTextStyle}"
                                                    HorizontalAlignment="Right" />
-                                        <TextBlock Text="Unknown"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}"
                                                    HorizontalAlignment="Right" />
                                     </StackPanel>
@@ -832,7 +873,8 @@
                                         <TextBlock Text="Mid"
                                                    Style="{StaticResource DraftRoleTextStyle}"
                                                    HorizontalAlignment="Right" />
-                                        <TextBlock Text="Unknown"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}"
                                                    HorizontalAlignment="Right" />
                                     </StackPanel>
@@ -858,7 +900,8 @@
                                         <TextBlock Text="ADC"
                                                    Style="{StaticResource DraftRoleTextStyle}"
                                                    HorizontalAlignment="Right" />
-                                        <TextBlock Text="Unknown"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}"
                                                    HorizontalAlignment="Right" />
                                     </StackPanel>
@@ -869,8 +912,7 @@
                                     </Border>
                                 </Grid>
                             </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}"
-                                    BorderThickness="0">
+                            <Border Style="{StaticResource DraftSlotStyle}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -883,7 +925,8 @@
                                         <TextBlock Text="Support"
                                                    Style="{StaticResource DraftRoleTextStyle}"
                                                    HorizontalAlignment="Right" />
-                                        <TextBlock Text="Unknown"
+                                        <TextBlock Text=""
+                                                   MinHeight="17"
                                                    Style="{StaticResource DraftChampionTextStyle}"
                                                    HorizontalAlignment="Right" />
                                     </StackPanel>

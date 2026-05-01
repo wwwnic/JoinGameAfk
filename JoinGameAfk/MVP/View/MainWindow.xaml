@@ -122,26 +122,87 @@
                 </Grid>
             </Border>
 
-            <WrapPanel Grid.Row="1"
-                       Margin="18,0,18,12"
-                       Orientation="Horizontal"
-                       KeyboardNavigation.DirectionalNavigation="Contained">
-                <Button x:Name="TabDashboard"
-                        Content="Dashboard"
-                        AutomationProperties.Name="Dashboard tab"
-                        Click="TabDashboard_Click"
-                        Style="{StaticResource TabButtonStyle}" />
-                <Button x:Name="TabChampSelect"
-                        Content="Champion Select"
-                        AutomationProperties.Name="Champion Select tab"
-                        Click="TabChampSelect_Click"
-                        Style="{StaticResource TabButtonStyle}" />
-                <Button x:Name="TabSettings"
-                        Content="Settings"
-                        AutomationProperties.Name="Settings tab"
-                        Click="TabSettings_Click"
-                        Style="{StaticResource TabButtonStyle}" />
-            </WrapPanel>
+            <Grid Grid.Row="1"
+                  Margin="18,0,18,12"
+                  KeyboardNavigation.DirectionalNavigation="Contained">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="GlobalWatcherButton"
+                        Grid.Column="0"
+                        MinHeight="36"
+                        Padding="12,7"
+                        Margin="0,0,10,0"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource WatcherStartBrush}"
+                        Content="Start watcher"
+                        AutomationProperties.Name="Start watcher"
+                        Click="GlobalWatcherButton_Click"
+                        Style="{StaticResource AccentButtonStyle}" />
+
+                <WrapPanel Grid.Column="2"
+                           Orientation="Horizontal"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Top">
+                    <Button x:Name="TabDashboard"
+                            Content="Dashboard"
+                            AutomationProperties.Name="Dashboard tab"
+                            Click="TabDashboard_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                    <Button x:Name="TabChampSelect"
+                            Content="Champion Select"
+                            AutomationProperties.Name="Champion Select tab"
+                            Click="TabChampSelect_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                    <Button x:Name="TabSettings"
+                            Content="Settings"
+                            AutomationProperties.Name="Settings tab"
+                            Click="TabSettings_Click"
+                            Style="{StaticResource TabButtonStyle}" />
+                </WrapPanel>
+
+                <Border Grid.Column="4"
+                        MinWidth="124"
+                        MinHeight="36"
+                        Padding="12,0"
+                        Background="{DynamicResource AppSurfaceInsetBrush}"
+                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        VerticalAlignment="Top">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border x:Name="GlobalPhaseIndicator"
+                                Grid.Column="0"
+                                Width="9"
+                                Height="9"
+                                Background="{DynamicResource PhaseDefaultBrush}"
+                                CornerRadius="5"
+                                VerticalAlignment="Center" />
+
+                        <TextBlock x:Name="GlobalPhaseText"
+                                   Grid.Column="2"
+                                   Text="Stopped"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+            </Grid>
 
             <Grid Grid.Row="2"
                   Margin="16,0,16,16">

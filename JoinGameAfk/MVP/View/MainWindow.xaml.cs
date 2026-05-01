@@ -1,11 +1,13 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using JoinGameAfk.Enums;
+using JoinGameAfk.MVP.Controller;
 using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
@@ -20,8 +22,11 @@ namespace JoinGameAfk.View
 
         private readonly Button[] _tabs;
         private readonly Frame[] _frames;
+        private PhaseController? _phaseController;
         private int _activeTabIndex;
         private ClientPhase _currentPhase = ClientPhase.Unknown;
+        private bool _isWatcherRunning;
+        private bool _isClientConnected;
 
         public int ActiveTabIndex => _activeTabIndex;
 
@@ -41,6 +46,9 @@ namespace JoinGameAfk.View
             Closed += (_, _) => AppThemeManager.ThemeChanged -= RefreshTheme;
             AppThemeManager.ThemeChanged += RefreshTheme;
             ActivateTab(0);
+            SetWatcherState(false);
+            SetClientConnection(false);
+            UpdatePhaseIndicator(ClientPhase.Unknown);
             UpdateMaximizeRestoreButton();
         }
 
@@ -53,6 +61,41 @@ namespace JoinGameAfk.View
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
         private void TabChampSelect_Click(object sender, RoutedEventArgs e) => ActivateTab(1);
         private void TabSettings_Click(object sender, RoutedEventArgs e) => ActivateTab(2);
+
+        public void SetController(PhaseController controller)
+        {
+            _phaseController = controller;
+        }
+
+        public void SetWatcherState(bool isRunning)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _isWatcherRunning = isRunning;
+                RefreshWatcherButton();
+                RefreshPhaseText();
+            });
+        }
+
+        public void SetClientConnection(bool isConnected)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _isClientConnected = isConnected;
+                RefreshPhaseText();
+            });
+        }
+
+        private void GlobalWatcherButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_phaseController is null)
+                return;
+
+            if (_phaseController.IsRunning)
+                _phaseController.Stop();
+            else
+                _phaseController.Start();
+        }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
@@ -219,14 +262,8 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 _currentPhase = phase;
-                TitlePhaseIndicator.Background = phase switch
-                {
-                    ClientPhase.Lobby or ClientPhase.Matchmaking => ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue),
-                    ClientPhase.ReadyCheck => ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen),
-                    ClientPhase.Planning => ResourceBrush("PhaseHoverBrush", Brushes.DarkOrange),
-                    ClientPhase.ChampSelect => ResourceBrush("PhaseBanBrush", Brushes.Firebrick),
-                    _ => ResourceBrush("PhaseDefaultBrush", Brushes.White)
-                };
+                RefreshPhaseIndicator();
+                RefreshPhaseText();
             });
         }
 
@@ -235,8 +272,55 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 ActivateTab(_activeTabIndex);
-                UpdatePhaseIndicator(_currentPhase);
+                RefreshPhaseIndicator();
+                RefreshWatcherButton();
+                RefreshPhaseText();
             });
+        }
+
+        private void RefreshPhaseIndicator()
+        {
+            Brush phaseBrush = _currentPhase switch
+            {
+                ClientPhase.Lobby or ClientPhase.Matchmaking => ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue),
+                ClientPhase.ReadyCheck => ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen),
+                ClientPhase.Planning => ResourceBrush("PhaseHoverBrush", Brushes.DarkOrange),
+                ClientPhase.ChampSelect => ResourceBrush("PhaseBanBrush", Brushes.Firebrick),
+                _ => ResourceBrush("PhaseDefaultBrush", Brushes.White)
+            };
+
+            TitlePhaseIndicator.Background = phaseBrush;
+            GlobalPhaseIndicator.Background = phaseBrush;
+        }
+
+        private void RefreshWatcherButton()
+        {
+            GlobalWatcherButton.Content = _isWatcherRunning ? "Stop watcher" : "Start watcher";
+            AutomationProperties.SetName(GlobalWatcherButton, _isWatcherRunning ? "Stop watcher" : "Start watcher");
+            GlobalWatcherButton.Background = _isWatcherRunning
+                ? ResourceBrush("WatcherStopBrush", Brushes.Firebrick)
+                : ResourceBrush("WatcherStartBrush", Brushes.ForestGreen);
+        }
+
+        private void RefreshPhaseText()
+        {
+            GlobalPhaseText.Text = GetStatusLine(_currentPhase);
+        }
+
+        private string GetStatusLine(ClientPhase phase)
+        {
+            return phase switch
+            {
+                ClientPhase.Lobby => "Lobby",
+                ClientPhase.Matchmaking => "In Queue",
+                ClientPhase.ReadyCheck => "Ready Check",
+                ClientPhase.ChampSelect => "Champion Select",
+                ClientPhase.Planning => "Planning",
+                ClientPhase.InGame => "In Game",
+                _ when _isWatcherRunning && !_isClientConnected => "Waiting for client",
+                _ when _isWatcherRunning => "Watching",
+                _ => "Stopped"
+            };
         }
 
         private Brush ResourceBrush(string key, Brush fallback)

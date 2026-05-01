@@ -8,6 +8,8 @@ namespace JoinGameAfk.Model
 
     public sealed record DashboardStatus
     {
+        public IReadOnlyList<DashboardChampionPlanItem> MyTeamBans { get; init; } = [];
+        public IReadOnlyList<DashboardChampionPlanItem> TheirTeamBans { get; init; } = [];
         public IReadOnlyList<DashboardChampionPlanItem> PickChampionPriority { get; init; } = [];
         public IReadOnlyList<DashboardChampionPlanItem> BanChampionPriority { get; init; } = [];
         public string BanChampionText { get; init; } = "Waiting for champion select.";
