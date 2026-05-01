@@ -66,6 +66,8 @@ namespace JoinGameAfk.Model
 
         public PositionPreference GetPreference(Position position)
         {
+            position = NormalizePreferencePosition(position);
+
             if (Preferences.TryGetValue(position, out var pref) && (pref.PickChampionIds.Count > 0 || pref.BanChampionIds.Count > 0))
                 return pref;
 
@@ -84,6 +86,8 @@ namespace JoinGameAfk.Model
 
         private List<int> GetMergedChampionIds(Position position, Func<PositionPreference, List<int>> selector)
         {
+            position = NormalizePreferencePosition(position);
+
             var rolePref = position != Position.Default
                 && Preferences.TryGetValue(position, out var rp)
                 ? selector(rp)
@@ -105,6 +109,13 @@ namespace JoinGameAfk.Model
             }
 
             return merged;
+        }
+
+        private static Position NormalizePreferencePosition(Position position)
+        {
+            return position == Position.None
+                ? Position.Default
+                : position;
         }
 
         public event Action? Saved;
@@ -153,6 +164,8 @@ namespace JoinGameAfk.Model
         {
             if (settings.Version <= 0)
                 settings.Version = AppStorage.SettingsFileVersion;
+
+            settings.Preferences.Remove(Position.None);
 
             return settings;
         }

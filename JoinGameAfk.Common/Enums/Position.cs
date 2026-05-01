@@ -7,6 +7,7 @@ namespace JoinGameAfk.Enums
         Jungle,
         Mid,
         Adc,
-        Support
+        Support,
+        None
     }
 }

@@ -60,8 +60,12 @@ namespace JoinGameAfk.View
             {
                 UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "No bans yet.");
                 UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "No bans yet.");
+                UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
+                UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
                 UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
                 UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
+                UpdateCurrentRoleDisplay(GetCurrentPriorityListPosition(status));
+                UpdateCurrentActionDisplay(status);
 
                 ChampSelectSubPhaseText.Text = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
                     ? "Idle"
@@ -71,6 +75,108 @@ namespace JoinGameAfk.View
                     : "--";
                 QueueLogRowResize();
             });
+        }
+
+        private static void UpdateTeamSlotList(ItemsControl itemsControl, IReadOnlyList<DashboardTeamSlotItem> slots)
+        {
+            itemsControl.ItemsSource = slots;
+        }
+
+        private void UpdateCurrentRoleDisplay(Position position)
+        {
+            position = NormalizeDisplayPosition(position);
+
+            var inactiveStyle = (Style)FindResource("RoleChipStyle");
+            var activeStyle = (Style)FindResource("ActiveRoleChipStyle");
+
+            SetRoleChipStyle(TopRoleChip, Position.Top, position, inactiveStyle, activeStyle);
+            SetRoleChipStyle(JungleRoleChip, Position.Jungle, position, inactiveStyle, activeStyle);
+            SetRoleChipStyle(MidRoleChip, Position.Mid, position, inactiveStyle, activeStyle);
+            SetRoleChipStyle(AdcRoleChip, Position.Adc, position, inactiveStyle, activeStyle);
+            SetRoleChipStyle(SupportRoleChip, Position.Support, position, inactiveStyle, activeStyle);
+            SetRoleChipStyle(DefaultRoleChip, Position.Default, position, inactiveStyle, activeStyle);
+        }
+
+        private void UpdateCurrentActionDisplay(DashboardStatus status)
+        {
+            bool isBanAction = IsBanAction(status);
+            IReadOnlyList<DashboardChampionPlanItem> actionPlan = isBanAction
+                ? status.BanChampionPriority
+                : status.PickChampionPriority;
+            string actionName = isBanAction ? "Ban" : "Pick";
+            string lockText = isBanAction ? status.BanLockText : status.PickLockText;
+            var targetChampion = GetCurrentActionChampion(actionPlan);
+
+            CurrentActionChampionText.Text = targetChampion?.Name ?? "--";
+            CurrentActionTitleText.Text = $"{actionName} target";
+            CurrentActionLockText.Text = string.IsNullOrWhiteSpace(lockText)
+                ? "Lock timing unavailable."
+                : lockText;
+
+            if (targetChampion is null)
+            {
+                bool isWaiting = status.TimeLeftSeconds < 0
+                    && string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
+                    && status.PickChampionPriority.Count == 0
+                    && status.BanChampionPriority.Count == 0;
+
+                CurrentActionSubtitleText.Visibility = isWaiting ? Visibility.Collapsed : Visibility.Visible;
+                CurrentActionSubtitleText.Text = isWaiting
+                    ? string.Empty
+                    : $"No {actionName.ToLowerInvariant()} champion configured.";
+                CurrentActionLockText.Text = isWaiting
+                    ? "Lock timing unavailable."
+                    : CurrentActionLockText.Text;
+                return;
+            }
+
+            CurrentActionSubtitleText.Visibility = Visibility.Collapsed;
+        }
+
+        private static Position GetCurrentPriorityListPosition(DashboardStatus status)
+        {
+            bool isBanAction = IsBanAction(status);
+            IReadOnlyList<DashboardChampionPlanItem> actionPlan = isBanAction
+                ? status.BanChampionPriority
+                : status.PickChampionPriority;
+
+            return NormalizeDisplayPosition(GetCurrentActionChampion(actionPlan)?.SourcePosition ?? status.CurrentPosition);
+        }
+
+        private static bool IsBanAction(DashboardStatus status)
+        {
+            return string.Equals(status.ChampSelectSubPhase, "Ban", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void SetRoleChipStyle(Border roleChip, Position role, Position currentPosition, Style inactiveStyle, Style activeStyle)
+        {
+            roleChip.Style = role == currentPosition ? activeStyle : inactiveStyle;
+        }
+
+        private static Position NormalizeDisplayPosition(Position position)
+        {
+            return position is Position.Default or Position.None
+                ? Position.Default
+                : position;
+        }
+
+        private static string GetPositionDisplayName(Position position)
+        {
+            return position switch
+            {
+                Position.Top => "Top",
+                Position.Jungle => "Jungle",
+                Position.Mid => "Mid",
+                Position.Adc => "ADC",
+                Position.Support => "Support",
+                _ => "Default",
+            };
+        }
+
+        private static DashboardChampionPlanItem? GetCurrentActionChampion(IReadOnlyList<DashboardChampionPlanItem> actionPlan)
+        {
+            return actionPlan.FirstOrDefault(champion => champion.IsAvailable)
+                ?? actionPlan.FirstOrDefault();
         }
 
         private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)

@@ -7,6 +7,8 @@ using static LcuClient.Lcu;
 
 public class ChampSelect : IPhaseHandler
 {
+    private sealed record ChampionPlanChoice(int ChampionId, Position SourcePosition);
+
     private readonly LeagueClientHttp _http;
     private readonly ChampSelectSettings _settings;
     private readonly Action<string>? _log;
@@ -27,6 +29,7 @@ public class ChampSelect : IPhaseHandler
     private long _lastReportedTimeLeftMs;
     private long _lastEffectiveTimeLeftMs;
     private DateTime _lastTimerObservedAtUtc;
+    private Position _lastAssignedPosition = Position.None;
     private int _pendingPickHoverActionId;
     private int _pendingBanHoverActionId;
     private DateTime _pickHoverReadyAtUtc;
@@ -66,9 +69,12 @@ public class ChampSelect : IPhaseHandler
                 return;
 
             Position assignedPosition = GetAssignedPosition(root, localPlayerCellId);
-            var mergedPickIds = _settings.GetMergedPickChampionIds(assignedPosition);
-            var mergedBanIds = _settings.GetMergedBanChampionIds(assignedPosition);
-            var preference = _settings.GetPreference(assignedPosition);
+            RefreshAssignedPosition(assignedPosition);
+
+            var pickChoices = GetMergedPickChampionChoices(assignedPosition);
+            var banChoices = GetMergedBanChampionChoices(assignedPosition);
+            var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
+            var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
             string champSelectPhase = GetChampSelectPhase(root);
             long totalTimeMs = GetTotalTimeInPhaseMs(root);
             long rawTimeLeftMs = GetAdjustedTimeLeftMs(root);
@@ -132,7 +138,7 @@ public class ChampSelect : IPhaseHandler
                 }
             }
 
-            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, mergedPickIds, mergedBanIds, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
+            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
         }
         catch (Exception ex)
         {
@@ -140,29 +146,298 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<int> pickIds, IReadOnlyList<int> banIds, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
+    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
     {
         return new DashboardStatus
         {
-            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickIds, _failedPickChampionIds),
-            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banIds, _failedBanChampionIds),
+            CurrentPosition = assignedPosition,
+            MyTeamSlots = BuildTeamSlotItems(root, "myTeam"),
+            TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam"),
+            MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam"),
+            TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam"),
+            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds),
+            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds),
             PickChampionText = "No picks configured",
             BanChampionText = "No bans configured",
+            PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
+            BanLockText = BuildLockText(_settings.BanLockDelaySeconds, _manualBanSelectionOverride),
             ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType),
             TimeLeftSeconds = (int)(timeLeftMs / 1000),
         };
     }
 
-    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<int> championIds, IReadOnlySet<int> failedChampionIds)
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds)
     {
+        return championChoices
+            .Select(choice => new DashboardChampionPlanItem
+            {
+                Name = FormatChampion(choice.ChampionId),
+                SourcePosition = choice.SourcePosition,
+                IsAvailable = !failedChampionIds.Contains(choice.ChampionId)
+                    && !IsChampionUnavailable(root, localPlayerCellId, actionId, choice.ChampionId)
+            })
+            .ToList();
+    }
+
+    private IReadOnlyList<ChampionPlanChoice> GetMergedPickChampionChoices(Position position)
+    {
+        return GetMergedChampionChoices(position, preference => preference.PickChampionIds);
+    }
+
+    private IReadOnlyList<ChampionPlanChoice> GetMergedBanChampionChoices(Position position)
+    {
+        return GetMergedChampionChoices(position, preference => preference.BanChampionIds);
+    }
+
+    private IReadOnlyList<ChampionPlanChoice> GetMergedChampionChoices(Position position, Func<PositionPreference, List<int>> selector)
+    {
+        position = NormalizePreferencePosition(position);
+
+        var roleIds = position != Position.Default
+            && _settings.Preferences.TryGetValue(position, out var rolePreference)
+            ? selector(rolePreference)
+            : [];
+
+        var defaultIds = _settings.Preferences.TryGetValue(Position.Default, out var defaultPreference)
+            ? selector(defaultPreference)
+            : [];
+
+        if (roleIds.Count == 0)
+        {
+            return defaultIds
+                .Select(championId => new ChampionPlanChoice(championId, Position.Default))
+                .ToList();
+        }
+
+        var seen = new HashSet<int>();
+        var choices = new List<ChampionPlanChoice>();
+
+        foreach (int championId in roleIds)
+        {
+            if (seen.Add(championId))
+                choices.Add(new ChampionPlanChoice(championId, position));
+        }
+
+        foreach (int championId in defaultIds)
+        {
+            if (seen.Add(championId))
+                choices.Add(new ChampionPlanChoice(championId, Position.Default));
+        }
+
+        return choices;
+    }
+
+    private static Position NormalizePreferencePosition(Position position)
+    {
+        return position == Position.None
+            ? Position.Default
+            : position;
+    }
+
+    private string BuildLockText(int configuredDelaySeconds, bool useLastSecondFallback)
+    {
+        if (!_settings.AutoLockSelectionEnabled)
+            return "Auto-lock disabled";
+
+        int lockDelaySeconds = GetLockDelaySeconds(configuredDelaySeconds, useLastSecondFallback);
+        if (lockDelaySeconds <= 0)
+            return "Locks immediately";
+
+        string suffix = useLastSecondFallback ? " after manual selection" : string.Empty;
+        return $"Locks at <= {lockDelaySeconds}s{suffix}";
+    }
+
+    private static IReadOnlyList<DashboardTeamSlotItem> BuildTeamSlotItems(JsonElement root, string teamPropertyName)
+    {
+        if (!root.TryGetProperty(teamPropertyName, out var teamMembers)
+            || teamMembers.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var slots = new List<(int Index, Position Position, DashboardTeamSlotItem Item)>();
+        int index = 0;
+        foreach (var member in teamMembers.EnumerateArray())
+        {
+            Position position = GetAssignedPosition(member);
+            int championId = GetCurrentChampionId(member);
+            string championName = championId > 0 ? FormatChampion(championId) : "No champion";
+
+            slots.Add((
+                index++,
+                position,
+                new DashboardTeamSlotItem
+                {
+                    ChampionInitial = GetChampionInitial(championName, championId),
+                    ChampionName = championName,
+                    RoleName = GetPositionDisplayName(position)
+                }));
+        }
+
+        return slots
+            .OrderBy(slot => GetPositionSortOrder(slot.Position))
+            .ThenBy(slot => slot.Index)
+            .Select(slot => slot.Item)
+            .ToList();
+    }
+
+    private static int GetCurrentChampionId(JsonElement member)
+    {
+        if (TryGetInt32(member, "championId", out int championId) && championId > 0)
+            return championId;
+
+        return TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent > 0
+            ? championPickIntent
+            : 0;
+    }
+
+    private static string GetChampionInitial(string championName, int championId)
+    {
+        if (championId <= 0 || string.IsNullOrWhiteSpace(championName))
+            return "?";
+
+        return championName[..1].ToUpperInvariant();
+    }
+
+    private static string GetPositionDisplayName(Position position)
+    {
+        return position switch
+        {
+            Position.Top => "Top",
+            Position.Jungle => "Jungle",
+            Position.Mid => "Mid",
+            Position.Adc => "ADC",
+            Position.Support => "Support",
+            _ => "None",
+        };
+    }
+
+    private static int GetPositionSortOrder(Position position)
+    {
+        return position switch
+        {
+            Position.Top => 0,
+            Position.Jungle => 1,
+            Position.Mid => 2,
+            Position.Adc => 3,
+            Position.Support => 4,
+            _ => 5,
+        };
+    }
+
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildTeamBanItems(JsonElement root, string bansPropertyName, string teamPropertyName)
+    {
+        var championIds = GetBanChampionIdsFromBans(root, bansPropertyName);
+        if (championIds.Count == 0)
+            championIds = GetCompletedBanChampionIdsFromActions(root, GetTeamCellIds(root, teamPropertyName));
+
         return championIds
             .Select(championId => new DashboardChampionPlanItem
             {
-                Name = FormatChampion(championId),
-                IsAvailable = !failedChampionIds.Contains(championId)
-                    && !IsChampionUnavailable(root, localPlayerCellId, actionId, championId)
+                Name = FormatChampion(championId)
             })
             .ToList();
+    }
+
+    private static List<int> GetBanChampionIdsFromBans(JsonElement root, string propertyName)
+    {
+        if (root.TryGetProperty("bans", out var bans)
+            && bans.ValueKind == JsonValueKind.Object
+            && bans.TryGetProperty(propertyName, out var banIds))
+        {
+            return GetChampionIdsFromArray(banIds);
+        }
+
+        return root.TryGetProperty(propertyName, out var rootBanIds)
+            ? GetChampionIdsFromArray(rootBanIds)
+            : [];
+    }
+
+    private static List<int> GetCompletedBanChampionIdsFromActions(JsonElement root, IReadOnlySet<int> teamCellIds)
+    {
+        if (teamCellIds.Count == 0
+            || !root.TryGetProperty("actions", out var actions)
+            || actions.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var championIds = new List<int>();
+        var seenChampionIds = new HashSet<int>();
+
+        foreach (var actionGroup in actions.EnumerateArray())
+        {
+            if (actionGroup.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var action in actionGroup.EnumerateArray())
+            {
+                if (!TryGetInt32(action, "actorCellId", out int actorCellId)
+                    || !teamCellIds.Contains(actorCellId)
+                    || !TryGetInt32(action, "championId", out int championId)
+                    || championId <= 0
+                    || !TryGetBool(action, "completed", out bool completed)
+                    || !completed)
+                {
+                    continue;
+                }
+
+                string type = action.TryGetProperty("type", out var typeProperty)
+                    ? typeProperty.GetString() ?? string.Empty
+                    : string.Empty;
+
+                if (!string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase)
+                    || !seenChampionIds.Add(championId))
+                {
+                    continue;
+                }
+
+                championIds.Add(championId);
+            }
+        }
+
+        return championIds;
+    }
+
+    private static HashSet<int> GetTeamCellIds(JsonElement root, string teamPropertyName)
+    {
+        var cellIds = new HashSet<int>();
+        if (!root.TryGetProperty(teamPropertyName, out var teamMembers)
+            || teamMembers.ValueKind != JsonValueKind.Array)
+        {
+            return cellIds;
+        }
+
+        foreach (var member in teamMembers.EnumerateArray())
+        {
+            if (TryGetInt32(member, "cellId", out int cellId))
+                cellIds.Add(cellId);
+        }
+
+        return cellIds;
+    }
+
+    private static List<int> GetChampionIdsFromArray(JsonElement championIdsElement)
+    {
+        if (championIdsElement.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var championIds = new List<int>();
+        var seenChampionIds = new HashSet<int>();
+        foreach (var championIdElement in championIdsElement.EnumerateArray())
+        {
+            if (championIdElement.ValueKind != JsonValueKind.Number
+                || !championIdElement.TryGetInt32(out int championId)
+                || championId <= 0
+                || !seenChampionIds.Add(championId))
+            {
+                continue;
+            }
+
+            championIds.Add(championId);
+        }
+
+        return championIds;
     }
 
     private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType)
@@ -207,6 +482,7 @@ public class ChampSelect : IPhaseHandler
         _lastReportedTimeLeftMs = 0;
         _lastEffectiveTimeLeftMs = 0;
         _lastTimerObservedAtUtc = DateTime.MinValue;
+        _lastAssignedPosition = Position.None;
         _pendingPickHoverActionId = 0;
         _pendingBanHoverActionId = 0;
         _pickHoverReadyAtUtc = DateTime.MinValue;
@@ -215,6 +491,23 @@ public class ChampSelect : IPhaseHandler
         _banRetryStateActionId = 0;
         _failedPickChampionIds.Clear();
         _failedBanChampionIds.Clear();
+    }
+
+    private void RefreshAssignedPosition(Position assignedPosition)
+    {
+        if (_lastAssignedPosition == assignedPosition)
+            return;
+
+        Position previousPosition = _lastAssignedPosition;
+        _lastAssignedPosition = assignedPosition;
+
+        ResetPickHover();
+        ResetBanHover();
+        _failedPickChampionIds.Clear();
+        _failedBanChampionIds.Clear();
+
+        if (previousPosition != Position.None)
+            Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
     private void HandlePickAction(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
@@ -602,24 +895,34 @@ public class ChampSelect : IPhaseHandler
         {
             foreach (var member in myTeam.EnumerateArray())
             {
-                int cellId = member.GetProperty("cellId").GetInt32();
+                if (!TryGetInt32(member, "cellId", out int cellId))
+                    continue;
+
                 if (cellId == localPlayerCellId)
                 {
-                    string position = member.GetProperty("assignedPosition").GetString() ?? "";
-                    return position.ToLowerInvariant() switch
-                    {
-                        "top" => Position.Top,
-                        "jungle" => Position.Jungle,
-                        "middle" => Position.Mid,
-                        "bottom" => Position.Adc,
-                        "utility" => Position.Support,
-                        _ => Position.Default
-                    };
+                    return GetAssignedPosition(member);
                 }
             }
         }
 
-        return Position.Default;
+        return Position.None;
+    }
+
+    private static Position GetAssignedPosition(JsonElement member)
+    {
+        string position = member.TryGetProperty("assignedPosition", out var assignedPositionProperty)
+            ? assignedPositionProperty.GetString() ?? ""
+            : "";
+
+        return position.ToLowerInvariant() switch
+        {
+            "top" => Position.Top,
+            "jungle" => Position.Jungle,
+            "middle" => Position.Mid,
+            "bottom" => Position.Adc,
+            "utility" => Position.Support,
+            _ => Position.None
+        };
     }
 
     private static string GetChampSelectPhase(JsonElement root)

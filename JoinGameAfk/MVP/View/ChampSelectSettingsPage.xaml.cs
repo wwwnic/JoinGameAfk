@@ -93,7 +93,7 @@ namespace JoinGameAfk.View
             ChampionReferenceList.ItemsSource = _filteredChampions;
 
             _rows = [];
-            foreach (Position position in Enum.GetValues<Position>())
+            foreach (Position position in Enum.GetValues<Position>().Where(position => position != Position.None))
             {
                 var pref = _settings.Preferences.GetValueOrDefault(position) ?? new PositionPreference();
                 var row = new PositionRow
@@ -1758,6 +1758,8 @@ namespace JoinGameAfk.View
 
         private void SaveChampionPreferences()
         {
+            _settings.Preferences.Remove(Position.None);
+
             foreach (var row in _rows)
             {
                 _settings.Preferences[row.Position] = new PositionPreference

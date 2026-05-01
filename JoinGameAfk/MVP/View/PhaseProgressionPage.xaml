@@ -281,126 +281,46 @@
                             <StackPanel>
                                 <TextBlock Text="YOUR TEAM"
                                            Style="{StaticResource DraftPanelHeaderStyle}" />
-                                <TextBlock Text="Live slots later"
+                                <TextBlock Text="Current champions"
                                            Margin="0,2,0,0"
                                            Style="{StaticResource MutedTextStyle}" />
                             </StackPanel>
                         </Border>
 
-                        <StackPanel Grid.Row="1">
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="T"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
+                        <ItemsControl x:Name="MyTeamSlotList"
+                                      Grid.Row="1">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource DraftSlotStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="9" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Style="{StaticResource DraftAvatarStyle}">
+                                                <TextBlock Text="{Binding ChampionInitial}"
+                                                           Style="{StaticResource DraftAvatarTextStyle}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="2"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ChampionName}"
+                                                           Style="{StaticResource DraftRoleTextStyle}" />
+                                                <TextBlock Text="{Binding RoleName}"
+                                                           MinHeight="17"
+                                                           Style="{StaticResource DraftChampionTextStyle}" />
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Top"
-                                                   Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="J"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Jungle"
-                                                   Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0"
-                                            Style="{StaticResource DraftAvatarStyle}"
-                                            BorderBrush="{DynamicResource AccentBlueBrush}">
-                                        <TextBlock Text="M"
-                                                   Style="{StaticResource DraftAvatarTextStyle}"
-                                                   Foreground="{DynamicResource AccentBluePaleBrush}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Mid"
-                                                   Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="A"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="ADC"
-                                                   Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="S"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Support"
-                                                   Style="{StaticResource DraftRoleTextStyle}" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
                 </Border>
 
@@ -432,7 +352,8 @@
                         <UniformGrid Grid.Row="1"
                                      Columns="6"
                                      Margin="12,12,12,0">
-                            <Border Style="{StaticResource RoleChipStyle}"
+                            <Border x:Name="TopRoleChip"
+                                    Style="{StaticResource RoleChipStyle}"
                                     Margin="0,0,6,0">
                                 <TextBlock Text="Top"
                                            FontSize="11"
@@ -440,7 +361,8 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
-                            <Border Style="{StaticResource RoleChipStyle}"
+                            <Border x:Name="JungleRoleChip"
+                                    Style="{StaticResource RoleChipStyle}"
                                     Margin="0,0,6,0">
                                 <TextBlock Text="Jungle"
                                            FontSize="11"
@@ -448,7 +370,8 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
-                            <Border Style="{StaticResource ActiveRoleChipStyle}"
+                            <Border x:Name="MidRoleChip"
+                                    Style="{StaticResource RoleChipStyle}"
                                     Margin="0,0,6,0">
                                 <TextBlock Text="Mid"
                                            FontSize="11"
@@ -456,7 +379,8 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
-                            <Border Style="{StaticResource RoleChipStyle}"
+                            <Border x:Name="AdcRoleChip"
+                                    Style="{StaticResource RoleChipStyle}"
                                     Margin="0,0,6,0">
                                 <TextBlock Text="ADC"
                                            FontSize="11"
@@ -464,7 +388,8 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
-                            <Border Style="{StaticResource RoleChipStyle}"
+                            <Border x:Name="SupportRoleChip"
+                                    Style="{StaticResource RoleChipStyle}"
                                     Margin="0,0,6,0">
                                 <TextBlock Text="Support"
                                            FontSize="11"
@@ -472,8 +397,9 @@
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center" />
                             </Border>
-                            <Border Style="{StaticResource RoleChipStyle}">
-                                <TextBlock Text="None"
+                            <Border x:Name="DefaultRoleChip"
+                                    Style="{StaticResource ActiveRoleChipStyle}">
+                                <TextBlock Text="Default"
                                            FontSize="11"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
@@ -497,25 +423,43 @@
                                         BorderBrush="{DynamicResource AccentBlueBrush}"
                                         BorderThickness="1"
                                         CornerRadius="8">
-                                    <TextBlock Text="JG"
-                                               FontSize="16"
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource AccentBluePaleBrush}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
+                                    <Viewbox Stretch="Uniform"
+                                             Margin="5">
+                                        <TextBlock x:Name="CurrentActionChampionText"
+                                                   Text="--"
+                                                   Width="42"
+                                                   FontSize="12"
+                                                   FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBluePaleBrush}"
+                                                   TextAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+                                    </Viewbox>
                                 </Border>
                                 <StackPanel Grid.Column="2"
                                             VerticalAlignment="Center">
                                     <TextBlock Text="Current action"
                                                Style="{StaticResource EyebrowTextStyle}" />
-                                    <TextBlock Text="Champion select plan"
+                                    <TextBlock x:Name="CurrentActionTitleText"
+                                               Text="None plan"
                                                Margin="0,2,0,0"
                                                FontSize="19"
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextPrimaryBrush}" />
-                                    <TextBlock Text="The live pick and ban recommendations below still use the existing dashboard data."
+                                    <TextBlock x:Name="CurrentActionSubtitleText"
+                                               Text=""
                                                Margin="0,3,0,0"
-                                               Style="{StaticResource MutedTextStyle}" />
+                                               Style="{StaticResource MutedTextStyle}"
+                                               Visibility="Collapsed"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock x:Name="CurrentActionLockText"
+                                               Text="Lock timing unavailable."
+                                               Margin="0,3,0,0"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextWrapping="Wrap" />
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -802,142 +746,47 @@
                                 <TextBlock Text="ENEMY TEAM"
                                            Style="{StaticResource DraftPanelHeaderStyle}"
                                            HorizontalAlignment="Right" />
-                                <TextBlock Text="Live slots later"
+                                <TextBlock Text="Current champions"
                                            Margin="0,2,0,0"
                                            Style="{StaticResource MutedTextStyle}"
                                            HorizontalAlignment="Right" />
                             </StackPanel>
                         </Border>
 
-                        <StackPanel Grid.Row="1">
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
-                                        <TextBlock Text="Top"
-                                                   Style="{StaticResource DraftRoleTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="?"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
+                        <ItemsControl x:Name="TheirTeamSlotList"
+                                      Grid.Row="1">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource DraftSlotStyle}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="9" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Style="{StaticResource DraftAvatarStyle}">
+                                                <TextBlock Text="{Binding ChampionInitial}"
+                                                           Style="{StaticResource DraftAvatarTextStyle}" />
+                                            </Border>
+                                            <StackPanel Grid.Column="2"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ChampionName}"
+                                                           Style="{StaticResource DraftRoleTextStyle}" />
+                                                <TextBlock Text="{Binding RoleName}"
+                                                           MinHeight="17"
+                                                           Style="{StaticResource DraftChampionTextStyle}" />
+                                            </StackPanel>
+                                        </Grid>
                                     </Border>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
-                                        <TextBlock Text="Jungle"
-                                                   Style="{StaticResource DraftRoleTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="?"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
-                                        <TextBlock Text="Mid"
-                                                   Style="{StaticResource DraftRoleTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource DraftAvatarStyle}"
-                                            BorderBrush="{DynamicResource DangerAccentBrush}">
-                                        <TextBlock Text="?"
-                                                   Style="{StaticResource DraftAvatarTextStyle}"
-                                                   Foreground="{DynamicResource DangerTextPaleBrush}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
-                                        <TextBlock Text="ADC"
-                                                   Style="{StaticResource DraftRoleTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="?"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                            <Border Style="{StaticResource DraftSlotStyle}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="9" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0"
-                                                VerticalAlignment="Center"
-                                                HorizontalAlignment="Right">
-                                        <TextBlock Text="Support"
-                                                   Style="{StaticResource DraftRoleTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                        <TextBlock Text=""
-                                                   MinHeight="17"
-                                                   Style="{StaticResource DraftChampionTextStyle}"
-                                                   HorizontalAlignment="Right" />
-                                    </StackPanel>
-                                    <Border Grid.Column="2"
-                                            Style="{StaticResource DraftAvatarStyle}">
-                                        <TextBlock Text="?"
-                                                   Style="{StaticResource DraftAvatarTextStyle}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
                 </Border>
             </Grid>
