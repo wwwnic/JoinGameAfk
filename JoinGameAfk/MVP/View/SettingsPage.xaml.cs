@@ -99,7 +99,7 @@ namespace JoinGameAfk.View
         {
             if (!ConfirmChampionCatalogRefresh())
             {
-                SetChampionCatalogRefreshStatus("Update canceled. No internet request was made.", "TextSoftBrush", Brushes.SlateGray);
+                SetChampionCatalogRefreshStatus("Update canceled.", "TextSoftBrush", Brushes.SlateGray);
                 return;
             }
 

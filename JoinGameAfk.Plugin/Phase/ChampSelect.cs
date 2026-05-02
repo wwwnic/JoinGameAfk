@@ -327,11 +327,16 @@ public class ChampSelect : IPhaseHandler
 
     private static IReadOnlyList<DashboardChampionPlanItem> BuildTeamBanItems(JsonElement root, string bansPropertyName, string teamPropertyName)
     {
+        var teamCellIds = GetTeamCellIds(root, teamPropertyName);
+        var activeOrCompletedBanChampionIds = GetBanChampionIdsFromActions(root, teamCellIds, includeInProgress: true);
         var championIds = GetBanChampionIdsFromBans(root, bansPropertyName);
         if (championIds.Count == 0)
-            championIds = GetCompletedBanChampionIdsFromActions(root, GetTeamCellIds(root, teamPropertyName));
+            championIds = GetBanChampionIdsFromActions(root, teamCellIds, includeInProgress: false);
+
+        var actionBanChampionIds = activeOrCompletedBanChampionIds.ToHashSet();
 
         return championIds
+            .Where(championId => ChampionCatalog.TryGetById(championId, out _) || actionBanChampionIds.Contains(championId))
             .Select(championId => new DashboardChampionPlanItem
             {
                 Name = FormatChampion(championId)
@@ -353,7 +358,7 @@ public class ChampSelect : IPhaseHandler
             : [];
     }
 
-    private static List<int> GetCompletedBanChampionIdsFromActions(JsonElement root, IReadOnlySet<int> teamCellIds)
+    private static List<int> GetBanChampionIdsFromActions(JsonElement root, IReadOnlySet<int> teamCellIds, bool includeInProgress)
     {
         if (teamCellIds.Count == 0
             || !root.TryGetProperty("actions", out var actions)
@@ -375,12 +380,18 @@ public class ChampSelect : IPhaseHandler
                 if (!TryGetInt32(action, "actorCellId", out int actorCellId)
                     || !teamCellIds.Contains(actorCellId)
                     || !TryGetInt32(action, "championId", out int championId)
-                    || championId <= 0
-                    || !TryGetBool(action, "completed", out bool completed)
-                    || !completed)
+                    || championId <= 0)
                 {
                     continue;
                 }
+
+                bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
+                bool inProgress = includeInProgress
+                    && TryGetBool(action, "isInProgress", out bool inProgressValue)
+                    && inProgressValue;
+
+                if (!completed && !inProgress)
+                    continue;
 
                 string type = action.TryGetProperty("type", out var typeProperty)
                     ? typeProperty.GetString() ?? string.Empty
