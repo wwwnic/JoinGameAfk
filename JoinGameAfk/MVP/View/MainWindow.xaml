@@ -133,6 +133,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="18" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="8" />
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="GlobalWatcherButton"

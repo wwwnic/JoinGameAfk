@@ -246,6 +246,109 @@
         <Setter Property="Margin" Value="0,10,0,0" />
     </Style>
 
+    <Style x:Key="SlimScrollBarRepeatButtonStyle" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SlimScrollBarThumbStyle" TargetType="Thumb">
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Width="8"
+                          Background="Transparent"
+                          SnapsToDevicePixels="True">
+                        <Border x:Name="ThumbRail"
+                                Width="4"
+                                HorizontalAlignment="Center"
+                                Background="{DynamicResource AppStrongBorderBrush}"
+                                CornerRadius="2"
+                                Opacity="0.58" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ThumbRail" Property="Width" Value="6" />
+                            <Setter TargetName="ThumbRail" Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+                            <Setter TargetName="ThumbRail" Property="Opacity" Value="0.9" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="ThumbRail" Property="Width" Value="6" />
+                            <Setter TargetName="ThumbRail" Property="Background" Value="{DynamicResource AccentBlueSoftBrush}" />
+                            <Setter TargetName="ThumbRail" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ThumbRail" Property="Opacity" Value="0.25" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SlimVerticalScrollBarStyle" TargetType="ScrollBar">
+        <Setter Property="Width" Value="8" />
+        <Setter Property="MinWidth" Value="8" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Width="8"
+                          Background="Transparent"
+                          SnapsToDevicePixels="True">
+                        <Border x:Name="ScrollRail"
+                                Width="2"
+                                Margin="0,3"
+                                HorizontalAlignment="Center"
+                                Background="{DynamicResource AppSurfaceInsetBrush}"
+                                CornerRadius="1"
+                                Opacity="0.65" />
+
+                        <Track x:Name="PART_Track"
+                               Margin="0,3"
+                               IsDirectionReversed="True"
+                               Minimum="{TemplateBinding Minimum}"
+                               Maximum="{TemplateBinding Maximum}"
+                               Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                               ViewportSize="{TemplateBinding ViewportSize}">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand"
+                                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                              Style="{StaticResource SlimScrollBarRepeatButtonStyle}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource SlimScrollBarThumbStyle}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand"
+                                              CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                              Style="{StaticResource SlimScrollBarRepeatButtonStyle}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ScrollRail" Property="Background" Value="{DynamicResource AppMutedBorderBrush}" />
+                            <Setter TargetName="ScrollRail" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ScrollRail" Property="Opacity" Value="0.25" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="StableVerticalScrollViewerStyle" TargetType="ScrollViewer">
         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
@@ -258,7 +361,7 @@
                           SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition Width="8" />
                         </Grid.ColumnDefinitions>
 
                         <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
@@ -278,6 +381,7 @@
                                    AutomationProperties.AutomationId="VerticalScrollBar"
                                    Maximum="{TemplateBinding ScrollableHeight}"
                                    Orientation="Vertical"
+                                   Style="{StaticResource SlimVerticalScrollBarStyle}"
                                    Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
                                    ViewportSize="{TemplateBinding ViewportHeight}"
                                    Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
