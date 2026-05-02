@@ -2,8 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style x:Key="AppWindowBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AppSubtleBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="16" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=WindowState}" Value="Maximized">
