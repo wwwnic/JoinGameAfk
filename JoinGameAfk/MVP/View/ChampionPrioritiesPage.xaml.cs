@@ -22,7 +22,7 @@ namespace JoinGameAfk.View
         private const string ChampionPillTag = "ChampionPill";
 
         private readonly ChampSelectSettings _settings;
-        private readonly List<ChampionInfo> _allChampions;
+        private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private readonly List<PositionRow> _rows;
         private readonly ObservableCollection<RoleFilterOption> _roleFilters;
@@ -95,7 +95,7 @@ namespace JoinGameAfk.View
             InitializeComponent();
             _settings = settings;
             RefreshThemeBrushes();
-            Unloaded += (_, _) => AppThemeManager.ThemeChanged -= RefreshTheme;
+            Unloaded += ChampionPrioritiesPage_Unloaded;
             AppThemeManager.ThemeChanged += RefreshTheme;
 
             _allChampions = ChampionCatalog.All
@@ -154,6 +154,41 @@ namespace JoinGameAfk.View
                 QueueChampionReferenceListHeightUpdate();
             };
             PageScrollViewer.SizeChanged += (_, _) => QueueChampionReferenceListHeightUpdate();
+            ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+        }
+
+        private void ChampionPrioritiesPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            AppThemeManager.ThemeChanged -= RefreshTheme;
+            ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+        }
+
+        private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.InvokeAsync(RefreshChampionCatalogView);
+        }
+
+        private void RefreshChampionCatalogView()
+        {
+            _allChampions = ChampionCatalog.All
+                .OrderBy(champion => champion.Name)
+                .ToList();
+
+            RefreshConfiguredChampionDisplayText();
+            UpdateChampionFilter();
+            QueueChampionReferenceListHeightUpdate();
+        }
+
+        private void RefreshConfiguredChampionDisplayText()
+        {
+            foreach (var row in _rows)
+            {
+                foreach (var champion in row.PickChampions.Concat(row.BanChampions))
+                    champion.DisplayText = ChampionCatalog.FormatWithName(champion.ChampionId);
+
+                UpdateRowTextFromCollection(row, isPick: true);
+                UpdateRowTextFromCollection(row, isPick: false);
+            }
         }
 
         private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -1983,11 +2018,17 @@ namespace JoinGameAfk.View
         private Visibility _insertAfterIndicatorVisibility = Visibility.Collapsed;
         private bool _isDuplicateDropTarget;
         private bool _isSelected;
+        private string _displayText = "";
 
         public int ChampionId { get; init; }
-        public string DisplayText { get; init; } = "";
         public PositionRow Row { get; init; } = null!;
         public bool IsPick { get; init; }
+
+        public string DisplayText
+        {
+            get => _displayText;
+            set => SetProperty(ref _displayText, value);
+        }
 
         public Visibility InsertBeforeIndicatorVisibility
         {

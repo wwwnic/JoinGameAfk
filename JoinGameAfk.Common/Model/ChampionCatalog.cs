@@ -10,11 +10,27 @@ namespace JoinGameAfk.Model
         public List<Position> Roles { get; init; } = [];
     }
 
+    public sealed record ChampionCatalogSyncInfo(string? DataDragonVersion, int ChampionCount, string FilePath);
+
+    public sealed record ChampionCatalogRefreshResult(string DataDragonVersion, int ChampionCount, string FilePath);
+
+    public sealed record ChampionCatalogRemoteData(string DataDragonVersion, IReadOnlyList<ChampionCatalogRemoteChampion> Champions);
+
+    public sealed record ChampionCatalogRemoteChampion(int Id, string Name);
+
+    public interface IChampionCatalogRemoteService
+    {
+        Task<ChampionCatalogRemoteData> FetchLatestChampionCatalogAsync(CancellationToken cancellationToken = default);
+    }
+
     public static class ChampionCatalog
     {
+        private static readonly object CatalogLock = new();
+
         private static readonly JsonSerializerOptions CatalogSerializerOptions = new()
         {
             WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters = { new JsonStringEnumConverter() }
         };
 
@@ -192,13 +208,15 @@ namespace JoinGameAfk.Model
         private static readonly IReadOnlyDictionary<int, ChampionInfo> DefaultChampionsById =
             DefaultChampions.ToDictionary(champion => champion.Id);
 
-        private static readonly Lazy<ChampionCatalogState> _catalog = new(LoadCatalog);
+        private static ChampionCatalogState? _catalog;
 
-        public static IReadOnlyList<ChampionInfo> All => _catalog.Value.All;
+        public static event EventHandler? CatalogChanged;
+
+        public static IReadOnlyList<ChampionInfo> All => CurrentCatalog.All;
 
         public static bool TryGetById(int championId, out ChampionInfo? champion)
         {
-            if (_catalog.Value.ById.TryGetValue(championId, out var match))
+            if (CurrentCatalog.ById.TryGetValue(championId, out var match))
             {
                 champion = match;
                 return true;
@@ -210,7 +228,7 @@ namespace JoinGameAfk.Model
 
         public static bool TryGetByName(string championName, out ChampionInfo? champion)
         {
-            if (_catalog.Value.ByName.TryGetValue(Normalize(championName), out var match))
+            if (CurrentCatalog.ByName.TryGetValue(Normalize(championName), out var match))
             {
                 champion = match;
                 return true;
@@ -227,19 +245,82 @@ namespace JoinGameAfk.Model
                 : "Unknown Champion";
         }
 
+        public static ChampionCatalogSyncInfo GetLocalSyncInfo()
+        {
+            string filePath = AppStorage.ChampionFilePath;
+
+            try
+            {
+                if (!File.Exists(filePath))
+                    return new ChampionCatalogSyncInfo(null, 0, filePath);
+
+                var catalogFile = DeserializeCatalogFile(File.ReadAllText(filePath));
+                if (catalogFile is null || catalogFile.Champions.Count == 0)
+                    return new ChampionCatalogSyncInfo(null, 0, filePath);
+
+                int championCount = NormalizeChampions(catalogFile.Champions).Count;
+                return new ChampionCatalogSyncInfo(catalogFile.DataDragonVersion, championCount, filePath);
+            }
+            catch
+            {
+                return new ChampionCatalogSyncInfo(null, 0, filePath);
+            }
+        }
+
+        public static async Task<ChampionCatalogRefreshResult> RefreshFromDataDragonAsync(
+            IChampionCatalogRemoteService remoteService,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(remoteService);
+
+            var rolesByChampionId = LoadKnownRolesByChampionId();
+
+            var remoteCatalog = await remoteService.FetchLatestChampionCatalogAsync(cancellationToken)
+                .ConfigureAwait(false);
+            string dataDragonVersion = remoteCatalog.DataDragonVersion.Trim();
+
+            if (string.IsNullOrWhiteSpace(dataDragonVersion))
+                throw new InvalidOperationException("Riot Data Dragon returned no version.");
+
+            var champions = remoteCatalog.Champions
+                .Select(champion => CreateChampionFromRemote(champion, rolesByChampionId))
+                .Where(champion => champion is not null)
+                .Select(champion => champion!)
+                .ToList();
+
+            if (champions.Count == 0)
+                throw new InvalidOperationException("Riot Data Dragon returned no champions.");
+
+            AppStorage.EnsureDirectoryExists();
+            string filePath = AppStorage.ChampionFilePath;
+            SaveCatalogFile(filePath, champions, dataDragonVersion);
+            SetCatalogState(champions);
+
+            return new ChampionCatalogRefreshResult(dataDragonVersion, champions.Count, filePath);
+        }
+
         private static string Normalize(string value)
         {
             return new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        }
+
+        private static ChampionCatalogState CurrentCatalog
+        {
+            get
+            {
+                lock (CatalogLock)
+                {
+                    _catalog ??= LoadCatalog();
+                    return _catalog;
+                }
+            }
         }
 
         private static ChampionCatalogState LoadCatalog()
         {
             IReadOnlyList<ChampionInfo> champions = LoadFromExternalFile() ?? DefaultChampions;
 
-            return new ChampionCatalogState(
-                champions,
-                champions.ToDictionary(champion => champion.Id),
-                champions.ToDictionary(champion => Normalize(champion.Name), StringComparer.OrdinalIgnoreCase));
+            return CreateCatalogState(champions);
         }
 
         private static IReadOnlyList<ChampionInfo>? LoadFromExternalFile()
@@ -259,7 +340,7 @@ namespace JoinGameAfk.Model
                 var champions = NormalizeChampions(catalogFile.Champions);
 
                 if (catalogFile.Version < AppStorage.ChampionFileVersion)
-                    SaveCatalogFile(filePath, champions);
+                    SaveCatalogFile(filePath, champions, catalogFile.DataDragonVersion);
 
                 return champions;
             }
@@ -267,6 +348,48 @@ namespace JoinGameAfk.Model
             {
                 return null;
             }
+        }
+
+        private static ChampionInfo? CreateChampionFromRemote(
+            ChampionCatalogRemoteChampion champion,
+            IReadOnlyDictionary<int, List<Position>> rolesByChampionId)
+        {
+            if (champion.Id <= 0
+                || string.IsNullOrWhiteSpace(champion.Name))
+            {
+                return null;
+            }
+
+            return new ChampionInfo(champion.Id, champion.Name.Trim())
+            {
+                Roles = rolesByChampionId.TryGetValue(champion.Id, out var roles)
+                    ? roles.ToList()
+                    : []
+            };
+        }
+
+        private static IReadOnlyDictionary<int, List<Position>> LoadKnownRolesByChampionId()
+        {
+            try
+            {
+                string filePath = AppStorage.ChampionFilePath;
+                EnsureChampionFileExists(filePath);
+
+                if (File.Exists(filePath))
+                {
+                    var catalogFile = DeserializeCatalogFile(File.ReadAllText(filePath));
+                    if (catalogFile is not null && catalogFile.Champions.Count > 0)
+                    {
+                        return NormalizeChampions(catalogFile.Champions)
+                            .ToDictionary(champion => champion.Id, champion => champion.Roles.ToList());
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return DefaultChampions.ToDictionary(champion => champion.Id, champion => champion.Roles.ToList());
         }
 
         private static void EnsureChampionFileExists(string filePath)
@@ -301,16 +424,42 @@ namespace JoinGameAfk.Model
             };
         }
 
-        private static void SaveCatalogFile(string filePath, IReadOnlyList<ChampionInfo> champions)
+        private static void SaveCatalogFile(
+            string filePath,
+            IReadOnlyList<ChampionInfo> champions,
+            string? dataDragonVersion = null)
         {
             var catalogFile = new ChampionCatalogFile
             {
                 Version = AppStorage.ChampionFileVersion,
+                DataDragonVersion = dataDragonVersion,
                 Champions = NormalizeChampions(champions).ToList()
             };
 
             string json = JsonSerializer.Serialize(catalogFile, CatalogSerializerOptions);
             File.WriteAllText(filePath, json);
+        }
+
+        private static void SetCatalogState(IReadOnlyList<ChampionInfo> champions)
+        {
+            ChampionCatalogState state = CreateCatalogState(champions);
+
+            lock (CatalogLock)
+            {
+                _catalog = state;
+            }
+
+            CatalogChanged?.Invoke(null, EventArgs.Empty);
+        }
+
+        private static ChampionCatalogState CreateCatalogState(IEnumerable<ChampionInfo> champions)
+        {
+            var normalizedChampions = NormalizeChampions(champions);
+
+            return new ChampionCatalogState(
+                normalizedChampions,
+                normalizedChampions.ToDictionary(champion => champion.Id),
+                normalizedChampions.ToDictionary(champion => Normalize(champion.Name), StringComparer.OrdinalIgnoreCase));
         }
 
         private static IReadOnlyList<ChampionInfo> NormalizeChampions(IEnumerable<ChampionInfo> champions)
@@ -373,7 +522,10 @@ namespace JoinGameAfk.Model
         {
             public int Version { get; set; } = AppStorage.ChampionFileVersion;
 
+            public string? DataDragonVersion { get; set; }
+
             public List<ChampionInfo> Champions { get; set; } = [];
         }
+
     }
 }

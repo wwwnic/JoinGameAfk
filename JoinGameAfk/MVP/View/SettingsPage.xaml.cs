@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
@@ -15,6 +17,7 @@ namespace JoinGameAfk.View
         private readonly ChampSelectSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
+        private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
 
         public SettingsPage(ChampSelectSettings settings, Action<ChampSelectSettings>? reloadUiForTheme = null)
         {
@@ -32,6 +35,7 @@ namespace JoinGameAfk.View
             };
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
+            RefreshChampionCatalogSyncStatus();
             LoadThemeOptions();
             ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
             AutoLockSelectionCheckBox.IsChecked = _settings.AutoLockSelectionEnabled;
@@ -89,6 +93,92 @@ namespace JoinGameAfk.View
             {
                 MessageBox.Show($"Unable to open storage folder: {ex.Message}", "Open Folder Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private async void RefreshChampionCatalogButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmChampionCatalogRefresh())
+            {
+                SetChampionCatalogRefreshStatus("Update canceled. No internet request was made.", "TextSoftBrush", Brushes.SlateGray);
+                return;
+            }
+
+            RefreshChampionCatalogButton.IsEnabled = false;
+            SetChampionCatalogRefreshStatus("Updating champion list from Riot Data Dragon...", "TextSoftBrush", Brushes.SlateGray);
+
+            try
+            {
+                var result = await ChampionCatalog.RefreshFromDataDragonAsync(_championCatalogRemoteService);
+                RefreshChampionCatalogSyncStatus(result);
+                SetChampionCatalogRefreshStatus(
+                    "Champion list updated.",
+                    "AccentGreenTextBrush",
+                    Brushes.ForestGreen);
+            }
+            catch (Exception ex)
+            {
+                SetChampionCatalogRefreshStatus(
+                    $"Champion list update failed. Existing local file was kept. {ex.Message}",
+                    "DangerTextBrush",
+                    Brushes.IndianRed);
+            }
+            finally
+            {
+                RefreshChampionCatalogButton.IsEnabled = true;
+            }
+        }
+
+        private bool ConfirmChampionCatalogRefresh()
+        {
+            var result = MessageBox.Show(
+                Window.GetWindow(this),
+                "This will contact Riot Data Dragon at ddragon.leagueoflegends.com and update only the local champion list file.\n\nYour champion priorities and settings are kept.\n\nContinue?",
+                "Update Champion List",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information,
+                MessageBoxResult.Cancel);
+
+            return result == MessageBoxResult.OK;
+        }
+
+        private void RefreshChampionCatalogSyncStatus(ChampionCatalogRefreshResult? refreshResult = null)
+        {
+            string? dataDragonVersion = refreshResult?.DataDragonVersion;
+            int championCount = refreshResult?.ChampionCount ?? 0;
+
+            if (refreshResult is null)
+            {
+                var syncInfo = ChampionCatalog.GetLocalSyncInfo();
+                dataDragonVersion = syncInfo.DataDragonVersion;
+                championCount = syncInfo.ChampionCount;
+            }
+
+            if (string.IsNullOrWhiteSpace(dataDragonVersion))
+            {
+                SetChampionCatalogSyncStatus(
+                    "Champion list has never been synced with Riot Data Dragon.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+                return;
+            }
+
+            SetChampionCatalogSyncStatus(
+                $"Synced with Riot Data Dragon {dataDragonVersion} ({championCount} champions).",
+                "TextSoftBrush",
+                Brushes.SlateGray);
+        }
+
+        private void SetChampionCatalogSyncStatus(string message, string brushResourceKey, Brush fallbackBrush)
+        {
+            ChampionCatalogSyncStatusTextBlock.Text = message;
+            ChampionCatalogSyncStatusTextBlock.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+        }
+
+        private void SetChampionCatalogRefreshStatus(string message, string brushResourceKey, Brush fallbackBrush)
+        {
+            ChampionCatalogRefreshStatusLabel.Text = message;
+            ChampionCatalogRefreshStatusLabel.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+            ChampionCatalogRefreshStatusLabel.Visibility = Visibility.Visible;
         }
 
         private void LoadThemeOptions()
