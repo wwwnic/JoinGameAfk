@@ -11,6 +11,7 @@ namespace JoinGameAfk.Theme
         public static IReadOnlyList<AppThemeDefinition> Themes { get; } =
         [
             new AppThemeDefinition(DefaultThemeKey, "Draft Desk", "Styles/Themes/DraftDesk.xaml"),
+            new AppThemeDefinition("midnight-rift", "Midnight Rift", "Styles/Themes/MidnightRift.xaml"),
             new AppThemeDefinition("sakura-bloom", "Sakura Bloom", "Styles/Themes/SakuraBloom.xaml"),
             new AppThemeDefinition("lavender-mint", "Lavender Mint", "Styles/Themes/LavenderMint.xaml"),
             new AppThemeDefinition("peach-sorbet", "Peach Sorbet", "Styles/Themes/PeachSorbet.xaml"),
