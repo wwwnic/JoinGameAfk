@@ -880,7 +880,10 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            int? targetIndex = ResolveDropIndexFromItem((FrameworkElement)sender, targetChampion, e);
+            var itemElement = sender as FrameworkElement;
+            Point pagePosition = e.GetPosition(this);
+            int? targetIndex = ResolveDropIndexFromListAncestor(itemElement, targetChampion.Row, targetChampion.IsPick, pagePosition)
+                ?? ResolveDropIndexFromItem(itemElement, targetChampion, pagePosition);
             if (targetIndex is not int resolvedTargetIndex)
             {
                 e.Effects = DragDropEffects.None;
@@ -911,8 +914,11 @@ namespace JoinGameAfk.View
             if (!CanDropChampion(champion, targetChampion.Row, targetChampion.IsPick))
                 return;
 
+            var itemElement = sender as FrameworkElement;
+            Point pagePosition = e.GetPosition(this);
             int? targetIndex = ResolveDropIndexFromHover(targetChampion.Row, targetChampion.IsPick)
-                ?? ResolveDropIndexFromItem(sender as FrameworkElement, targetChampion, e);
+                ?? ResolveDropIndexFromListAncestor(itemElement, targetChampion.Row, targetChampion.IsPick, pagePosition)
+                ?? ResolveDropIndexFromItem(itemElement, targetChampion, pagePosition);
 
             DropChampionOnTarget(champion, targetChampion.Row, targetChampion.IsPick, targetIndex);
             ClearInsertionIndicator();
@@ -921,14 +927,14 @@ namespace JoinGameAfk.View
 
         private void ChampionList_DragOver(object sender, DragEventArgs e)
         {
-            if (!TryGetChampionDragData(e, out var champion) || (sender as FrameworkElement)?.DataContext is not PositionRow row)
+            if (!TryGetChampionDragData(e, out var champion) || sender is not FrameworkElement listElement || listElement.DataContext is not PositionRow row)
             {
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
             }
 
-            bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
+            bool isPick = string.Equals(listElement.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             if (!CanDropChampion(champion, row, isPick))
             {
                 e.Effects = DragDropEffects.None;
@@ -936,9 +942,8 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            var collection = GetChampionCollection(row, isPick);
-            if (ResolveDropIndexFromHover(row, isPick) is null || !IsPointerOverItemsHost(sender as DependencyObject, e))
-                ShowInsertionIndicatorAtIndex(row, isPick, collection.Count);
+            int targetIndex = ResolveDropIndexFromList(listElement, row, isPick, e.GetPosition(this));
+            ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
 
             ShowDuplicateDropWarning(champion, row, isPick);
 
@@ -956,16 +961,15 @@ namespace JoinGameAfk.View
 
         private void ChampionList_Drop(object sender, DragEventArgs e)
         {
-            if (!TryGetChampionDragData(e, out var champion) || (sender as FrameworkElement)?.DataContext is not PositionRow row)
+            if (!TryGetChampionDragData(e, out var champion) || sender is not FrameworkElement listElement || listElement.DataContext is not PositionRow row)
                 return;
 
-            bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
+            bool isPick = string.Equals(listElement.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             if (!CanDropChampion(champion, row, isPick))
                 return;
 
-            int targetIndex = ResolveDropIndexFromHover(row, isPick) is int hoverIndex && IsPointerOverItemsHost(sender as DependencyObject, e)
-                ? hoverIndex
-                : GetChampionCollection(row, isPick).Count;
+            int targetIndex = ResolveDropIndexFromHover(row, isPick)
+                ?? ResolveDropIndexFromList(listElement, row, isPick, e.GetPosition(this));
 
             DropChampionOnTarget(champion, row, isPick, targetIndex);
             ClearInsertionIndicator();
@@ -1314,6 +1318,21 @@ namespace JoinGameAfk.View
 
             IsSearchDeleteDropTarget = false;
             DependencyObject? hitElement = InputHitTest(pagePosition) as DependencyObject;
+            if (TryFindChampionListTarget(hitElement, out var listElement, out var row, out bool isPick))
+            {
+                if (!CanDropChampion(champion, row, isPick))
+                {
+                    ClearInsertionIndicator();
+                    return;
+                }
+
+                int targetIndex = ResolveDropIndexFromList(listElement, row, isPick, pagePosition);
+                ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
+                ShowDuplicateDropWarning(champion, row, isPick);
+                SetActiveTarget(row, isPick, focusSearch: false);
+                return;
+            }
+
             if (TryFindChampionItemTarget(hitElement, out var itemElement, out var targetChampion))
             {
                 if (!CanDropChampion(champion, targetChampion.Row, targetChampion.IsPick))
@@ -1332,23 +1351,6 @@ namespace JoinGameAfk.View
                 ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex);
                 ShowDuplicateDropWarning(champion, targetChampion.Row, targetChampion.IsPick);
                 SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
-                return;
-            }
-
-            if (TryFindChampionListTarget(hitElement, out var listElement, out var row, out bool isPick))
-            {
-                if (!CanDropChampion(champion, row, isPick))
-                {
-                    ClearInsertionIndicator();
-                    return;
-                }
-
-                var collection = GetChampionCollection(row, isPick);
-                if (ResolveDropIndexFromHover(row, isPick) is null || !IsPointerOverItemsHost(listElement, pagePosition))
-                    ShowInsertionIndicatorAtIndex(row, isPick, collection.Count);
-
-                ShowDuplicateDropWarning(champion, row, isPick);
-                SetActiveTarget(row, isPick, focusSearch: false);
                 return;
             }
 
@@ -1466,13 +1468,105 @@ namespace JoinGameAfk.View
                 : null;
         }
 
-        private int? ResolveDropIndexFromItem(FrameworkElement? itemElement, ChampionSelectionItem targetChampion, DragEventArgs e)
+        private int? ResolveDropIndexFromListAncestor(DependencyObject? start, PositionRow row, bool isPick, Point pagePosition)
         {
-            if (itemElement is null)
-                return null;
+            if (TryFindChampionListTarget(start, out var listElement, out var targetRow, out bool targetIsPick)
+                && ReferenceEquals(targetRow, row)
+                && targetIsPick == isPick)
+            {
+                return ResolveDropIndexFromList(listElement, row, isPick, pagePosition);
+            }
 
-            var pillElement = FindTaggedVisualChild(itemElement, ChampionPillTag) ?? itemElement;
-            return ResolveDropIndexFromItemPosition(itemElement, targetChampion, e.GetPosition(pillElement));
+            return null;
+        }
+
+        private int ResolveDropIndexFromList(FrameworkElement listElement, PositionRow row, bool isPick, Point pagePosition)
+        {
+            var collection = GetChampionCollection(row, isPick);
+            if (collection.Count == 0)
+                return 0;
+
+            var itemsControl = FindVisualChild<ItemsControl>(listElement);
+            if (itemsControl is null)
+                return collection.Count;
+
+            Point itemsPosition = TranslatePoint(pagePosition, itemsControl);
+            if (!IsPointInsideElement(itemsControl, itemsPosition))
+                return collection.Count;
+
+            var layouts = GetChampionPillLayouts(itemsControl, collection);
+            if (layouts.Count == 0)
+                return collection.Count;
+
+            var rows = GroupChampionPillRows(layouts);
+            var selectedRow = rows[0];
+            for (int i = 0; i < rows.Count - 1; i++)
+            {
+                double rowBoundary = (rows[i].CenterY + rows[i + 1].CenterY) / 2;
+                if (pagePosition.Y < rowBoundary)
+                {
+                    selectedRow = rows[i];
+                    return ResolveDropIndexFromPillRow(selectedRow, pagePosition.X);
+                }
+            }
+
+            selectedRow = rows[^1];
+            return ResolveDropIndexFromPillRow(selectedRow, pagePosition.X);
+        }
+
+        private List<ChampionPillLayout> GetChampionPillLayouts(
+            ItemsControl itemsControl,
+            ObservableCollection<ChampionSelectionItem> collection)
+        {
+            var layouts = new List<ChampionPillLayout>(collection.Count);
+            for (int i = 0; i < collection.Count; i++)
+            {
+                if (itemsControl.ItemContainerGenerator.ContainerFromItem(collection[i]) is not DependencyObject container)
+                    continue;
+
+                var pillElement = FindTaggedVisualChild(container, ChampionPillTag);
+                if (pillElement is null || pillElement.ActualWidth <= 0 || pillElement.ActualHeight <= 0)
+                    continue;
+
+                Point topLeft = pillElement.TranslatePoint(new Point(0, 0), this);
+                layouts.Add(new ChampionPillLayout(
+                    i,
+                    new Rect(topLeft, new Size(pillElement.ActualWidth, pillElement.ActualHeight))));
+            }
+
+            return layouts;
+        }
+
+        private static List<ChampionPillRow> GroupChampionPillRows(List<ChampionPillLayout> layouts)
+        {
+            var rows = new List<ChampionPillRow>();
+            foreach (var layout in layouts.OrderBy(layout => layout.Bounds.Top).ThenBy(layout => layout.Bounds.Left))
+            {
+                var row = rows.Count > 0 ? rows[^1] : null;
+                if (row is null || layout.Bounds.Top > row.Bottom + 1)
+                {
+                    row = new ChampionPillRow();
+                    rows.Add(row);
+                }
+
+                row.Add(layout);
+            }
+
+            foreach (var row in rows)
+                row.SortItems();
+
+            return rows;
+        }
+
+        private static int ResolveDropIndexFromPillRow(ChampionPillRow row, double pointerX)
+        {
+            foreach (var layout in row.Items)
+            {
+                if (pointerX < layout.CenterX)
+                    return layout.Index;
+            }
+
+            return row.Items[^1].Index + 1;
         }
 
         private int? ResolveDropIndexFromItem(FrameworkElement? itemElement, ChampionSelectionItem targetChampion, Point pagePosition)
@@ -1497,38 +1591,6 @@ namespace JoinGameAfk.View
             var pillElement = FindTaggedVisualChild(itemElement, ChampionPillTag) ?? itemElement;
             bool insertAfter = pointerPositionInPill.X >= pillElement.ActualWidth / 2;
             return insertAfter ? targetIndex + 1 : targetIndex;
-        }
-
-        private static bool IsPointerOverItemsHost(DependencyObject? listContainer, DragEventArgs e)
-        {
-            var itemsControl = listContainer is null
-                ? null
-                : FindVisualChild<ItemsControl>(listContainer);
-
-            if (itemsControl is null)
-                return false;
-
-            Point pointer = e.GetPosition(itemsControl);
-            return pointer.X >= 0
-                && pointer.Y >= 0
-                && pointer.X <= itemsControl.ActualWidth
-                && pointer.Y <= itemsControl.ActualHeight;
-        }
-
-        private bool IsPointerOverItemsHost(DependencyObject? listContainer, Point pagePosition)
-        {
-            var itemsControl = listContainer is null
-                ? null
-                : FindVisualChild<ItemsControl>(listContainer);
-
-            if (itemsControl is null)
-                return false;
-
-            Point pointer = TranslatePoint(pagePosition, itemsControl);
-            return pointer.X >= 0
-                && pointer.Y >= 0
-                && pointer.X <= itemsControl.ActualWidth
-                && pointer.Y <= itemsControl.ActualHeight;
         }
 
         private static bool TryFindChampionItemTarget(
@@ -1631,6 +1693,12 @@ namespace JoinGameAfk.View
             var duplicate = GetChampionCollection(row, isPick)
                 .FirstOrDefault(item => item.ChampionId == champion.ChampionId && !ReferenceEquals(item, champion.SourceItem));
 
+            if (ReferenceEquals(_duplicateDropChampion, duplicate))
+                return;
+
+            if (_duplicateDropChampion is not null)
+                _duplicateDropChampion.IsDuplicateDropTarget = false;
+
             _duplicateDropChampion = duplicate;
             if (_duplicateDropChampion is not null)
                 _duplicateDropChampion.IsDuplicateDropTarget = true;
@@ -1671,8 +1739,6 @@ namespace JoinGameAfk.View
 
         private void ShowInsertionIndicator(PositionRow row, bool isPick, ChampionSelectionItem? champion, bool insertAfter, int targetIndex)
         {
-            ClearInsertionIndicator();
-
             int resolvedTargetIndex = targetIndex;
             if (champion is null)
             {
@@ -1683,6 +1749,18 @@ namespace JoinGameAfk.View
                     insertAfter = true;
                 }
             }
+
+            if (ReferenceEquals(_dragHoverChampion, champion)
+                && ReferenceEquals(_dragHoverRow, row)
+                && _dragHoverIsPick == isPick
+                && _dragHoverInsertAfter == insertAfter
+                && _dragHoverTargetIndex == resolvedTargetIndex)
+            {
+                RefreshTargetBrushes();
+                return;
+            }
+
+            ClearInsertionIndicator();
 
             _dragHoverChampion = champion;
             _dragHoverRow = row;
@@ -1828,6 +1906,39 @@ namespace JoinGameAfk.View
             public ChampionInfo ToChampionInfo()
             {
                 return new ChampionInfo(ChampionId, ChampionName);
+            }
+        }
+
+        private sealed class ChampionPillLayout
+        {
+            public ChampionPillLayout(int index, Rect bounds)
+            {
+                Index = index;
+                Bounds = bounds;
+            }
+
+            public int Index { get; }
+            public Rect Bounds { get; }
+            public double CenterX => Bounds.Left + Bounds.Width / 2;
+        }
+
+        private sealed class ChampionPillRow
+        {
+            public List<ChampionPillLayout> Items { get; } = [];
+            public double Top { get; private set; } = double.PositiveInfinity;
+            public double Bottom { get; private set; } = double.NegativeInfinity;
+            public double CenterY => Top + (Bottom - Top) / 2;
+
+            public void Add(ChampionPillLayout layout)
+            {
+                Items.Add(layout);
+                Top = Math.Min(Top, layout.Bounds.Top);
+                Bottom = Math.Max(Bottom, layout.Bounds.Bottom);
+            }
+
+            public void SortItems()
+            {
+                Items.Sort((left, right) => left.Bounds.Left.CompareTo(right.Bounds.Left));
             }
         }
 
