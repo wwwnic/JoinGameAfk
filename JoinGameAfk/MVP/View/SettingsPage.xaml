@@ -51,8 +51,11 @@
                                    Foreground="{DynamicResource AccentGreenTextBrush}"
                                    FontSize="12"
                                    FontWeight="SemiBold"
+                                   MaxWidth="340"
                                    Margin="0,7,0,0"
                                    HorizontalAlignment="Right"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
                                    Visibility="Collapsed" />
                     </StackPanel>
                 </Grid>

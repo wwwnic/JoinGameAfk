@@ -12,10 +12,6 @@ namespace JoinGameAfk.Model
 
     public class ChampSelectSettings
     {
-        private static readonly string LegacySettingsFilePath = Path.Combine(
-            AppContext.BaseDirectory,
-            AppStorage.SettingsFileName);
-
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
         /// <summary>
@@ -138,21 +134,6 @@ namespace JoinGameAfk.Model
                 {
                     var json = File.ReadAllText(AppStorage.SettingsFilePath);
                     return NormalizeVersion(JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings());
-                }
-
-                if (File.Exists(LegacySettingsFilePath))
-                {
-                    var json = File.ReadAllText(LegacySettingsFilePath);
-                    var settings = NormalizeVersion(JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings());
-                    settings.Save();
-
-                    try
-                    {
-                        File.Delete(LegacySettingsFilePath);
-                    }
-                    catch { }
-
-                    return settings;
                 }
             }
             catch { }

@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:validation="clr-namespace:JoinGameAfk.Validation">
     <Style x:Key="AppWindowBorderStyle" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
         <Setter Property="BorderBrush" Value="Transparent" />
@@ -596,6 +597,11 @@
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="InputBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
                             <Setter TargetName="InputBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                        </Trigger>
+                        <Trigger Property="validation:InputValidator.ValidationState" Value="Invalid">
+                            <Setter TargetName="InputBorder" Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                            <Setter TargetName="InputBorder" Property="BorderThickness" Value="2" />
+                            <Setter TargetName="InputBorder" Property="Background" Value="{DynamicResource DangerSurfaceDeepBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="InputBorder" Property="Opacity" Value="0.55" />

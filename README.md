@@ -68,7 +68,7 @@ From the current source, configuration is stored locally as JSON files in:
 
 including:
 
-- `champselectsettings.json`
+- `configuration.json`
 - `champions.json`
 
 This makes the app easier to inspect, back up, and remove.
@@ -155,7 +155,7 @@ From the current implementation, the app reads:
 ### What the app writes
 From the current implementation, the app writes local files such as:
 
-- `champselectsettings.json`
+- `configuration.json`
 - `champions.json` (if missing, a default version may be created)
 
 It also writes runtime messages to:
@@ -261,10 +261,11 @@ The Settings page also includes a button to open this folder directly.
 
 Both configuration files include a `Version` field. Current schema version is `1`.
 
-### `champselectsettings.json`
+### `configuration.json`
 Stores:
 
 - configuration schema version
+- selected theme
 - ready check delay
 - hover delay
 - pick lock delay
@@ -280,8 +281,6 @@ Stores:
 - champion IDs and display names used by the UI
 
 If the file is missing, the app can fall back to a built-in default champion list and recreate the file.
-
-If older versions created these files next to the executable, the app now migrates them to `%LocalAppData%\JoinGameAfk` automatically when possible.
 
 ---
 
@@ -333,7 +332,7 @@ Yes. The current implementation waits for the local League Client process and th
 It can start and watch phases, but champion select automation is only useful after you configure preferred picks/bans.
 
 ### Where are my settings saved?
-Settings are stored in `%LocalAppData%\JoinGameAfk\champselectsettings.json`.
+Settings are stored in `%LocalAppData%\JoinGameAfk\configuration.json`.
 
 ### Does it upload my data anywhere?
 From the current source review, no external upload or telemetry service was identified.

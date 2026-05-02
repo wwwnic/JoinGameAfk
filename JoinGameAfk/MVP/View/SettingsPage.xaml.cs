@@ -7,6 +7,7 @@ using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Theme;
+using JoinGameAfk.Validation;
 
 namespace JoinGameAfk.View
 {
@@ -18,6 +19,12 @@ namespace JoinGameAfk.View
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
+        private readonly List<NumericInputRule> _numericInputRules;
+        private NumericInputRule _readyCheckAcceptDelayRule = null!;
+        private NumericInputRule _pickLockDelayRule = null!;
+        private NumericInputRule _championHoverDelayRule = null!;
+        private NumericInputRule _banLockDelayRule = null!;
+        private NumericInputRule _champSelectPollIntervalRule = null!;
 
         public SettingsPage(ChampSelectSettings settings, Action<ChampSelectSettings>? reloadUiForTheme = null)
         {
@@ -43,20 +50,38 @@ namespace JoinGameAfk.View
             ChampionHoverDelayBox.Text = _settings.ChampionHoverDelaySeconds.ToString();
             BanLockDelayBox.Text = _settings.BanLockDelaySeconds.ToString();
             ChampSelectPollIntervalBox.Text = _settings.ChampSelectPollIntervalMs.ToString();
+            _numericInputRules = AttachNumericInputValidation();
+        }
+
+        private List<NumericInputRule> AttachNumericInputValidation()
+        {
+            _readyCheckAcceptDelayRule = InputValidator.AttachInteger(ReadyCheckAcceptDelayBox, "Auto accept delay", minimum: 0);
+            _pickLockDelayRule = InputValidator.AttachInteger(PickLockDelayBox, "Pick lock timer", minimum: 0);
+            _championHoverDelayRule = InputValidator.AttachInteger(ChampionHoverDelayBox, "Champion hover delay", minimum: 0);
+            _banLockDelayRule = InputValidator.AttachInteger(BanLockDelayBox, "Ban lock timer", minimum: 0);
+            _champSelectPollIntervalRule = InputValidator.AttachInteger(ChampSelectPollIntervalBox, "Polling interval", minimum: 100, maximum: 5000);
+
+            return
+            [
+                _readyCheckAcceptDelayRule,
+                _pickLockDelayRule,
+                _championHoverDelayRule,
+                _banLockDelayRule,
+                _champSelectPollIntervalRule
+            ];
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            _settings.ReadyCheckAcceptDelaySeconds = int.TryParse(ReadyCheckAcceptDelayBox.Text, out int readyCheckDelay)
-                ? Math.Max(0, readyCheckDelay)
-                : 0;
+            if (!TryReadSettingsInput(out var input))
+                return;
+
+            _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.AutoLockSelectionEnabled = AutoLockSelectionCheckBox.IsChecked == true;
-            _settings.PickLockDelaySeconds = int.TryParse(PickLockDelayBox.Text, out int pickDelay) ? Math.Max(0, pickDelay) : 0;
-            _settings.ChampionHoverDelaySeconds = int.TryParse(ChampionHoverDelayBox.Text, out int hoverDelay) ? Math.Max(0, hoverDelay) : 0;
-            _settings.BanLockDelaySeconds = int.TryParse(BanLockDelayBox.Text, out int banDelay) ? Math.Max(0, banDelay) : 0;
-            _settings.ChampSelectPollIntervalMs = int.TryParse(ChampSelectPollIntervalBox.Text, out int pollInterval)
-                ? Math.Clamp(pollInterval, 100, 5000)
-                : 1000;
+            _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
+            _settings.ChampionHoverDelaySeconds = input.ChampionHoverDelaySeconds;
+            _settings.BanLockDelaySeconds = input.BanLockDelaySeconds;
+            _settings.ChampSelectPollIntervalMs = input.ChampSelectPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
@@ -70,10 +95,53 @@ namespace JoinGameAfk.View
             ShowSavedMessage();
         }
 
+        private bool TryReadSettingsInput(out SettingsInputValues input)
+        {
+            input = default;
+
+            if (!InputValidator.TryValidateAll(_numericInputRules, out var invalidRule, out string errorMessage))
+            {
+                ShowValidationMessage(errorMessage);
+                invalidRule?.TextBox.Focus();
+                invalidRule?.TextBox.SelectAll();
+                return false;
+            }
+
+            if (!_readyCheckAcceptDelayRule.TryGetInt32(out int readyCheckDelay)
+                || !_pickLockDelayRule.TryGetInt32(out int pickDelay)
+                || !_championHoverDelayRule.TryGetInt32(out int hoverDelay)
+                || !_banLockDelayRule.TryGetInt32(out int banDelay)
+                || !_champSelectPollIntervalRule.TryGetInt32(out int pollInterval))
+            {
+                ShowValidationMessage("Fix invalid settings before saving.");
+                return false;
+            }
+
+            input = new SettingsInputValues(
+                readyCheckDelay,
+                pickDelay,
+                hoverDelay,
+                banDelay,
+                pollInterval);
+
+            return true;
+        }
+
         private void ShowSavedMessage()
         {
+            ShowStatusMessage("Settings saved.", "AccentGreenTextBrush", Brushes.ForestGreen);
+        }
+
+        private void ShowValidationMessage(string message)
+        {
+            ShowStatusMessage(message, "DangerTextBrush", Brushes.IndianRed);
+        }
+
+        private void ShowStatusMessage(string message, string brushResourceKey, Brush fallbackBrush)
+        {
             _savedMessageTimer.Stop();
-            SavedLabel.Text = "Settings saved.";
+            SavedLabel.Text = message;
+            SavedLabel.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
             SavedLabel.Visibility = Visibility.Visible;
             _savedMessageTimer.Start();
         }
@@ -207,5 +275,12 @@ namespace JoinGameAfk.View
         {
             return !string.Equals(GetSelectedThemeKey(), AppThemeManager.CurrentThemeKey, StringComparison.OrdinalIgnoreCase);
         }
+
+        private readonly record struct SettingsInputValues(
+            int ReadyCheckAcceptDelaySeconds,
+            int PickLockDelaySeconds,
+            int ChampionHoverDelaySeconds,
+            int BanLockDelaySeconds,
+            int ChampSelectPollIntervalMs);
     }
 }

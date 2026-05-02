@@ -5,7 +5,7 @@ namespace JoinGameAfk.Constant
         public const int SettingsFileVersion = 1;
         public const int ChampionFileVersion = 2;
 
-        public const string SettingsFileName = "champselectsettings.json";
+        public const string SettingsFileName = "configuration.json";
         public const string ChampionFileName = "champions.json";
 
         public static string DirectoryPath => Path.Combine(
