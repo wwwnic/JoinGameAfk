@@ -80,6 +80,92 @@
                TargetType="TextBlock"
                BasedOn="{StaticResource ChampionChipTextStyle}">
         </Style>
+
+        <Style x:Key="RoleFilterButtonStyle" TargetType="Button">
+            <Setter Property="MinWidth" Value="36" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
+                                CornerRadius="6"
+                                Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </Trigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueStrongBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                </DataTrigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppInputPressedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SearchClearButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+            <Setter Property="ToolTip" Value="Clear search" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppInputPressedBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Page.Resources>
 
     <ScrollViewer x:Name="PageScrollViewer"
@@ -348,19 +434,79 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="6" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="0">
                             <TextBox x:Name="ChampionSearchBox"
                                      TextChanged="ChampionSearchBox_TextChanged"
                                      PreviewKeyDown="ChampionSearchBox_PreviewKeyDown"
-                                     Padding="10,6"
+                                     Padding="10,6,34,6"
                                      ToolTip="Type a champion name or ID. Press Enter to add the first result."
                                      Style="{StaticResource SearchTextBoxStyle}" />
+                            <Button x:Name="ChampionSearchClearButton"
+                                    AutomationProperties.Name="Clear champion search"
+                                    Click="ChampionSearchClearButton_Click">
+                                <Button.Style>
+                                    <Style TargetType="Button"
+                                           BasedOn="{StaticResource SearchClearButtonStyle}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=ChampionSearchBox, Path=Text}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <Path Width="10"
+                                      Height="10"
+                                      Stretch="Uniform"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Data="M6,6 L18,18 M18,6 L6,18" />
+                            </Button>
                         </Grid>
 
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Border Width="24"
+                                    Height="30"
+                                    Margin="0,0,4,0"
+                                    ToolTip="Role filters">
+                                <Path Width="14"
+                                      Height="14"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Data="M3,4 H21 L14,12 V20 L10,22 V12 Z" />
+                            </Border>
+
+                            <ItemsControl x:Name="RoleFilterList"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding DisplayText}"
+                                                AutomationProperties.Name="{Binding AutomationName}"
+                                                ToolTip="{Binding ToolTipText}"
+                                                Click="RoleFilterButton_Click"
+                                                Style="{StaticResource RoleFilterButtonStyle}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <Button x:Name="DeleteSelectedButton"
-                                Grid.Column="2"
+                                Grid.Column="4"
                                 Width="54"
                                 Height="30"
                                 Padding="0"
@@ -390,7 +536,7 @@
                             </StackPanel>
                         </Button>
 
-                        <Button Grid.Column="4"
+                        <Button Grid.Column="6"
                                 Content="?"
                                 Style="{StaticResource InfoIndicatorStyle}"
                                 ToolTip="Click or drag a champion chip into the active pick or ban list. Drop selected chips here to remove them." />

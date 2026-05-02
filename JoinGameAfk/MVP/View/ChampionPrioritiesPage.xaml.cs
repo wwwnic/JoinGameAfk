@@ -25,6 +25,8 @@ namespace JoinGameAfk.View
         private readonly List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private readonly List<PositionRow> _rows;
+        private readonly ObservableCollection<RoleFilterOption> _roleFilters;
+        private readonly HashSet<Position> _activeRoleFilters = [];
         private Brush _activeTargetBrush = Brushes.DodgerBlue;
         private Brush _inactiveTargetBrush = Brushes.SlateGray;
         private Brush _dropHoverTargetBrush = Brushes.DeepSkyBlue;
@@ -101,6 +103,16 @@ namespace JoinGameAfk.View
                 .ToList();
             _filteredChampions = [.. _allChampions];
             ChampionReferenceList.ItemsSource = _filteredChampions;
+
+            _roleFilters =
+            [
+                new(Position.Top, "Top"),
+                new(Position.Jungle, "Jungle"),
+                new(Position.Mid, "Mid"),
+                new(Position.Adc, "Adc"),
+                new(Position.Support, "Support")
+            ];
+            RoleFilterList.ItemsSource = _roleFilters;
 
             _rows = [];
             foreach (Position position in Enum.GetValues<Position>().Where(position => position != Position.None))
@@ -182,12 +194,37 @@ namespace JoinGameAfk.View
             }
         }
 
+        private void ChampionSearchClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ChampionSearchBox.Text.Length > 0)
+                ChampionSearchBox.Clear();
+
+            FocusSearchBox();
+            e.Handled = true;
+        }
+
         private void DeleteSelectedButton_Click(object sender, RoutedEventArgs e)
         {
             if (DeleteSelectedChampions())
             {
                 e.Handled = true;
             }
+        }
+
+        private void RoleFilterButton_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is not RoleFilterOption filter)
+                return;
+
+            filter.IsSelected = !filter.IsSelected;
+            if (filter.IsSelected)
+                _activeRoleFilters.Add(filter.Position);
+            else
+                _activeRoleFilters.Remove(filter.Position);
+
+            UpdateChampionFilter();
+            ChampionSearchBox.Focus();
+            e.Handled = true;
         }
 
         private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -393,9 +430,11 @@ namespace JoinGameAfk.View
         private void UpdateChampionFilter()
         {
             string search = ChampionSearchBox.Text.Trim();
+            var roleFilteredChampions = _allChampions.Where(MatchesActiveRoleFilter);
+
             _filteredChampions = string.IsNullOrWhiteSpace(search)
-                ? [.. _allChampions]
-                : [.. _allChampions
+                ? [.. roleFilteredChampions]
+                : [.. roleFilteredChampions
                     .Select(champion => new
                     {
                         Champion = champion,
@@ -408,6 +447,12 @@ namespace JoinGameAfk.View
                     .Select(result => result.Champion)];
 
             ChampionReferenceList.ItemsSource = _filteredChampions;
+        }
+
+        private bool MatchesActiveRoleFilter(ChampionInfo champion)
+        {
+            return _activeRoleFilters.Count == 0
+                || champion.Roles.Any(_activeRoleFilters.Contains);
         }
 
         private static int GetChampionSearchScore(ChampionInfo champion, string search)
@@ -1786,6 +1831,37 @@ namespace JoinGameAfk.View
             }
         }
 
+    }
+
+    public class RoleFilterOption : INotifyPropertyChanged
+    {
+        private bool _isSelected;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public RoleFilterOption(Position position, string displayText)
+        {
+            Position = position;
+            DisplayText = displayText;
+        }
+
+        public Position Position { get; }
+        public string DisplayText { get; }
+        public string AutomationName => $"Filter {Position} champions";
+        public string ToolTipText => $"Filter {Position} champions";
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected == value)
+                    return;
+
+                _isSelected = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+            }
+        }
     }
 
     public class ChampionSelectionItem : INotifyPropertyChanged

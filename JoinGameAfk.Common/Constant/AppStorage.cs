@@ -3,7 +3,7 @@ namespace JoinGameAfk.Constant
     public static class AppStorage
     {
         public const int SettingsFileVersion = 1;
-        public const int ChampionFileVersion = 1;
+        public const int ChampionFileVersion = 2;
 
         public const string SettingsFileName = "champselectsettings.json";
         public const string ChampionFileName = "champions.json";
