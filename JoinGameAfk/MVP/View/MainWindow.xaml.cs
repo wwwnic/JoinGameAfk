@@ -30,16 +30,16 @@ namespace JoinGameAfk.View
 
         public int ActiveTabIndex => _activeTabIndex;
 
-        public MainWindow(PhaseProgressionPage dashboardPage, ChampSelectSettingsPage champSelectPage, SettingsPage settingsPage)
+        public MainWindow(PhaseProgressionPage dashboardPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage)
         {
             InitializeComponent();
 
             DashboardFrame.Content = dashboardPage;
-            ChampSelectFrame.Content = champSelectPage;
+            ChampionPrioritiesFrame.Content = championPrioritiesPage;
             SettingsFrame.Content = settingsPage;
 
-            _tabs = [TabDashboard, TabChampSelect, TabSettings];
-            _frames = [DashboardFrame, ChampSelectFrame, SettingsFrame];
+            _tabs = [TabDashboard, TabChampionPriorities, TabSettings];
+            _frames = [DashboardFrame, ChampionPrioritiesFrame, SettingsFrame];
 
             SourceInitialized += MainWindow_SourceInitialized;
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
@@ -59,7 +59,7 @@ namespace JoinGameAfk.View
         }
 
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
-        private void TabChampSelect_Click(object sender, RoutedEventArgs e) => ActivateTab(1);
+        private void TabChampionPriorities_Click(object sender, RoutedEventArgs e) => ActivateTab(1);
         private void TabSettings_Click(object sender, RoutedEventArgs e) => ActivateTab(2);
 
         public void SetController(PhaseController controller)

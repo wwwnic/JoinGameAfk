@@ -159,10 +159,10 @@
                             AutomationProperties.Name="Dashboard tab"
                             Click="TabDashboard_Click"
                             Style="{StaticResource TabButtonStyle}" />
-                    <Button x:Name="TabChampSelect"
-                            Content="Champion Select"
-                            AutomationProperties.Name="Champion Select tab"
-                            Click="TabChampSelect_Click"
+                    <Button x:Name="TabChampionPriorities"
+                            Content="Champion Priorities"
+                            AutomationProperties.Name="Champion priorities tab"
+                            Click="TabChampionPriorities_Click"
                             Style="{StaticResource TabButtonStyle}" />
                     <Button x:Name="TabSettings"
                             Content="Settings"
@@ -213,7 +213,7 @@
                        NavigationUIVisibility="Hidden"
                        Background="Transparent"
                        BorderThickness="0" />
-                <Frame x:Name="ChampSelectFrame"
+                <Frame x:Name="ChampionPrioritiesFrame"
                        NavigationUIVisibility="Hidden"
                        Background="Transparent"
                        BorderThickness="0"

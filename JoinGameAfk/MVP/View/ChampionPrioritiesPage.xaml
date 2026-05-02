@@ -1,0 +1,476 @@
+<Page x:Class="JoinGameAfk.View.ChampionPrioritiesPage"
+      x:Name="RootPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:controls="clr-namespace:JoinGameAfk.Controls"
+      Background="Transparent"
+      AllowDrop="True"
+      SizeChanged="Page_SizeChanged"
+      PreviewTextInput="Page_PreviewTextInput"
+      PreviewKeyDown="Page_PreviewKeyDown"
+      PreviewMouseMove="Page_PreviewMouseMove"
+      PreviewMouseLeftButtonUp="Page_PreviewMouseLeftButtonUp"
+      DragOver="Page_DragOver"
+      DragLeave="Page_DragLeave">
+    <Page.Resources>
+        <Style x:Key="SearchDeleteDropCardStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource SectionCardStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SearchDeleteOverlayStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PriorityBoardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style x:Key="PriorityRowStyle" TargetType="Border">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="0,4" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+
+        <Style x:Key="PriorityLaneBorderStyle" TargetType="Border">
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="MinHeight" Value="52" />
+        </Style>
+
+        <Style x:Key="PriorityHeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+        </Style>
+
+        <Style x:Key="PriorityPlaceholderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+            <Setter Property="FontStyle" Value="Italic" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="PriorityChampionTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource ChampionChipTextStyle}">
+        </Style>
+
+        <Style x:Key="ReferenceChampionTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource ChampionChipTextStyle}">
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer x:Name="PageScrollViewer"
+                  Style="{StaticResource StableVerticalScrollViewerStyle}">
+        <Grid x:Name="ContentGrid" Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Style="{StaticResource PriorityBoardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="6" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0"
+                          Margin="6,0,6,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Text="Position"
+                                   Style="{StaticResource PriorityHeaderTextStyle}" />
+                        <TextBlock Grid.Column="2"
+                                   Text="Pick"
+                                   Style="{StaticResource PriorityHeaderTextStyle}" />
+                        <TextBlock Grid.Column="4"
+                                   Text="Ban"
+                                   Style="{StaticResource PriorityHeaderTextStyle}" />
+                    </Grid>
+
+                    <ItemsControl x:Name="PositionList"
+                                  Grid.Row="2">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource PriorityRowStyle}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding PositionName}"
+                                                   FontSize="14"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center" />
+
+                                        <Border Grid.Column="1"
+                                                Width="1"
+                                                Margin="0,5"
+                                                HorizontalAlignment="Center"
+                                                Background="{DynamicResource AppMutedBorderBrush}" />
+
+                                        <Border Grid.Column="2"
+                                                Tag="Pick"
+                                                Background="{Binding PickBackgroundBrush, FallbackValue=Transparent}"
+                                                BorderBrush="{Binding PickBorderBrush, FallbackValue=Transparent}"
+                                                AllowDrop="True"
+                                                Focusable="True"
+                                                GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
+                                                KeyDown="ChampionTarget_KeyDown"
+                                                ToolTip="Focus this list, then type a champion name and press Enter to add it here."
+                                                AutomationProperties.Name="{Binding PositionName, StringFormat={}{0} pick champions}"
+                                                MouseLeftButtonDown="ChampionTarget_MouseLeftButtonDown"
+                                                DragOver="ChampionList_DragOver"
+                                                Drop="ChampionList_Drop"
+                                                Style="{StaticResource PriorityLaneBorderStyle}">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <Grid>
+                                                    <TextBlock Text="Empty"
+                                                               Style="{StaticResource PriorityPlaceholderStyle}"
+                                                               Visibility="{Binding PickPlaceholderVisibility}" />
+                                                    <ItemsControl ItemsSource="{Binding PickChampions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,3,6,3"
+                                                                      VerticalAlignment="Center"
+                                                                      Background="Transparent"
+                                                                      AllowDrop="True"
+                                                                      DragOver="ChampionItem_DragOver"
+                                                                      Drop="ChampionItem_Drop">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <Border Grid.Column="0"
+                                                                            Width="3"
+                                                                            Margin="0,4,4,4"
+                                                                            Background="{DynamicResource AccentBlueBrush}"
+                                                                            CornerRadius="2"
+                                                                            Visibility="{Binding InsertBeforeIndicatorVisibility}" />
+
+                                                                    <Border Grid.Column="1"
+                                                                            Tag="ChampionPill"
+                                                                            Style="{StaticResource ChampionPillBorderStyle}"
+                                                                            AutomationProperties.Name="{Binding DisplayText}"
+                                                                            GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
+                                                                            KeyDown="ChampionItem_KeyDown"
+                                                                            PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
+                                                                            MouseMove="ChampionItem_MouseMove">
+                                                                        <TextBlock Text="{Binding DisplayText}"
+                                                                                   Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                    </Border>
+
+                                                                    <Border Grid.Column="2"
+                                                                            Width="3"
+                                                                            Margin="4,4,0,4"
+                                                                            Background="{DynamicResource AccentBlueBrush}"
+                                                                            CornerRadius="2"
+                                                                            Visibility="{Binding InsertAfterIndicatorVisibility}" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+
+                                                <Border Width="3"
+                                                        Height="28"
+                                                        Margin="4,2,0,0"
+                                                        Background="{DynamicResource AccentBlueBrush}"
+                                                        CornerRadius="2"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{Binding PickDropIndicatorVisibility}" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="3"
+                                                Width="1"
+                                                Margin="0,5"
+                                                HorizontalAlignment="Center"
+                                                Background="{DynamicResource AppMutedBorderBrush}" />
+
+                                        <Border Grid.Column="4"
+                                                Tag="Ban"
+                                                Background="{Binding BanBackgroundBrush, FallbackValue=Transparent}"
+                                                BorderBrush="{Binding BanBorderBrush, FallbackValue=Transparent}"
+                                                AllowDrop="True"
+                                                Focusable="True"
+                                                GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
+                                                KeyDown="ChampionTarget_KeyDown"
+                                                ToolTip="Focus this list, then type a champion name and press Enter to add it here."
+                                                AutomationProperties.Name="{Binding PositionName, StringFormat={}{0} ban champions}"
+                                                MouseLeftButtonDown="ChampionTarget_MouseLeftButtonDown"
+                                                DragOver="ChampionList_DragOver"
+                                                Drop="ChampionList_Drop"
+                                                Style="{StaticResource PriorityLaneBorderStyle}">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <Grid>
+                                                    <TextBlock Text="Empty"
+                                                               Style="{StaticResource PriorityPlaceholderStyle}"
+                                                               Visibility="{Binding BanPlaceholderVisibility}" />
+                                                    <ItemsControl ItemsSource="{Binding BanChampions}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Grid Margin="0,3,6,3"
+                                                                      VerticalAlignment="Center"
+                                                                      Background="Transparent"
+                                                                      AllowDrop="True"
+                                                                      DragOver="ChampionItem_DragOver"
+                                                                      Drop="ChampionItem_Drop">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                    </Grid.ColumnDefinitions>
+
+                                                                    <Border Grid.Column="0"
+                                                                            Width="3"
+                                                                            Margin="0,4,4,4"
+                                                                            Background="{DynamicResource AccentBlueBrush}"
+                                                                            CornerRadius="2"
+                                                                            Visibility="{Binding InsertBeforeIndicatorVisibility}" />
+
+                                                                    <Border Grid.Column="1"
+                                                                            Tag="ChampionPill"
+                                                                            Style="{StaticResource ChampionPillBorderStyle}"
+                                                                            AutomationProperties.Name="{Binding DisplayText}"
+                                                                            GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
+                                                                            KeyDown="ChampionItem_KeyDown"
+                                                                            PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
+                                                                            MouseMove="ChampionItem_MouseMove">
+                                                                        <TextBlock Text="{Binding DisplayText}"
+                                                                                   Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                    </Border>
+
+                                                                    <Border Grid.Column="2"
+                                                                            Width="3"
+                                                                            Margin="4,4,0,4"
+                                                                            Background="{DynamicResource AccentBlueBrush}"
+                                                                            CornerRadius="2"
+                                                                            Visibility="{Binding InsertAfterIndicatorVisibility}" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+
+                                                <Border Width="3"
+                                                        Height="28"
+                                                        Margin="4,2,0,0"
+                                                        Background="{DynamicResource AccentBlueBrush}"
+                                                        CornerRadius="2"
+                                                        HorizontalAlignment="Left"
+                                                        Visibility="{Binding BanDropIndicatorVisibility}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+
+            <Border x:Name="ChampionSearchCard"
+                    Grid.Row="2"
+                    AllowDrop="True"
+                    Padding="16"
+                    PreviewDragOver="SearchArea_PreviewDragOver"
+                    PreviewDrop="SearchArea_PreviewDrop"
+                    Style="{StaticResource SearchDeleteDropCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0"
+                          Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0">
+                            <TextBox x:Name="ChampionSearchBox"
+                                     TextChanged="ChampionSearchBox_TextChanged"
+                                     PreviewKeyDown="ChampionSearchBox_PreviewKeyDown"
+                                     Padding="10,6"
+                                     ToolTip="Type a champion name or ID. Press Enter to add the first result."
+                                     Style="{StaticResource SearchTextBoxStyle}" />
+                        </Grid>
+
+                        <Button x:Name="DeleteSelectedButton"
+                                Grid.Column="2"
+                                Width="54"
+                                Height="30"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Delete selected champions"
+                                Click="DeleteSelectedButton_Click"
+                                IsEnabled="{Binding ElementName=RootPage, Path=HasSelectedChampions}"
+                                Style="{StaticResource DeleteSelectedButtonStyle}">
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <Path Width="14"
+                                      Height="14"
+                                      Stretch="Uniform"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Data="M3,6 L21,6 M8,6 L8,4 L16,4 L16,6 M6,6 L7,21 L17,21 L18,6 M10,11 L10,17 M14,11 L14,17" />
+                                <TextBlock Margin="4,0,0,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="11"
+                                           FontWeight="Bold"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           Text="{Binding ElementName=RootPage, Path=SelectedChampionCountText}" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="4"
+                                Content="?"
+                                Style="{StaticResource InfoIndicatorStyle}"
+                                ToolTip="Click or drag a champion chip into the active pick or ban list. Drop selected chips here to remove them." />
+                    </Grid>
+
+                    <Border x:Name="ChampionReferenceBorder"
+                            Grid.Row="1"
+                            Background="{DynamicResource AppSurfaceInsetBrush}"
+                            BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="8">
+                        <ScrollViewer x:Name="ChampionReferenceScrollViewer"
+                                      Style="{StaticResource StableVerticalScrollViewerStyle}">
+                            <ItemsControl x:Name="ChampionReferenceList">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <controls:JustifiedWrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Click="ChampionReferenceButton_Click"
+                                                AutomationProperties.Name="{Binding Name}"
+                                                PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
+                                                PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
+                                                Style="{StaticResource ChampionReferenceButtonStyle}">
+                                            <TextBlock Style="{StaticResource ReferenceChampionTextStyle}">
+                                                <Run Text="{Binding Name, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <Border Grid.RowSpan="2"
+                            Style="{StaticResource SearchDeleteOverlayStyle}"
+                            Background="{DynamicResource DangerOverlayBrush}"
+                            BorderBrush="{DynamicResource DangerAccentBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            IsHitTestVisible="False">
+                        <Viewbox Width="42"
+                                 Height="42"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                                <Path Stroke="{DynamicResource DangerTextPaleBrush}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Data="M3,6 L5,6 M5,6 L21,6 M19,6 L21,6 M8,6 L8,4 L16,4 L16,6 M6,6 L7,21 L17,21 L18,6 M10,11 L10,17 M14,11 L14,17" />
+                            </Canvas>
+                        </Viewbox>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Popup x:Name="DragPreviewPopup"
+                   Placement="RelativePoint"
+                   PlacementTarget="{Binding ElementName=RootPage}"
+                   AllowsTransparency="True"
+                   IsHitTestVisible="False"
+                   PopupAnimation="None"
+                   StaysOpen="True">
+                <Border Background="{DynamicResource AppInputFocusBrush}"
+                        BorderBrush="{DynamicResource AccentBlueBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="10,5"
+                        Opacity="0.95">
+                    <TextBlock x:Name="DragPreviewText"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold" />
+                </Border>
+            </Popup>
+        </Grid>
+    </ScrollViewer>
+</Page>

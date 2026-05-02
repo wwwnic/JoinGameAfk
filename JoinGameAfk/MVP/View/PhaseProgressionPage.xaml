@@ -122,8 +122,8 @@
 
             <Border x:Name="HeaderPanel"
                     Grid.Row="0"
-                    Background="{DynamicResource AppSurfaceAltBrush}"
-                    BorderBrush="{DynamicResource AppSubtleBorderBrush}"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="16,11">

@@ -41,10 +41,10 @@ namespace JoinGameAfk
 
             fPhaseController = new PhaseController(fDashboardPage, fLogsPage, champSelectSettings);
 
-            var champSelectPage = new ChampSelectSettingsPage(champSelectSettings);
+            var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
             var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme);
 
-            var mainWindow = new MainWindow(fDashboardPage, champSelectPage, settingsPage);
+            var mainWindow = new MainWindow(fDashboardPage, championPrioritiesPage, settingsPage);
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;

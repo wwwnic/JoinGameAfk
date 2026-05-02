@@ -13,11 +13,11 @@ using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
 {
-    public partial class ChampSelectSettingsPage : Page
+    public partial class ChampionPrioritiesPage : Page
     {
         private const double DragAutoScrollEdgeDistance = 56;
         private const double DragAutoScrollStep = 28;
-        private const double ChampionReferenceListMinHeight = 140;
+        private const double ChampionReferenceListMinHeight = 110;
         private const double ChampionReferenceHeightBuffer = 2;
         private const string ChampionPillTag = "ChampionPill";
 
@@ -55,7 +55,7 @@ namespace JoinGameAfk.View
         public static readonly DependencyProperty HasSelectedChampionsProperty = DependencyProperty.Register(
             nameof(HasSelectedChampions),
             typeof(bool),
-            typeof(ChampSelectSettingsPage),
+            typeof(ChampionPrioritiesPage),
             new PropertyMetadata(false));
 
         public bool HasSelectedChampions
@@ -64,10 +64,22 @@ namespace JoinGameAfk.View
             private set => SetValue(HasSelectedChampionsProperty, value);
         }
 
+        public static readonly DependencyProperty SelectedChampionCountTextProperty = DependencyProperty.Register(
+            nameof(SelectedChampionCountText),
+            typeof(string),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata("(0)"));
+
+        public string SelectedChampionCountText
+        {
+            get => (string)GetValue(SelectedChampionCountTextProperty);
+            private set => SetValue(SelectedChampionCountTextProperty, value);
+        }
+
         public static readonly DependencyProperty IsSearchDeleteDropTargetProperty = DependencyProperty.Register(
             nameof(IsSearchDeleteDropTarget),
             typeof(bool),
-            typeof(ChampSelectSettingsPage),
+            typeof(ChampionPrioritiesPage),
             new PropertyMetadata(false));
 
         public bool IsSearchDeleteDropTarget
@@ -76,7 +88,7 @@ namespace JoinGameAfk.View
             private set => SetValue(IsSearchDeleteDropTargetProperty, value);
         }
 
-        public ChampSelectSettingsPage(ChampSelectSettings settings)
+        public ChampionPrioritiesPage(ChampSelectSettings settings)
         {
             InitializeComponent();
             _settings = settings;
@@ -739,9 +751,7 @@ namespace JoinGameAfk.View
                 + row.BanChampions.Count(champion => champion.IsSelected));
 
             HasSelectedChampions = selectedChampionCount > 0;
-            DeleteSelectedButton.Content = selectedChampionCount > 0
-                ? $"Delete selected ({selectedChampionCount})"
-                : "Delete selected";
+            SelectedChampionCountText = $"({Math.Min(selectedChampionCount, 99)})";
         }
 
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
