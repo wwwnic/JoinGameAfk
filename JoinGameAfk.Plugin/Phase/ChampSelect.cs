@@ -263,8 +263,7 @@ public class ChampSelect : IPhaseHandler
             return [];
         }
 
-        var slots = new List<(int Index, Position Position, DashboardTeamSlotItem Item)>();
-        int index = 0;
+        var slots = new List<DashboardTeamSlotItem>();
         foreach (var member in teamMembers.EnumerateArray())
         {
             Position position = GetAssignedPosition(member);
@@ -272,24 +271,17 @@ public class ChampSelect : IPhaseHandler
             bool isLocalPlayer = TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId;
             string championName = championId > 0 ? FormatChampion(championId) : "No champion";
 
-            slots.Add((
-                index++,
-                position,
-                new DashboardTeamSlotItem
-                {
-                    ChampionId = championId,
-                    ChampionInitial = GetChampionInitial(championName, championId),
-                    ChampionName = championName,
-                    RoleName = GetPositionDisplayName(position),
-                    IsLocalPlayer = isLocalPlayer
-                }));
+            slots.Add(new DashboardTeamSlotItem
+            {
+                ChampionId = championId,
+                ChampionInitial = GetChampionInitial(championName, championId),
+                ChampionName = championName,
+                RoleName = GetPositionDisplayName(position),
+                IsLocalPlayer = isLocalPlayer
+            });
         }
 
-        return slots
-            .OrderBy(slot => GetPositionSortOrder(slot.Position))
-            .ThenBy(slot => slot.Index)
-            .Select(slot => slot.Item)
-            .ToList();
+        return slots;
     }
 
     private static int GetCurrentChampionId(JsonElement member)
@@ -320,19 +312,6 @@ public class ChampSelect : IPhaseHandler
             Position.Adc => "ADC",
             Position.Support => "Support",
             _ => "None",
-        };
-    }
-
-    private static int GetPositionSortOrder(Position position)
-    {
-        return position switch
-        {
-            Position.Top => 0,
-            Position.Jungle => 1,
-            Position.Mid => 2,
-            Position.Adc => 3,
-            Position.Support => 4,
-            _ => 5,
         };
     }
 
