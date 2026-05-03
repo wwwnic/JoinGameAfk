@@ -4,16 +4,26 @@ namespace JoinGameAfk.Model
 {
     public sealed record DashboardChampionPlanItem
     {
+        public int ChampionId { get; init; }
         public string Name { get; init; } = string.Empty;
         public Position SourcePosition { get; init; } = Position.Default;
         public bool IsAvailable { get; init; } = true;
+        public string StatusText { get; init; } = string.Empty;
+        public bool IsPlanReference { get; init; }
+        public string PlanReferenceText { get; init; } = string.Empty;
+        public bool IsOwnAction { get; init; }
     }
 
     public sealed record DashboardTeamSlotItem
     {
+        public int ChampionId { get; init; }
         public string ChampionInitial { get; init; } = "?";
         public string ChampionName { get; init; } = "No champion";
         public string RoleName { get; init; } = "None";
+        public bool IsLocalPlayer { get; init; }
+        public bool IsPlanReference { get; init; }
+        public string PlanReferenceText { get; init; } = string.Empty;
+        public bool IsOwnAction { get; init; }
     }
 
     public sealed record DashboardStatus

@@ -25,6 +25,16 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
             <Setter Property="BorderThickness" Value="0,0,0,1" />
             <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="DraftAvatarStyle" TargetType="Border">
@@ -35,6 +45,18 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceRaisedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="DraftAvatarTextStyle" TargetType="TextBlock">
@@ -43,6 +65,14 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
             <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="DraftRoleTextStyle" TargetType="TextBlock">
@@ -50,6 +80,14 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="DraftChampionTextStyle" TargetType="TextBlock">
@@ -57,6 +95,14 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="HeaderBanPanelStyle" TargetType="Border">
@@ -71,9 +117,52 @@
         <Style x:Key="HeaderBanChipStyle"
                TargetType="Border"
                BasedOn="{StaticResource PriorityChampionChipStyle}">
-            <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PlannerChampionChipStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource HeaderBanChipStyle}">
+            <Setter Property="ToolTipService.InitialShowDelay" Value="150" />
+            <Setter Property="ToolTipService.ShowDuration" Value="20000" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="PlannerChampionChipTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource ChampionChipTextStyle}">
+            <Setter Property="TextDecorations" Value="{x:Null}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="HeaderBanPlaceholderStyle" TargetType="TextBlock">
@@ -82,22 +171,6 @@
             <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
             <Setter Property="FontStyle" Value="Italic" />
             <Setter Property="TextWrapping" Value="Wrap" />
-        </Style>
-
-        <Style x:Key="RoleChipStyle" TargetType="Border">
-            <Setter Property="MinHeight" Value="30" />
-            <Setter Property="Padding" Value="8,0" />
-            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="7" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource TextMutedBrush}" />
-        </Style>
-
-        <Style x:Key="ActiveRoleChipStyle" TargetType="Border" BasedOn="{StaticResource RoleChipStyle}">
-            <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
         </Style>
 
         <Style x:Key="ActionPanelStyle" TargetType="Border">
@@ -162,7 +235,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource HeaderBanChipStyle}">
+                                            <Border Style="{StaticResource HeaderBanChipStyle}"
+                                                    ToolTip="{Binding PlanReferenceText}">
                                                 <TextBlock Text="{Binding Name}"
                                                            Style="{StaticResource ChampionChipTextStyle}"
                                                            TextTrimming="CharacterEllipsis" />
@@ -228,7 +302,8 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Border Style="{StaticResource HeaderBanChipStyle}">
+                                            <Border Style="{StaticResource HeaderBanChipStyle}"
+                                                    ToolTip="{Binding PlanReferenceText}">
                                                 <TextBlock Text="{Binding Name}"
                                                            Style="{StaticResource ChampionChipTextStyle}"
                                                            TextTrimming="CharacterEllipsis" />
@@ -295,7 +370,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource DraftSlotStyle}">
+                                    <Border Style="{StaticResource DraftSlotStyle}"
+                                            ToolTip="{Binding PlanReferenceText}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
@@ -329,8 +405,8 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
 
                         <Border Grid.Row="0"
@@ -348,384 +424,167 @@
                             </Grid>
                         </Border>
 
-                        <UniformGrid Grid.Row="1"
-                                     Columns="6"
-                                     Margin="12,12,12,0">
-                            <Border x:Name="TopRoleChip"
-                                    Style="{StaticResource RoleChipStyle}"
-                                    Margin="0,0,6,0">
-                                <TextBlock Text="Top"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="JungleRoleChip"
-                                    Style="{StaticResource RoleChipStyle}"
-                                    Margin="0,0,6,0">
-                                <TextBlock Text="Jungle"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="MidRoleChip"
-                                    Style="{StaticResource RoleChipStyle}"
-                                    Margin="0,0,6,0">
-                                <TextBlock Text="Mid"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="AdcRoleChip"
-                                    Style="{StaticResource RoleChipStyle}"
-                                    Margin="0,0,6,0">
-                                <TextBlock Text="ADC"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="SupportRoleChip"
-                                    Style="{StaticResource RoleChipStyle}"
-                                    Margin="0,0,6,0">
-                                <TextBlock Text="Support"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                            <Border x:Name="DefaultRoleChip"
-                                    Style="{StaticResource ActiveRoleChipStyle}">
-                                <TextBlock Text="Default"
-                                           FontSize="11"
-                                           FontWeight="SemiBold"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center" />
-                            </Border>
-                        </UniformGrid>
-
-                        <Border Grid.Row="2"
+                        <Border Grid.Row="1"
                                 Style="{StaticResource ActionPanelStyle}"
-                                Margin="12">
+                                Margin="12,12,12,0">
                             <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0"
-                                        Width="48"
-                                        Height="48"
-                                        Background="{DynamicResource AccentBlueInfoBrush}"
-                                        BorderBrush="{DynamicResource AccentBlueBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="8">
-                                    <Viewbox Stretch="Uniform"
-                                             Margin="5">
-                                        <TextBlock x:Name="CurrentActionChampionText"
-                                                   Text="--"
-                                                   Width="42"
-                                                   FontSize="12"
-                                                   FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentBlueTextBrush}"
-                                                   TextAlignment="Center"
-                                                   TextWrapping="Wrap"
-                                                   HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
-                                    </Viewbox>
-                                </Border>
-                                <StackPanel Grid.Column="2"
-                                            VerticalAlignment="Center">
-                                    <TextBlock Text="Current action"
-                                               Style="{StaticResource EyebrowTextStyle}" />
-                                    <TextBlock x:Name="CurrentActionTitleText"
-                                               Text="None plan"
-                                               Margin="0,2,0,0"
-                                               FontSize="19"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextPrimaryBrush}" />
-                                    <TextBlock x:Name="CurrentActionSubtitleText"
-                                               Text=""
-                                               Margin="0,3,0,0"
-                                               Style="{StaticResource MutedTextStyle}"
-                                               Visibility="Collapsed"
-                                               TextWrapping="Wrap" />
-                                    <TextBlock x:Name="CurrentActionLockText"
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="10" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="4"
+                                            Height="28"
+                                            Background="{DynamicResource AccentBlueBrush}"
+                                            CornerRadius="2" />
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Pick plan"
+                                                   Style="{StaticResource CardTitleStyle}"
+                                                   FontSize="14" />
+                                        <TextBlock Text="Champion priority"
+                                                   Style="{StaticResource MutedTextStyle}"
+                                                   Margin="0,1,0,0" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="PickPlanLockText"
+                                               Grid.Column="4"
                                                Text="Lock timing unavailable."
-                                               Margin="0,3,0,0"
                                                FontSize="11"
                                                FontWeight="Bold"
                                                Foreground="{DynamicResource TextMutedBrush}"
-                                               TextWrapping="Wrap" />
-                                </StackPanel>
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap"
+                                               MaxWidth="170"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Border Grid.Row="2"
+                                        Background="{DynamicResource AppSurfaceInsetBrush}"
+                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="6"
+                                        MinHeight="76">
+                                    <Grid>
+                                        <TextBlock x:Name="PickChampionPlaceholderText"
+                                                   Text="Waiting for champion select."
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextSubtleBrush}"
+                                                   FontStyle="Italic"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="Visible" />
+                                        <ItemsControl x:Name="PickChampionPriorityList"
+                                                      VerticalAlignment="Top">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource PlannerChampionChipStyle}"
+                                                            ToolTip="{Binding StatusText}">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Style="{StaticResource PlannerChampionChipTextStyle}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
                             </Grid>
                         </Border>
 
-                        <Grid Grid.Row="3"
-                              Margin="12,0,12,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <Border Grid.Row="3"
+                                Style="{StaticResource ActionPanelStyle}"
+                                Margin="12,0,12,12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="10" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
 
-                            <Border Grid.Column="0"
-                                    Style="{StaticResource ActionPanelStyle}">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="10" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="8" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                Height="28"
-                                                Background="{DynamicResource AccentBlueBrush}"
-                                                CornerRadius="2" />
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Pick plan"
-                                                       Style="{StaticResource CardTitleStyle}"
-                                                       FontSize="14" />
-                                            <TextBlock Text="Champion priority"
-                                                       Style="{StaticResource MutedTextStyle}"
-                                                       Margin="0,1,0,0" />
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <Border Grid.Row="2"
-                                            Background="{DynamicResource AppSurfaceInsetBrush}"
-                                            BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="6"
-                                            MinHeight="76">
-                                        <Grid>
-                                            <TextBlock x:Name="PickChampionPlaceholderText"
-                                                       Text="Waiting for champion select."
-                                                       FontSize="12"
-                                                       Foreground="{DynamicResource TextSubtleBrush}"
-                                                       FontStyle="Italic"
-                                                       TextWrapping="Wrap"
-                                                       VerticalAlignment="Center"
-                                                       Visibility="Visible" />
-                                            <ItemsControl x:Name="PickChampionPriorityList"
-                                                          VerticalAlignment="Top">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Margin="0,0,0,5"
-                                                                Padding="8,0"
-                                                                MinHeight="28"
-                                                                Background="{DynamicResource AppInputBrush}"
-                                                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="7">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="18" />
-                                                                    <ColumnDefinition Width="7" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <Border Grid.Column="0"
-                                                                        Width="18"
-                                                                        Height="18"
-                                                                        Background="{DynamicResource AccentBlueInfoBrush}"
-                                                                        BorderBrush="{DynamicResource AccentBlueBrush}"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="5">
-                                                                    <TextBlock Text="{Binding Name[0]}"
-                                                                               FontSize="9"
-                                                                               FontWeight="Bold"
-                                                                               Foreground="{DynamicResource AccentBlueTextBrush}"
-                                                                               HorizontalAlignment="Center"
-                                                                               VerticalAlignment="Center" />
-                                                                </Border>
-                                                                <TextBlock Grid.Column="2"
-                                                                           Text="{Binding Name}"
-                                                                           Style="{StaticResource ChampionChipTextStyle}"
-                                                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Grid.Column="3"
-                                                                           FontSize="10"
-                                                                           FontWeight="Bold"
-                                                                           Foreground="{DynamicResource AccentGreenTextBrush}"
-                                                                           VerticalAlignment="Center">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Text" Value="Pick" />
-                                                                            <Setter Property="TextDecorations" Value="{x:Null}" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
-                                                                                    <Setter Property="Text" Value="Blocked" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </Grid>
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Opacity" Value="1" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                            <Setter Property="Background" Value="{DynamicResource DangerSurfaceRaisedBrush}" />
-                                                                            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
-                                                                            <Setter Property="Opacity" Value="0.88" />
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
-                                    </Border>
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="4"
+                                            Height="28"
+                                            Background="{DynamicResource DangerAccentBrush}"
+                                            CornerRadius="2" />
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Ban plan"
+                                                   Style="{StaticResource CardTitleStyle}"
+                                                   FontSize="14" />
+                                        <TextBlock Text="Champion priority"
+                                                   Style="{StaticResource MutedTextStyle}"
+                                                   Margin="0,1,0,0" />
+                                    </StackPanel>
+                                    <TextBlock x:Name="BanPlanLockText"
+                                               Grid.Column="4"
+                                               Text="Lock timing unavailable."
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap"
+                                               MaxWidth="170"
+                                               VerticalAlignment="Center" />
                                 </Grid>
-                            </Border>
 
-                            <Border Grid.Column="2"
-                                    Style="{StaticResource ActionPanelStyle}">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="10" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="8" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0"
-                                                Width="4"
-                                                Height="28"
-                                                Background="{DynamicResource DangerAccentBrush}"
-                                                CornerRadius="2" />
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Ban plan"
-                                                       Style="{StaticResource CardTitleStyle}"
-                                                       FontSize="14" />
-                                            <TextBlock Text="Champion priority"
-                                                       Style="{StaticResource MutedTextStyle}"
-                                                       Margin="0,1,0,0" />
-                                        </StackPanel>
+                                <Border Grid.Row="2"
+                                        Background="{DynamicResource AppSurfaceInsetBrush}"
+                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="6"
+                                        MinHeight="76">
+                                    <Grid>
+                                        <TextBlock x:Name="BanChampionPlaceholderText"
+                                                   Text="Waiting for champion select."
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextSubtleBrush}"
+                                                   FontStyle="Italic"
+                                                   TextWrapping="Wrap"
+                                                   VerticalAlignment="Center"
+                                                   Visibility="Visible" />
+                                        <ItemsControl x:Name="BanChampionPriorityList"
+                                                      VerticalAlignment="Top">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Style="{StaticResource PlannerChampionChipStyle}"
+                                                            ToolTip="{Binding StatusText}">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Style="{StaticResource PlannerChampionChipTextStyle}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Grid>
-
-                                    <Border Grid.Row="2"
-                                            Background="{DynamicResource AppSurfaceInsetBrush}"
-                                            BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                            BorderThickness="1"
-                                            CornerRadius="8"
-                                            Padding="6"
-                                            MinHeight="76">
-                                        <Grid>
-                                            <TextBlock x:Name="BanChampionPlaceholderText"
-                                                       Text="Waiting for champion select."
-                                                       FontSize="12"
-                                                       Foreground="{DynamicResource TextSubtleBrush}"
-                                                       FontStyle="Italic"
-                                                       TextWrapping="Wrap"
-                                                       VerticalAlignment="Center"
-                                                       Visibility="Visible" />
-                                            <ItemsControl x:Name="BanChampionPriorityList"
-                                                          VerticalAlignment="Top">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <StackPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Margin="0,0,0,5"
-                                                                Padding="8,0"
-                                                                MinHeight="28"
-                                                                Background="{DynamicResource AppInputBrush}"
-                                                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                                                BorderThickness="1"
-                                                                CornerRadius="7">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="18" />
-                                                                    <ColumnDefinition Width="7" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <Border Grid.Column="0"
-                                                                        Width="18"
-                                                                        Height="18"
-                                                                        Background="{DynamicResource DangerSurfaceBrush}"
-                                                                        BorderBrush="{DynamicResource DangerAccentBrush}"
-                                                                        BorderThickness="1"
-                                                                        CornerRadius="5">
-                                                                    <TextBlock Text="{Binding Name[0]}"
-                                                                               FontSize="9"
-                                                                               FontWeight="Bold"
-                                                                               Foreground="{DynamicResource DangerTextBrush}"
-                                                                               HorizontalAlignment="Center"
-                                                                               VerticalAlignment="Center" />
-                                                                </Border>
-                                                                <TextBlock Grid.Column="2"
-                                                                           Text="{Binding Name}"
-                                                                           Style="{StaticResource ChampionChipTextStyle}"
-                                                                           Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                           TextTrimming="CharacterEllipsis" />
-                                                                <TextBlock Grid.Column="3"
-                                                                           FontSize="10"
-                                                                           FontWeight="Bold"
-                                                                           Foreground="{DynamicResource DangerTextSoftBrush}"
-                                                                           VerticalAlignment="Center">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock">
-                                                                            <Setter Property="Text" Value="Ban" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
-                                                                                    <Setter Property="Text" Value="Blocked" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
-                                                            </Grid>
-                                                            <Border.Style>
-                                                                <Style TargetType="Border">
-                                                                    <Setter Property="Opacity" Value="1" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding IsAvailable}" Value="False">
-                                                                            <Setter Property="Background" Value="{DynamicResource DangerSurfaceRaisedBrush}" />
-                                                                            <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
-                                                                            <Setter Property="Opacity" Value="0.88" />
-                                                                        </DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Border.Style>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
                     </Grid>
                 </Border>
 
@@ -761,7 +620,8 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Style="{StaticResource DraftSlotStyle}">
+                                    <Border Style="{StaticResource DraftSlotStyle}"
+                                            ToolTip="{Binding PlanReferenceText}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />

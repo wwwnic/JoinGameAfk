@@ -59,14 +59,15 @@ namespace JoinGameAfk.View
         {
             Dispatcher.Invoke(() =>
             {
+                status = ApplyPlanBlockerHighlights(status);
+
                 UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "No bans yet.");
                 UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "No bans yet.");
                 UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
                 UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
                 UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
                 UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
-                UpdateCurrentRoleDisplay(GetCurrentPriorityListPosition(status));
-                UpdateCurrentActionDisplay(status);
+                UpdatePlanDisplay(status);
 
                 string champSelectSubPhase = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
                     ? "Idle"
@@ -80,106 +81,195 @@ namespace JoinGameAfk.View
             });
         }
 
+        private static DashboardStatus ApplyPlanBlockerHighlights(DashboardStatus status)
+        {
+            var sourceLabelsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            AddSourceBlockers(sourceLabelsByKey, status.MyTeamBans, "your bans");
+            AddSourceBlockers(sourceLabelsByKey, status.TheirTeamBans, "enemy bans");
+            AddSourceBlockers(sourceLabelsByKey, status.MyTeamSlots.Where(slot => !slot.IsLocalPlayer), "your team");
+            AddSourceBlockers(sourceLabelsByKey, status.TheirTeamSlots, "enemy team");
+
+            var ownActionLabelsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            AddSourceBlockers(ownActionLabelsByKey, status.MyTeamSlots.Where(slot => slot.IsLocalPlayer), "you");
+
+            var planLabelsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            AddPlanReferences(planLabelsByKey, status.PickChampionPriority, "pick plan");
+            AddPlanReferences(planLabelsByKey, status.BanChampionPriority, "ban plan");
+
+            return status with
+            {
+                MyTeamBans = HighlightChampionSources(status.MyTeamBans, planLabelsByKey),
+                TheirTeamBans = HighlightChampionSources(status.TheirTeamBans, planLabelsByKey),
+                MyTeamSlots = HighlightTeamSources(status.MyTeamSlots, planLabelsByKey),
+                TheirTeamSlots = HighlightTeamSources(status.TheirTeamSlots, planLabelsByKey),
+                PickChampionPriority = HighlightPlanItems(status.PickChampionPriority, sourceLabelsByKey, ownActionLabelsByKey),
+                BanChampionPriority = HighlightPlanItems(status.BanChampionPriority, sourceLabelsByKey, ownActionLabelsByKey)
+            };
+        }
+
+        private static void AddSourceBlockers(Dictionary<string, List<string>> sourceLabelsByKey, IEnumerable<DashboardChampionPlanItem> champions, string sourceLabel)
+        {
+            foreach (var champion in champions)
+                AddLabelForChampion(sourceLabelsByKey, champion.ChampionId, champion.Name, sourceLabel);
+        }
+
+        private static void AddSourceBlockers(Dictionary<string, List<string>> sourceLabelsByKey, IEnumerable<DashboardTeamSlotItem> slots, string sourceLabel)
+        {
+            foreach (var slot in slots)
+                AddLabelForChampion(sourceLabelsByKey, slot.ChampionId, slot.ChampionName, sourceLabel);
+        }
+
+        private static void AddPlanReferences(Dictionary<string, List<string>> planLabelsByKey, IEnumerable<DashboardChampionPlanItem> champions, string planLabel)
+        {
+            foreach (var champion in champions)
+                AddLabelForChampion(planLabelsByKey, champion.ChampionId, champion.Name, planLabel);
+        }
+
+        private static IReadOnlyList<DashboardChampionPlanItem> HighlightChampionSources(IReadOnlyList<DashboardChampionPlanItem> champions, IReadOnlyDictionary<string, List<string>> planLabelsByKey)
+        {
+            return champions
+                .Select(champion =>
+                {
+                    var planLabels = FindLabels(planLabelsByKey, champion.ChampionId, champion.Name);
+                    return planLabels.Count == 0
+                        ? champion with { IsPlanReference = false, PlanReferenceText = string.Empty, IsOwnAction = false }
+                        : champion with
+                        {
+                            IsPlanReference = true,
+                            PlanReferenceText = $"Blocks {FormatLabelList(planLabels)}",
+                            IsOwnAction = false
+                        };
+                })
+                .ToList();
+        }
+
+        private static IReadOnlyList<DashboardTeamSlotItem> HighlightTeamSources(IReadOnlyList<DashboardTeamSlotItem> slots, IReadOnlyDictionary<string, List<string>> planLabelsByKey)
+        {
+            return slots
+                .Select(slot =>
+                {
+                    var planLabels = FindLabels(planLabelsByKey, slot.ChampionId, slot.ChampionName);
+                    return planLabels.Count == 0
+                        ? slot with { IsPlanReference = false, PlanReferenceText = string.Empty, IsOwnAction = false }
+                        : slot.IsLocalPlayer
+                            ? slot with
+                            {
+                                IsPlanReference = true,
+                                PlanReferenceText = $"In {FormatLabelList(planLabels)}",
+                                IsOwnAction = true
+                            }
+                        : slot with
+                        {
+                            IsPlanReference = true,
+                            PlanReferenceText = $"Blocks {FormatLabelList(planLabels)}",
+                            IsOwnAction = false
+                        };
+                })
+                .ToList();
+        }
+
+        private static IReadOnlyList<DashboardChampionPlanItem> HighlightPlanItems(IReadOnlyList<DashboardChampionPlanItem> champions, IReadOnlyDictionary<string, List<string>> sourceLabelsByKey, IReadOnlyDictionary<string, List<string>> ownActionLabelsByKey)
+        {
+            return champions
+                .Select(champion =>
+                {
+                    var ownActionLabels = FindLabels(ownActionLabelsByKey, champion.ChampionId, champion.Name);
+                    if (ownActionLabels.Count > 0)
+                    {
+                        return champion with
+                        {
+                            IsOwnAction = true,
+                            StatusText = $"Selected by {FormatLabelList(ownActionLabels)}"
+                        };
+                    }
+
+                    var sourceLabels = FindLabels(sourceLabelsByKey, champion.ChampionId, champion.Name);
+                    return sourceLabels.Count == 0
+                        ? champion with { IsOwnAction = false }
+                        : champion with
+                        {
+                            IsOwnAction = false,
+                            IsAvailable = false,
+                            StatusText = $"Blocked by {FormatLabelList(sourceLabels)}"
+                        };
+                })
+                .ToList();
+        }
+
+        private static void AddLabelForChampion(Dictionary<string, List<string>> labelsByKey, int championId, string championName, string label)
+        {
+            foreach (string key in GetChampionMatchKeys(championId, championName))
+                AddLabel(labelsByKey, key, label);
+        }
+
+        private static IReadOnlyList<string> FindLabels(IReadOnlyDictionary<string, List<string>> labelsByKey, int championId, string championName)
+        {
+            foreach (string key in GetChampionMatchKeys(championId, championName))
+            {
+                if (labelsByKey.TryGetValue(key, out var labels))
+                    return labels;
+            }
+
+            return [];
+        }
+
+        private static IEnumerable<string> GetChampionMatchKeys(int championId, string championName)
+        {
+            if (championId > 0)
+                yield return $"id:{championId}";
+
+            string normalizedName = NormalizeChampionName(championName);
+            if (!string.IsNullOrEmpty(normalizedName)
+                && !string.Equals(normalizedName, "NOCHAMPION", StringComparison.Ordinal))
+            {
+                yield return $"name:{normalizedName}";
+            }
+        }
+
+        private static string NormalizeChampionName(string championName)
+        {
+            return new string(championName.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        }
+
+        private static void AddLabel(Dictionary<string, List<string>> labelsByKey, string key, string label)
+        {
+            if (!labelsByKey.TryGetValue(key, out var labels))
+            {
+                labels = [];
+                labelsByKey[key] = labels;
+            }
+
+            if (!labels.Contains(label, StringComparer.Ordinal))
+                labels.Add(label);
+        }
+
+        private static string FormatLabelList(IReadOnlyList<string> labels)
+        {
+            return labels.Count switch
+            {
+                0 => string.Empty,
+                1 => labels[0],
+                2 => $"{labels[0]} and {labels[1]}",
+                _ => $"{string.Join(", ", labels.Take(labels.Count - 1))}, and {labels[^1]}"
+            };
+        }
+
         private static void UpdateTeamSlotList(ItemsControl itemsControl, IReadOnlyList<DashboardTeamSlotItem> slots)
         {
             itemsControl.ItemsSource = slots;
         }
 
-        private void UpdateCurrentRoleDisplay(Position position)
+        private void UpdatePlanDisplay(DashboardStatus status)
         {
-            position = NormalizeDisplayPosition(position);
-
-            var inactiveStyle = (Style)FindResource("RoleChipStyle");
-            var activeStyle = (Style)FindResource("ActiveRoleChipStyle");
-
-            SetRoleChipStyle(TopRoleChip, Position.Top, position, inactiveStyle, activeStyle);
-            SetRoleChipStyle(JungleRoleChip, Position.Jungle, position, inactiveStyle, activeStyle);
-            SetRoleChipStyle(MidRoleChip, Position.Mid, position, inactiveStyle, activeStyle);
-            SetRoleChipStyle(AdcRoleChip, Position.Adc, position, inactiveStyle, activeStyle);
-            SetRoleChipStyle(SupportRoleChip, Position.Support, position, inactiveStyle, activeStyle);
-            SetRoleChipStyle(DefaultRoleChip, Position.Default, position, inactiveStyle, activeStyle);
+            PickPlanLockText.Text = GetPlanLockText(status.PickLockText);
+            BanPlanLockText.Text = GetPlanLockText(status.BanLockText);
         }
 
-        private void UpdateCurrentActionDisplay(DashboardStatus status)
+        private static string GetPlanLockText(string lockText)
         {
-            bool isBanAction = IsBanAction(status);
-            IReadOnlyList<DashboardChampionPlanItem> actionPlan = isBanAction
-                ? status.BanChampionPriority
-                : status.PickChampionPriority;
-            string actionName = isBanAction ? "Ban" : "Pick";
-            string lockText = isBanAction ? status.BanLockText : status.PickLockText;
-            var targetChampion = GetCurrentActionChampion(actionPlan);
-
-            CurrentActionChampionText.Text = targetChampion?.Name ?? "--";
-            CurrentActionTitleText.Text = $"{actionName} target";
-            CurrentActionLockText.Text = string.IsNullOrWhiteSpace(lockText)
+            return string.IsNullOrWhiteSpace(lockText)
                 ? "Lock timing unavailable."
                 : lockText;
-
-            if (targetChampion is null)
-            {
-                bool isWaiting = status.TimeLeftSeconds < 0
-                    && string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
-                    && status.PickChampionPriority.Count == 0
-                    && status.BanChampionPriority.Count == 0;
-
-                CurrentActionSubtitleText.Visibility = isWaiting ? Visibility.Collapsed : Visibility.Visible;
-                CurrentActionSubtitleText.Text = isWaiting
-                    ? string.Empty
-                    : $"No {actionName.ToLowerInvariant()} champion configured.";
-                CurrentActionLockText.Text = isWaiting
-                    ? "Lock timing unavailable."
-                    : CurrentActionLockText.Text;
-                return;
-            }
-
-            CurrentActionSubtitleText.Visibility = Visibility.Collapsed;
-        }
-
-        private static Position GetCurrentPriorityListPosition(DashboardStatus status)
-        {
-            bool isBanAction = IsBanAction(status);
-            IReadOnlyList<DashboardChampionPlanItem> actionPlan = isBanAction
-                ? status.BanChampionPriority
-                : status.PickChampionPriority;
-
-            return NormalizeDisplayPosition(GetCurrentActionChampion(actionPlan)?.SourcePosition ?? status.CurrentPosition);
-        }
-
-        private static bool IsBanAction(DashboardStatus status)
-        {
-            return string.Equals(status.ChampSelectSubPhase, "Ban", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static void SetRoleChipStyle(Border roleChip, Position role, Position currentPosition, Style inactiveStyle, Style activeStyle)
-        {
-            roleChip.Style = role == currentPosition ? activeStyle : inactiveStyle;
-        }
-
-        private static Position NormalizeDisplayPosition(Position position)
-        {
-            return position is Position.Default or Position.None
-                ? Position.Default
-                : position;
-        }
-
-        private static string GetPositionDisplayName(Position position)
-        {
-            return position switch
-            {
-                Position.Top => "Top",
-                Position.Jungle => "Jungle",
-                Position.Mid => "Mid",
-                Position.Adc => "ADC",
-                Position.Support => "Support",
-                _ => "Default",
-            };
-        }
-
-        private static DashboardChampionPlanItem? GetCurrentActionChampion(IReadOnlyList<DashboardChampionPlanItem> actionPlan)
-        {
-            return actionPlan.FirstOrDefault(champion => champion.IsAvailable)
-                ?? actionPlan.FirstOrDefault();
         }
 
         private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)

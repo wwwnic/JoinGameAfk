@@ -23,7 +23,10 @@ namespace JoinGameAfk.View
 
         private readonly Button[] _tabs;
         private readonly Frame[] _frames;
+        private readonly PhaseProgressionPage _dashboardPage;
+        private readonly LogsPage _logsPage;
         private PhaseController? _phaseController;
+        private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
         private int _activeTabIndex;
         private ClientPhase _currentPhase = ClientPhase.Unknown;
         private bool _isWatcherRunning;
@@ -43,10 +46,12 @@ namespace JoinGameAfk.View
             Hover
         }
 
-        public MainWindow(PhaseProgressionPage dashboardPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage)
+        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage)
         {
             InitializeComponent();
 
+            _dashboardPage = dashboardPage;
+            _logsPage = logsPage;
             DashboardFrame.Content = dashboardPage;
             ChampionPrioritiesFrame.Content = championPrioritiesPage;
             SettingsFrame.Content = settingsPage;
@@ -85,6 +90,9 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 _isWatcherRunning = isRunning;
+                if (_isWatcherRunning)
+                    ClosePhaseProgressionTestWindow();
+
                 RefreshWatcherButton();
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
@@ -123,6 +131,13 @@ namespace JoinGameAfk.View
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.F12 && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+            {
+                OpenPhaseProgressionTestWindow();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Enter && Keyboard.FocusedElement is ButtonBase button && button.IsEnabled)
             {
                 ActivateButtonFromKeyboard(button);
@@ -147,6 +162,36 @@ namespace JoinGameAfk.View
             ActivateTab(index);
             _tabs[index].Focus();
             e.Handled = true;
+        }
+
+        private void OpenPhaseProgressionTestWindow()
+        {
+            if (_isWatcherRunning)
+            {
+                MessageBox.Show(this, "Stop the watcher before opening the phase tester.", "Watcher Running", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (_phaseProgressionTestWindow is not null)
+            {
+                if (_phaseProgressionTestWindow.WindowState == WindowState.Minimized)
+                    _phaseProgressionTestWindow.WindowState = WindowState.Normal;
+
+                _phaseProgressionTestWindow.Activate();
+                return;
+            }
+
+            _phaseProgressionTestWindow = new PhaseProgressionTestWindow(_dashboardPage, _logsPage, () => !_isWatcherRunning)
+            {
+                Owner = this
+            };
+            _phaseProgressionTestWindow.Closed += (_, _) => _phaseProgressionTestWindow = null;
+            _phaseProgressionTestWindow.Show();
+        }
+
+        private void ClosePhaseProgressionTestWindow()
+        {
+            _phaseProgressionTestWindow?.Close();
         }
 
         private static void ActivateButtonFromKeyboard(ButtonBase button)

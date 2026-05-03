@@ -44,7 +44,7 @@ namespace JoinGameAfk
             var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
             var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme);
 
-            var mainWindow = new MainWindow(fDashboardPage, championPrioritiesPage, settingsPage);
+            var mainWindow = new MainWindow(fDashboardPage, fLogsPage, championPrioritiesPage, settingsPage);
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;

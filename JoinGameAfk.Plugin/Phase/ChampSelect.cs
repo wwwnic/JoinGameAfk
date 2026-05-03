@@ -151,12 +151,12 @@ public class ChampSelect : IPhaseHandler
         return new DashboardStatus
         {
             CurrentPosition = assignedPosition,
-            MyTeamSlots = BuildTeamSlotItems(root, "myTeam"),
-            TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam"),
+            MyTeamSlots = BuildTeamSlotItems(root, "myTeam", localPlayerCellId),
+            TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId),
             MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam"),
             TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam"),
-            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds),
-            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds),
+            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds, "Pick"),
+            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds, "Ban"),
             PickChampionText = "No picks configured",
             BanChampionText = "No bans configured",
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
@@ -166,15 +166,23 @@ public class ChampSelect : IPhaseHandler
         };
     }
 
-    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds)
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, string availableStatusText)
     {
         return championChoices
-            .Select(choice => new DashboardChampionPlanItem
+            .Select(choice =>
             {
-                Name = FormatChampion(choice.ChampionId),
-                SourcePosition = choice.SourcePosition,
-                IsAvailable = !failedChampionIds.Contains(choice.ChampionId)
-                    && !IsChampionUnavailable(root, localPlayerCellId, actionId, choice.ChampionId)
+                string? unavailableStatus = failedChampionIds.Contains(choice.ChampionId)
+                    ? "Failed"
+                    : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, choice.ChampionId);
+
+                return new DashboardChampionPlanItem
+                {
+                    ChampionId = choice.ChampionId,
+                    Name = FormatChampion(choice.ChampionId),
+                    SourcePosition = choice.SourcePosition,
+                    IsAvailable = unavailableStatus is null,
+                    StatusText = unavailableStatus ?? availableStatusText
+                };
             })
             .ToList();
     }
@@ -247,7 +255,7 @@ public class ChampSelect : IPhaseHandler
         return $"Locks at <= {lockDelaySeconds}s{suffix}";
     }
 
-    private static IReadOnlyList<DashboardTeamSlotItem> BuildTeamSlotItems(JsonElement root, string teamPropertyName)
+    private static IReadOnlyList<DashboardTeamSlotItem> BuildTeamSlotItems(JsonElement root, string teamPropertyName, int localPlayerCellId)
     {
         if (!root.TryGetProperty(teamPropertyName, out var teamMembers)
             || teamMembers.ValueKind != JsonValueKind.Array)
@@ -261,6 +269,7 @@ public class ChampSelect : IPhaseHandler
         {
             Position position = GetAssignedPosition(member);
             int championId = GetCurrentChampionId(member);
+            bool isLocalPlayer = TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId;
             string championName = championId > 0 ? FormatChampion(championId) : "No champion";
 
             slots.Add((
@@ -268,9 +277,11 @@ public class ChampSelect : IPhaseHandler
                 position,
                 new DashboardTeamSlotItem
                 {
+                    ChampionId = championId,
                     ChampionInitial = GetChampionInitial(championName, championId),
                     ChampionName = championName,
-                    RoleName = GetPositionDisplayName(position)
+                    RoleName = GetPositionDisplayName(position),
+                    IsLocalPlayer = isLocalPlayer
                 }));
         }
 
@@ -339,6 +350,7 @@ public class ChampSelect : IPhaseHandler
             .Where(championId => ChampionCatalog.TryGetById(championId, out _) || actionBanChampionIds.Contains(championId))
             .Select(championId => new DashboardChampionPlanItem
             {
+                ChampionId = championId,
                 Name = FormatChampion(championId)
             })
             .ToList();
@@ -558,7 +570,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastPickStatusMessage, $"Pick hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick");
+                TryHoverChampion(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick");
             }
             else
             {
@@ -625,7 +637,7 @@ public class ChampSelect : IPhaseHandler
         if (_hasHoveredBan
             && !_manualBanSelectionOverride
             && _hoveredBanChampionId != 0
-            && IsChampionUnavailable(root, localPlayerCellId, actionId, _hoveredBanChampionId))
+            && IsChampionUnavailable(root, localPlayerCellId, actionId, _hoveredBanChampionId, includeLocalPlayerTeamSelection: true))
         {
             _failedBanChampionIds.Add(_hoveredBanChampionId);
             LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(_hoveredBanChampionId)} is no longer available. Trying next configured champion.");
@@ -655,7 +667,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban");
+                TryHoverChampion(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban");
             }
             else
             {
@@ -700,6 +712,21 @@ public class ChampSelect : IPhaseHandler
             return;
         }
 
+        string? unavailableStatus = GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championIdToLock, includeLocalPlayerTeamSelection: true);
+        if (unavailableStatus is not null)
+        {
+            LogStatus(ref _lastBanStatusMessage, $"Ban target {FormatChampion(championIdToLock)} is blocked ({unavailableStatus}). The app will not lock this ban.");
+            if (!_manualBanSelectionOverride)
+            {
+                _failedBanChampionIds.Add(championIdToLock);
+                ResetBanHover();
+                _pendingBanHoverActionId = actionId;
+                _banHoverReadyAtUtc = DateTime.UtcNow;
+            }
+
+            return;
+        }
+
         try
         {
             LogStatus(ref _lastBanStatusMessage, $"Ban lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
@@ -719,12 +746,19 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private void TryHoverChampion(int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel)
+    private void TryHoverChampion(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel)
     {
         foreach (var championId in championIds)
         {
             if (excludedChampionIds.Contains(championId))
                 continue;
+
+            string? unavailableStatus = GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: !isPickAction);
+            if (unavailableStatus is not null)
+            {
+                Log($"{actionLabel}: skipping {FormatChampion(championId)} because it is unavailable ({unavailableStatus}).");
+                continue;
+            }
 
             try
             {
@@ -774,72 +808,79 @@ public class ChampSelect : IPhaseHandler
         _failedBanChampionIds.Clear();
     }
 
-    private static bool IsChampionUnavailable(JsonElement root, int localPlayerCellId, int localActionId, int championId)
+    private static bool IsChampionUnavailable(JsonElement root, int localPlayerCellId, int localActionId, int championId, bool includeLocalPlayerTeamSelection = false)
+    {
+        return GetChampionUnavailableStatus(root, localPlayerCellId, localActionId, championId, includeLocalPlayerTeamSelection) is not null;
+    }
+
+    private static string? GetChampionUnavailableStatus(JsonElement root, int localPlayerCellId, int localActionId, int championId, bool includeLocalPlayerTeamSelection = false)
     {
         if (championId == 0)
-            return false;
+            return null;
 
-        if (IsChampionSelectedByAnotherPlayer(root, "myTeam", championId, localPlayerCellId)
-            || IsChampionSelectedByAnotherPlayer(root, "theirTeam", championId, localPlayerCellId))
+        if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
         {
-            return true;
-        }
-
-        if (!root.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array)
-            return false;
-
-        foreach (var actionGroup in actions.EnumerateArray())
-        {
-            if (actionGroup.ValueKind != JsonValueKind.Array)
-                continue;
-
-            foreach (var action in actionGroup.EnumerateArray())
+            foreach (var actionGroup in actions.EnumerateArray())
             {
-                if (!TryGetInt32(action, "championId", out int actionChampionId) || actionChampionId != championId)
+                if (actionGroup.ValueKind != JsonValueKind.Array)
                     continue;
 
-                if (TryGetInt32(action, "actorCellId", out int actorCellId)
-                    && actorCellId == localPlayerCellId
-                    && TryGetInt32(action, "id", out int actionId)
-                    && actionId == localActionId)
+                foreach (var action in actionGroup.EnumerateArray())
                 {
-                    continue;
-                }
+                    if (!TryGetInt32(action, "championId", out int actionChampionId) || actionChampionId != championId)
+                        continue;
 
-                string type = action.TryGetProperty("type", out var typeProperty)
-                    ? typeProperty.GetString() ?? string.Empty
-                    : string.Empty;
+                    if (TryGetInt32(action, "actorCellId", out int actorCellId)
+                        && actorCellId == localPlayerCellId
+                        && TryGetInt32(action, "id", out int actionId)
+                        && actionId == localActionId)
+                    {
+                        continue;
+                    }
 
-                if (string.Equals(type, "pick", StringComparison.OrdinalIgnoreCase))
-                    return true;
+                    string type = action.TryGetProperty("type", out var typeProperty)
+                        ? typeProperty.GetString() ?? string.Empty
+                        : string.Empty;
 
-                if (string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase)
-                    && TryGetBool(action, "completed", out bool completed)
-                    && completed)
-                {
-                    return true;
+                    if (string.Equals(type, "pick", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return TryGetBool(action, "completed", out bool pickCompleted) && pickCompleted
+                            ? "Locked"
+                            : "Picked";
+                    }
+
+                    if (string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase)
+                        && TryGetBool(action, "completed", out bool banCompleted)
+                        && banCompleted)
+                    {
+                        return "Banned";
+                    }
                 }
             }
         }
 
-        return false;
+        return GetChampionSelectedByAnotherPlayerStatus(root, "myTeam", championId, localPlayerCellId, includeLocalPlayerTeamSelection)
+            ?? GetChampionSelectedByAnotherPlayerStatus(root, "theirTeam", championId, localPlayerCellId, includeLocalPlayerTeamSelection);
     }
 
-    private static bool IsChampionSelectedByAnotherPlayer(JsonElement root, string teamPropertyName, int championId, int localPlayerCellId)
+    private static string? GetChampionSelectedByAnotherPlayerStatus(JsonElement root, string teamPropertyName, int championId, int localPlayerCellId, bool includeLocalPlayer)
     {
         if (!root.TryGetProperty(teamPropertyName, out var teamMembers) || teamMembers.ValueKind != JsonValueKind.Array)
-            return false;
+            return null;
 
         foreach (var member in teamMembers.EnumerateArray())
         {
-            if (TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId)
+            if (!includeLocalPlayer && TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId)
                 continue;
 
             if (TryGetInt32(member, "championId", out int memberChampionId) && memberChampionId == championId)
-                return true;
+                return "Locked";
+
+            if (TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent == championId)
+                return "Picked";
         }
 
-        return false;
+        return null;
     }
 
     private static bool ShouldExcludeChampionAfterRequestFailure(Exception ex)
