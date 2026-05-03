@@ -128,32 +128,25 @@
                   Margin="18,8,18,12"
                   KeyboardNavigation.DirectionalNavigation="Contained">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="176" />
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="18" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="176" />
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="GlobalWatcherButton"
                         Grid.Column="0"
-                        MinHeight="36"
-                        Padding="12,7"
-                        Margin="0,0,10,0"
-                        FontSize="13"
-                        FontWeight="SemiBold"
-                        VerticalAlignment="Top"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
                         Background="{DynamicResource WatcherStartBrush}"
                         Content="Start watcher"
                         AutomationProperties.Name="Start watcher"
                         Click="GlobalWatcherButton_Click"
-                        Style="{StaticResource AccentButtonStyle}" />
+                        Style="{StaticResource WatcherButtonStyle}" />
 
-                <WrapPanel Grid.Column="2"
-                           Orientation="Horizontal"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Top">
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
                     <Button x:Name="TabDashboard"
                             Content="Dashboard"
                             AutomationProperties.Name="Dashboard tab"
@@ -169,41 +162,20 @@
                             AutomationProperties.Name="Settings tab"
                             Click="TabSettings_Click"
                             Style="{StaticResource TabButtonStyle}" />
-                </WrapPanel>
+                </StackPanel>
 
-                <Border Grid.Column="4"
-                        MinWidth="124"
-                        MinHeight="36"
-                        Padding="12,0"
-                        Background="{DynamicResource AppSurfaceInsetBrush}"
-                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        VerticalAlignment="Top">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <Border x:Name="GlobalPhaseIndicator"
-                                Grid.Column="0"
-                                Width="9"
-                                Height="9"
-                                Background="{DynamicResource PhaseDefaultBrush}"
-                                CornerRadius="5"
-                                VerticalAlignment="Center" />
-
-                        <TextBlock x:Name="GlobalPhaseText"
-                                   Grid.Column="2"
-                                   Text="Stopped"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextPrimaryBrush}"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center" />
-                    </Grid>
+                <Border Grid.Column="2"
+                        Style="{StaticResource MainStatusPillStyle}">
+                    <TextBlock x:Name="GlobalPhaseText"
+                               Text="Stopped"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                               HorizontalAlignment="Stretch"
+                               VerticalAlignment="Center" />
                 </Border>
             </Grid>
 

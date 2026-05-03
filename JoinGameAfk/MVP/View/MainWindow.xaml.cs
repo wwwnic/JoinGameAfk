@@ -312,12 +312,13 @@ namespace JoinGameAfk.View
             };
 
             TitlePhaseIndicator.Background = phaseBrush;
-            GlobalPhaseIndicator.Background = phaseBrush;
         }
 
         private void RefreshWatcherButton()
         {
             GlobalWatcherButton.Content = _isWatcherRunning ? "Stop watcher" : "Start watcher";
+            GlobalWatcherButton.Tag = _isWatcherRunning ? "Running" : null;
+            GlobalWatcherButton.ToolTip = _isWatcherRunning ? "Stop watcher" : "Start watcher";
             AutomationProperties.SetName(GlobalWatcherButton, _isWatcherRunning ? "Stop watcher" : "Start watcher");
             GlobalWatcherButton.Background = _isWatcherRunning
                 ? ResourceBrush("WatcherStopBrush", Brushes.Firebrick)

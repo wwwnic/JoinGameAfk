@@ -97,7 +97,7 @@
     <Style x:Key="TabButtonStyle" TargetType="Button">
         <Setter Property="MinHeight" Value="36" />
         <Setter Property="Padding" Value="12,7" />
-        <Setter Property="Margin" Value="0,0,10,0" />
+        <Setter Property="Margin" Value="5,0" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Background" Value="Transparent" />
@@ -172,6 +172,95 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="WatcherButtonStyle" TargetType="Button">
+        <Setter Property="Width" Value="156" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="13,0" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid SnapsToDevicePixels="True">
+                        <Border x:Name="ButtonBorder"
+                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                CornerRadius="8"
+                                Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Path x:Name="WatcherStateIcon"
+                                      Grid.Column="0"
+                                      Width="11"
+                                      Height="11"
+                                      Data="M5,3 L18,12 L5,21 Z"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=White}"
+                                      Stretch="Uniform"
+                                      VerticalAlignment="Center" />
+
+                                <ContentPresenter Grid.Column="2"
+                                                  HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
+                                                  VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
+                                                  RecognizesAccessKey="True" />
+                            </Grid>
+                        </Border>
+                        <Border x:Name="KeyboardFocusRing"
+                                BorderBrush="{DynamicResource AccentBluePaleBrush}"
+                                BorderThickness="2"
+                                CornerRadius="8"
+                                IsHitTestVisible="False"
+                                Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="Running">
+                            <Setter TargetName="WatcherStateIcon" Property="Data" Value="M6,6 H18 V18 H6 Z" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.9" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="KeyboardFocusRing" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.76" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.55" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="MainStatusPillStyle" TargetType="Border">
+        <Setter Property="Width" Value="176" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
     </Style>
 
     <Style x:Key="AccentButtonStyle" TargetType="Button">
