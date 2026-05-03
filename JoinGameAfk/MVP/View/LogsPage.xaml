@@ -18,6 +18,11 @@
                  HorizontalScrollBarVisibility="Disabled"
                  TextWrapping="Wrap"
                  AcceptsReturn="True"
-                 BorderThickness="0" />
+                 BorderThickness="0">
+            <TextBox.Resources>
+                <Style TargetType="{x:Type ScrollBar}"
+                       BasedOn="{StaticResource SlimVerticalScrollBarStyle}" />
+            </TextBox.Resources>
+        </TextBox>
     </Border>
 </Page>

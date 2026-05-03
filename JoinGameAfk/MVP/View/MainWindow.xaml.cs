@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
 using JoinGameAfk.MVP.Controller;
 using JoinGameAfk.Theme;
@@ -27,8 +28,20 @@ namespace JoinGameAfk.View
         private ClientPhase _currentPhase = ClientPhase.Unknown;
         private bool _isWatcherRunning;
         private bool _isClientConnected;
+        private string _champSelectSubPhase = string.Empty;
+        private Storyboard? _titleChampionSelectStoryboard;
+        private bool _isTitleChampionAnimationRunning;
+        private TitleChampionAnimationPalette? _activeTitleChampionAnimationPalette;
 
         public int ActiveTabIndex => _activeTabIndex;
+
+        private enum TitleChampionAnimationPalette
+        {
+            Neutral,
+            Ban,
+            Pick,
+            Hover
+        }
 
         public MainWindow(PhaseProgressionPage dashboardPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage)
         {
@@ -73,6 +86,7 @@ namespace JoinGameAfk.View
             {
                 _isWatcherRunning = isRunning;
                 RefreshWatcherButton();
+                RefreshPhaseIndicator();
                 RefreshPhaseText();
             });
         }
@@ -82,7 +96,17 @@ namespace JoinGameAfk.View
             Dispatcher.Invoke(() =>
             {
                 _isClientConnected = isConnected;
+                RefreshPhaseIndicator();
                 RefreshPhaseText();
+            });
+        }
+
+        public void UpdateChampSelectSubPhase(string subPhase)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _champSelectSubPhase = subPhase;
+                RefreshPhaseIndicator();
             });
         }
 
@@ -302,17 +326,130 @@ namespace JoinGameAfk.View
 
         private void RefreshPhaseIndicator()
         {
-            Brush phaseBrush = _currentPhase switch
+            if (_currentPhase is ClientPhase.ChampSelect or ClientPhase.Planning)
             {
-                ClientPhase.Lobby or ClientPhase.Matchmaking => ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue),
+                ShowTitleChampionAnimation(GetTitleChampionAnimationPalette());
+                return;
+            }
+
+            StopTitleChampionAnimation();
+            TitleChampionGlyph.Visibility = Visibility.Collapsed;
+            TitlePhaseCircle.Visibility = Visibility.Visible;
+            TitlePhaseCircle.Fill = GetTitlePhaseBrush();
+        }
+
+        private Brush GetTitlePhaseBrush()
+        {
+            if (_isWatcherRunning && !_isClientConnected)
+                return ResourceBrush("PhaseBanBrush", Brushes.IndianRed);
+
+            return _currentPhase switch
+            {
+                ClientPhase.Lobby => ResourceBrush("PhaseHoverBrush", Brushes.Goldenrod),
+                ClientPhase.Matchmaking => ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue),
                 ClientPhase.ReadyCheck => ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen),
                 ClientPhase.Planning => ResourceBrush("PhaseHoverBrush", Brushes.DarkOrange),
-                ClientPhase.ChampSelect => ResourceBrush("PhaseBanBrush", Brushes.Firebrick),
+                ClientPhase.InGame => ResourceBrush("PhaseDefaultBrush", Brushes.White),
                 _ => ResourceBrush("PhaseDefaultBrush", Brushes.White)
             };
-
-            TitlePhaseIndicator.Background = phaseBrush;
         }
+
+        private TitleChampionAnimationPalette GetTitleChampionAnimationPalette()
+        {
+            return _champSelectSubPhase switch
+            {
+                "Ban" => TitleChampionAnimationPalette.Ban,
+                "Pick" => TitleChampionAnimationPalette.Pick,
+                "Hover" => TitleChampionAnimationPalette.Hover,
+                _ => TitleChampionAnimationPalette.Neutral
+            };
+        }
+
+        private void ShowTitleChampionAnimation(TitleChampionAnimationPalette palette)
+        {
+            TitlePhaseCircle.Visibility = Visibility.Collapsed;
+            TitleChampionGlyph.Visibility = Visibility.Visible;
+
+            if (_isTitleChampionAnimationRunning && _activeTitleChampionAnimationPalette == palette)
+                return;
+
+            StopTitleChampionAnimation();
+            ApplyTitleChampionAnimationPalette(palette);
+            TitleChampionSelectStoryboard?.Begin(this, true);
+            _isTitleChampionAnimationRunning = TitleChampionSelectStoryboard is not null;
+            _activeTitleChampionAnimationPalette = _isTitleChampionAnimationRunning ? palette : null;
+        }
+
+        private void StopTitleChampionAnimation()
+        {
+            if (!_isTitleChampionAnimationRunning)
+                return;
+
+            TitleChampionSelectStoryboard?.Stop(this);
+            _isTitleChampionAnimationRunning = false;
+            _activeTitleChampionAnimationPalette = null;
+        }
+
+        private Storyboard? TitleChampionSelectStoryboard =>
+            _titleChampionSelectStoryboard ??= (TryFindResource("TitleChampionSelectStoryboard") as Storyboard)?.Clone();
+
+        private void ApplyTitleChampionAnimationPalette(TitleChampionAnimationPalette palette)
+        {
+            if (TitleChampionSelectStoryboard is not Storyboard storyboard)
+                return;
+
+            var colors = GetTitleChampionPaletteColors(palette);
+
+            TitleChampionPulse.Stroke = new SolidColorBrush(colors.PulseColor);
+
+            foreach (Timeline timeline in storyboard.Children)
+            {
+                if (timeline is not ColorAnimationUsingKeyFrames colorAnimation)
+                    continue;
+
+                string targetName = Storyboard.GetTargetName(colorAnimation);
+                if (string.Equals(targetName, "TitleChampionCoreBrush", StringComparison.Ordinal))
+                    SetTitleChampionKeyFrameColors(colorAnimation, colors.CoreColors);
+                else if (string.Equals(targetName, "TitleChampionShadowBrush", StringComparison.Ordinal))
+                    SetTitleChampionKeyFrameColors(colorAnimation, colors.ShadowColors);
+            }
+        }
+
+        private static (Color[] CoreColors, Color[] ShadowColors, Color PulseColor) GetTitleChampionPaletteColors(TitleChampionAnimationPalette palette)
+        {
+            return palette switch
+            {
+                TitleChampionAnimationPalette.Ban => (
+                    new[] { Rgb(239, 68, 68), Rgb(249, 115, 22), Rgb(220, 38, 38), Rgb(239, 68, 68) },
+                    new[] { Rgb(127, 29, 29), Rgb(251, 113, 133), Rgb(153, 27, 27), Rgb(127, 29, 29) },
+                    Argb(128, 248, 113, 113)),
+                TitleChampionAnimationPalette.Pick => (
+                    new[] { Rgb(56, 189, 248), Rgb(37, 99, 235), Rgb(34, 211, 238), Rgb(56, 189, 248) },
+                    new[] { Rgb(30, 64, 175), Rgb(125, 211, 252), Rgb(30, 58, 138), Rgb(30, 64, 175) },
+                    Argb(128, 125, 211, 252)),
+                TitleChampionAnimationPalette.Hover => (
+                    new[] { Rgb(245, 158, 11), Rgb(251, 191, 36), Rgb(167, 139, 250), Rgb(245, 158, 11) },
+                    new[] { Rgb(180, 83, 9), Rgb(124, 58, 237), Rgb(249, 115, 22), Rgb(180, 83, 9) },
+                    Argb(128, 251, 191, 36)),
+                _ => (
+                    new[] { Rgb(34, 211, 238), Rgb(167, 139, 250), Rgb(245, 158, 11), Rgb(34, 211, 238) },
+                    new[] { Rgb(124, 58, 237), Rgb(239, 68, 68), Rgb(56, 189, 248), Rgb(124, 58, 237) },
+                    Argb(128, 255, 255, 255))
+            };
+        }
+
+        private static void SetTitleChampionKeyFrameColors(ColorAnimationUsingKeyFrames animation, IReadOnlyList<Color> colors)
+        {
+            int count = Math.Min(animation.KeyFrames.Count, colors.Count);
+            for (int i = 0; i < count; i++)
+                animation.KeyFrames[i].Value = colors[i];
+        }
+
+        private static Color Rgb(byte red, byte green, byte blue) =>
+            Color.FromRgb(red, green, blue);
+
+        private static Color Argb(byte alpha, byte red, byte green, byte blue) =>
+            Color.FromArgb(alpha, red, green, blue);
 
         private void RefreshWatcherButton()
         {

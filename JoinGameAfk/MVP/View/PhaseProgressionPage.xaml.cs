@@ -11,6 +11,7 @@ namespace JoinGameAfk.View
         public event Action<ClientPhase>? PhaseChanged;
         public event Action<bool>? WatcherStateChanged;
         public event Action<bool>? ClientConnectionChanged;
+        public event Action<string>? ChampSelectSubPhaseChanged;
 
         private const double MinimumLogRowHeight = 150;
 
@@ -67,9 +68,11 @@ namespace JoinGameAfk.View
                 UpdateCurrentRoleDisplay(GetCurrentPriorityListPosition(status));
                 UpdateCurrentActionDisplay(status);
 
-                ChampSelectSubPhaseText.Text = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
+                string champSelectSubPhase = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
                     ? "Idle"
                     : status.ChampSelectSubPhase;
+                ChampSelectSubPhaseText.Text = champSelectSubPhase;
+                ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
                 ChampSelectTimerText.Text = status.TimeLeftSeconds >= 0
                     ? $"{status.TimeLeftSeconds}"
                     : "--";

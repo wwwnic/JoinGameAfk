@@ -49,9 +49,11 @@ namespace JoinGameAfk
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
             fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
+            fDashboardPage.ChampSelectSubPhaseChanged += mainWindow.UpdateChampSelectSubPhase;
             mainWindow.UpdatePhaseIndicator(ClientPhase.Unknown);
             mainWindow.SetWatcherState(false);
             mainWindow.SetClientConnection(false);
+            mainWindow.UpdateChampSelectSubPhase(string.Empty);
             mainWindow.ActivateTab(activeTabIndex);
 
             return mainWindow;
