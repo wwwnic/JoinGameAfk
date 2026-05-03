@@ -23,14 +23,14 @@
     <SolidColorBrush x:Key="TextSubtleBrush" Color="#9C8586" />
     <SolidColorBrush x:Key="TextInverseBrush" Color="#FFF8F2" />
 
-    <SolidColorBrush x:Key="AccentBlueBrush" Color="#B06A7F" />
-    <SolidColorBrush x:Key="AccentBlueSoftBrush" Color="#D198A9" />
-    <SolidColorBrush x:Key="AccentBluePaleBrush" Color="#F0C7D0" />
-    <SolidColorBrush x:Key="AccentBlueTextBrush" Color="#F8D7DE" />
-    <SolidColorBrush x:Key="AccentBlueDeepBrush" Color="#542438" />
-    <SolidColorBrush x:Key="AccentBlueStrongBrush" Color="#743049" />
-    <SolidColorBrush x:Key="AccentBlueActionBrush" Color="#8E3F52" />
-    <SolidColorBrush x:Key="AccentBlueInfoBrush" Color="#332431" />
+    <SolidColorBrush x:Key="AccentBlueBrush" Color="#5EC7FF" />
+    <SolidColorBrush x:Key="AccentBlueSoftBrush" Color="#8CDBFF" />
+    <SolidColorBrush x:Key="AccentBluePaleBrush" Color="#C8F0FF" />
+    <SolidColorBrush x:Key="AccentBlueTextBrush" Color="#EAFBFF" />
+    <SolidColorBrush x:Key="AccentBlueDeepBrush" Color="#0E4A63" />
+    <SolidColorBrush x:Key="AccentBlueStrongBrush" Color="#188BC4" />
+    <SolidColorBrush x:Key="AccentBlueActionBrush" Color="#1674B6" />
+    <SolidColorBrush x:Key="AccentBlueInfoBrush" Color="#173243" />
 
     <SolidColorBrush x:Key="AccentGreenBrush" Color="#557158" />
     <SolidColorBrush x:Key="AccentGreenTextBrush" Color="#B8CFAE" />
