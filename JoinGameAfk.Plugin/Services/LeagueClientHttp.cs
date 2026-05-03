@@ -92,9 +92,9 @@ namespace LcuClient
             }
 
             // Generic POST
-            private async Task<string> PostAsync(string endpoint, object body = null)
+            private async Task<string> PostAsync(string endpoint, object? body = null)
             {
-                StringContent content = null;
+                StringContent? content = null;
                 if (body != null)
                 {
                     var json = JsonSerializer.Serialize(body);
@@ -108,9 +108,9 @@ namespace LcuClient
             }
 
             // Generic PATCH
-            private async Task<string> PatchAsync(string endpoint, object body = null)
+            private async Task<string> PatchAsync(string endpoint, object? body = null)
             {
-                StringContent content = null;
+                StringContent? content = null;
                 if (body != null)
                 {
                     var json = JsonSerializer.Serialize(body);

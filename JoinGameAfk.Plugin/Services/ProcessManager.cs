@@ -57,6 +57,9 @@ namespace LcuClient
 
             private string? GetCommandLine(int pid)
             {
+                if (!OperatingSystem.IsWindows())
+                    return null;
+
                 string query = $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {pid}";
                 using var searcher = new ManagementObjectSearcher(query);
                 using var results = searcher.Get();
