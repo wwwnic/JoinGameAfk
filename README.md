@@ -8,6 +8,19 @@
 
 > [!IMPORTANT]
 > Users should review the code and build it if they want maximum confidence.
+
+---
+
+## Screenshots
+
+### Dashboard
+
+![JoinGameAfk dashboard view](docs/images/dashboard.jpg)
+
+### Champion Priorities
+
+![JoinGameAfk champion priorities view](docs/images/champion-priorities.jpg)
+
 ---
 
 ## What this app does
