@@ -9,6 +9,6 @@ namespace JoinGameAfk.Interface
     {
         ClientPhase ClientPhase { get; }
 
-        void Handle();
+        Task HandleAsync(CancellationToken cancellationToken);
     }
 }

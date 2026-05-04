@@ -71,109 +71,116 @@ namespace JoinGameAfk.MVP.Controller
             var processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
             Lcu.LeagueClientHttp? http = null;
 
-            while (!ct.IsCancellationRequested)
+            try
             {
-                var iterationStopwatch = Stopwatch.StartNew();
-
-                try
+                while (!ct.IsCancellationRequested)
                 {
-                    if (http == null || !http.HasAuthToken())
+                    var iterationStopwatch = Stopwatch.StartNew();
+
+                    try
                     {
-                        var auth = processManager.GetLeagueAuth();
-                        if (auth == null)
+                        if (http == null || !http.HasAuthToken())
                         {
-                            if (!_isWaitingForClient)
+                            var auth = processManager.GetLeagueAuth();
+                            if (auth == null)
                             {
-                                _isWaitingForClient = true;
-                                _isClientConnected = false;
-                                _lastObservedPhase = ClientPhase.Unknown;
-                                _lastHandledPhase = ClientPhase.Unknown;
-                                fPhaseProgressionPage.SetClientConnection(false);
-                                fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
-                                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                                if (!_isWaitingForClient)
+                                {
+                                    _isWaitingForClient = true;
+                                    _isClientConnected = false;
+                                    _lastObservedPhase = ClientPhase.Unknown;
+                                    _lastHandledPhase = ClientPhase.Unknown;
+                                    fPhaseProgressionPage.SetClientConnection(false);
+                                    fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+                                    fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                                }
+
+                                await Task.Delay(3000, ct);
+                                continue;
                             }
 
-                            await Task.Delay(3000, ct);
-                            continue;
+                            _isWaitingForClient = false;
+                            http = new Lcu.LeagueClientHttp(auth);
+                            InitializeHandlers(http);
+
+                            if (!_isClientConnected)
+                            {
+                                _isClientConnected = true;
+                                Log("Connected to League Client.");
+                                fPhaseProgressionPage.SetClientConnection(true);
+                            }
                         }
 
-                        _isWaitingForClient = false;
-                        http = new Lcu.LeagueClientHttp(auth);
-                        InitializeHandlers(http);
+                        ClientPhase phase = await GetCurrentPhaseAsync(http, ct);
+                        fPhaseProgressionPage.UpdatePhase(phase);
 
-                        if (!_isClientConnected)
+                        if (phase != _lastObservedPhase)
                         {
-                            _isClientConnected = true;
-                            Log("Connected to League Client.");
-                            fPhaseProgressionPage.SetClientConnection(true);
+                            Log($"Phase changed: {_lastObservedPhase} -> {phase}");
+                            _lastObservedPhase = phase;
+                            _lastHandledPhase = ClientPhase.Unknown;
+
+                            var champSelectHandler = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
+                            champSelectHandler?.Reset();
                         }
+
+                        var handler = _phaseHandlers.FirstOrDefault(h => h.ClientPhase == phase);
+                        var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
+                        bool isChampSelectFlow = phase is ClientPhase.ChampSelect or ClientPhase.Planning;
+
+                        if (!isChampSelectFlow)
+                            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+
+                        if (handler != null && _lastHandledPhase != phase)
+                        {
+                            string? actionMessage = GetActionMessage(phase);
+                            if (!string.IsNullOrWhiteSpace(actionMessage))
+                                Log(actionMessage);
+
+                            await handler.HandleAsync(ct);
+                            _lastHandledPhase = phase;
+
+                            if (handler is ChampSelect cs)
+                                fPhaseProgressionPage.UpdateDashboardStatus(cs.LastDashboardStatus);
+                        }
+                        else if (champSelect != null && isChampSelectFlow)
+                        {
+                            await champSelect.HandleAsync(ct);
+                            fPhaseProgressionPage.UpdateDashboardStatus(champSelect.LastDashboardStatus);
+                        }
+
+                        int delayMs = isChampSelectFlow
+                            ? Math.Clamp(_champSelectSettings.ChampSelectPollIntervalMs, 100, 5000)
+                            : 2000;
+
+                        int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
+                        await Task.Delay(remainingDelayMs, ct);
                     }
-
-                    ClientPhase phase = await GetCurrentPhaseAsync(http);
-                    fPhaseProgressionPage.UpdatePhase(phase);
-
-                    if (phase != _lastObservedPhase)
+                    catch (TaskCanceledException)
                     {
-                        Log($"Phase changed: {_lastObservedPhase} -> {phase}");
-                        _lastObservedPhase = phase;
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError(ex.Message);
+                        _isClientConnected = false;
+                        _isWaitingForClient = false;
+                        _lastObservedPhase = ClientPhase.Unknown;
                         _lastHandledPhase = ClientPhase.Unknown;
-
-                        var champSelectHandler = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
-                        champSelectHandler?.Reset();
-                    }
-
-                    var handler = _phaseHandlers.FirstOrDefault(h => h.ClientPhase == phase);
-                    var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
-                    bool isChampSelectFlow = phase is ClientPhase.ChampSelect or ClientPhase.Planning;
-
-                    if (!isChampSelectFlow)
+                        fPhaseProgressionPage.SetClientConnection(false);
+                        fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
                         fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
-
-                    if (handler != null && _lastHandledPhase != phase)
-                    {
-                        string? actionMessage = GetActionMessage(phase);
-                        if (!string.IsNullOrWhiteSpace(actionMessage))
-                            Log(actionMessage);
-
-                        handler.Handle();
-                        _lastHandledPhase = phase;
-
-                        if (handler is ChampSelect cs)
-                            fPhaseProgressionPage.UpdateDashboardStatus(cs.LastDashboardStatus);
+                        http?.Dispose();
+                        http = null;
+                        await Task.Delay(5000, ct);
                     }
-                    else if (champSelect != null && isChampSelectFlow)
-                    {
-                        champSelect.Handle();
-                        fPhaseProgressionPage.UpdateDashboardStatus(champSelect.LastDashboardStatus);
-                    }
-
-                    int delayMs = isChampSelectFlow
-                        ? Math.Clamp(_champSelectSettings.ChampSelectPollIntervalMs, 100, 5000)
-                        : 2000;
-
-                    int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
-                    await Task.Delay(remainingDelayMs, ct);
-                }
-                catch (TaskCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    LogError(ex.Message);
-                    _isClientConnected = false;
-                    _isWaitingForClient = false;
-                    _lastObservedPhase = ClientPhase.Unknown;
-                    _lastHandledPhase = ClientPhase.Unknown;
-                    fPhaseProgressionPage.SetClientConnection(false);
-                    fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
-                    fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
-                    http = null;
-                    await Task.Delay(5000, ct);
                 }
             }
-
-            Log("Stopped watching.");
+            finally
+            {
+                http?.Dispose();
+                Log("Stopped watching.");
+            }
         }
 
         private void InitializeHandlers(Lcu.LeagueClientHttp http)
@@ -195,11 +202,11 @@ namespace JoinGameAfk.MVP.Controller
             Console.Error.WriteLine(message);
         }
 
-        private static async Task<ClientPhase> GetCurrentPhaseAsync(Lcu.LeagueClientHttp http)
+        private static async Task<ClientPhase> GetCurrentPhaseAsync(Lcu.LeagueClientHttp http, CancellationToken cancellationToken)
         {
             try
             {
-                string json = await http.GetSessionAsync();
+                string json = await http.GetSessionAsync(cancellationToken);
                 using var doc = JsonDocument.Parse(json);
                 if (doc.RootElement.TryGetProperty("phase", out var phaseProp))
                 {
@@ -207,6 +214,10 @@ namespace JoinGameAfk.MVP.Controller
                     if (Enum.TryParse<ClientPhase>(phaseStr, true, out var phase))
                         return phase;
                 }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch { }
 

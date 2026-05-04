@@ -7,75 +7,65 @@ namespace LcuClient
 {
     public partial class Lcu
     {
-        public class LeagueClientHttp
+        public sealed class LeagueClientHttp : IDisposable
         {
-            private readonly AuthModel fAuthToken;
-            private readonly Uri _baseAddress;
+            private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(3);
+
+            private readonly AuthModel _authToken;
+            private readonly HttpClient _httpClient;
+            private bool _disposed;
 
             public LeagueClientHttp(AuthModel aAuthToken)
             {
-                fAuthToken = aAuthToken;
-                _baseAddress = new Uri($"https://127.0.0.1:{aAuthToken.Port}/");
+                _authToken = aAuthToken ?? throw new ArgumentNullException(nameof(aAuthToken));
+
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                };
+
+                _httpClient = new HttpClient(handler)
+                {
+                    BaseAddress = new Uri($"https://127.0.0.1:{aAuthToken.Port}/"),
+                    Timeout = RequestTimeout
+                };
+
+                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authToken.Base64Token);
+                _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             }
 
-            public async Task<string> GetSessionAsync()
+            public async Task<string> GetSessionAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-gameflow/v1/session";
-                return await GetAsync(endpoint).ConfigureAwait(false);
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
             public bool HasAuthToken()
             {
-                return fAuthToken != null;
+                return _authToken != null;
             }
 
-            public string GetSession()
-            {
-                return GetSessionAsync().GetAwaiter().GetResult();
-            }
-
-            public void AcceptMatch()
-            {
-                AcceptMatchAsync().GetAwaiter().GetResult();
-            }
-
-            public async Task<string> GetChampSelectSessionAsync()
+            public async Task<string> GetChampSelectSessionAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-champ-select/v1/session";
-                return await GetAsync(endpoint).ConfigureAwait(false);
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
-            public string GetChampSelectSession()
-            {
-                return GetChampSelectSessionAsync().GetAwaiter().GetResult();
-            }
-
-            public async Task HoverChampionAsync(int actionId, int championId)
+            public async Task HoverChampionAsync(int actionId, int championId, CancellationToken cancellationToken = default)
             {
                 string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}";
-                await PatchAsync(endpoint, new { championId }).ConfigureAwait(false);
+                await PatchAsync(endpoint, new { championId }, cancellationToken).ConfigureAwait(false);
             }
 
-            public void HoverChampion(int actionId, int championId)
-            {
-                HoverChampionAsync(actionId, championId).GetAwaiter().GetResult();
-            }
-
-            public async Task CompleteActionAsync(int actionId, int championId)
+            public async Task CompleteActionAsync(int actionId, int championId, CancellationToken cancellationToken = default)
             {
                 string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}";
-                await PatchAsync(endpoint, new { championId, completed = true }).ConfigureAwait(false);
+                await PatchAsync(endpoint, new { championId, completed = true }, cancellationToken).ConfigureAwait(false);
             }
 
-            public void CompleteAction(int actionId, int championId)
+            private async Task<string> GetAsync(string endpoint, CancellationToken cancellationToken)
             {
-                CompleteActionAsync(actionId, championId).GetAwaiter().GetResult();
-            }
-
-            // Generic GET
-            private async Task<string> GetAsync(string endpoint)
-            {
-                using var client = CreateClient();
+                ThrowIfDisposed();
                 using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
                 request.Headers.CacheControl = new CacheControlHeaderValue
                 {
@@ -84,69 +74,74 @@ namespace LcuClient
                     MaxAge = TimeSpan.Zero
                 };
                 request.Headers.Pragma.Add(new NameValueHeaderValue("no-cache"));
-                request.Headers.ConnectionClose = true;
 
-                HttpResponseMessage response = await client.SendAsync(request).ConfigureAwait(false);
+                using HttpResponseMessage response = await _httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
                 response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            // Generic POST
-            private async Task<string> PostAsync(string endpoint, object? body = null)
+            private async Task<string> PostAsync(string endpoint, object? body, CancellationToken cancellationToken)
             {
-                StringContent? content = null;
-                if (body != null)
+                ThrowIfDisposed();
+                using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
                 {
-                    var json = JsonSerializer.Serialize(body);
-                    content = new StringContent(json, Encoding.UTF8, "application/json");
-                }
+                    Content = CreateJsonContent(body)
+                };
 
-                using var client = CreateClient();
-                var response = await client.PostAsync(endpoint, content).ConfigureAwait(false);
+                using HttpResponseMessage response = await _httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
                 response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            // Generic PATCH
-            private async Task<string> PatchAsync(string endpoint, object? body = null)
+            private async Task<string> PatchAsync(string endpoint, object? body, CancellationToken cancellationToken)
             {
-                StringContent? content = null;
-                if (body != null)
+                ThrowIfDisposed();
+                using var request = new HttpRequestMessage(HttpMethod.Patch, endpoint)
                 {
-                    var json = JsonSerializer.Serialize(body);
-                    content = new StringContent(json, Encoding.UTF8, "application/json");
-                }
+                    Content = CreateJsonContent(body)
+                };
 
-                using var client = CreateClient();
-                var request = new HttpRequestMessage(HttpMethod.Patch, endpoint) { Content = content };
-                var response = await client.SendAsync(request).ConfigureAwait(false);
+                using HttpResponseMessage response = await _httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
                 response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            // Accept current match
-            public async Task AcceptMatchAsync()
+            public async Task AcceptMatchAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-matchmaking/v1/ready-check/accept";
-                await PostAsync(endpoint).ConfigureAwait(false);
+                await PostAsync(endpoint, body: null, cancellationToken).ConfigureAwait(false);
             }
 
-            private HttpClient CreateClient()
+            private static StringContent? CreateJsonContent(object? body)
             {
-                var handler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                };
+                if (body == null)
+                    return null;
 
-                var client = new HttpClient(handler)
-                {
-                    BaseAddress = _baseAddress
-                };
+                var json = JsonSerializer.Serialize(body);
+                return new StringContent(json, Encoding.UTF8, "application/json");
+            }
 
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", fAuthToken.Base64Token);
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            private void ThrowIfDisposed()
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+            }
 
-                return client;
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                _httpClient.Dispose();
+                _disposed = true;
             }
         }
     }

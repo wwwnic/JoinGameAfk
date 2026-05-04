@@ -7,8 +7,9 @@ namespace JoinGameAfk.Phase
     {
         public ClientPhase ClientPhase => ClientPhase.Unknown;
 
-        public void Handle()
+        public Task HandleAsync(CancellationToken cancellationToken)
         {
+            return Task.CompletedTask;
         }
     }
 }

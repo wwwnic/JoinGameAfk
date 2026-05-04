@@ -19,12 +19,13 @@ public class ReadyCheck : IPhaseHandler
 
     public ClientPhase ClientPhase => ClientPhase.ReadyCheck;
 
-    public void Handle()
+    public Task HandleAsync(CancellationToken cancellationToken)
     {
-        _ = AcceptAfterDelayAsync();
+        _ = AcceptAfterDelayAsync(cancellationToken);
+        return Task.CompletedTask;
     }
 
-    private async Task AcceptAfterDelayAsync()
+    private async Task AcceptAfterDelayAsync(CancellationToken cancellationToken)
     {
         int delaySeconds = Math.Max(0, _settings.ReadyCheckAcceptDelaySeconds);
 
@@ -33,17 +34,24 @@ public class ReadyCheck : IPhaseHandler
             if (delaySeconds > 0)
             {
                 Log($"Ready check detected. Waiting {delaySeconds}s before auto-accept so you can respond manually.");
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds)).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
             }
 
-            if (!await IsStillInReadyCheckAsync().ConfigureAwait(false))
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!await IsStillInReadyCheckAsync(cancellationToken))
             {
                 Log("Ready check was already handled manually. Skipping auto-accept.");
                 return;
             }
 
-            await _http.AcceptMatchAsync().ConfigureAwait(false);
+            await _http.AcceptMatchAsync(cancellationToken);
             Log("Ready check accepted automatically.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Log("Ready check auto-accept canceled.");
+            Log($"AcceptAfterDelayAsync Token cancellation requested.");
         }
         catch (Exception ex)
         {
@@ -51,9 +59,9 @@ public class ReadyCheck : IPhaseHandler
         }
     }
 
-    private async Task<bool> IsStillInReadyCheckAsync()
+    private async Task<bool> IsStillInReadyCheckAsync(CancellationToken cancellationToken)
     {
-        string json = await _http.GetSessionAsync().ConfigureAwait(false);
+        string json = await _http.GetSessionAsync(cancellationToken);
         using var doc = JsonDocument.Parse(json);
 
         return doc.RootElement.TryGetProperty("phase", out var phaseProperty)

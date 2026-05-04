@@ -50,11 +50,11 @@ public class ChampSelect : IPhaseHandler
         _log = log;
     }
 
-    public void Handle()
+    public async Task HandleAsync(CancellationToken cancellationToken)
     {
         try
         {
-            string json = _http.GetChampSelectSession();
+            string json = await _http.GetChampSelectSessionAsync(cancellationToken);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -128,17 +128,21 @@ public class ChampSelect : IPhaseHandler
 
                         if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                         {
-                            HandlePickAction(root, localPlayerCellId, actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds);
+                            await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds, cancellationToken);
                         }
                         else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                         {
-                            HandleBanAction(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds);
+                            await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds, cancellationToken);
                         }
                     }
                 }
             }
 
             LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Log($"HandleAsync Token cancellation requested.");
         }
         catch (Exception ex)
         {
@@ -512,7 +516,7 @@ public class ChampSelect : IPhaseHandler
             Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
-    private void HandlePickAction(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
+    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
 
@@ -549,7 +553,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastPickStatusMessage, $"Pick hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick");
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick", cancellationToken);
             }
             else
             {
@@ -593,9 +597,13 @@ public class ChampSelect : IPhaseHandler
         try
         {
             LogStatus(ref _lastPickStatusMessage, $"Pick lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
-            _http.CompleteAction(actionId, championIdToLock);
+            await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasPicked = true;
             Log($"Pick locked successfully. Champion={FormatChampion(championIdToLock)}, actionId={actionId}.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -609,7 +617,7 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private void HandleBanAction(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds)
+    private async Task HandleBanActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: false);
 
@@ -646,7 +654,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                TryHoverChampion(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban");
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban", cancellationToken);
             }
             else
             {
@@ -709,9 +717,13 @@ public class ChampSelect : IPhaseHandler
         try
         {
             LogStatus(ref _lastBanStatusMessage, $"Ban lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
-            _http.CompleteAction(actionId, championIdToLock);
+            await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasBanned = true;
             Log($"Ban locked successfully. Champion={FormatChampion(championIdToLock)}, actionId={actionId}.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Log($"HandleBanActionAsync Token cancellation requested.");
         }
         catch (Exception ex)
         {
@@ -725,7 +737,7 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private void TryHoverChampion(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel)
+    private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
     {
         foreach (var championId in championIds)
         {
@@ -742,7 +754,7 @@ public class ChampSelect : IPhaseHandler
             try
             {
                 Log($"{actionLabel}: trying {FormatChampion(championId)} on actionId={actionId}.");
-                _http.HoverChampion(actionId, championId);
+                await _http.HoverChampionAsync(actionId, championId, cancellationToken);
 
                 if (isPickAction)
                 {
@@ -757,6 +769,10 @@ public class ChampSelect : IPhaseHandler
 
                 Log($"{actionLabel}: hover succeeded with {FormatChampion(championId)} on actionId={actionId}.");
                 break;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                Log($"TryHoverChampionAsync Token cancellation requested.");
             }
             catch (Exception ex)
             {
