@@ -9,6 +9,13 @@ public class ChampSelect : IPhaseHandler
 {
     private sealed record ChampionPlanChoice(int ChampionId, Position SourcePosition);
 
+    private sealed record TimerSnapshot(
+        string Phase,
+        long TotalTimeInPhaseMs,
+        long TimeLeftMs,
+        long? InternalNowInEpochMs,
+        bool IsInfinite);
+
     private readonly LeagueClientHttp _http;
     private readonly ChampSelectSettings _settings;
     private readonly Action<string>? _log;
@@ -38,6 +45,7 @@ public class ChampSelect : IPhaseHandler
     private int _banRetryStateActionId;
     private readonly HashSet<int> _failedPickChampionIds = [];
     private readonly HashSet<int> _failedBanChampionIds = [];
+    private bool _hasLoggedTimerEndpointFallback;
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 
@@ -75,10 +83,10 @@ public class ChampSelect : IPhaseHandler
             var banChoices = GetMergedBanChampionChoices(assignedPosition);
             var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
             var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
-            string champSelectPhase = GetChampSelectPhase(root);
-            long totalTimeMs = GetTotalTimeInPhaseMs(root);
-            long rawTimeLeftMs = GetAdjustedTimeLeftMs(root);
-            long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, champSelectPhase, rawTimeLeftMs);
+            TimerSnapshot timerSnapshot = await GetTimerSnapshotAsync(root, cancellationToken);
+            string champSelectPhase = timerSnapshot.Phase;
+            long totalTimeMs = timerSnapshot.TotalTimeInPhaseMs;
+            long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot);
 
             if (!_hasLoggedSessionSummary)
             {
@@ -497,6 +505,7 @@ public class ChampSelect : IPhaseHandler
         _banRetryStateActionId = 0;
         _failedPickChampionIds.Clear();
         _failedBanChampionIds.Clear();
+        _hasLoggedTimerEndpointFallback = false;
     }
 
     private void RefreshAssignedPosition(Position assignedPosition)
@@ -972,53 +981,120 @@ public class ChampSelect : IPhaseHandler
         };
     }
 
-    private static string GetChampSelectPhase(JsonElement root)
+    private async Task<TimerSnapshot> GetTimerSnapshotAsync(JsonElement sessionRoot, CancellationToken cancellationToken)
     {
-        if (root.TryGetProperty("timer", out var timer)
-            && timer.ValueKind == JsonValueKind.Object
-            && timer.TryGetProperty("phase", out var phaseProperty))
+        try
         {
-            return phaseProperty.GetString() ?? string.Empty;
+            string timerJson = await _http.GetChampSelectTimerAsync(cancellationToken);
+            using var timerDoc = JsonDocument.Parse(timerJson);
+            if (TryCreateTimerSnapshot(timerDoc.RootElement, out var timerSnapshot))
+            {
+                _hasLoggedTimerEndpointFallback = false;
+                return timerSnapshot;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            if (!_hasLoggedTimerEndpointFallback)
+            {
+                Log($"Champ Select timer endpoint unavailable. Using session timer fallback. Reason: {ex.Message}");
+                _hasLoggedTimerEndpointFallback = true;
+            }
         }
 
-        return string.Empty;
+        return TryCreateTimerSnapshot(sessionRoot, out var fallbackTimerSnapshot)
+            ? fallbackTimerSnapshot
+            : new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false);
     }
 
-    private static long GetAdjustedTimeLeftMs(JsonElement root)
+    private static bool TryCreateTimerSnapshot(JsonElement source, out TimerSnapshot timerSnapshot)
     {
-        if (root.TryGetProperty("timer", out var timer)
-            && timer.ValueKind == JsonValueKind.Object
-            && timer.TryGetProperty("adjustedTimeLeftInPhase", out var timeLeftProp)
-            && timeLeftProp.ValueKind == JsonValueKind.Number)
+        timerSnapshot = new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false);
+
+        if (!TryGetTimerElement(source, out var timer))
+            return false;
+
+        string phase = timer.TryGetProperty("phase", out var phaseProperty)
+            ? phaseProperty.GetString() ?? string.Empty
+            : string.Empty;
+
+        long timeLeftMs = GetTimerTimeLeftMs(timer);
+        long totalTimeInPhaseMs = TryGetNumberAsInt64(timer, "totalTimeInPhase", out long totalTime)
+            ? totalTime
+            : 0;
+        long? internalNowInEpochMs = TryGetNumberAsInt64(timer, "internalNowInEpochMs", out long internalNow)
+            ? internalNow
+            : null;
+        bool isInfinite = TryGetBool(timer, "isInfinite", out bool infinite) && infinite;
+
+        timerSnapshot = new TimerSnapshot(
+            phase,
+            Math.Max(0, totalTimeInPhaseMs),
+            Math.Max(0, timeLeftMs),
+            internalNowInEpochMs,
+            isInfinite);
+        return true;
+    }
+
+    private static bool TryGetTimerElement(JsonElement source, out JsonElement timer)
+    {
+        timer = default;
+        if (source.ValueKind != JsonValueKind.Object)
+            return false;
+
+        if (source.TryGetProperty("timer", out var nestedTimer))
         {
-            // The LCU returns this value as a floating-point number (e.g. 88632.5).
-            return (long)timeLeftProp.GetDouble();
+            timer = nestedTimer;
+            return timer.ValueKind == JsonValueKind.Object;
         }
+
+        timer = source;
+        return true;
+    }
+
+    private static long GetTimerTimeLeftMs(JsonElement timer)
+    {
+        if (TryGetNumberAsInt64(timer, "adjustedTimeLeftInPhase", out long adjustedTimeLeftMs))
+            return adjustedTimeLeftMs;
+
+        if (TryGetNumberAsInt64(timer, "timeLeftInPhase", out long timeLeftMs))
+            return timeLeftMs;
+
+        if (TryGetNumberAsInt64(timer, "adjustedTimeLeftInPhaseInSec", out long adjustedTimeLeftSeconds))
+            return adjustedTimeLeftSeconds * 1000L;
+
+        if (TryGetNumberAsInt64(timer, "timeLeftInPhaseInSec", out long timeLeftSeconds))
+            return timeLeftSeconds * 1000L;
 
         return 0;
     }
 
-    private long GetEffectiveTimeLeftMs(string? sessionId, string champSelectPhase, long rawTimeLeftMs)
+    private long GetEffectiveTimeLeftMs(string? sessionId, TimerSnapshot timerSnapshot)
     {
         DateTime now = DateTime.UtcNow;
-
-        if (rawTimeLeftMs < 0)
-            rawTimeLeftMs = 0;
+        long timeLeftMs = GetPayloadAgeAdjustedTimeLeftMs(timerSnapshot);
 
         bool shouldResetBaseline = !string.Equals(_lastTimerSessionId, sessionId, StringComparison.Ordinal)
-            || !string.Equals(_lastTimerPhase, champSelectPhase, StringComparison.Ordinal)
+            || !string.Equals(_lastTimerPhase, timerSnapshot.Phase, StringComparison.Ordinal)
             || _lastTimerObservedAtUtc == DateTime.MinValue
-            || rawTimeLeftMs != _lastReportedTimeLeftMs;
+            || timeLeftMs != _lastReportedTimeLeftMs;
 
         if (shouldResetBaseline)
         {
             _lastTimerSessionId = sessionId;
-            _lastTimerPhase = champSelectPhase;
-            _lastReportedTimeLeftMs = rawTimeLeftMs;
-            _lastEffectiveTimeLeftMs = rawTimeLeftMs;
+            _lastTimerPhase = timerSnapshot.Phase;
+            _lastReportedTimeLeftMs = timeLeftMs;
+            _lastEffectiveTimeLeftMs = timeLeftMs;
             _lastTimerObservedAtUtc = now;
-            return rawTimeLeftMs;
+            return timeLeftMs;
         }
+
+        if (timerSnapshot.IsInfinite)
+            return _lastEffectiveTimeLeftMs;
 
         long elapsedMs = (long)(now - _lastTimerObservedAtUtc).TotalMilliseconds;
         if (elapsedMs <= 0)
@@ -1029,17 +1105,19 @@ public class ChampSelect : IPhaseHandler
         return _lastEffectiveTimeLeftMs;
     }
 
-    private static long GetTotalTimeInPhaseMs(JsonElement root)
+    private static long GetPayloadAgeAdjustedTimeLeftMs(TimerSnapshot timerSnapshot)
     {
-        if (root.TryGetProperty("timer", out var timer)
-            && timer.ValueKind == JsonValueKind.Object
-            && timer.TryGetProperty("totalTimeInPhase", out var totalTimeProp)
-            && totalTimeProp.ValueKind == JsonValueKind.Number)
-        {
-            return (long)totalTimeProp.GetDouble();
-        }
+        long timeLeftMs = Math.Max(0, timerSnapshot.TimeLeftMs);
+        if (timerSnapshot.IsInfinite || timerSnapshot.InternalNowInEpochMs is not long internalNowInEpochMs)
+            return timeLeftMs;
 
-        return 0;
+        long payloadAgeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - internalNowInEpochMs;
+        long maxExpectedPayloadAgeMs = Math.Max(timerSnapshot.TotalTimeInPhaseMs, 0)
+            + (long)TimeSpan.FromSeconds(30).TotalMilliseconds;
+        if (payloadAgeMs <= 0 || payloadAgeMs > maxExpectedPayloadAgeMs)
+            return timeLeftMs;
+
+        return Math.Max(0, timeLeftMs - payloadAgeMs);
     }
 
     /// <summary>
@@ -1115,6 +1193,22 @@ public class ChampSelect : IPhaseHandler
         return element.TryGetProperty(propertyName, out var property)
                && property.ValueKind == JsonValueKind.Number
                && property.TryGetInt32(out value);
+    }
+
+    private static bool TryGetNumberAsInt64(JsonElement element, string propertyName, out long value)
+    {
+        value = 0;
+        if (!element.TryGetProperty(propertyName, out var property)
+            || property.ValueKind != JsonValueKind.Number)
+        {
+            return false;
+        }
+
+        if (property.TryGetInt64(out value))
+            return true;
+
+        value = (long)property.GetDouble();
+        return true;
     }
 
     private static bool TryGetBool(JsonElement element, string propertyName, out bool value)

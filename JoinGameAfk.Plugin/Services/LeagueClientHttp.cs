@@ -51,6 +51,12 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
+            public async Task<string> GetChampSelectTimerAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-champ-select/v1/session/timer";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
             public async Task HoverChampionAsync(int actionId, int championId, CancellationToken cancellationToken = default)
             {
                 string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}";
