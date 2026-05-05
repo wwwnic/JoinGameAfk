@@ -227,7 +227,7 @@ Notable components:
 ### Requirements
 
 - Windows
-- .NET 9 SDK
+- .NET 10 SDK
 - Visual Studio 2026 or another .NET-capable IDE/CLI
 - League Client installed if you want to use the automation features
 
