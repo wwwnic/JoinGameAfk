@@ -14,7 +14,15 @@ public class ChampSelect : IPhaseHandler
         long TotalTimeInPhaseMs,
         long TimeLeftMs,
         long? InternalNowInEpochMs,
-        bool IsInfinite);
+        bool IsInfinite,
+        DateTime ObservedAtUtc);
+
+    private sealed record ScheduledLockState(
+        int ActionId,
+        int ChampionId,
+        int LockDelaySeconds,
+        DateTime LockAtUtc,
+        CancellationTokenSource CancellationTokenSource);
 
     private readonly LeagueClientHttp _http;
     private readonly ChampSelectSettings _settings;
@@ -45,7 +53,8 @@ public class ChampSelect : IPhaseHandler
     private int _banRetryStateActionId;
     private readonly HashSet<int> _failedPickChampionIds = [];
     private readonly HashSet<int> _failedBanChampionIds = [];
-    private bool _hasLoggedTimerEndpointFallback;
+    private ScheduledLockState? _scheduledPickLock;
+    private ScheduledLockState? _scheduledBanLock;
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 
@@ -63,6 +72,7 @@ public class ChampSelect : IPhaseHandler
         try
         {
             string json = await _http.GetChampSelectSessionAsync(cancellationToken);
+            DateTime sessionObservedAtUtc = DateTime.UtcNow;
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -83,10 +93,9 @@ public class ChampSelect : IPhaseHandler
             var banChoices = GetMergedBanChampionChoices(assignedPosition);
             var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
             var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
-            TimerSnapshot timerSnapshot = await GetTimerSnapshotAsync(root, cancellationToken);
+            TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
             string champSelectPhase = timerSnapshot.Phase;
-            long totalTimeMs = timerSnapshot.TotalTimeInPhaseMs;
-            long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot);
+            long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
 
             if (!_hasLoggedSessionSummary)
             {
@@ -136,21 +145,25 @@ public class ChampSelect : IPhaseHandler
 
                         if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                         {
-                            await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, totalTimeMs, timeLeftMs, mergedPickIds, cancellationToken);
+                            await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, cancellationToken);
                         }
                         else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                         {
-                            await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, totalTimeMs, timeLeftMs, mergedBanIds, cancellationToken);
+                            await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
                         }
                     }
                 }
             }
 
-            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, localPlayerActiveActionType);
+            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             Log($"HandleAsync Token cancellation requested.");
+        }
+        catch (HttpRequestException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -158,7 +171,7 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, string? localPlayerActiveActionType)
+    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
     {
         return new DashboardStatus
         {
@@ -174,7 +187,9 @@ public class ChampSelect : IPhaseHandler
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
             BanLockText = BuildLockText(_settings.BanLockDelaySeconds, _manualBanSelectionOverride),
             ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType),
-            TimeLeftSeconds = (int)(timeLeftMs / 1000),
+            TimeLeftSeconds = GetDisplayTimeLeftSeconds(timeLeftMs),
+            TimeLeftMilliseconds = Math.Max(0, timeLeftMs),
+            TimeLeftObservedAtUtc = timeLeftObservedAtUtc,
         };
     }
 
@@ -505,7 +520,8 @@ public class ChampSelect : IPhaseHandler
         _banRetryStateActionId = 0;
         _failedPickChampionIds.Clear();
         _failedBanChampionIds.Clear();
-        _hasLoggedTimerEndpointFallback = false;
+        CancelScheduledPickLock();
+        CancelScheduledBanLock();
     }
 
     private void RefreshAssignedPosition(Position assignedPosition)
@@ -525,7 +541,7 @@ public class ChampSelect : IPhaseHandler
             Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
-    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
+    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
 
@@ -586,25 +602,31 @@ public class ChampSelect : IPhaseHandler
 
         if (!isInProgress)
         {
+            CancelScheduledPickLock();
             Log($"Pick hovered {FormatChampion(championIdToLock)}. Waiting for pick action to become active. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
 
         if (!_settings.AutoLockSelectionEnabled)
         {
+            CancelScheduledPickLock();
             LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(championIdToLock)}. Auto-lock is disabled, so the app will not lock before timer 0.");
             return;
         }
 
         int pickLockDelaySeconds = GetLockDelaySeconds(_settings.PickLockDelaySeconds, _manualPickSelectionOverride);
-        if (!ShouldLock(totalTimeMs, timeLeftMs, pickLockDelaySeconds))
+        long millisecondsUntilPickLock = GetMillisecondsUntilLock(timeLeftMs, pickLockDelaySeconds);
+        DateTime pickLockAtUtc = timeLeftObservedAtUtc.AddMilliseconds(millisecondsUntilPickLock);
+        if (millisecondsUntilPickLock > 0 && pickLockAtUtc > DateTime.UtcNow)
         {
-            Log($"Pick hovered {FormatChampion(championIdToLock)}. Waiting to lock at <= {pickLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
+            ScheduleLock(actionId, championIdToLock, pickLockDelaySeconds, pickLockAtUtc, isPickAction: true, cancellationToken);
+            LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(championIdToLock)}. Scheduled lock at <= {pickLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
 
         try
         {
+            CancelScheduledPickLock();
             LogStatus(ref _lastPickStatusMessage, $"Pick lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
             await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasPicked = true;
@@ -626,7 +648,7 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private async Task HandleBanActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long totalTimeMs, long timeLeftMs, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
+    private async Task HandleBanActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: false);
 
@@ -691,20 +713,25 @@ public class ChampSelect : IPhaseHandler
 
         if (!isInProgress)
         {
+            CancelScheduledBanLock();
             Log($"Ban hovered {FormatChampion(championIdToLock)}. Waiting for ban action to become active. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
 
         if (!_settings.AutoLockSelectionEnabled)
         {
+            CancelScheduledBanLock();
             LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(championIdToLock)}. Auto-lock is disabled, so the app will not lock before timer 0.");
             return;
         }
 
         int banLockDelaySeconds = GetLockDelaySeconds(_settings.BanLockDelaySeconds, _manualBanSelectionOverride);
-        if (!ShouldLock(totalTimeMs, timeLeftMs, banLockDelaySeconds))
+        long millisecondsUntilBanLock = GetMillisecondsUntilLock(timeLeftMs, banLockDelaySeconds);
+        DateTime banLockAtUtc = timeLeftObservedAtUtc.AddMilliseconds(millisecondsUntilBanLock);
+        if (millisecondsUntilBanLock > 0 && banLockAtUtc > DateTime.UtcNow)
         {
-            Log($"Ban hovered {FormatChampion(championIdToLock)}. Waiting to lock at <= {banLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
+            ScheduleLock(actionId, championIdToLock, banLockDelaySeconds, banLockAtUtc, isPickAction: false, cancellationToken);
+            LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(championIdToLock)}. Scheduled lock at <= {banLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
 
@@ -725,6 +752,7 @@ public class ChampSelect : IPhaseHandler
 
         try
         {
+            CancelScheduledBanLock();
             LogStatus(ref _lastBanStatusMessage, $"Ban lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
             await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasBanned = true;
@@ -744,6 +772,129 @@ public class ChampSelect : IPhaseHandler
             _pendingBanHoverActionId = actionId;
             _banHoverReadyAtUtc = DateTime.UtcNow;
         }
+    }
+
+    private void ScheduleLock(int actionId, int championId, int lockDelaySeconds, DateTime lockAtUtc, bool isPickAction, CancellationToken cancellationToken)
+    {
+        ScheduledLockState? currentSchedule = isPickAction ? _scheduledPickLock : _scheduledBanLock;
+        if (currentSchedule is not null
+            && currentSchedule.ActionId == actionId
+            && currentSchedule.ChampionId == championId
+            && currentSchedule.LockDelaySeconds == lockDelaySeconds
+            && Math.Abs((currentSchedule.LockAtUtc - lockAtUtc).TotalMilliseconds) < 250
+            && !currentSchedule.CancellationTokenSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        if (isPickAction)
+            CancelScheduledPickLock();
+        else
+            CancelScheduledBanLock();
+
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var scheduledLock = new ScheduledLockState(actionId, championId, lockDelaySeconds, lockAtUtc, linkedCts);
+        if (isPickAction)
+            _scheduledPickLock = scheduledLock;
+        else
+            _scheduledBanLock = scheduledLock;
+
+        _ = RunScheduledLockAsync(scheduledLock, isPickAction);
+    }
+
+    private async Task RunScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction)
+    {
+        string actionLabel = isPickAction ? "Pick" : "Ban";
+        CancellationToken cancellationToken = scheduledLock.CancellationTokenSource.Token;
+
+        try
+        {
+            TimeSpan delay = scheduledLock.LockAtUtc - DateTime.UtcNow;
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, cancellationToken);
+
+            await TryCompleteScheduledLockAsync(scheduledLock, isPickAction, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log($"{actionLabel} scheduled lock failed for {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}: {ex.Message}");
+        }
+        finally
+        {
+            ClearScheduledLockIfCurrent(scheduledLock, isPickAction);
+            scheduledLock.CancellationTokenSource.Dispose();
+        }
+    }
+
+    private async Task TryCompleteScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction, CancellationToken cancellationToken)
+    {
+        string actionLabel = isPickAction ? "Pick" : "Ban";
+        string json = await _http.GetChampSelectSessionAsync(cancellationToken);
+        using var doc = JsonDocument.Parse(json);
+
+        if (!doc.RootElement.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array)
+            return;
+
+        foreach (var actionGroup in actions.EnumerateArray())
+        {
+            if (actionGroup.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var action in actionGroup.EnumerateArray())
+            {
+                if (!TryGetInt32(action, "id", out int actionId) || actionId != scheduledLock.ActionId)
+                    continue;
+
+                bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
+                bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgressValue) && inProgressValue;
+                int currentChampionId = TryGetInt32(action, "championId", out int championId)
+                    ? championId
+                    : 0;
+
+                if (completed || !isInProgress || currentChampionId != scheduledLock.ChampionId)
+                    return;
+
+                Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(currentChampionId)} on actionId={scheduledLock.ActionId}.");
+                await _http.CompleteActionAsync(scheduledLock.ActionId, currentChampionId, cancellationToken);
+
+                if (isPickAction)
+                    _hasPicked = true;
+                else
+                    _hasBanned = true;
+
+                Log($"{actionLabel} locked successfully. Champion={FormatChampion(currentChampionId)}, actionId={scheduledLock.ActionId}.");
+                return;
+            }
+        }
+    }
+
+    private void CancelScheduledPickLock()
+    {
+        _scheduledPickLock?.CancellationTokenSource.Cancel();
+        _scheduledPickLock = null;
+    }
+
+    private void CancelScheduledBanLock()
+    {
+        _scheduledBanLock?.CancellationTokenSource.Cancel();
+        _scheduledBanLock = null;
+    }
+
+    private void ClearScheduledLockIfCurrent(ScheduledLockState scheduledLock, bool isPickAction)
+    {
+        if (isPickAction)
+        {
+            if (ReferenceEquals(_scheduledPickLock, scheduledLock))
+                _scheduledPickLock = null;
+
+            return;
+        }
+
+        if (ReferenceEquals(_scheduledBanLock, scheduledLock))
+            _scheduledBanLock = null;
     }
 
     private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
@@ -902,6 +1053,7 @@ public class ChampSelect : IPhaseHandler
 
     private void ResetPickHover()
     {
+        CancelScheduledPickLock();
         _hasHoveredPick = false;
         _manualPickSelectionOverride = false;
         _hoveredPickChampionId = 0;
@@ -912,6 +1064,7 @@ public class ChampSelect : IPhaseHandler
 
     private void ResetBanHover()
     {
+        CancelScheduledBanLock();
         _hasHoveredBan = false;
         _manualBanSelectionOverride = false;
         _hoveredBanChampionId = 0;
@@ -981,39 +1134,16 @@ public class ChampSelect : IPhaseHandler
         };
     }
 
-    private async Task<TimerSnapshot> GetTimerSnapshotAsync(JsonElement sessionRoot, CancellationToken cancellationToken)
+    private static TimerSnapshot GetTimerSnapshot(JsonElement sessionRoot, DateTime sessionObservedAtUtc)
     {
-        try
-        {
-            string timerJson = await _http.GetChampSelectTimerAsync(cancellationToken);
-            using var timerDoc = JsonDocument.Parse(timerJson);
-            if (TryCreateTimerSnapshot(timerDoc.RootElement, out var timerSnapshot))
-            {
-                _hasLoggedTimerEndpointFallback = false;
-                return timerSnapshot;
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            if (!_hasLoggedTimerEndpointFallback)
-            {
-                Log($"Champ Select timer endpoint unavailable. Using session timer fallback. Reason: {ex.Message}");
-                _hasLoggedTimerEndpointFallback = true;
-            }
-        }
-
-        return TryCreateTimerSnapshot(sessionRoot, out var fallbackTimerSnapshot)
-            ? fallbackTimerSnapshot
-            : new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false);
+        return TryCreateTimerSnapshot(sessionRoot, sessionObservedAtUtc, out var timerSnapshot)
+            ? timerSnapshot
+            : new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false, DateTime.UtcNow);
     }
 
-    private static bool TryCreateTimerSnapshot(JsonElement source, out TimerSnapshot timerSnapshot)
+    private static bool TryCreateTimerSnapshot(JsonElement source, DateTime fallbackObservedAtUtc, out TimerSnapshot timerSnapshot)
     {
-        timerSnapshot = new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false);
+        timerSnapshot = new TimerSnapshot(string.Empty, 0, 0, null, IsInfinite: false, fallbackObservedAtUtc);
 
         if (!TryGetTimerElement(source, out var timer))
             return false;
@@ -1030,13 +1160,15 @@ public class ChampSelect : IPhaseHandler
             ? internalNow
             : null;
         bool isInfinite = TryGetBool(timer, "isInfinite", out bool infinite) && infinite;
+        DateTime observedAtUtc = GetTimerObservedAtUtc(internalNowInEpochMs, totalTimeInPhaseMs, fallbackObservedAtUtc);
 
         timerSnapshot = new TimerSnapshot(
             phase,
             Math.Max(0, totalTimeInPhaseMs),
             Math.Max(0, timeLeftMs),
             internalNowInEpochMs,
-            isInfinite);
+            isInfinite,
+            observedAtUtc);
         return true;
     }
 
@@ -1073,9 +1205,10 @@ public class ChampSelect : IPhaseHandler
         return 0;
     }
 
-    private long GetEffectiveTimeLeftMs(string? sessionId, TimerSnapshot timerSnapshot)
+    private long GetEffectiveTimeLeftMs(string? sessionId, TimerSnapshot timerSnapshot, out DateTime observedAtUtc)
     {
         DateTime now = DateTime.UtcNow;
+        observedAtUtc = now;
         long timeLeftMs = GetPayloadAgeAdjustedTimeLeftMs(timerSnapshot);
 
         bool shouldResetBaseline = !string.Equals(_lastTimerSessionId, sessionId, StringComparison.Ordinal)
@@ -1108,10 +1241,10 @@ public class ChampSelect : IPhaseHandler
     private static long GetPayloadAgeAdjustedTimeLeftMs(TimerSnapshot timerSnapshot)
     {
         long timeLeftMs = Math.Max(0, timerSnapshot.TimeLeftMs);
-        if (timerSnapshot.IsInfinite || timerSnapshot.InternalNowInEpochMs is not long internalNowInEpochMs)
+        if (timerSnapshot.IsInfinite)
             return timeLeftMs;
 
-        long payloadAgeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - internalNowInEpochMs;
+        long payloadAgeMs = (long)(DateTime.UtcNow - timerSnapshot.ObservedAtUtc).TotalMilliseconds;
         long maxExpectedPayloadAgeMs = Math.Max(timerSnapshot.TotalTimeInPhaseMs, 0)
             + (long)TimeSpan.FromSeconds(30).TotalMilliseconds;
         if (payloadAgeMs <= 0 || payloadAgeMs > maxExpectedPayloadAgeMs)
@@ -1120,26 +1253,35 @@ public class ChampSelect : IPhaseHandler
         return Math.Max(0, timeLeftMs - payloadAgeMs);
     }
 
-    /// <summary>
-    /// Returns true when the action should be locked in.
-    /// A delaySeconds of 0 means lock immediately; otherwise wait until the timer
-    /// shows that many seconds (or fewer) remaining.
-    /// </summary>
-    private static bool ShouldLock(long totalTimeMs, long timeLeftMs, int delaySeconds)
+    private static DateTime GetTimerObservedAtUtc(long? internalNowInEpochMs, long totalTimeInPhaseMs, DateTime fallbackObservedAtUtc)
+    {
+        if (internalNowInEpochMs is not long epochMs)
+            return fallbackObservedAtUtc;
+
+        try
+        {
+            DateTime internalObservedAtUtc = DateTimeOffset.FromUnixTimeMilliseconds(epochMs).UtcDateTime;
+            long payloadAgeMs = (long)(fallbackObservedAtUtc - internalObservedAtUtc).TotalMilliseconds;
+            long maxExpectedPayloadAgeMs = Math.Max(totalTimeInPhaseMs, 0)
+                + (long)TimeSpan.FromSeconds(30).TotalMilliseconds;
+
+            return payloadAgeMs >= 0 && payloadAgeMs <= maxExpectedPayloadAgeMs
+                ? internalObservedAtUtc
+                : fallbackObservedAtUtc;
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return fallbackObservedAtUtc;
+        }
+    }
+
+    private static long GetMillisecondsUntilLock(long timeLeftMs, int delaySeconds)
     {
         if (delaySeconds <= 0)
-            return true;
+            return 0;
 
         long thresholdMs = delaySeconds * 1000L;
-        if (timeLeftMs <= thresholdMs)
-            return true;
-
-        if (totalTimeMs <= 0)
-            return false;
-
-        long elapsedMs = totalTimeMs - timeLeftMs;
-        long startDelayMs = Math.Max(0, totalTimeMs - thresholdMs);
-        return elapsedMs >= startDelayMs;
+        return Math.Max(0, timeLeftMs - thresholdMs);
     }
 
     private static int GetLockDelaySeconds(int configuredDelaySeconds, bool useLastSecondFallback)
@@ -1177,6 +1319,14 @@ public class ChampSelect : IPhaseHandler
             return "0.0s";
 
         return $"{timeLeftMs / 1000d:F1}s";
+    }
+
+    private static int GetDisplayTimeLeftSeconds(long timeLeftMs)
+    {
+        if (timeLeftMs <= 0)
+            return 0;
+
+        return (int)(timeLeftMs / 1000L);
     }
 
     private static string? GetSessionId(JsonElement root)

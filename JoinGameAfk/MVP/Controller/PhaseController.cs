@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Diagnostics;
+using System.Net.Http;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
@@ -111,7 +112,10 @@ namespace JoinGameAfk.MVP.Controller
                             }
                         }
 
-                        ClientPhase phase = await GetCurrentPhaseAsync(http, ct);
+                        bool wasInChampSelectFlow = IsChampSelectFlow(_lastObservedPhase);
+                        ClientPhase phase = wasInChampSelectFlow
+                            ? _lastObservedPhase
+                            : await GetCurrentPhaseAsync(http, ct);
                         fPhaseProgressionPage.UpdatePhase(phase);
 
                         if (phase != _lastObservedPhase)
@@ -126,7 +130,7 @@ namespace JoinGameAfk.MVP.Controller
 
                         var handler = _phaseHandlers.FirstOrDefault(h => h.ClientPhase == phase);
                         var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
-                        bool isChampSelectFlow = phase is ClientPhase.ChampSelect or ClientPhase.Planning;
+                        bool isChampSelectFlow = IsChampSelectFlow(phase);
 
                         if (!isChampSelectFlow)
                             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
@@ -137,21 +141,25 @@ namespace JoinGameAfk.MVP.Controller
                             if (!string.IsNullOrWhiteSpace(actionMessage))
                                 Log(actionMessage);
 
-                            await handler.HandleAsync(ct);
-                            _lastHandledPhase = phase;
-
                             if (handler is ChampSelect cs)
-                                fPhaseProgressionPage.UpdateDashboardStatus(cs.LastDashboardStatus);
+                            {
+                                if (await TryHandleChampSelectAsync(cs, ct))
+                                    _lastHandledPhase = phase;
+                            }
+                            else
+                            {
+                                await handler.HandleAsync(ct);
+                                _lastHandledPhase = phase;
+                            }
                         }
                         else if (champSelect != null && isChampSelectFlow)
                         {
-                            await champSelect.HandleAsync(ct);
-                            fPhaseProgressionPage.UpdateDashboardStatus(champSelect.LastDashboardStatus);
+                            await TryHandleChampSelectAsync(champSelect, ct);
                         }
 
                         int delayMs = isChampSelectFlow
                             ? Math.Clamp(_champSelectSettings.ChampSelectPollIntervalMs, 100, 5000)
-                            : 2000;
+                            : 1000;
 
                         int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
                         await Task.Delay(remainingDelayMs, ct);
@@ -202,6 +210,26 @@ namespace JoinGameAfk.MVP.Controller
             Console.Error.WriteLine(message);
         }
 
+        private async Task<bool> TryHandleChampSelectAsync(ChampSelect champSelect, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await champSelect.HandleAsync(cancellationToken);
+                fPhaseProgressionPage.UpdateDashboardStatus(champSelect.LastDashboardStatus);
+                return true;
+            }
+            catch (HttpRequestException ex)
+            {
+                Log($"Champ Select session unavailable. Returning to phase detection. {ex.Message}");
+                _lastObservedPhase = ClientPhase.Unknown;
+                _lastHandledPhase = ClientPhase.Unknown;
+                fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                champSelect.Reset();
+                return false;
+            }
+        }
+
         private static async Task<ClientPhase> GetCurrentPhaseAsync(Lcu.LeagueClientHttp http, CancellationToken cancellationToken)
         {
             try
@@ -222,6 +250,11 @@ namespace JoinGameAfk.MVP.Controller
             catch { }
 
             return ClientPhase.Unknown;
+        }
+
+        private static bool IsChampSelectFlow(ClientPhase phase)
+        {
+            return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
         private static string? GetActionMessage(ClientPhase phase)

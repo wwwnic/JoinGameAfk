@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Globalization;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
@@ -14,10 +15,23 @@ namespace JoinGameAfk.View
         public event Action<string>? ChampSelectSubPhaseChanged;
 
         private const double MinimumLogRowHeight = 150;
+        private const double TimerRenderBoundaryPaddingMs = 10;
+        private const double MinimumTimerRenderDelayMs = 25;
+        private const double MaximumTimerRenderDelayMs = 1000;
+
+        private readonly DispatcherTimer _champSelectTimerRenderTimer;
+        private long _timerBaselineTimeLeftMs = -1;
+        private DateTime _timerBaselineObservedAtUtc = DateTime.MinValue;
 
         public PhaseProgressionPage()
         {
             InitializeComponent();
+
+            _champSelectTimerRenderTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(MaximumTimerRenderDelayMs)
+            };
+            _champSelectTimerRenderTimer.Tick += (_, _) => RenderChampSelectTimer();
 
             SetWatcherState(false);
             SetClientConnection(false);
@@ -74,11 +88,80 @@ namespace JoinGameAfk.View
                     : status.ChampSelectSubPhase;
                 ChampSelectSubPhaseText.Text = champSelectSubPhase;
                 ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
-                ChampSelectTimerText.Text = status.TimeLeftSeconds >= 0
-                    ? $"{status.TimeLeftSeconds}"
-                    : "--";
+                UpdateChampSelectTimerBaseline(status);
                 QueueLogRowResize();
             });
+        }
+
+        private void UpdateChampSelectTimerBaseline(DashboardStatus status)
+        {
+            long timeLeftMs = status.TimeLeftMilliseconds >= 0
+                ? status.TimeLeftMilliseconds
+                : status.TimeLeftSeconds >= 0
+                    ? status.TimeLeftSeconds * 1000L
+                    : -1;
+
+            if (timeLeftMs < 0)
+            {
+                StopChampSelectTimer();
+                return;
+            }
+
+            _timerBaselineTimeLeftMs = Math.Max(0, timeLeftMs);
+            _timerBaselineObservedAtUtc = status.TimeLeftObservedAtUtc == DateTime.MinValue
+                ? DateTime.UtcNow
+                : status.TimeLeftObservedAtUtc;
+
+            RenderChampSelectTimer();
+        }
+
+        private void StopChampSelectTimer()
+        {
+            _champSelectTimerRenderTimer.Stop();
+            _timerBaselineTimeLeftMs = -1;
+            _timerBaselineObservedAtUtc = DateTime.MinValue;
+            ChampSelectTimerText.Text = "--";
+        }
+
+        private void RenderChampSelectTimer()
+        {
+            if (_timerBaselineTimeLeftMs < 0 || _timerBaselineObservedAtUtc == DateTime.MinValue)
+            {
+                ChampSelectTimerText.Text = "--";
+                return;
+            }
+
+            double elapsedMs = Math.Max(0, (DateTime.UtcNow - _timerBaselineObservedAtUtc).TotalMilliseconds);
+            double remainingMs = Math.Max(0, _timerBaselineTimeLeftMs - elapsedMs);
+            ChampSelectTimerText.Text = GetDisplayTimeLeftSeconds(remainingMs).ToString(CultureInfo.InvariantCulture);
+            ScheduleNextChampSelectTimerRender(remainingMs);
+        }
+
+        private void ScheduleNextChampSelectTimerRender(double remainingMs)
+        {
+            _champSelectTimerRenderTimer.Stop();
+            if (remainingMs <= 0)
+                return;
+
+            double millisecondsUntilNextVisibleChange = remainingMs % 1000d;
+            if (millisecondsUntilNextVisibleChange <= 0)
+                millisecondsUntilNextVisibleChange = 1000d;
+
+            double delayMs = Math.Clamp(
+                millisecondsUntilNextVisibleChange + TimerRenderBoundaryPaddingMs,
+                MinimumTimerRenderDelayMs,
+                MaximumTimerRenderDelayMs);
+
+            _champSelectTimerRenderTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
+            _champSelectTimerRenderTimer.Start();
+        }
+
+        private static int GetDisplayTimeLeftSeconds(double timeLeftMs)
+        {
+            if (timeLeftMs <= 0)
+                return 0;
+
+            return (int)(timeLeftMs / 1000d);
         }
 
         private static DashboardStatus ApplyPlanBlockerHighlights(DashboardStatus status)
