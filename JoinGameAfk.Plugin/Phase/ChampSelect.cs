@@ -813,7 +813,7 @@ public class ChampSelect : IPhaseHandler
             if (delay > TimeSpan.Zero)
                 await Task.Delay(delay, cancellationToken);
 
-            await TryCompleteScheduledLockAsync(scheduledLock, isPickAction, cancellationToken);
+            await CompleteScheduledLockAsync(scheduledLock, isPickAction, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -829,46 +829,18 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private async Task TryCompleteScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction, CancellationToken cancellationToken)
+    private async Task CompleteScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction, CancellationToken cancellationToken)
     {
         string actionLabel = isPickAction ? "Pick" : "Ban";
-        string json = await _http.GetChampSelectSessionAsync(cancellationToken);
-        using var doc = JsonDocument.Parse(json);
+        Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}.");
+        await _http.CompleteActionAsync(scheduledLock.ActionId, scheduledLock.ChampionId, cancellationToken);
 
-        if (!doc.RootElement.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array)
-            return;
+        if (isPickAction)
+            _hasPicked = true;
+        else
+            _hasBanned = true;
 
-        foreach (var actionGroup in actions.EnumerateArray())
-        {
-            if (actionGroup.ValueKind != JsonValueKind.Array)
-                continue;
-
-            foreach (var action in actionGroup.EnumerateArray())
-            {
-                if (!TryGetInt32(action, "id", out int actionId) || actionId != scheduledLock.ActionId)
-                    continue;
-
-                bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
-                bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgressValue) && inProgressValue;
-                int currentChampionId = TryGetInt32(action, "championId", out int championId)
-                    ? championId
-                    : 0;
-
-                if (completed || !isInProgress || currentChampionId != scheduledLock.ChampionId)
-                    return;
-
-                Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(currentChampionId)} on actionId={scheduledLock.ActionId}.");
-                await _http.CompleteActionAsync(scheduledLock.ActionId, currentChampionId, cancellationToken);
-
-                if (isPickAction)
-                    _hasPicked = true;
-                else
-                    _hasBanned = true;
-
-                Log($"{actionLabel} locked successfully. Champion={FormatChampion(currentChampionId)}, actionId={scheduledLock.ActionId}.");
-                return;
-            }
-        }
+        Log($"{actionLabel} locked successfully. Champion={FormatChampion(scheduledLock.ChampionId)}, actionId={scheduledLock.ActionId}.");
     }
 
     private void CancelScheduledPickLock()
