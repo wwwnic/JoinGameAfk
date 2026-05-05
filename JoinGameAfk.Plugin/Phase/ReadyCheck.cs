@@ -1,7 +1,6 @@
 ﻿using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
-using System.Text.Json;
 using static LcuClient.Lcu;
 
 public class ReadyCheck : IPhaseHandler
@@ -39,12 +38,6 @@ public class ReadyCheck : IPhaseHandler
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!await IsStillInReadyCheckAsync(cancellationToken))
-            {
-                Log("Ready check was already handled manually. Skipping auto-accept.");
-                return;
-            }
-
             await _http.AcceptMatchAsync(cancellationToken);
             Log("Ready check accepted automatically.");
         }
@@ -57,15 +50,6 @@ public class ReadyCheck : IPhaseHandler
         {
             Log($"Ready check auto-accept skipped: {ex.Message}");
         }
-    }
-
-    private async Task<bool> IsStillInReadyCheckAsync(CancellationToken cancellationToken)
-    {
-        string json = await _http.GetSessionAsync(cancellationToken);
-        using var doc = JsonDocument.Parse(json);
-
-        return doc.RootElement.TryGetProperty("phase", out var phaseProperty)
-            && string.Equals(phaseProperty.GetString(), ClientPhase.ReadyCheck.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     private void Log(string message)
