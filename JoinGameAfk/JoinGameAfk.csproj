@@ -18,10 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="MVP\Model\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
     <ProjectReference Include="..\JoinGameAfk.Plugin\JoinGameAfk.Plugin.csproj" />
   </ItemGroup>
