@@ -120,11 +120,16 @@ The champion select flow currently supports:
 The settings page currently exposes:
 
 - ready check accept delay
+- in-queue automation enable/disable
+- auto-ready-check enable/disable
+- champion select automation enable/disable
+- auto-hover enable/disable
 - champion hover delay
 - pick lock timer
 - ban lock timer
 - auto-lock enable/disable
 - champ select polling rate
+- reset automation, timing, performance, and theme defaults
 
 ---
 

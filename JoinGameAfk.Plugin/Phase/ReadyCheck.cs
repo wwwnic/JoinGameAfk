@@ -20,6 +20,12 @@ public class ReadyCheck : IPhaseHandler
 
     public Task HandleAsync(CancellationToken cancellationToken)
     {
+        if (!_settings.IsInQueueAutomationActive())
+        {
+            Log("Ready check detected. Auto-accept is disabled.");
+            return Task.CompletedTask;
+        }
+
         _ = AcceptAfterDelayAsync(cancellationToken);
         return Task.CompletedTask;
     }

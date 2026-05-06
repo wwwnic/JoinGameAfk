@@ -96,10 +96,11 @@ public class ChampSelect : IPhaseHandler
             TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
             string champSelectPhase = timerSnapshot.Phase;
             long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
+            bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
 
             if (!_hasLoggedSessionSummary)
             {
-                Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
+                Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], automation={championSelectAutomationEnabled}, autoHover={_settings.AutoHoverChampionEnabled}, autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
                 _hasLoggedSessionSummary = true;
             }
 
@@ -143,11 +144,11 @@ public class ChampSelect : IPhaseHandler
                         if (type == "ban" && localBanActionId == 0)
                             localBanActionId = actionId;
 
-                        if (type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
+                        if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                         {
                             await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, cancellationToken);
                         }
-                        else if (type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
+                        else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                         {
                             await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
                         }
@@ -271,6 +272,9 @@ public class ChampSelect : IPhaseHandler
 
     private string BuildLockText(int configuredDelaySeconds, bool useLastSecondFallback)
     {
+        if (!_settings.IsChampionSelectAutomationActive())
+            return "Automation disabled";
+
         if (!_settings.AutoLockSelectionEnabled)
             return "Auto-lock disabled";
 
@@ -573,7 +577,13 @@ public class ChampSelect : IPhaseHandler
             _hoveredPickChampionId = currentChampionId;
         }
 
-        if (!_hasHoveredPick && !_manualPickSelectionOverride)
+        if (!_hasHoveredPick && !_manualPickSelectionOverride && !_settings.AutoHoverChampionEnabled)
+        {
+            _pendingPickHoverActionId = 0;
+            _pickHoverReadyAtUtc = DateTime.MinValue;
+            LogStatus(ref _lastPickStatusMessage, $"Pick action detected. Auto-hover is disabled, so the app is waiting for your manual champion selection.");
+        }
+        else if (!_hasHoveredPick && !_manualPickSelectionOverride)
         {
             if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
             {
@@ -593,6 +603,12 @@ public class ChampSelect : IPhaseHandler
             if (_manualPickSelectionOverride)
             {
                 LogStatus(ref _lastPickStatusMessage, $"Pick selection was changed manually. Waiting for your current champion selection before auto-locking.");
+                return;
+            }
+
+            if (!_settings.AutoHoverChampionEnabled)
+            {
+                LogStatus(ref _lastPickStatusMessage, $"No pick selected yet. Auto-hover is disabled, so auto-lock will wait for your manual selection.");
                 return;
             }
 
@@ -680,7 +696,13 @@ public class ChampSelect : IPhaseHandler
             _hoveredBanChampionId = currentChampionId;
         }
 
-        if (!_hasHoveredBan && !_manualBanSelectionOverride && !string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+        if (!_hasHoveredBan && !_manualBanSelectionOverride && !_settings.AutoHoverChampionEnabled && !string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+        {
+            _pendingBanHoverActionId = 0;
+            _banHoverReadyAtUtc = DateTime.MinValue;
+            LogStatus(ref _lastBanStatusMessage, $"Ban action detected. Auto-hover is disabled, so the app is waiting for your manual champion selection.");
+        }
+        else if (!_hasHoveredBan && !_manualBanSelectionOverride && !string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
         {
             if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
             {
@@ -705,6 +727,12 @@ public class ChampSelect : IPhaseHandler
 
             if (!string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
             {
+                if (!_settings.AutoHoverChampionEnabled)
+                {
+                    LogStatus(ref _lastBanStatusMessage, $"No ban selected yet. Auto-hover is disabled, so auto-lock will wait for your manual selection.");
+                    return;
+                }
+
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover not set yet. ActionId={actionId}. Will retry with remaining configured champions.");
             }
 

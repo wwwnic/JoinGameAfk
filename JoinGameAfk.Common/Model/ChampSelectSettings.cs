@@ -15,6 +15,16 @@ namespace JoinGameAfk.Model
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
         /// <summary>
+        /// Whether the app should perform in-queue automation.
+        /// </summary>
+        public bool InQueueAutomationEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Whether the app should automatically accept ready checks.
+        /// </summary>
+        public bool AutoReadyCheckEnabled { get; set; } = true;
+
+        /// <summary>
         /// Number of seconds to wait before automatically accepting a ready check.
         /// This gives the player time to manually accept or decline first.
         /// </summary>
@@ -24,6 +34,16 @@ namespace JoinGameAfk.Model
         /// Lock the pick when this many seconds (or fewer) remain on the timer. 0 = lock immediately.
         /// </summary>
         public int PickLockDelaySeconds { get; set; } = 11;
+
+        /// <summary>
+        /// Whether the app should perform champion select automation.
+        /// </summary>
+        public bool ChampionSelectAutomationEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Whether the app should automatically hover configured champions during pick or ban.
+        /// </summary>
+        public bool AutoHoverChampionEnabled { get; set; } = true;
 
         /// <summary>
         /// Number of seconds to wait before automatically hovering a configured champion during pick or ban.
@@ -115,6 +135,34 @@ namespace JoinGameAfk.Model
         }
 
         public event Action? Saved;
+
+        public bool IsInQueueAutomationActive()
+        {
+            return InQueueAutomationEnabled && AutoReadyCheckEnabled;
+        }
+
+        public bool IsChampionSelectAutomationActive()
+        {
+            return ChampionSelectAutomationEnabled
+                && (AutoHoverChampionEnabled || AutoLockSelectionEnabled);
+        }
+
+        public void ResetConfigurableOptionsToDefaults()
+        {
+            var defaults = new ChampSelectSettings();
+
+            InQueueAutomationEnabled = defaults.InQueueAutomationEnabled;
+            AutoReadyCheckEnabled = defaults.AutoReadyCheckEnabled;
+            ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
+            PickLockDelaySeconds = defaults.PickLockDelaySeconds;
+            ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
+            AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
+            ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
+            BanLockDelaySeconds = defaults.BanLockDelaySeconds;
+            AutoLockSelectionEnabled = defaults.AutoLockSelectionEnabled;
+            ChampSelectPollIntervalMs = defaults.ChampSelectPollIntervalMs;
+            ThemeKey = defaults.ThemeKey;
+        }
 
         public void Save()
         {

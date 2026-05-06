@@ -262,7 +262,7 @@ namespace JoinGameAfk.MVP.Controller
             return phase switch
             {
                 ClientPhase.ReadyCheck => "Ready check detected.",
-                ClientPhase.ChampSelect => "Champion Select is now active. Auto-picking and banning based on your settings.",
+                ClientPhase.ChampSelect => "Champion Select is now active. Automation will follow your settings.",
                 _ => null
             };
         }

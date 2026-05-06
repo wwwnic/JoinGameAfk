@@ -38,13 +38,25 @@
                     <StackPanel Grid.Column="1"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
-                        <Button x:Name="SaveButton"
-                                Content="Save Settings"
-                                Click="SaveButton_Click"
-                                Background="{DynamicResource AccentGreenBrush}"
-                                Style="{StaticResource AccentButtonStyle}"
-                                Padding="24,10"
-                                HorizontalAlignment="Right" />
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Right">
+                            <Button x:Name="ResetDefaultsButton"
+                                    Content="Reset Defaults"
+                                    Click="ResetDefaultsButton_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Padding="18,10"
+                                    HorizontalAlignment="Right"
+                                    ToolTip="Restore automation, timing, performance, and theme defaults without changing champion priorities." />
+
+                            <Button x:Name="SaveButton"
+                                    Content="Save Settings"
+                                    Click="SaveButton_Click"
+                                    Background="{DynamicResource AccentGreenBrush}"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    Padding="24,10"
+                                    Margin="10,0,0,0"
+                                    HorizontalAlignment="Right" />
+                        </StackPanel>
 
                         <TextBlock x:Name="SavedLabel"
                                    Text="Settings saved."
@@ -101,11 +113,81 @@
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Text="Matchmaking"
+                    <TextBlock Text="In Queue"
                                Style="{StaticResource SectionTitleStyle}" />
                     <TextBlock Text="Ready check behavior."
                                Style="{StaticResource SectionDescriptionStyle}"
                                Margin="0,4,0,0" />
+
+                    <Border x:Name="InQueueAutomationMasterRow"
+                            Style="{StaticResource AutomationMasterRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="In queue automation"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Turn this off if you want the app to take no automated actions while you are in queue." />
+                                </StackPanel>
+                                <TextBlock Text="Master switch for ready check actions."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="InQueueAutomationCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AutomationMasterCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="InQueueAutomationCheckBox_StateChanged"
+                                      Unchecked="InQueueAutomationCheckBox_StateChanged"
+                                      ToolTip="When disabled, the app monitors queue state but does not accept ready checks." />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel x:Name="InQueueAutomationOptionsPanel">
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Accept ready checks automatically"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Turn this off if you want the app to detect ready checks but never accept them." />
+                                </StackPanel>
+                                <TextBlock Text="Controls whether ready check automation sends the accept action."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoReadyCheckCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="AutomationCheckBox_StateChanged"
+                                      Unchecked="AutomationCheckBox_StateChanged"
+                                      ToolTip="When enabled, the app accepts ready checks after the configured delay." />
+                        </Grid>
+                    </Border>
 
                     <Border Style="{StaticResource SettingRowStyle}">
                         <Grid>
@@ -134,6 +216,7 @@
                                      ToolTip="Number of seconds to wait before auto-accepting a ready check." />
                         </Grid>
                     </Border>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -143,9 +226,79 @@
                 <StackPanel>
                     <TextBlock Text="Champion Select"
                                Style="{StaticResource SectionTitleStyle}" />
-                    <TextBlock Text="Hover and lock timing."
+                    <TextBlock Text="Hover, lock, and timing behavior."
                                Style="{StaticResource SectionDescriptionStyle}"
                                Margin="0,4,0,0" />
+
+                    <Border x:Name="ChampionSelectAutomationMasterRow"
+                            Style="{StaticResource AutomationMasterRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Champion select automation"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Turn this off if you want the app to take no automated pick or ban actions during champion select." />
+                                </StackPanel>
+                                <TextBlock Text="Master switch for champion hover and lock actions."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="ChampionSelectAutomationCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AutomationMasterCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="ChampionSelectAutomationCheckBox_StateChanged"
+                                      Unchecked="ChampionSelectAutomationCheckBox_StateChanged"
+                                      ToolTip="When disabled, the app monitors champion select but does not hover or lock champions." />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel x:Name="ChampionSelectAutomationOptionsPanel">
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Hover configured champions automatically"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Turn this off if you want champion priorities shown without sending hover actions." />
+                                </StackPanel>
+                                <TextBlock Text="Uses your pick and ban priorities to select a champion during your action."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoHoverChampionCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="AutomationCheckBox_StateChanged"
+                                      Unchecked="AutomationCheckBox_StateChanged"
+                                      ToolTip="When enabled, the app hovers configured pick and ban priorities." />
+                        </Grid>
+                    </Border>
 
                     <Border Style="{StaticResource SettingRowStyle}">
                         <Grid>
@@ -175,6 +328,8 @@
                                       Grid.Column="2"
                                       Style="{StaticResource AppCheckBoxStyle}"
                                       VerticalAlignment="Center"
+                                      Checked="AutomationCheckBox_StateChanged"
+                                      Unchecked="AutomationCheckBox_StateChanged"
                                       ToolTip="When enabled, the app locks the current pick or ban using the timers below." />
                         </Grid>
                     </Border>
@@ -275,6 +430,7 @@
                             </Grid>
                         </Border>
                     </UniformGrid>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
