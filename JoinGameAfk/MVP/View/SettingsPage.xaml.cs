@@ -6,6 +6,7 @@ using System.Windows.Threading;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
+using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.Validation;
 
@@ -18,6 +19,7 @@ namespace JoinGameAfk.View
         private readonly ChampSelectSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
+        private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
@@ -31,6 +33,7 @@ namespace JoinGameAfk.View
             InitializeComponent();
             _settings = settings;
             _reloadUiForTheme = reloadUiForTheme;
+            _notificationSoundPlayer = new NotificationSoundPlayer(ShowValidationMessage);
             _savedMessageTimer = new DispatcherTimer
             {
                 Interval = SavedMessageDuration
@@ -46,6 +49,7 @@ namespace JoinGameAfk.View
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
+            LoadReadyCheckSoundOptions();
             ApplySettingsToControls();
             AttachNumericInputValidation();
             UpdateAutomationInputStates();
@@ -67,6 +71,8 @@ namespace JoinGameAfk.View
 
             _settings.InQueueAutomationEnabled = InQueueAutomationCheckBox.IsChecked == true;
             _settings.AutoReadyCheckEnabled = _settings.InQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
+            _settings.ReadyCheckSoundNotificationEnabled = _settings.InQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
+            _settings.ReadyCheckSoundNotificationKey = GetSelectedReadyCheckSoundKey();
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.ChampionSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
             _settings.AutoHoverChampionEnabled = _settings.ChampionSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
@@ -93,7 +99,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default automation, timing, performance, and theme settings?\n\nChampion priorities are kept.",
+                "Restore default automation, sound, timing, performance, and theme settings?\n\nChampion priorities are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -120,7 +126,7 @@ namespace JoinGameAfk.View
 
         private void ApplySettingsToControls()
         {
-            bool inQueueAutomationEnabled = _settings.IsInQueueAutomationActive();
+            bool inQueueAutomationEnabled = _settings.InQueueAutomationEnabled;
             bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
 
             _isUpdatingAutomationControls = true;
@@ -128,6 +134,8 @@ namespace JoinGameAfk.View
             {
                 InQueueAutomationCheckBox.IsChecked = inQueueAutomationEnabled;
                 AutoReadyCheckCheckBox.IsChecked = inQueueAutomationEnabled && _settings.AutoReadyCheckEnabled;
+                ReadyCheckSoundNotificationCheckBox.IsChecked = inQueueAutomationEnabled && _settings.ReadyCheckSoundNotificationEnabled;
+                SelectReadyCheckSound(_settings.ReadyCheckSoundNotificationKey);
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
                 ChampionSelectAutomationCheckBox.IsChecked = championSelectAutomationEnabled;
                 AutoHoverChampionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
@@ -148,7 +156,7 @@ namespace JoinGameAfk.View
         private void AutomationCheckBox_StateChanged(object sender, RoutedEventArgs e)
         {
             if (!_isUpdatingAutomationControls
-                && ReferenceEquals(sender, AutoReadyCheckCheckBox))
+                && (ReferenceEquals(sender, AutoReadyCheckCheckBox) || ReferenceEquals(sender, ReadyCheckSoundNotificationCheckBox)))
             {
                 SyncInQueueAutomationCheckBoxFromChildren();
             }
@@ -172,6 +180,7 @@ namespace JoinGameAfk.View
                 try
                 {
                     AutoReadyCheckCheckBox.IsChecked = inQueueAutomationEnabled;
+                    ReadyCheckSoundNotificationCheckBox.IsChecked = inQueueAutomationEnabled;
                 }
                 finally
                 {
@@ -216,7 +225,8 @@ namespace JoinGameAfk.View
 
         private void SyncInQueueAutomationCheckBoxFromChildren()
         {
-            bool hasInQueueAutomation = AutoReadyCheckCheckBox.IsChecked == true;
+            bool hasInQueueAutomation = AutoReadyCheckCheckBox.IsChecked == true
+                || ReadyCheckSoundNotificationCheckBox.IsChecked == true;
 
             if (InQueueAutomationCheckBox.IsChecked == hasInQueueAutomation)
                 return;
@@ -263,6 +273,10 @@ namespace JoinGameAfk.View
             UpdateAutomationMasterRowState(ChampionSelectAutomationMasterRow, championSelectAutomationEnabled);
 
             InQueueAutomationOptionsPanel.IsEnabled = inQueueAutomationEnabled;
+            AutoReadyCheckCheckBox.IsEnabled = inQueueAutomationEnabled;
+            ReadyCheckSoundNotificationCheckBox.IsEnabled = inQueueAutomationEnabled;
+            ReadyCheckSoundComboBox.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
+            ReadyCheckSoundPreviewButton.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckAcceptDelayBox.IsEnabled = autoReadyCheckEnabled;
             ChampionSelectAutomationOptionsPanel.IsEnabled = championSelectAutomationEnabled;
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
@@ -316,6 +330,11 @@ namespace JoinGameAfk.View
             {
                 _isUpdatingAutomationControls = false;
             }
+        }
+
+        private void PreviewReadyCheckSoundButton_Click(object sender, RoutedEventArgs e)
+        {
+            _notificationSoundPlayer.PreviewReadyCheckDetectedCue(GetSelectedReadyCheckSoundKey());
         }
 
         private bool TryReadSettingsInput(out SettingsInputValues input)
@@ -552,6 +571,27 @@ namespace JoinGameAfk.View
         {
             ThemeComboBox.ItemsSource = AppThemeManager.Themes;
             SelectTheme(AppThemeManager.CurrentThemeKey);
+        }
+
+        private void LoadReadyCheckSoundOptions()
+        {
+            ReadyCheckSoundComboBox.ItemsSource = NotificationSoundPlayer.ReadyCheckSoundOptions;
+        }
+
+        private void SelectReadyCheckSound(string? soundKey)
+        {
+            string normalizedSoundKey = NotificationSoundPlayer.NormalizeReadyCheckSoundKey(soundKey);
+            ReadyCheckSoundComboBox.SelectedItem = NotificationSoundPlayer.ReadyCheckSoundOptions.FirstOrDefault(option =>
+                string.Equals(option.Key, normalizedSoundKey, StringComparison.Ordinal))
+                ?? NotificationSoundPlayer.ReadyCheckSoundOptions[0];
+        }
+
+        private string GetSelectedReadyCheckSoundKey()
+        {
+            if (ReadyCheckSoundComboBox.SelectedItem is NotificationSoundOption selectedOption)
+                return NotificationSoundPlayer.NormalizeReadyCheckSoundKey(selectedOption.Key);
+
+            return NotificationSoundPlayer.DefaultReadyCheckSoundKey;
         }
 
         private void SelectTheme(string? themeKey)

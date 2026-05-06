@@ -5,6 +5,7 @@ using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
+using JoinGameAfk.Services;
 using JoinGameAfk.View;
 using LcuClient;
 
@@ -15,6 +16,7 @@ namespace JoinGameAfk.MVP.Controller
         private readonly PhaseProgressionPage fPhaseProgressionPage;
         private readonly LogsPage _logsPage;
         private readonly ChampSelectSettings _champSelectSettings;
+        private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly List<IPhaseHandler> _phaseHandlers;
 
         private CancellationTokenSource? _cts;
@@ -31,6 +33,7 @@ namespace JoinGameAfk.MVP.Controller
             fPhaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
             _champSelectSettings = champSelectSettings;
+            _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
         }
 
@@ -121,6 +124,9 @@ namespace JoinGameAfk.MVP.Controller
                         if (phase != _lastObservedPhase)
                         {
                             Log($"Phase changed: {_lastObservedPhase} -> {phase}");
+                            if (ShouldPlayReadyCheckDetectedCue(phase))
+                                _notificationSoundPlayer.PlayReadyCheckDetectedCue(_champSelectSettings.ReadyCheckSoundNotificationKey);
+
                             _lastObservedPhase = phase;
                             _lastHandledPhase = ClientPhase.Unknown;
 
@@ -255,6 +261,13 @@ namespace JoinGameAfk.MVP.Controller
         private static bool IsChampSelectFlow(ClientPhase phase)
         {
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
+        }
+
+        private bool ShouldPlayReadyCheckDetectedCue(ClientPhase phase)
+        {
+            return phase == ClientPhase.ReadyCheck
+                && _champSelectSettings.InQueueAutomationEnabled
+                && _champSelectSettings.ReadyCheckSoundNotificationEnabled;
         }
 
         private static string? GetActionMessage(ClientPhase phase)

@@ -25,6 +25,16 @@ namespace JoinGameAfk.Model
         public bool AutoReadyCheckEnabled { get; set; } = true;
 
         /// <summary>
+        /// Whether the app should play a short cue when a ready check popup is detected.
+        /// </summary>
+        public bool ReadyCheckSoundNotificationEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Sound cue used when a ready check popup is detected.
+        /// </summary>
+        public string ReadyCheckSoundNotificationKey { get; set; } = "numeric";
+
+        /// <summary>
         /// Number of seconds to wait before automatically accepting a ready check.
         /// This gives the player time to manually accept or decline first.
         /// </summary>
@@ -158,6 +168,8 @@ namespace JoinGameAfk.Model
 
             InQueueAutomationEnabled = defaults.InQueueAutomationEnabled;
             AutoReadyCheckEnabled = defaults.AutoReadyCheckEnabled;
+            ReadyCheckSoundNotificationEnabled = defaults.ReadyCheckSoundNotificationEnabled;
+            ReadyCheckSoundNotificationKey = defaults.ReadyCheckSoundNotificationKey;
             ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
             PickLockDelaySeconds = defaults.PickLockDelaySeconds;
             ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
@@ -201,6 +213,9 @@ namespace JoinGameAfk.Model
                 settings.Version = AppStorage.SettingsFileVersion;
 
             settings.Preferences.Remove(Position.None);
+
+            if (string.IsNullOrWhiteSpace(settings.ReadyCheckSoundNotificationKey))
+                settings.ReadyCheckSoundNotificationKey = new ChampSelectSettings().ReadyCheckSoundNotificationKey;
 
             return settings;
         }

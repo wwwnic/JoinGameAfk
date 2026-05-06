@@ -11,6 +11,11 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
+    <Content Include="Assets\Sounds\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Sounds\%(Filename)%(Extension)</TargetPath>
+    </Content>
     <Content Include="Assets\champions.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <TargetPath>champions.json</TargetPath>
