@@ -2,6 +2,7 @@ using System.Windows;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.View;
 
@@ -9,6 +10,8 @@ namespace JoinGameAfk
 {
     public partial class App : Application
     {
+        private static readonly TimeSpan ChampionCatalogAutoUpdateInterval = TimeSpan.FromHours(24);
+
         private MainWindow? fMainWindow;
         private PhaseProgressionPage? fDashboardPage;
         private LogsPage? fLogsPage;
@@ -25,6 +28,8 @@ namespace JoinGameAfk
                 fMainWindow = CreateMainWindow(champSelectSettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
+
+                _ = AutoUpdateChampionCatalogOnStartupAsync(champSelectSettings);
             }
             catch (Exception ex)
             {
@@ -57,6 +62,44 @@ namespace JoinGameAfk
             mainWindow.ActivateTab(activeTabIndex);
 
             return mainWindow;
+        }
+
+        private async Task AutoUpdateChampionCatalogOnStartupAsync(ChampSelectSettings champSelectSettings)
+        {
+            if (!champSelectSettings.AutoUpdateChampionCatalogOnStartup)
+                return;
+
+            var syncInfo = ChampionCatalog.GetLocalSyncInfo();
+            if (!ShouldAutoUpdateChampionCatalog(syncInfo.LastSyncedAtUtc, out DateTime nextUpdateAtUtc))
+            {
+                fLogsPage?.WriteLine($"Champion list auto-update skipped. Last sync was less than 24 hours ago; next automatic check is after {nextUpdateAtUtc.ToLocalTime():g}. Use Settings > Update Champion List to sync manually.");
+                return;
+            }
+
+            fLogsPage?.WriteLine("Champion list auto-update is enabled. Contacting Riot Data Dragon to refresh champion names.");
+
+            try
+            {
+                var result = await ChampionCatalog.RefreshFromDataDragonAsync(new DataDragonChampionCatalogService());
+                fLogsPage?.WriteLine($"Champion list auto-update completed. Riot Data Dragon {result.DataDragonVersion} ({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
+            }
+            catch (Exception ex)
+            {
+                fLogsPage?.WriteErrorLine($"Champion list auto-update failed. Existing local champion list was kept. {ex.Message}");
+            }
+        }
+
+        private static bool ShouldAutoUpdateChampionCatalog(DateTime? lastSyncedAtUtc, out DateTime nextUpdateAtUtc)
+        {
+            nextUpdateAtUtc = DateTime.MinValue;
+
+            if (lastSyncedAtUtc is null)
+                return true;
+
+            DateTime normalizedLastSyncedAtUtc = DateTime.SpecifyKind(lastSyncedAtUtc.Value, DateTimeKind.Utc);
+            nextUpdateAtUtc = normalizedLastSyncedAtUtc.Add(ChampionCatalogAutoUpdateInterval);
+
+            return DateTime.UtcNow >= nextUpdateAtUtc;
         }
 
         private void ReloadUiForTheme(ChampSelectSettings champSelectSettings)

@@ -440,9 +440,42 @@
                 <StackPanel>
                     <TextBlock Text="Champion Data"
                                Style="{StaticResource SectionTitleStyle}" />
-                    <TextBlock Text="Manual Riot Data Dragon sync."
+                    <TextBlock Text="Riot Data Dragon sync."
                                Style="{StaticResource SectionDescriptionStyle}"
                                Margin="0,4,0,0" />
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Update champion list on startup"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, the app contacts Riot Data Dragon at startup only if the last successful sync is older than 24 hours." />
+                                </StackPanel>
+                                <TextBlock Text="Opt-in internet request at most once every 24 hours."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoUpdateChampionCatalogOnStartupCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="AutoUpdateChampionCatalogOnStartupCheckBox_Checked"
+                                      ToolTip="When enabled, startup refreshes champions from Riot Data Dragon only when the local sync is older than 24 hours." />
+                        </Grid>
+                    </Border>
 
                     <Border Style="{StaticResource SettingRowStyle}">
                         <StackPanel>

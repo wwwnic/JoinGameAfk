@@ -70,6 +70,11 @@ namespace JoinGameAfk.Model
         /// </summary>
         public string ThemeKey { get; set; } = "draft-desk";
 
+        /// <summary>
+        /// Whether the app should refresh the champion list from Riot Data Dragon when it starts.
+        /// </summary>
+        public bool AutoUpdateChampionCatalogOnStartup { get; set; }
+
         public Dictionary<Position, PositionPreference> Preferences { get; set; } = new()
         {
             { Position.Default, new PositionPreference() },
@@ -162,6 +167,7 @@ namespace JoinGameAfk.Model
             AutoLockSelectionEnabled = defaults.AutoLockSelectionEnabled;
             ChampSelectPollIntervalMs = defaults.ChampSelectPollIntervalMs;
             ThemeKey = defaults.ThemeKey;
+            AutoUpdateChampionCatalogOnStartup = defaults.AutoUpdateChampionCatalogOnStartup;
         }
 
         public void Save()

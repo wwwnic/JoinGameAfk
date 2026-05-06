@@ -43,6 +43,8 @@ namespace JoinGameAfk.View
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
             RefreshChampionCatalogSyncStatus();
+            ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
             ApplySettingsToControls();
             AttachNumericInputValidation();
@@ -74,6 +76,7 @@ namespace JoinGameAfk.View
             _settings.BanLockDelaySeconds = input.BanLockDelaySeconds;
             _settings.ChampSelectPollIntervalMs = input.ChampSelectPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
+            _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
@@ -134,6 +137,7 @@ namespace JoinGameAfk.View
                 BanLockDelayBox.Text = _settings.BanLockDelaySeconds.ToString();
                 ChampSelectPollIntervalBox.Text = _settings.ChampSelectPollIntervalMs.ToString();
                 SelectTheme(_settings.ThemeKey);
+                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = _settings.AutoUpdateChampionCatalogOnStartup;
             }
             finally
             {
@@ -295,6 +299,25 @@ namespace JoinGameAfk.View
                 ?? (enabled ? Brushes.DodgerBlue : Brushes.IndianRed);
         }
 
+        private void AutoUpdateChampionCatalogOnStartupCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_isUpdatingAutomationControls)
+                return;
+
+            if (ConfirmChampionCatalogAutoUpdate())
+                return;
+
+            _isUpdatingAutomationControls = true;
+            try
+            {
+                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = false;
+            }
+            finally
+            {
+                _isUpdatingAutomationControls = false;
+            }
+        }
+
         private bool TryReadSettingsInput(out SettingsInputValues input)
         {
             input = default;
@@ -440,8 +463,21 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "This will contact Riot Data Dragon at ddragon.leagueoflegends.com and update only the local champion list file.\n\nYour champion priorities and settings are kept.\n\nContinue?",
+                "This will use your internet connection to contact Riot Data Dragon at ddragon.leagueoflegends.com.\n\nThe app downloads Riot's public champion version and champion-name data, then updates only your local champions.json file.\n\nContinue?",
                 "Update Champion List",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information,
+                MessageBoxResult.Cancel);
+
+            return result == MessageBoxResult.OK;
+        }
+
+        private bool ConfirmChampionCatalogAutoUpdate()
+        {
+            var result = MessageBox.Show(
+                Window.GetWindow(this),
+                "Enable champion list updates on startup?\n\nWhen this is on, JoinGameAfk will use your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com, but only if the last successful sync is older than 24 hours.\n\nIt only downloads Riot's public champion version and champion-name data, then updates your local champions.json file.\n\nYou can still use Update Champion List manually at any time.\n\nIf the request fails, the app keeps your existing local champion list and continues normally.",
+                "Allow Startup Champion List Update",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
                 MessageBoxResult.Cancel);
@@ -453,12 +489,14 @@ namespace JoinGameAfk.View
         {
             string? dataDragonVersion = refreshResult?.DataDragonVersion;
             int championCount = refreshResult?.ChampionCount ?? 0;
+            DateTime? lastSyncedAtUtc = refreshResult?.LastSyncedAtUtc;
 
             if (refreshResult is null)
             {
                 var syncInfo = ChampionCatalog.GetLocalSyncInfo();
                 dataDragonVersion = syncInfo.DataDragonVersion;
                 championCount = syncInfo.ChampionCount;
+                lastSyncedAtUtc = syncInfo.LastSyncedAtUtc;
             }
 
             if (string.IsNullOrWhiteSpace(dataDragonVersion))
@@ -471,9 +509,19 @@ namespace JoinGameAfk.View
             }
 
             SetChampionCatalogSyncStatus(
-                $"Synced with Riot Data Dragon {dataDragonVersion} ({championCount} champions).",
+                $"Synced with Riot Data Dragon {dataDragonVersion} ({championCount} champions). Last sync: {FormatLastSyncedAt(lastSyncedAtUtc)}.",
                 "TextSoftBrush",
                 Brushes.SlateGray);
+        }
+
+        private static string FormatLastSyncedAt(DateTime? lastSyncedAtUtc)
+        {
+            if (lastSyncedAtUtc is null)
+                return "unknown";
+
+            return DateTime.SpecifyKind(lastSyncedAtUtc.Value, DateTimeKind.Utc)
+                .ToLocalTime()
+                .ToString("g");
         }
 
         private void SetChampionCatalogSyncStatus(string message, string brushResourceKey, Brush fallbackBrush)
@@ -487,6 +535,17 @@ namespace JoinGameAfk.View
             ChampionCatalogRefreshStatusLabel.Text = message;
             ChampionCatalogRefreshStatusLabel.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
             ChampionCatalogRefreshStatusLabel.Visibility = Visibility.Visible;
+        }
+
+        private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.InvokeAsync(() => RefreshChampionCatalogSyncStatus());
+        }
+
+        private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            Unloaded -= SettingsPage_Unloaded;
         }
 
         private void LoadThemeOptions()

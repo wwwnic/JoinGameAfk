@@ -130,6 +130,7 @@ The settings page currently exposes:
 - auto-lock enable/disable
 - champ select polling rate
 - reset automation, timing, performance, and theme defaults
+- optional champion list update on startup, rate-limited to once every 24 hours
 
 ---
 
@@ -182,13 +183,15 @@ It also writes runtime messages to:
 - the standard console output
 
 ### What the app sends over the network
-From the current code, the app sends requests to the **local League Client API only**.
+By default, the app sends requests to the **local League Client API only**.
 
 Observed action types include:
 
 - accept ready check
 - hover champion
 - complete pick/ban action
+
+If you manually update the champion list, or enable **Update champion list on startup**, the app also contacts Riot Data Dragon at `ddragon.leagueoflegends.com` to download public champion version/name data. The startup check runs only when the last successful sync is older than 24 hours; the manual button can still be used any time. That path updates only the local `champions.json` file and does not send champion priorities or settings.
 
 ---
 
