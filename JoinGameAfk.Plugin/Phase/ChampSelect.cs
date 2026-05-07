@@ -24,6 +24,11 @@ public class ChampSelect : IPhaseHandler
         DateTime LockAtUtc,
         CancellationTokenSource CancellationTokenSource);
 
+    private sealed record ActiveLockCountdownStatus(
+        string ActionType,
+        long TimeLeftMilliseconds,
+        DateTime ObservedAtUtc);
+
     private readonly LeagueClientHttp _http;
     private readonly ChampSelectSettings _settings;
     private readonly Action<string>? _log;
@@ -174,6 +179,8 @@ public class ChampSelect : IPhaseHandler
 
     private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
     {
+        var activeLockCountdown = GetActiveLockCountdownStatus(localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
+
         return new DashboardStatus
         {
             CurrentPosition = assignedPosition,
@@ -191,40 +198,35 @@ public class ChampSelect : IPhaseHandler
             TimeLeftSeconds = GetDisplayTimeLeftSeconds(timeLeftMs),
             TimeLeftMilliseconds = Math.Max(0, timeLeftMs),
             TimeLeftObservedAtUtc = timeLeftObservedAtUtc,
-            ActiveLockActionType = GetActiveLockActionType(localPlayerActiveActionType),
-            ActiveLockTimeLeftMilliseconds = GetActiveLockTimeLeftMilliseconds(localPlayerActiveActionType, timeLeftMs),
-            ActiveLockTimeLeftObservedAtUtc = timeLeftObservedAtUtc,
+            ActiveLockActionType = activeLockCountdown.ActionType,
+            ActiveLockTimeLeftMilliseconds = activeLockCountdown.TimeLeftMilliseconds,
+            ActiveLockTimeLeftObservedAtUtc = activeLockCountdown.ObservedAtUtc,
         };
     }
 
-    private string GetActiveLockActionType(string? localPlayerActiveActionType)
+    private ActiveLockCountdownStatus GetActiveLockCountdownStatus(string? localPlayerActiveActionType, long timeLeftMs, DateTime timeLeftObservedAtUtc)
     {
-        if (!_settings.IsChampionSelectAutomationActive() || !_settings.AutoLockSelectionEnabled)
-            return string.Empty;
+        if (!ShouldShowActiveLockCountdown())
+            return new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue);
 
         return localPlayerActiveActionType switch
         {
-            "pick" => "Pick",
-            "ban" => "Ban",
-            _ => string.Empty
+            "pick" => new ActiveLockCountdownStatus(
+                "Pick",
+                GetMillisecondsUntilLock(timeLeftMs, GetLockDelaySeconds(_settings.PickLockDelaySeconds, _manualPickSelectionOverride)),
+                timeLeftObservedAtUtc),
+            "ban" => new ActiveLockCountdownStatus(
+                "Ban",
+                GetMillisecondsUntilLock(timeLeftMs, GetLockDelaySeconds(_settings.BanLockDelaySeconds, _manualBanSelectionOverride)),
+                timeLeftObservedAtUtc),
+            _ => new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue)
         };
     }
 
-    private long GetActiveLockTimeLeftMilliseconds(string? localPlayerActiveActionType, long timeLeftMs)
+    private bool ShouldShowActiveLockCountdown()
     {
-        if (!_settings.IsChampionSelectAutomationActive() || !_settings.AutoLockSelectionEnabled)
-            return -1;
-
-        return localPlayerActiveActionType switch
-        {
-            "pick" => GetMillisecondsUntilLock(
-                timeLeftMs,
-                GetLockDelaySeconds(_settings.PickLockDelaySeconds, _manualPickSelectionOverride)),
-            "ban" => GetMillisecondsUntilLock(
-                timeLeftMs,
-                GetLockDelaySeconds(_settings.BanLockDelaySeconds, _manualBanSelectionOverride)),
-            _ => -1
-        };
+        return _settings.ChampionSelectAutomationEnabled
+            && _settings.AutoLockSelectionEnabled;
     }
 
     private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, string availableStatusText)
@@ -600,7 +602,7 @@ public class ChampSelect : IPhaseHandler
         }
         else if (currentChampionId != 0)
         {
-            if (_hasHoveredPick && currentChampionId != _hoveredPickChampionId && !_manualPickSelectionOverride)
+            if (IsManualSelectionOverride(currentChampionId, _hasHoveredPick, _hoveredPickChampionId, _manualPickSelectionOverride))
             {
                 _manualPickSelectionOverride = true;
                 LogStatus(ref _lastPickStatusMessage, $"Pick selection changed manually to {FormatChampion(currentChampionId)}. Falling back to last-second auto-lock for your current selection.");
@@ -719,7 +721,7 @@ public class ChampSelect : IPhaseHandler
         }
         else if (currentChampionId != 0)
         {
-            if (_hasHoveredBan && currentChampionId != _hoveredBanChampionId && !_manualBanSelectionOverride)
+            if (IsManualSelectionOverride(currentChampionId, _hasHoveredBan, _hoveredBanChampionId, _manualBanSelectionOverride))
             {
                 _manualBanSelectionOverride = true;
                 LogStatus(ref _lastBanStatusMessage, $"Ban selection changed manually to {FormatChampion(currentChampionId)}. Falling back to last-second auto-lock for your current selection.");
@@ -833,6 +835,13 @@ public class ChampSelect : IPhaseHandler
             _pendingBanHoverActionId = actionId;
             _banHoverReadyAtUtc = DateTime.UtcNow;
         }
+    }
+
+    private static bool IsManualSelectionOverride(int currentChampionId, bool hasAppHoveredChampion, int appHoveredChampionId, bool manualSelectionOverride)
+    {
+        return currentChampionId != 0
+            && !manualSelectionOverride
+            && (!hasAppHoveredChampion || currentChampionId != appHoveredChampionId);
     }
 
     private void ScheduleLock(int actionId, int championId, int lockDelaySeconds, DateTime lockAtUtc, bool isPickAction, CancellationToken cancellationToken)

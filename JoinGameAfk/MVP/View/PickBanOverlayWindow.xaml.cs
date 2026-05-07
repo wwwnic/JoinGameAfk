@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
@@ -118,7 +117,11 @@ namespace JoinGameAfk.View
         {
             StatusText.Text = GetStatusLine(_currentPhase);
             PhaseText.Text = GetPhaseText(_currentPhase);
-            StatusDot.Background = GetStatusBrush(_currentPhase);
+            OverlayPhaseIndicator.Update(
+                _currentPhase,
+                _isWatcherRunning,
+                _isClientConnected,
+                _champSelectSubPhase);
         }
 
         private string GetStatusLine(ClientPhase phase)
@@ -148,28 +151,6 @@ namespace JoinGameAfk.View
             }
 
             return GetStatusLine(phase);
-        }
-
-        private Brush GetStatusBrush(ClientPhase phase)
-        {
-            if (_isWatcherRunning && !_isClientConnected)
-                return ResourceBrush("PhaseBanBrush", Brushes.IndianRed);
-
-            return phase switch
-            {
-                ClientPhase.Lobby => ResourceBrush("PhaseHoverBrush", Brushes.Goldenrod),
-                ClientPhase.Matchmaking => ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue),
-                ClientPhase.ReadyCheck => ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen),
-                ClientPhase.ChampSelect => ResourceBrush("AccentBlueBrush", Brushes.DodgerBlue),
-                ClientPhase.Planning => ResourceBrush("PhaseHoverBrush", Brushes.DarkOrange),
-                ClientPhase.InGame => ResourceBrush("PhaseDefaultBrush", Brushes.White),
-                _ => ResourceBrush("PhaseDefaultBrush", Brushes.White)
-            };
-        }
-
-        private Brush ResourceBrush(string key, Brush fallback)
-        {
-            return TryFindResource(key) as Brush ?? fallback;
         }
 
         private static string GetPositionText(Position position)
