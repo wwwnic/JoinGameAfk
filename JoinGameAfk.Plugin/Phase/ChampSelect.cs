@@ -191,6 +191,39 @@ public class ChampSelect : IPhaseHandler
             TimeLeftSeconds = GetDisplayTimeLeftSeconds(timeLeftMs),
             TimeLeftMilliseconds = Math.Max(0, timeLeftMs),
             TimeLeftObservedAtUtc = timeLeftObservedAtUtc,
+            ActiveLockActionType = GetActiveLockActionType(localPlayerActiveActionType),
+            ActiveLockTimeLeftMilliseconds = GetActiveLockTimeLeftMilliseconds(localPlayerActiveActionType, timeLeftMs),
+            ActiveLockTimeLeftObservedAtUtc = timeLeftObservedAtUtc,
+        };
+    }
+
+    private string GetActiveLockActionType(string? localPlayerActiveActionType)
+    {
+        if (!_settings.IsChampionSelectAutomationActive() || !_settings.AutoLockSelectionEnabled)
+            return string.Empty;
+
+        return localPlayerActiveActionType switch
+        {
+            "pick" => "Pick",
+            "ban" => "Ban",
+            _ => string.Empty
+        };
+    }
+
+    private long GetActiveLockTimeLeftMilliseconds(string? localPlayerActiveActionType, long timeLeftMs)
+    {
+        if (!_settings.IsChampionSelectAutomationActive() || !_settings.AutoLockSelectionEnabled)
+            return -1;
+
+        return localPlayerActiveActionType switch
+        {
+            "pick" => GetMillisecondsUntilLock(
+                timeLeftMs,
+                GetLockDelaySeconds(_settings.PickLockDelaySeconds, _manualPickSelectionOverride)),
+            "ban" => GetMillisecondsUntilLock(
+                timeLeftMs,
+                GetLockDelaySeconds(_settings.BanLockDelaySeconds, _manualBanSelectionOverride)),
+            _ => -1
         };
     }
 

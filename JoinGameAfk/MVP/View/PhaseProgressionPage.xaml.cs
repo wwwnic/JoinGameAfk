@@ -13,6 +13,7 @@ namespace JoinGameAfk.View
         public event Action<bool>? WatcherStateChanged;
         public event Action<bool>? ClientConnectionChanged;
         public event Action<string>? ChampSelectSubPhaseChanged;
+        public event Action<DashboardStatus>? DashboardStatusChanged;
 
         private const double MinimumLogRowHeight = 150;
         private const double TimerRenderBoundaryPaddingMs = 10;
@@ -88,6 +89,7 @@ namespace JoinGameAfk.View
                     : status.ChampSelectSubPhase;
                 ChampSelectSubPhaseText.Text = champSelectSubPhase;
                 ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
+                DashboardStatusChanged?.Invoke(status);
                 UpdateChampSelectTimerBaseline(status);
                 QueueLogRowResize();
             });

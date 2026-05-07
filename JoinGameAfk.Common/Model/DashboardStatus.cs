@@ -43,5 +43,8 @@ namespace JoinGameAfk.Model
         public int TimeLeftSeconds { get; init; } = -1;
         public long TimeLeftMilliseconds { get; init; } = -1;
         public DateTime TimeLeftObservedAtUtc { get; init; } = DateTime.MinValue;
+        public string ActiveLockActionType { get; init; } = "";
+        public long ActiveLockTimeLeftMilliseconds { get; init; } = -1;
+        public DateTime ActiveLockTimeLeftObservedAtUtc { get; init; } = DateTime.MinValue;
     }
 }

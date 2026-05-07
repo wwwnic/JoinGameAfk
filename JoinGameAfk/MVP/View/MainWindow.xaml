@@ -262,6 +262,21 @@
                     <StackPanel Grid.Column="4"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right">
+                        <Button x:Name="PickBanOverlayButton"
+                                Style="{StaticResource TitleBarButtonStyle}"
+                                ToolTip="Pop out pick/ban overlay and minimize"
+                                AutomationProperties.Name="Pop out pick ban overlay"
+                                Click="PickBanOverlayButton_Click">
+                            <Path Data="M7,17 H5 V5 H17 V7 M11,5 H19 V13 M19,5 L10,14"
+                                  Width="14"
+                                  Height="14"
+                                  Stretch="Uniform"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round" />
+                        </Button>
                         <Button Style="{StaticResource TitleBarButtonStyle}"
                                 ToolTip="Minimize"
                                 AutomationProperties.Name="Minimize"

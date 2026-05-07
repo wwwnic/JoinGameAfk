@@ -39,6 +39,7 @@ ScaffoldingReadMe.txt
 # Local .NET CLI/NuGet cache overrides
 .dotnet/
 .dotnet-cli-home/
+.dotnet_home/
 
 # dotenv environment variables file
 .env

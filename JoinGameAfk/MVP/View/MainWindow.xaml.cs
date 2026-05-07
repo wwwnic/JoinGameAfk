@@ -8,6 +8,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
+using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
 using JoinGameAfk.Theme;
 
@@ -27,6 +28,8 @@ namespace JoinGameAfk.View
         private readonly LogsPage _logsPage;
         private PhaseController? _phaseController;
         private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
+        private PickBanOverlayWindow? _pickBanOverlayWindow;
+        private DashboardStatus _lastDashboardStatus = new();
         private int _activeTabIndex;
         private ClientPhase _currentPhase = ClientPhase.Unknown;
         private bool _isWatcherRunning;
@@ -61,7 +64,8 @@ namespace JoinGameAfk.View
 
             SourceInitialized += MainWindow_SourceInitialized;
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
-            Closed += (_, _) => AppThemeManager.ThemeChanged -= RefreshTheme;
+            Closed += MainWindow_Closed;
+            _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
             AppThemeManager.ThemeChanged += RefreshTheme;
             ActivateTab(0);
             SetWatcherState(false);
@@ -74,6 +78,13 @@ namespace JoinGameAfk.View
         {
             if (PresentationSource.FromVisual(this) is HwndSource source)
                 source.AddHook(WindowProc);
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            AppThemeManager.ThemeChanged -= RefreshTheme;
+            _dashboardPage.DashboardStatusChanged -= UpdateDashboardStatus;
+            _pickBanOverlayWindow?.Close();
         }
 
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
@@ -96,6 +107,7 @@ namespace JoinGameAfk.View
                 RefreshWatcherButton();
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
+                _pickBanOverlayWindow?.SetWatcherState(_isWatcherRunning);
             });
         }
 
@@ -106,6 +118,7 @@ namespace JoinGameAfk.View
                 _isClientConnected = isConnected;
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
+                _pickBanOverlayWindow?.SetClientConnection(_isClientConnected);
             });
         }
 
@@ -115,6 +128,7 @@ namespace JoinGameAfk.View
             {
                 _champSelectSubPhase = subPhase;
                 RefreshPhaseIndicator();
+                _pickBanOverlayWindow?.UpdateChampSelectSubPhase(_champSelectSubPhase);
             });
         }
 
@@ -127,6 +141,12 @@ namespace JoinGameAfk.View
                 _phaseController.Stop();
             else
                 _phaseController.Start();
+        }
+
+        private void PickBanOverlayButton_Click(object sender, RoutedEventArgs e)
+        {
+            ShowPickBanOverlay();
+            WindowState = WindowState.Minimized;
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -355,6 +375,16 @@ namespace JoinGameAfk.View
                 _currentPhase = phase;
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
+                _pickBanOverlayWindow?.UpdatePhase(_currentPhase);
+            });
+        }
+
+        private void UpdateDashboardStatus(DashboardStatus status)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _lastDashboardStatus = status;
+                _pickBanOverlayWindow?.UpdateDashboardStatus(status);
             });
         }
 
@@ -526,6 +556,46 @@ namespace JoinGameAfk.View
                 _ when _isWatcherRunning => "Watching",
                 _ => "Stopped"
             };
+        }
+
+        private void ShowPickBanOverlay()
+        {
+            if (_pickBanOverlayWindow is null)
+            {
+                _pickBanOverlayWindow = new PickBanOverlayWindow();
+                _pickBanOverlayWindow.Closed += (_, _) => _pickBanOverlayWindow = null;
+                PositionPickBanOverlay(_pickBanOverlayWindow);
+            }
+
+            RefreshPickBanOverlayState(_pickBanOverlayWindow);
+
+            if (!_pickBanOverlayWindow.IsVisible)
+                _pickBanOverlayWindow.Show();
+
+            _pickBanOverlayWindow.Activate();
+        }
+
+        private void RefreshPickBanOverlayState(PickBanOverlayWindow overlayWindow)
+        {
+            overlayWindow.SetWatcherState(_isWatcherRunning);
+            overlayWindow.SetClientConnection(_isClientConnected);
+            overlayWindow.UpdatePhase(_currentPhase);
+            overlayWindow.UpdateChampSelectSubPhase(_champSelectSubPhase);
+            overlayWindow.UpdateDashboardStatus(_lastDashboardStatus);
+        }
+
+        private void PositionPickBanOverlay(PickBanOverlayWindow overlayWindow)
+        {
+            Rect anchorBounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, ActualWidth > 0 ? ActualWidth : Width, ActualHeight > 0 ? ActualHeight : Height)
+                : RestoreBounds;
+
+            Rect workArea = SystemParameters.WorkArea;
+            double targetLeft = anchorBounds.Right - overlayWindow.Width - 18;
+            double targetTop = anchorBounds.Top + 76;
+
+            overlayWindow.Left = Math.Clamp(targetLeft, workArea.Left + 8, workArea.Right - overlayWindow.Width - 8);
+            overlayWindow.Top = Math.Clamp(targetTop, workArea.Top + 8, workArea.Bottom - overlayWindow.Height - 8);
         }
 
         private Brush ResourceBrush(string key, Brush fallback)
