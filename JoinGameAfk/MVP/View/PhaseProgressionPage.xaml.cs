@@ -1,9 +1,9 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using System.Globalization;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Services;
 
 namespace JoinGameAfk.View
 {
@@ -16,29 +16,20 @@ namespace JoinGameAfk.View
         public event Action<DashboardStatus>? DashboardStatusChanged;
 
         private const double MinimumLogRowHeight = 150;
-        private const double TimerRenderBoundaryPaddingMs = 10;
-        private const double MinimumTimerRenderDelayMs = 25;
-        private const double MaximumTimerRenderDelayMs = 1000;
-
-        private readonly DispatcherTimer _champSelectTimerRenderTimer;
-        private long _timerBaselineTimeLeftMs = -1;
-        private DateTime _timerBaselineObservedAtUtc = DateTime.MinValue;
+        private readonly DraftCountdownTimer _draftCountdownTimer;
 
         public PhaseProgressionPage()
         {
             InitializeComponent();
 
-            _champSelectTimerRenderTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(MaximumTimerRenderDelayMs)
-            };
-            _champSelectTimerRenderTimer.Tick += (_, _) => RenderChampSelectTimer();
+            _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
 
             SetWatcherState(false);
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
             Loaded += (_, _) => QueueLogRowResize();
+            Unloaded += (_, _) => _draftCountdownTimer.Stop();
         }
 
         internal void SetLogsPage(LogsPage logsPage)
@@ -90,80 +81,40 @@ namespace JoinGameAfk.View
                 ChampSelectSubPhaseText.Text = champSelectSubPhase;
                 ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
                 DashboardStatusChanged?.Invoke(status);
-                UpdateChampSelectTimerBaseline(status);
+                _draftCountdownTimer.Update(status);
                 QueueLogRowResize();
             });
         }
 
-        private void UpdateChampSelectTimerBaseline(DashboardStatus status)
+        private void RenderCountdownTimers(DraftCountdownTimerSnapshot snapshot)
         {
-            long timeLeftMs = status.TimeLeftMilliseconds >= 0
-                ? status.TimeLeftMilliseconds
-                : status.TimeLeftSeconds >= 0
-                    ? status.TimeLeftSeconds * 1000L
-                    : -1;
+            ChampSelectTimerText.Text = snapshot.PhaseTimeText;
 
-            if (timeLeftMs < 0)
+            if (!snapshot.HasActiveLockTimer)
             {
-                StopChampSelectTimer();
+                PickPlanLockText.Text = "--";
+                BanPlanLockText.Text = "--";
                 return;
             }
 
-            _timerBaselineTimeLeftMs = Math.Max(0, timeLeftMs);
-            _timerBaselineObservedAtUtc = status.TimeLeftObservedAtUtc == DateTime.MinValue
-                ? DateTime.UtcNow
-                : status.TimeLeftObservedAtUtc;
+            string lockText = $"Lock in {snapshot.LockTimeText}";
 
-            RenderChampSelectTimer();
-        }
-
-        private void StopChampSelectTimer()
-        {
-            _champSelectTimerRenderTimer.Stop();
-            _timerBaselineTimeLeftMs = -1;
-            _timerBaselineObservedAtUtc = DateTime.MinValue;
-            ChampSelectTimerText.Text = "--";
-        }
-
-        private void RenderChampSelectTimer()
-        {
-            if (_timerBaselineTimeLeftMs < 0 || _timerBaselineObservedAtUtc == DateTime.MinValue)
+            if (string.Equals(snapshot.ActiveLockActionType, "Pick", StringComparison.Ordinal))
             {
-                ChampSelectTimerText.Text = "--";
+                PickPlanLockText.Text = lockText;
+                BanPlanLockText.Text = "--";
                 return;
             }
 
-            double elapsedMs = Math.Max(0, (DateTime.UtcNow - _timerBaselineObservedAtUtc).TotalMilliseconds);
-            double remainingMs = Math.Max(0, _timerBaselineTimeLeftMs - elapsedMs);
-            ChampSelectTimerText.Text = GetDisplayTimeLeftSeconds(remainingMs).ToString(CultureInfo.InvariantCulture);
-            ScheduleNextChampSelectTimerRender(remainingMs);
-        }
-
-        private void ScheduleNextChampSelectTimerRender(double remainingMs)
-        {
-            _champSelectTimerRenderTimer.Stop();
-            if (remainingMs <= 0)
+            if (string.Equals(snapshot.ActiveLockActionType, "Ban", StringComparison.Ordinal))
+            {
+                PickPlanLockText.Text = "--";
+                BanPlanLockText.Text = lockText;
                 return;
+            }
 
-            double millisecondsUntilNextVisibleChange = remainingMs % 1000d;
-            if (millisecondsUntilNextVisibleChange <= 0)
-                millisecondsUntilNextVisibleChange = 1000d;
-
-            double delayMs = Math.Clamp(
-                millisecondsUntilNextVisibleChange + TimerRenderBoundaryPaddingMs,
-                MinimumTimerRenderDelayMs,
-                MaximumTimerRenderDelayMs);
-
-            _champSelectTimerRenderTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
-            _champSelectTimerRenderTimer.Start();
-        }
-
-        private static int GetDisplayTimeLeftSeconds(double timeLeftMs)
-        {
-            if (timeLeftMs <= 0)
-                return 0;
-
-            return (int)(timeLeftMs / 1000d);
+            PickPlanLockText.Text = "--";
+            BanPlanLockText.Text = "--";
         }
 
         private static DashboardStatus ApplyPlanBlockerHighlights(DashboardStatus status)
@@ -346,8 +297,8 @@ namespace JoinGameAfk.View
 
         private void UpdatePlanDisplay(DashboardStatus status)
         {
-            PickPlanLockText.Text = GetPlanLockText(status.PickLockText);
-            BanPlanLockText.Text = GetPlanLockText(status.BanLockText);
+            PickPlanLockText.ToolTip = GetPlanLockText(status.PickLockText);
+            BanPlanLockText.ToolTip = GetPlanLockText(status.BanLockText);
         }
 
         private static string GetPlanLockText(string lockText)

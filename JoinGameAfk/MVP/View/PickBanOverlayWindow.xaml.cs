@@ -1,39 +1,26 @@
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Services;
 
 namespace JoinGameAfk.View
 {
     public partial class PickBanOverlayWindow : Window
     {
-        private const double TimerRenderBoundaryPaddingMs = 10;
-        private const double MinimumTimerRenderDelayMs = 25;
-        private const double MaximumTimerRenderDelayMs = 1000;
-
-        private readonly DispatcherTimer _timerRenderTimer;
+        private readonly DraftCountdownTimer _draftCountdownTimer;
         private ClientPhase _currentPhase = ClientPhase.Unknown;
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
-        private long _timerBaselineTimeLeftMs = -1;
-        private DateTime _timerBaselineObservedAtUtc = DateTime.MinValue;
-        private long _lockTimerBaselineTimeLeftMs = -1;
-        private DateTime _lockTimerBaselineObservedAtUtc = DateTime.MinValue;
 
         public PickBanOverlayWindow()
         {
             InitializeComponent();
 
-            _timerRenderTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(MaximumTimerRenderDelayMs)
-            };
-            _timerRenderTimer.Tick += (_, _) => RenderTimers();
+            _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
 
             RefreshStatusDisplay();
             RefreshTopmostButton();
@@ -95,7 +82,7 @@ namespace JoinGameAfk.View
                 PickLockText.Text = GetPlanLockText(status.PickLockText);
                 BanLockText.Text = GetPlanLockText(status.BanLockText);
                 PositionText.Text = GetPositionText(status.CurrentPosition);
-                UpdateTimerBaselines(status);
+                _draftCountdownTimer.Update(status);
             });
         }
 
@@ -118,147 +105,13 @@ namespace JoinGameAfk.View
                 placeholder.Text = string.IsNullOrWhiteSpace(fallbackText) ? "Waiting for champion select." : fallbackText;
         }
 
-        private void UpdateTimerBaselines(DashboardStatus status)
+        private void RenderCountdownTimers(DraftCountdownTimerSnapshot snapshot)
         {
-            long timeLeftMs = status.TimeLeftMilliseconds >= 0
-                ? status.TimeLeftMilliseconds
-                : status.TimeLeftSeconds >= 0
-                    ? status.TimeLeftSeconds * 1000L
-                    : -1;
-
-            if (timeLeftMs < 0)
-            {
-                ClearPhaseTimer();
-            }
-            else
-            {
-                _timerBaselineTimeLeftMs = Math.Max(0, timeLeftMs);
-                _timerBaselineObservedAtUtc = status.TimeLeftObservedAtUtc == DateTime.MinValue
-                    ? DateTime.UtcNow
-                    : status.TimeLeftObservedAtUtc;
-            }
-
-            if (status.ActiveLockTimeLeftMilliseconds < 0 || string.IsNullOrWhiteSpace(status.ActiveLockActionType))
-            {
-                ClearLockTimer();
-                LockTimerLabel.Text = "lock";
-            }
-            else
-            {
-                _lockTimerBaselineTimeLeftMs = Math.Max(0, status.ActiveLockTimeLeftMilliseconds);
-                _lockTimerBaselineObservedAtUtc = status.ActiveLockTimeLeftObservedAtUtc == DateTime.MinValue
-                    ? DateTime.UtcNow
-                    : status.ActiveLockTimeLeftObservedAtUtc;
-                LockTimerLabel.Text = $"{status.ActiveLockActionType.ToLowerInvariant()} lock";
-            }
-
-            RenderTimers();
-        }
-
-        private void ClearPhaseTimer()
-        {
-            _timerBaselineTimeLeftMs = -1;
-            _timerBaselineObservedAtUtc = DateTime.MinValue;
-            TimerText.Text = "--";
-        }
-
-        private void ClearLockTimer()
-        {
-            _lockTimerBaselineTimeLeftMs = -1;
-            _lockTimerBaselineObservedAtUtc = DateTime.MinValue;
-            LockTimerText.Text = "--";
-        }
-
-        private void RenderTimers()
-        {
-            double phaseRemainingMs = RenderPhaseTimer();
-            double lockRemainingMs = RenderLockTimer();
-            ScheduleNextTimerRender(phaseRemainingMs, lockRemainingMs);
-        }
-
-        private double RenderPhaseTimer()
-        {
-            if (_timerBaselineTimeLeftMs < 0 || _timerBaselineObservedAtUtc == DateTime.MinValue)
-            {
-                TimerText.Text = "--";
-                return -1;
-            }
-
-            double elapsedMs = Math.Max(0, (DateTime.UtcNow - _timerBaselineObservedAtUtc).TotalMilliseconds);
-            double remainingMs = Math.Max(0, _timerBaselineTimeLeftMs - elapsedMs);
-            TimerText.Text = GetDisplayTimeLeftSeconds(remainingMs).ToString(CultureInfo.InvariantCulture);
-            return remainingMs;
-        }
-
-        private double RenderLockTimer()
-        {
-            if (_lockTimerBaselineTimeLeftMs < 0 || _lockTimerBaselineObservedAtUtc == DateTime.MinValue)
-            {
-                LockTimerText.Text = "--";
-                return -1;
-            }
-
-            double elapsedMs = Math.Max(0, (DateTime.UtcNow - _lockTimerBaselineObservedAtUtc).TotalMilliseconds);
-            double remainingMs = Math.Max(0, _lockTimerBaselineTimeLeftMs - elapsedMs);
-            LockTimerText.Text = FormatPreciseTimeLeft(remainingMs);
-            return remainingMs;
-        }
-
-        private void ScheduleNextTimerRender(double phaseRemainingMs, double lockRemainingMs)
-        {
-            _timerRenderTimer.Stop();
-            double delayMs = double.PositiveInfinity;
-
-            if (phaseRemainingMs > 0)
-                delayMs = Math.Min(delayMs, GetDelayToNextWholeSecond(phaseRemainingMs));
-
-            if (lockRemainingMs > 0)
-                delayMs = Math.Min(delayMs, GetDelayToNextTenthSecond(lockRemainingMs));
-
-            if (double.IsPositiveInfinity(delayMs))
-                return;
-
-            delayMs = Math.Clamp(
-                delayMs,
-                MinimumTimerRenderDelayMs,
-                MaximumTimerRenderDelayMs);
-
-            _timerRenderTimer.Interval = TimeSpan.FromMilliseconds(delayMs);
-            _timerRenderTimer.Start();
-        }
-
-        private static double GetDelayToNextWholeSecond(double remainingMs)
-        {
-            double millisecondsUntilNextVisibleChange = remainingMs % 1000d;
-            if (millisecondsUntilNextVisibleChange <= 0)
-                millisecondsUntilNextVisibleChange = 1000d;
-
-            return millisecondsUntilNextVisibleChange + TimerRenderBoundaryPaddingMs;
-        }
-
-        private static double GetDelayToNextTenthSecond(double remainingMs)
-        {
-            double millisecondsUntilNextVisibleChange = remainingMs % 100d;
-            if (millisecondsUntilNextVisibleChange <= 0)
-                millisecondsUntilNextVisibleChange = 100d;
-
-            return millisecondsUntilNextVisibleChange + TimerRenderBoundaryPaddingMs;
-        }
-
-        private static int GetDisplayTimeLeftSeconds(double timeLeftMs)
-        {
-            if (timeLeftMs <= 0)
-                return 0;
-
-            return (int)(timeLeftMs / 1000d);
-        }
-
-        private static string FormatPreciseTimeLeft(double timeLeftMs)
-        {
-            if (timeLeftMs <= 0)
-                return "0.0s";
-
-            return (timeLeftMs / 1000d).ToString("0.0", CultureInfo.InvariantCulture) + "s";
+            TimerText.Text = snapshot.PhaseTimeText;
+            LockTimerText.Text = snapshot.LockTimeText;
+            LockTimerLabel.Text = snapshot.HasActiveLockTimer
+                ? $"{snapshot.ActiveLockActionType.ToLowerInvariant()} lock"
+                : "lock";
         }
 
         private void RefreshStatusDisplay()
@@ -360,7 +213,7 @@ namespace JoinGameAfk.View
 
         private void Window_Closed(object? sender, EventArgs e)
         {
-            _timerRenderTimer.Stop();
+            _draftCountdownTimer.Stop();
         }
     }
 }
