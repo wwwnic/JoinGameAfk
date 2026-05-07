@@ -32,7 +32,7 @@ namespace JoinGameAfk.Model
         /// <summary>
         /// Sound cue used when a ready check popup is detected.
         /// </summary>
-        public string ReadyCheckSoundNotificationKey { get; set; } = "numeric";
+        public string ReadyCheckSoundNotificationKey { get; set; } = "metallic-lock";
 
         /// <summary>
         /// Number of seconds to wait before automatically accepting a ready check.

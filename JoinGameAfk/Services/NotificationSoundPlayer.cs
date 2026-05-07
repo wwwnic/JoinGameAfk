@@ -9,21 +9,26 @@ namespace JoinGameAfk.Services
 
     internal sealed class NotificationSoundPlayer
     {
-        public const string DefaultReadyCheckSoundKey = "numeric";
+        public const string DefaultReadyCheckSoundKey = "metallic-lock";
 
         public static IReadOnlyList<NotificationSoundOption> ReadyCheckSoundOptions { get; } =
         [
-            new(DefaultReadyCheckSoundKey, "Accept Action", Path.Combine("Sounds", "Numeric.wav")),
+            new(DefaultReadyCheckSoundKey, "Metallic Lock", Path.Combine("Sounds", "MetalicLock.wav")),
+            new("numeric", "Accept Action", Path.Combine("Sounds", "Numeric.wav")),
             new("default-rising", "Rising Ready Cue", Path.Combine("Sounds", "ReadyCheckAlert.wav")),
             new("sword", "Sword Guard", Path.Combine("Sounds", "Sword.wav")),
-            new("metallic-lock", "Metallic Lock", Path.Combine("Sounds", "MetalicLock.wav")),
             new("action-pulse", "Action Pulse", Path.Combine("Sounds", "ActionSound.wav")),
+            new("queue-gong", "Queue Gong", Path.Combine("Sounds", "QueueGong.wav")),
+            new("draft-surge", "Draft Surge", Path.Combine("Sounds", "DraftSurge.wav")),
+            new("lock-in-impact", "Lock-In Impact", Path.Combine("Sounds", "LockInImpact.wav")),
+            new("celestial-sweep", "Celestial Sweep", Path.Combine("Sounds", "CelestialSweep.wav")),
+            new("assistant-beacon", "Assistant Beacon", Path.Combine("Sounds", "AssistantBeacon.wav")),
         ];
 
         private static readonly IReadOnlyDictionary<string, string> LegacyReadyCheckSoundKeys =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["accept-action-v2"] = DefaultReadyCheckSoundKey,
+                ["accept-action-v2"] = "numeric",
                 ["reinforced-shield-v2"] = "sword",
                 ["short-metallic-lock-v4"] = "metallic-lock",
                 ["action-sound-effect-v4"] = "action-pulse",
