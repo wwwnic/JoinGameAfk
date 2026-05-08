@@ -25,6 +25,8 @@ namespace JoinGameAfk.Model
 
     public static class ChampionCatalog
     {
+        private const string BundledChampionCatalogResourceName = "JoinGameAfk.Assets.champions.json";
+
         private static readonly object CatalogLock = new();
 
         private static readonly JsonSerializerOptions CatalogSerializerOptions = new()
@@ -406,8 +408,26 @@ namespace JoinGameAfk.Model
                 return;
             }
 
+            string? bundledCatalogJson = LoadBundledChampionCatalogJson();
+            if (!string.IsNullOrWhiteSpace(bundledCatalogJson))
+            {
+                AppStorage.EnsureDirectoryExists();
+                File.WriteAllText(filePath, bundledCatalogJson);
+                return;
+            }
+
             AppStorage.EnsureDirectoryExists();
             SaveCatalogFile(filePath, DefaultChampions);
+        }
+
+        private static string? LoadBundledChampionCatalogJson()
+        {
+            using Stream? resourceStream = typeof(ChampionCatalog).Assembly.GetManifestResourceStream(BundledChampionCatalogResourceName);
+            if (resourceStream is null)
+                return null;
+
+            using var reader = new StreamReader(resourceStream);
+            return reader.ReadToEnd();
         }
 
         private static ChampionCatalogFile? DeserializeCatalogFile(string json)

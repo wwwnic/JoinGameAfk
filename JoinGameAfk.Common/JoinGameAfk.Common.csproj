@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\JoinGameAfk\Assets\champions.json" Link="Assets\champions.json" LogicalName="JoinGameAfk.Assets.champions.json" />
+  </ItemGroup>
+
 </Project>

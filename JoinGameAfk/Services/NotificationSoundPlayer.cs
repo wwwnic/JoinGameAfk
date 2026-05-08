@@ -1,11 +1,13 @@
 using System.IO;
 using System.Media;
 using System.Windows;
-using System.Windows.Media;
 
 namespace JoinGameAfk.Services
 {
-    internal sealed record NotificationSoundOption(string Key, string DisplayName, string RelativePath);
+    internal sealed record NotificationSoundOption(string Key, string DisplayName, string FileName)
+    {
+        public Uri ResourceUri => new($"pack://application:,,,/Assets/Sounds/{FileName}", UriKind.Absolute);
+    }
 
     internal sealed class NotificationSoundPlayer
     {
@@ -13,17 +15,21 @@ namespace JoinGameAfk.Services
 
         public static IReadOnlyList<NotificationSoundOption> ReadyCheckSoundOptions { get; } =
         [
-            new(DefaultReadyCheckSoundKey, "Metallic Lock", Path.Combine("Sounds", "MetalicLock.wav")),
-            new("numeric", "Accept Action", Path.Combine("Sounds", "Numeric.wav")),
-            new("default-rising", "Rising Ready Cue", Path.Combine("Sounds", "ReadyCheckAlert.wav")),
-            new("sword", "Sword Guard", Path.Combine("Sounds", "Sword.wav")),
-            new("action-pulse", "Action Pulse", Path.Combine("Sounds", "ActionSound.wav")),
-            new("queue-gong", "Queue Gong", Path.Combine("Sounds", "QueueGong.wav")),
-            new("draft-surge", "Draft Surge", Path.Combine("Sounds", "DraftSurge.wav")),
-            new("lock-in-impact", "Lock-In Impact", Path.Combine("Sounds", "LockInImpact.wav")),
-            new("celestial-sweep", "Celestial Sweep", Path.Combine("Sounds", "CelestialSweep.wav")),
-            new("assistant-beacon", "Assistant Beacon", Path.Combine("Sounds", "AssistantBeacon.wav")),
+            new(DefaultReadyCheckSoundKey, "Metallic Lock", "MetalicLock.wav"),
+            new("numeric", "Accept Action", "Numeric.wav"),
+            new("default-rising", "Rising Ready Cue", "ReadyCheckAlert.wav"),
+            new("sword", "Sword Guard", "Sword.wav"),
+            new("action-pulse", "Action Pulse", "ActionSound.wav"),
+            new("queue-gong", "Queue Gong", "QueueGong.wav"),
+            new("draft-surge", "Draft Surge", "DraftSurge.wav"),
+            new("lock-in-impact", "Lock-In Impact", "LockInImpact.wav"),
+            new("celestial-sweep", "Celestial Sweep", "CelestialSweep.wav"),
+            new("assistant-beacon", "Assistant Beacon", "AssistantBeacon.wav"),
         ];
+
+        private static readonly object SoundPlayerCacheLock = new();
+
+        private static readonly Dictionary<string, SoundPlayer> SoundPlayerCache = new(StringComparer.Ordinal);
 
         private static readonly IReadOnlyDictionary<string, string> LegacyReadyCheckSoundKeys =
             new Dictionary<string, string>(StringComparer.Ordinal)
@@ -33,8 +39,6 @@ namespace JoinGameAfk.Services
                 ["short-metallic-lock-v4"] = "metallic-lock",
                 ["action-sound-effect-v4"] = "action-pulse",
             };
-
-        private static readonly List<MediaPlayer> ActivePlayers = [];
 
         private readonly Action<string>? _log;
 
@@ -72,14 +76,6 @@ namespace JoinGameAfk.Services
             try
             {
                 var option = GetReadyCheckSoundOption(soundKey);
-                string cuePath = Path.Combine(AppContext.BaseDirectory, option.RelativePath);
-                if (!File.Exists(cuePath))
-                {
-                    SystemSounds.Exclamation.Play();
-                    _log?.Invoke($"{context} file was not found: {cuePath}");
-                    return;
-                }
-
                 var dispatcher = Application.Current?.Dispatcher;
                 if (dispatcher is null)
                 {
@@ -89,9 +85,9 @@ namespace JoinGameAfk.Services
                 }
 
                 if (dispatcher.CheckAccess())
-                    PlayWithMediaPlayer(cuePath, context);
+                    PlayResourceSound(option, context);
                 else
-                    dispatcher.BeginInvoke(() => PlayWithMediaPlayer(cuePath, context));
+                    dispatcher.BeginInvoke(() => PlayResourceSound(option, context));
             }
             catch (Exception ex)
             {
@@ -106,44 +102,48 @@ namespace JoinGameAfk.Services
             return ReadyCheckSoundOptions.First(option => string.Equals(option.Key, normalizedKey, StringComparison.Ordinal));
         }
 
-        private void PlayWithMediaPlayer(string cuePath, string context)
+        private void PlayResourceSound(NotificationSoundOption option, string context)
         {
-            var player = new MediaPlayer();
-
-            void Cleanup()
-            {
-                player.MediaEnded -= Player_MediaEnded;
-                player.MediaFailed -= Player_MediaFailed;
-                player.Close();
-                ActivePlayers.Remove(player);
-            }
-
-            void Player_MediaEnded(object? sender, EventArgs e)
-            {
-                Cleanup();
-            }
-
-            void Player_MediaFailed(object? sender, ExceptionEventArgs e)
-            {
-                SystemSounds.Exclamation.Play();
-                _log?.Invoke($"{context} could not play {Path.GetFileName(cuePath)}: {e.ErrorException.Message}");
-                Cleanup();
-            }
-
-            player.MediaEnded += Player_MediaEnded;
-            player.MediaFailed += Player_MediaFailed;
-            ActivePlayers.Add(player);
-
             try
             {
-                player.Open(new Uri(cuePath, UriKind.Absolute));
+                SoundPlayer? player = GetSoundPlayer(option);
+                if (player is null)
+                {
+                    SystemSounds.Exclamation.Play();
+                    _log?.Invoke($"{context} resource was not found: {option.ResourceUri}");
+                    return;
+                }
+
                 player.Play();
             }
             catch (Exception ex)
             {
                 SystemSounds.Exclamation.Play();
-                _log?.Invoke($"{context} could not play {Path.GetFileName(cuePath)}: {ex.Message}");
-                Cleanup();
+                _log?.Invoke($"{context} could not play {option.FileName}: {ex.Message}");
+            }
+        }
+
+        private static SoundPlayer? GetSoundPlayer(NotificationSoundOption option)
+        {
+            lock (SoundPlayerCacheLock)
+            {
+                if (SoundPlayerCache.TryGetValue(option.Key, out var cachedPlayer))
+                    return cachedPlayer;
+
+                var resourceInfo = Application.GetResourceStream(option.ResourceUri);
+                if (resourceInfo is null)
+                    return null;
+
+                using var resourceStream = resourceInfo.Stream;
+                var playerStream = new MemoryStream();
+                resourceStream.CopyTo(playerStream);
+                playerStream.Position = 0;
+
+                var player = new SoundPlayer(playerStream);
+                player.Load();
+
+                SoundPlayerCache[option.Key] = player;
+                return player;
             }
         }
     }

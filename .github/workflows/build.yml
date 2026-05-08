@@ -19,10 +19,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup .NET 9 SDK
+      - name: Setup .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore dependencies
         run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
@@ -32,6 +32,24 @@ jobs:
 
       - name: Publish single-file app
         run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
+
+      - name: Verify single-file artifact
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-single'
+          $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
+
+          if (-not (Test-Path $exePath)) {
+            throw "Single-file executable was not produced at $exePath."
+          }
+
+          $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
+            Where-Object { $_.FullName -ne $exePath }
+
+          if ($unexpectedFiles) {
+            $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
+            throw "Single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
+          }
 
       - name: Rename single-file executable
         run: Copy-Item -Path ${{ github.workspace }}\publish-single\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
