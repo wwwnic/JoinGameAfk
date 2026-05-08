@@ -26,6 +26,7 @@ namespace JoinGameAfk.View
         private NumericInputRule _championHoverDelayRule = null!;
         private NumericInputRule _banLockDelayRule = null!;
         private NumericInputRule _champSelectPollIntervalRule = null!;
+        private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
 
         public SettingsPage(ChampSelectSettings settings, Action<ChampSelectSettings>? reloadUiForTheme = null)
@@ -61,7 +62,8 @@ namespace JoinGameAfk.View
             _pickLockDelayRule = InputValidator.AttachInteger(PickLockDelayBox, "Pick lock timer", minimum: 0);
             _championHoverDelayRule = InputValidator.AttachInteger(ChampionHoverDelayBox, "Champion hover delay", minimum: 0);
             _banLockDelayRule = InputValidator.AttachInteger(BanLockDelayBox, "Ban lock timer", minimum: 0);
-            _champSelectPollIntervalRule = InputValidator.AttachInteger(ChampSelectPollIntervalBox, "Polling interval", minimum: 100, maximum: 5000);
+            _champSelectPollIntervalRule = InputValidator.AttachInteger(ChampSelectPollIntervalBox, "Regular polling interval", minimum: 100, maximum: 5000);
+            _champSelectEventFallbackPollIntervalRule = InputValidator.AttachInteger(EventFallbackPollIntervalBox, "Event fallback polling interval", minimum: 1000, maximum: 30000);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -81,6 +83,8 @@ namespace JoinGameAfk.View
             _settings.ChampionHoverDelaySeconds = input.ChampionHoverDelaySeconds;
             _settings.BanLockDelaySeconds = input.BanLockDelaySeconds;
             _settings.ChampSelectPollIntervalMs = input.ChampSelectPollIntervalMs;
+            _settings.UseChampSelectEventStream = UseLiveEventsCheckBox.IsChecked == true;
+            _settings.ChampSelectEventFallbackPollIntervalMs = input.ChampSelectEventFallbackPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
             _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
             bool shouldReloadTheme = SelectedThemeRequiresReload();
@@ -144,6 +148,8 @@ namespace JoinGameAfk.View
                 ChampionHoverDelayBox.Text = _settings.ChampionHoverDelaySeconds.ToString();
                 BanLockDelayBox.Text = _settings.BanLockDelaySeconds.ToString();
                 ChampSelectPollIntervalBox.Text = _settings.ChampSelectPollIntervalMs.ToString();
+                UseLiveEventsCheckBox.IsChecked = _settings.UseChampSelectEventStream;
+                EventFallbackPollIntervalBox.Text = _settings.ChampSelectEventFallbackPollIntervalMs.ToString();
                 SelectTheme(_settings.ThemeKey);
                 AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = _settings.AutoUpdateChampionCatalogOnStartup;
             }
@@ -167,6 +173,11 @@ namespace JoinGameAfk.View
                 SyncChampionSelectAutomationCheckBoxFromChildren();
             }
 
+            UpdateAutomationInputStates();
+        }
+
+        private void PerformanceCheckBox_StateChanged(object sender, RoutedEventArgs e)
+        {
             UpdateAutomationInputStates();
         }
 
@@ -282,6 +293,7 @@ namespace JoinGameAfk.View
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
             PickLockDelayBox.IsEnabled = autoLockSelectionEnabled;
             BanLockDelayBox.IsEnabled = autoLockSelectionEnabled;
+            EventFallbackPollIntervalBox.IsEnabled = UseLiveEventsCheckBox.IsChecked == true;
 
             if (!autoReadyCheckEnabled)
                 InputValidator.SetValidationState(ReadyCheckAcceptDelayBox, InputValidationState.Valid);
@@ -303,6 +315,11 @@ namespace JoinGameAfk.View
                 _pickLockDelayRule?.Validate();
                 _banLockDelayRule?.Validate();
             }
+
+            if (UseLiveEventsCheckBox.IsChecked != true)
+                InputValidator.SetValidationState(EventFallbackPollIntervalBox, InputValidationState.Valid);
+            else
+                _champSelectEventFallbackPollIntervalRule?.Validate();
         }
 
         private void UpdateAutomationMasterRowState(Border row, bool enabled)
@@ -353,18 +370,21 @@ namespace JoinGameAfk.View
             int hoverDelay = _settings.ChampionHoverDelaySeconds;
             int pickDelay = _settings.PickLockDelaySeconds;
             int banDelay = _settings.BanLockDelaySeconds;
+            int eventFallbackPollInterval = _settings.ChampSelectEventFallbackPollIntervalMs;
 
             bool inQueueAutomationEnabled = InQueueAutomationCheckBox.IsChecked == true;
             bool autoReadyCheckEnabled = inQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
             bool championSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
             bool autoHoverChampionEnabled = championSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
             bool autoLockSelectionEnabled = championSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
+            bool useLiveEvents = UseLiveEventsCheckBox.IsChecked == true;
 
             if ((autoReadyCheckEnabled && !_readyCheckAcceptDelayRule.TryGetInt32(out readyCheckDelay))
                 || (autoLockSelectionEnabled && !_pickLockDelayRule.TryGetInt32(out pickDelay))
                 || (autoHoverChampionEnabled && !_championHoverDelayRule.TryGetInt32(out hoverDelay))
                 || (autoLockSelectionEnabled && !_banLockDelayRule.TryGetInt32(out banDelay))
-                || !_champSelectPollIntervalRule.TryGetInt32(out int pollInterval))
+                || !_champSelectPollIntervalRule.TryGetInt32(out int pollInterval)
+                || (useLiveEvents && !_champSelectEventFallbackPollIntervalRule.TryGetInt32(out eventFallbackPollInterval)))
             {
                 ShowValidationMessage("Fix invalid settings before saving.");
                 return false;
@@ -375,7 +395,8 @@ namespace JoinGameAfk.View
                 pickDelay,
                 hoverDelay,
                 banDelay,
-                pollInterval);
+                pollInterval,
+                eventFallbackPollInterval);
 
             return true;
         }
@@ -402,6 +423,9 @@ namespace JoinGameAfk.View
                 yield return _banLockDelayRule;
 
             yield return _champSelectPollIntervalRule;
+
+            if (UseLiveEventsCheckBox.IsChecked == true)
+                yield return _champSelectEventFallbackPollIntervalRule;
         }
 
         private void ShowSavedMessage()
@@ -620,6 +644,7 @@ namespace JoinGameAfk.View
             int PickLockDelaySeconds,
             int ChampionHoverDelaySeconds,
             int BanLockDelaySeconds,
-            int ChampSelectPollIntervalMs);
+            int ChampSelectPollIntervalMs,
+            int ChampSelectEventFallbackPollIntervalMs);
     }
 }

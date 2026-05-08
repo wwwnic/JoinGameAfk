@@ -78,90 +78,7 @@ public class ChampSelect : IPhaseHandler
         {
             string json = await _http.GetChampSelectSessionAsync(cancellationToken);
             DateTime sessionObservedAtUtc = DateTime.UtcNow;
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            string? sessionId = GetSessionId(root);
-            if (!string.Equals(_lastSessionId, sessionId, StringComparison.Ordinal))
-            {
-                Reset();
-                _lastSessionId = sessionId;
-            }
-
-            if (!TryGetInt32(root, "localPlayerCellId", out int localPlayerCellId))
-                return;
-
-            Position assignedPosition = GetAssignedPosition(root, localPlayerCellId);
-            RefreshAssignedPosition(assignedPosition);
-
-            var pickChoices = GetMergedPickChampionChoices(assignedPosition);
-            var banChoices = GetMergedBanChampionChoices(assignedPosition);
-            var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
-            var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
-            TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
-            string champSelectPhase = timerSnapshot.Phase;
-            long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
-            bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
-
-            if (!_hasLoggedSessionSummary)
-            {
-                Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], automation={championSelectAutomationEnabled}, autoHover={_settings.AutoHoverChampionEnabled}, autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
-                _hasLoggedSessionSummary = true;
-            }
-
-            string? localPlayerActiveActionType = null;
-            int localPickActionId = 0;
-            int localBanActionId = 0;
-
-            if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var actionGroup in actions.EnumerateArray())
-                {
-                    if (actionGroup.ValueKind != JsonValueKind.Array)
-                        continue;
-
-                    foreach (var action in actionGroup.EnumerateArray())
-                    {
-                        if (!TryGetInt32(action, "actorCellId", out int actorCellId) || actorCellId != localPlayerCellId)
-                            continue;
-
-                        if (!TryGetBool(action, "completed", out bool completed) || completed)
-                            continue;
-
-                        string type = action.TryGetProperty("type", out var typeProperty)
-                            ? typeProperty.GetString() ?? string.Empty
-                            : string.Empty;
-
-                        if (!TryGetInt32(action, "id", out int actionId))
-                            continue;
-
-                        bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgress) && inProgress;
-                        int currentChampionId = TryGetInt32(action, "championId", out int championId)
-                            ? championId
-                            : 0;
-
-                        if (isInProgress && localPlayerActiveActionType is null)
-                            localPlayerActiveActionType = type;
-
-                        if (type == "pick" && localPickActionId == 0)
-                            localPickActionId = actionId;
-
-                        if (type == "ban" && localBanActionId == 0)
-                            localBanActionId = actionId;
-
-                        if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
-                        {
-                            await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, cancellationToken);
-                        }
-                        else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
-                        {
-                            await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
-                        }
-                    }
-                }
-            }
-
-            LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
+            await HandleSessionJsonCoreAsync(json, sessionObservedAtUtc, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -175,6 +92,110 @@ public class ChampSelect : IPhaseHandler
         {
             Log($"Champ Select handler error: {ex.Message}");
         }
+    }
+
+    public async Task HandleSessionJsonAsync(string json, DateTime sessionObservedAtUtc, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await HandleSessionJsonCoreAsync(json, sessionObservedAtUtc, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            Log($"HandleSessionJsonAsync Token cancellation requested.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Champ Select event handler error: {ex.Message}");
+        }
+    }
+
+    private async Task HandleSessionJsonCoreAsync(string json, DateTime sessionObservedAtUtc, CancellationToken cancellationToken)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        string? sessionId = GetSessionId(root);
+        if (!string.Equals(_lastSessionId, sessionId, StringComparison.Ordinal))
+        {
+            Reset();
+            _lastSessionId = sessionId;
+        }
+
+        if (!TryGetInt32(root, "localPlayerCellId", out int localPlayerCellId))
+            return;
+
+        Position assignedPosition = GetAssignedPosition(root, localPlayerCellId);
+        RefreshAssignedPosition(assignedPosition);
+
+        var pickChoices = GetMergedPickChampionChoices(assignedPosition);
+        var banChoices = GetMergedBanChampionChoices(assignedPosition);
+        var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
+        var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
+        TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
+        string champSelectPhase = timerSnapshot.Phase;
+        long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
+        bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
+
+        if (!_hasLoggedSessionSummary)
+        {
+            Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], automation={championSelectAutomationEnabled}, autoHover={_settings.AutoHoverChampionEnabled}, autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
+            _hasLoggedSessionSummary = true;
+        }
+
+        string? localPlayerActiveActionType = null;
+        int localPickActionId = 0;
+        int localBanActionId = 0;
+
+        if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var actionGroup in actions.EnumerateArray())
+            {
+                if (actionGroup.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                foreach (var action in actionGroup.EnumerateArray())
+                {
+                    if (!TryGetInt32(action, "actorCellId", out int actorCellId) || actorCellId != localPlayerCellId)
+                        continue;
+
+                    if (!TryGetBool(action, "completed", out bool completed) || completed)
+                        continue;
+
+                    string type = action.TryGetProperty("type", out var typeProperty)
+                        ? typeProperty.GetString() ?? string.Empty
+                        : string.Empty;
+
+                    if (!TryGetInt32(action, "id", out int actionId))
+                        continue;
+
+                    bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgress) && inProgress;
+                    int currentChampionId = TryGetInt32(action, "championId", out int championId)
+                        ? championId
+                        : 0;
+
+                    if (isInProgress && localPlayerActiveActionType is null)
+                        localPlayerActiveActionType = type;
+
+                    if (type == "pick" && localPickActionId == 0)
+                        localPickActionId = actionId;
+
+                    if (type == "ban" && localBanActionId == 0)
+                        localBanActionId = actionId;
+
+                    if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
+                    {
+                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, cancellationToken);
+                    }
+                    else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
+                    {
+                        await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
+                    }
+                }
+            }
+        }
+
+        LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
     }
 
     private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)

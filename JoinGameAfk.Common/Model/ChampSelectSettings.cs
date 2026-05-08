@@ -71,9 +71,19 @@ namespace JoinGameAfk.Model
         public bool AutoLockSelectionEnabled { get; set; } = true;
 
         /// <summary>
-        /// App-wide polling interval in milliseconds.
+        /// Regular League Client polling interval in milliseconds.
         /// </summary>
         public int ChampSelectPollIntervalMs { get; set; } = 1000;
+
+        /// <summary>
+        /// Whether live LCU websocket events should be used as the primary champ select refresh source.
+        /// </summary>
+        public bool UseChampSelectEventStream { get; set; } = true;
+
+        /// <summary>
+        /// Safety polling interval in milliseconds while live LCU events are enabled.
+        /// </summary>
+        public int ChampSelectEventFallbackPollIntervalMs { get; set; } = 5000;
 
         /// <summary>
         /// Visual theme selected for the WPF application.
@@ -178,6 +188,8 @@ namespace JoinGameAfk.Model
             BanLockDelaySeconds = defaults.BanLockDelaySeconds;
             AutoLockSelectionEnabled = defaults.AutoLockSelectionEnabled;
             ChampSelectPollIntervalMs = defaults.ChampSelectPollIntervalMs;
+            UseChampSelectEventStream = defaults.UseChampSelectEventStream;
+            ChampSelectEventFallbackPollIntervalMs = defaults.ChampSelectEventFallbackPollIntervalMs;
             ThemeKey = defaults.ThemeKey;
             AutoUpdateChampionCatalogOnStartup = defaults.AutoUpdateChampionCatalogOnStartup;
         }
@@ -216,6 +228,9 @@ namespace JoinGameAfk.Model
 
             if (string.IsNullOrWhiteSpace(settings.ReadyCheckSoundNotificationKey))
                 settings.ReadyCheckSoundNotificationKey = new ChampSelectSettings().ReadyCheckSoundNotificationKey;
+
+            if (settings.ChampSelectEventFallbackPollIntervalMs <= 0)
+                settings.ChampSelectEventFallbackPollIntervalMs = new ChampSelectSettings().ChampSelectEventFallbackPollIntervalMs;
 
             return settings;
         }

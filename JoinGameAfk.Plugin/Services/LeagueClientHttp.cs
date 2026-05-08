@@ -40,6 +40,12 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
+            public async Task<string> GetGameflowPhaseAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-gameflow/v1/gameflow-phase";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
             public bool HasAuthToken()
             {
                 return _authToken != null;
