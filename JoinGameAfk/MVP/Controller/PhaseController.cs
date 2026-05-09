@@ -53,6 +53,7 @@ namespace JoinGameAfk.MVP.Controller
             _champSelectSettings = champSelectSettings;
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
+            _champSelectSettings.Saved += OnSettingsSaved;
         }
 
         public void Start()
@@ -192,9 +193,11 @@ namespace JoinGameAfk.MVP.Controller
                             await TryHandleChampSelectAsync(champSelect, eventSnapshot, ct);
                         }
 
-                        int delayMs = GetLoopDelayMs();
+                        int? delayMs = GetLoopDelayMs();
 
-                        int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
+                        int? remainingDelayMs = delayMs.HasValue
+                            ? Math.Max(0, delayMs.Value - (int)iterationStopwatch.ElapsedMilliseconds)
+                            : null;
                         await WaitForLoopDelayAsync(remainingDelayMs, ct);
                     }
                     catch (TaskCanceledException)
@@ -487,9 +490,9 @@ namespace JoinGameAfk.MVP.Controller
             return string.Equals(apiEvent.EventType, "Delete", StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task WaitForLoopDelayAsync(int delayMs, CancellationToken cancellationToken)
+        private async Task WaitForLoopDelayAsync(int? delayMs, CancellationToken cancellationToken)
         {
-            if (delayMs <= 0)
+            if (delayMs.HasValue && delayMs.Value <= 0)
                 return;
 
             Task eventTask;
@@ -498,7 +501,10 @@ namespace JoinGameAfk.MVP.Controller
                 eventTask = _lcuEventSignal.Task;
             }
 
-            Task completedTask = await Task.WhenAny(Task.Delay(delayMs, cancellationToken), eventTask);
+            Task delayTask = delayMs.HasValue
+                ? Task.Delay(delayMs.Value, cancellationToken)
+                : Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            Task completedTask = await Task.WhenAny(delayTask, eventTask);
             cancellationToken.ThrowIfCancellationRequested();
 
             if (!ReferenceEquals(completedTask, eventTask))
@@ -519,6 +525,11 @@ namespace JoinGameAfk.MVP.Controller
             }
         }
 
+        private void OnSettingsSaved()
+        {
+            SignalLcuEvent();
+        }
+
         private void ResetLcuEventSignal()
         {
             lock (_lcuEventSignalLock)
@@ -532,11 +543,14 @@ namespace JoinGameAfk.MVP.Controller
             return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        private int GetLoopDelayMs()
+        private int? GetLoopDelayMs()
         {
             if (_champSelectSettings.UseChampSelectEventStream
                 && _isEventStreamAvailable)
             {
+                if (!_champSelectSettings.ChampSelectEventFallbackPollingEnabled)
+                    return null;
+
                 return Math.Clamp(
                     _champSelectSettings.ChampSelectEventFallbackPollIntervalMs,
                     1000,

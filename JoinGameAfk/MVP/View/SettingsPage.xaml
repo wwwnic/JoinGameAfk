@@ -627,7 +627,7 @@
                                             Content="?"
                                             Margin="8,0,0,0"
                                             VerticalAlignment="Center"
-                                            ToolTip="Recommended. When enabled, websocket events are used for live League Client updates and polling becomes a safety refresh." />
+                                            ToolTip="Recommended. When enabled, websocket events are used for live League Client updates." />
                                 </StackPanel>
                                 <TextBlock Text="Recommended for faster updates and fewer idle requests. Turn this off to use regular HTTP polling only."
                                            Style="{StaticResource FieldHintStyle}" />
@@ -658,16 +658,50 @@
                                     <Button Style="{StaticResource InfoIndicatorStyle}"
                                             Content="?"
                                             Margin="8,0,0,0"
-                                            ToolTip="Milliseconds between regular HTTP refreshes for phase detection, ready checks, and champion select when live events are disabled or unavailable. Values save between 100 and 5000 ms." />
+                                            ToolTip="Milliseconds between regular HTTP refreshes when live events are disabled. This value is also used automatically if the event stream is unavailable." />
                                 </StackPanel>
-                                <TextBlock Text="Used for phase detection, ready checks, and regular champion select polling."
+                                <TextBlock Text="Editable when live events are off; also used automatically if live events become unavailable."
                                            Style="{StaticResource FieldHintStyle}" />
                             </StackPanel>
 
                             <TextBox x:Name="ChampSelectPollIntervalBox"
                                      Grid.Column="2"
                                      Style="{StaticResource InputTextBoxStyle}"
-                                     ToolTip="Regular polling interval in milliseconds for League Client monitoring." />
+                                     ToolTip="Regular polling interval in milliseconds for League Client monitoring when live events are not active." />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Fallback polling while live events are connected"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="Optional safety refresh while the websocket event stream is connected. Leave this off for the lowest idle activity." />
+                                </StackPanel>
+                                <TextBlock Text="Off by default. If live events fail, the app still uses regular polling automatically."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="EventFallbackPollingCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      Checked="PerformanceCheckBox_StateChanged"
+                                      Unchecked="PerformanceCheckBox_StateChanged"
+                                      ToolTip="When enabled, the app periodically refreshes over HTTP even while live LCU events are connected." />
                         </Grid>
                     </Border>
 
@@ -686,16 +720,16 @@
                                     <Button Style="{StaticResource InfoIndicatorStyle}"
                                             Content="?"
                                             Margin="8,0,0,0"
-                                            ToolTip="Safety refresh interval while live LCU events are enabled. Values save between 1000 and 30000 ms." />
+                                            ToolTip="Safety refresh interval when fallback polling is enabled. Values save between 1000 and 30000 ms." />
                                 </StackPanel>
-                                <TextBlock Text="Safety refresh for phase detection, ready checks, and champion select while live events are on."
+                                <TextBlock Text="Used only when fallback polling is enabled while live events are connected."
                                            Style="{StaticResource FieldHintStyle}" />
                             </StackPanel>
 
                             <TextBox x:Name="EventFallbackPollIntervalBox"
                                      Grid.Column="2"
                                      Style="{StaticResource InputTextBoxStyle}"
-                                     ToolTip="Fallback polling interval in milliseconds while live LCU events are enabled." />
+                                     ToolTip="Fallback polling interval in milliseconds while live LCU events are connected." />
                         </Grid>
                     </Border>
                 </StackPanel>

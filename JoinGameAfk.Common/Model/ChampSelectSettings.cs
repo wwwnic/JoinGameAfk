@@ -81,6 +81,11 @@ namespace JoinGameAfk.Model
         public bool UseChampSelectEventStream { get; set; } = true;
 
         /// <summary>
+        /// Whether regular safety polling should run while live LCU events are connected.
+        /// </summary>
+        public bool ChampSelectEventFallbackPollingEnabled { get; set; }
+
+        /// <summary>
         /// Safety polling interval in milliseconds while live LCU events are enabled.
         /// </summary>
         public int ChampSelectEventFallbackPollIntervalMs { get; set; } = 5000;
@@ -189,6 +194,7 @@ namespace JoinGameAfk.Model
             AutoLockSelectionEnabled = defaults.AutoLockSelectionEnabled;
             ChampSelectPollIntervalMs = defaults.ChampSelectPollIntervalMs;
             UseChampSelectEventStream = defaults.UseChampSelectEventStream;
+            ChampSelectEventFallbackPollingEnabled = defaults.ChampSelectEventFallbackPollingEnabled;
             ChampSelectEventFallbackPollIntervalMs = defaults.ChampSelectEventFallbackPollIntervalMs;
             ThemeKey = defaults.ThemeKey;
             AutoUpdateChampionCatalogOnStartup = defaults.AutoUpdateChampionCatalogOnStartup;
