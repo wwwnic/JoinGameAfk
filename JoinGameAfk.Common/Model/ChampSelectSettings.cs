@@ -76,7 +76,7 @@ namespace JoinGameAfk.Model
         public int ChampSelectPollIntervalMs { get; set; } = 1000;
 
         /// <summary>
-        /// Whether live LCU websocket events should be used as the primary champ select refresh source.
+        /// Whether live LCU websocket events should be used as the primary League Client refresh source.
         /// </summary>
         public bool UseChampSelectEventStream { get; set; } = true;
 

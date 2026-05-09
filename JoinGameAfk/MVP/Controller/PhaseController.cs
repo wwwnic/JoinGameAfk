@@ -192,7 +192,7 @@ namespace JoinGameAfk.MVP.Controller
                             await TryHandleChampSelectAsync(champSelect, eventSnapshot, ct);
                         }
 
-                        int delayMs = GetLoopDelayMs(isChampSelectFlow);
+                        int delayMs = GetLoopDelayMs();
 
                         int remainingDelayMs = Math.Max(0, delayMs - (int)iterationStopwatch.ElapsedMilliseconds);
                         await WaitForLoopDelayAsync(remainingDelayMs, ct);
@@ -532,10 +532,9 @@ namespace JoinGameAfk.MVP.Controller
             return new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        private int GetLoopDelayMs(bool isChampSelectFlow)
+        private int GetLoopDelayMs()
         {
-            if (isChampSelectFlow
-                && _champSelectSettings.UseChampSelectEventStream
+            if (_champSelectSettings.UseChampSelectEventStream
                 && _isEventStreamAvailable)
             {
                 return Math.Clamp(

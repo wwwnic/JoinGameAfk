@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -132,10 +133,27 @@ namespace LcuClient
                 return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            public async Task AcceptMatchAsync(CancellationToken cancellationToken = default)
+            public async Task<bool> AcceptMatchAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-matchmaking/v1/ready-check/accept";
-                await PostAsync(endpoint, body: null, cancellationToken).ConfigureAwait(false);
+
+                try
+                {
+                    await PostAsync(endpoint, body: null, cancellationToken).ConfigureAwait(false);
+                    return true;
+                }
+                catch (HttpRequestException ex) when (IsExpectedReadyCheckAcceptConflict(ex.StatusCode))
+                {
+                    _log?.Invoke($"LCU request handled as already accepted or inactive: POST {endpoint} returned {(int)ex.StatusCode!.Value}.");
+                    return false;
+                }
+            }
+
+            private static bool IsExpectedReadyCheckAcceptConflict(HttpStatusCode? statusCode)
+            {
+                return statusCode is HttpStatusCode.BadRequest
+                    or HttpStatusCode.NotFound
+                    or HttpStatusCode.Conflict;
             }
 
             private void LogRequest(HttpMethod method, string endpoint, object? body)

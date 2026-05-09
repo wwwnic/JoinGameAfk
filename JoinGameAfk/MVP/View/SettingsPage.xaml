@@ -627,9 +627,9 @@
                                             Content="?"
                                             Margin="8,0,0,0"
                                             VerticalAlignment="Center"
-                                            ToolTip="Recommended. When enabled, websocket events are used for live League Client updates and polling becomes a safety refresh during champion select." />
+                                            ToolTip="Recommended. When enabled, websocket events are used for live League Client updates and polling becomes a safety refresh." />
                                 </StackPanel>
-                                <TextBlock Text="Recommended for faster updates. Turn this off to use regular HTTP polling only."
+                                <TextBlock Text="Recommended for faster updates and fewer idle requests. Turn this off to use regular HTTP polling only."
                                            Style="{StaticResource FieldHintStyle}" />
                             </StackPanel>
 
@@ -688,7 +688,7 @@
                                             Margin="8,0,0,0"
                                             ToolTip="Safety refresh interval while live LCU events are enabled. Values save between 1000 and 30000 ms." />
                                 </StackPanel>
-                                <TextBlock Text="Used only as a safety refresh while live events are on."
+                                <TextBlock Text="Safety refresh for phase detection, ready checks, and champion select while live events are on."
                                            Style="{StaticResource FieldHintStyle}" />
                             </StackPanel>
 
