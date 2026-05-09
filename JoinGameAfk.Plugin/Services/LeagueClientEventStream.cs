@@ -11,6 +11,7 @@ namespace LcuClient
             private const int ReceiveBufferSize = 32 * 1024;
             private readonly AuthModel _authToken;
             private readonly Action<LeagueClientEvent>? _eventReceived;
+            private readonly Action? _connected;
             private readonly Action<string>? _log;
             private ClientWebSocket? _webSocket;
             private bool _disposed;
@@ -18,10 +19,12 @@ namespace LcuClient
             public LeagueClientEventStream(
                 AuthModel authToken,
                 Action<LeagueClientEvent>? eventReceived = null,
+                Action? connected = null,
                 Action<string>? log = null)
             {
                 _authToken = authToken ?? throw new ArgumentNullException(nameof(authToken));
                 _eventReceived = eventReceived;
+                _connected = connected;
                 _log = log;
             }
 
@@ -41,6 +44,7 @@ namespace LcuClient
                     .ConfigureAwait(false);
 
                 _log?.Invoke("LCU websocket event stream connected.");
+                _connected?.Invoke();
                 await ReceiveLoopAsync(webSocket, cancellationToken).ConfigureAwait(false);
             }
 

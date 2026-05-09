@@ -13,6 +13,15 @@ namespace JoinGameAfk.MVP.Controller
 {
     public class PhaseController
     {
+        private static readonly TimeSpan[] EventStreamRetryDelays =
+        [
+            TimeSpan.FromSeconds(2),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(10),
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromSeconds(30)
+        ];
+
         private readonly record struct LcuEventSnapshot(
             ClientPhase? Phase,
             string? ChampSelectSessionJson,
@@ -26,22 +35,28 @@ namespace JoinGameAfk.MVP.Controller
         private readonly ChampSelectSettings _champSelectSettings;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly List<IPhaseHandler> _phaseHandlers;
+        private readonly Lcu.ProcessManager _processManager;
 
         private CancellationTokenSource? _cts;
         private Lcu.LeagueClientEventStream? _eventStream;
         private Task? _eventStreamTask;
         private readonly object _lcuEventSignalLock = new();
         private TaskCompletionSource _lcuEventSignal = CreateEventSignal();
+        private readonly object _clientDisconnectLock = new();
         private readonly object _pendingLcuEventsLock = new();
         private ClientPhase? _pendingEventPhase;
         private string? _pendingChampSelectSessionJson;
         private DateTime _pendingChampSelectSessionObservedAtUtc;
+        private string? _pendingClientDisconnectMessage;
         private bool _isRunning;
         private ClientPhase _lastObservedPhase;
         private ClientPhase _lastHandledPhase;
         private bool _isClientConnected;
+        private bool _isEventStreamConnecting;
         private bool _isEventStreamAvailable;
-        private bool _eventStreamUnavailableForCurrentClient;
+        private int _eventStreamRetryAttempt;
+        private DateTime _nextEventStreamRetryAtUtc;
+        private bool _hasReceivedPhaseResponse;
         private bool _isWaitingForClient;
 
         public bool IsRunning => _isRunning;
@@ -53,6 +68,7 @@ namespace JoinGameAfk.MVP.Controller
             _champSelectSettings = champSelectSettings;
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
+            _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
             _champSelectSettings.Saved += OnSettingsSaved;
         }
 
@@ -64,10 +80,10 @@ namespace JoinGameAfk.MVP.Controller
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _isClientConnected = false;
-            _isEventStreamAvailable = false;
-            _eventStreamUnavailableForCurrentClient = false;
+            ResetEventStreamState();
             _isWaitingForClient = false;
             ResetLcuEventSignal();
+            ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
 
             fPhaseProgressionPage.SetWatcherState(true);
@@ -86,7 +102,8 @@ namespace JoinGameAfk.MVP.Controller
             _isRunning = false;
             _cts?.Cancel();
             _eventStream?.Dispose();
-            _isEventStreamAvailable = false;
+            ResetEventStreamState();
+            ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
             fPhaseProgressionPage.SetWatcherState(false);
             fPhaseProgressionPage.SetClientConnection(false);
@@ -98,7 +115,6 @@ namespace JoinGameAfk.MVP.Controller
         {
             Log("Waiting for League Client process...");
 
-            var processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
             Lcu.LeagueClientHttp? http = null;
             AuthModel? currentAuth = null;
 
@@ -110,9 +126,16 @@ namespace JoinGameAfk.MVP.Controller
 
                     try
                     {
+                        if (TryConsumeClientDisconnectRequest(out string? disconnectMessage))
+                        {
+                            DisconnectCurrentClient(ref http, ref currentAuth, disconnectMessage);
+                            await Task.Delay(3000, ct);
+                            continue;
+                        }
+
                         if (http == null || !http.HasAuthToken())
                         {
-                            var auth = processManager.GetLeagueAuth();
+                            var auth = _processManager.GetLeagueAuth();
                             if (auth == null)
                             {
                                 if (!_isWaitingForClient)
@@ -133,7 +156,7 @@ namespace JoinGameAfk.MVP.Controller
                             _isWaitingForClient = false;
                             http = new Lcu.LeagueClientHttp(auth, Log);
                             currentAuth = auth;
-                            _eventStreamUnavailableForCurrentClient = false;
+                            ResetEventStreamState();
                             StartEventStreamIfEnabled(auth, ct);
                             InitializeHandlers(http);
 
@@ -145,11 +168,30 @@ namespace JoinGameAfk.MVP.Controller
                             }
                         }
 
-                        SyncEventStreamState(currentAuth, ct);
+                        var activeAuth = _processManager.GetLeagueAuth();
+                        if (activeAuth is null)
+                        {
+                            DisconnectCurrentClient(
+                                ref http,
+                                ref currentAuth,
+                                "League Client process closed. Waiting for League Client process...");
+                            await Task.Delay(3000, ct);
+                            continue;
+                        }
+
+                        if (!IsSameAuth(activeAuth, currentAuth))
+                        {
+                            DisconnectCurrentClient(
+                                ref http,
+                                ref currentAuth,
+                                "League Client connection changed. Reconnecting...");
+                            continue;
+                        }
 
                         LcuEventSnapshot eventSnapshot = ConsumePendingLcuEvents();
                         ClientPhase phase = await ResolveCurrentPhaseAsync(http, eventSnapshot, ct);
                         fPhaseProgressionPage.UpdatePhase(phase);
+                        SyncEventStreamState(currentAuth, ct);
 
                         if (phase != _lastObservedPhase)
                         {
@@ -207,22 +249,7 @@ namespace JoinGameAfk.MVP.Controller
                     catch (Exception ex)
                     {
                         LogError(ex.Message);
-                        _isClientConnected = false;
-                        _isEventStreamAvailable = false;
-                        _eventStreamUnavailableForCurrentClient = false;
-                        _isWaitingForClient = false;
-                        _lastObservedPhase = ClientPhase.Unknown;
-                        _lastHandledPhase = ClientPhase.Unknown;
-                        fPhaseProgressionPage.SetClientConnection(false);
-                        fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
-                        fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
-                        _eventStream?.Dispose();
-                        _eventStream = null;
-                        _eventStreamTask = null;
-                        ClearPendingLcuEvents();
-                        http?.Dispose();
-                        http = null;
-                        currentAuth = null;
+                        DisconnectCurrentClient(ref http, ref currentAuth);
                         await Task.Delay(5000, ct);
                     }
                 }
@@ -232,27 +259,83 @@ namespace JoinGameAfk.MVP.Controller
                 _eventStream?.Dispose();
                 _eventStream = null;
                 _eventStreamTask = null;
-                _isEventStreamAvailable = false;
+                ResetEventStreamState();
+                ClearClientDisconnectRequest();
                 ClearPendingLcuEvents();
                 http?.Dispose();
                 Log("Stopped watching.");
             }
         }
 
+        private void DisconnectCurrentClient(
+            ref Lcu.LeagueClientHttp? http,
+            ref AuthModel? currentAuth,
+            string? logMessage = null)
+        {
+            if (!string.IsNullOrWhiteSpace(logMessage))
+                Log(logMessage);
+
+            _eventStream?.Dispose();
+            _eventStream = null;
+            _eventStreamTask = null;
+            ResetEventStreamState();
+            ClearPendingLcuEvents();
+            http?.Dispose();
+            http = null;
+            currentAuth = null;
+            _isClientConnected = false;
+            _isWaitingForClient = false;
+            _lastObservedPhase = ClientPhase.Unknown;
+            _lastHandledPhase = ClientPhase.Unknown;
+            fPhaseProgressionPage.SetClientConnection(false);
+            fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
+            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+        }
+
+        private void RequestClientDisconnect(string message)
+        {
+            lock (_clientDisconnectLock)
+            {
+                _pendingClientDisconnectMessage ??= message;
+            }
+
+            SignalLcuEvent();
+        }
+
+        private bool TryConsumeClientDisconnectRequest(out string? message)
+        {
+            lock (_clientDisconnectLock)
+            {
+                message = _pendingClientDisconnectMessage;
+                _pendingClientDisconnectMessage = null;
+            }
+
+            return !string.IsNullOrWhiteSpace(message);
+        }
+
+        private void ClearClientDisconnectRequest()
+        {
+            lock (_clientDisconnectLock)
+            {
+                _pendingClientDisconnectMessage = null;
+            }
+        }
+
         private void StartEventStreamIfEnabled(AuthModel auth, CancellationToken cancellationToken)
         {
             _isEventStreamAvailable = false;
+            _isEventStreamConnecting = false;
 
             if (!_champSelectSettings.UseChampSelectEventStream)
             {
                 _eventStream?.Dispose();
                 _eventStream = null;
                 _eventStreamTask = null;
-                _eventStreamUnavailableForCurrentClient = false;
+                ResetEventStreamState();
                 return;
             }
 
-            StartEventStream(auth, cancellationToken);
+            _nextEventStreamRetryAtUtc = DateTime.MinValue;
         }
 
         private void SyncEventStreamState(AuthModel? auth, CancellationToken cancellationToken)
@@ -264,8 +347,7 @@ namespace JoinGameAfk.MVP.Controller
                     _eventStream.Dispose();
                     _eventStream = null;
                     _eventStreamTask = null;
-                    _isEventStreamAvailable = false;
-                    _eventStreamUnavailableForCurrentClient = false;
+                    ResetEventStreamState();
                     ClearPendingLcuEvents();
                     Log("Live LCU events disabled. Using regular polling.");
                 }
@@ -273,7 +355,10 @@ namespace JoinGameAfk.MVP.Controller
                 return;
             }
 
-            if (auth is null || _eventStream is not null || _eventStreamUnavailableForCurrentClient)
+            if (auth is null || !_hasReceivedPhaseResponse || _eventStream is not null || _isEventStreamConnecting)
+                return;
+
+            if (_nextEventStreamRetryAtUtc > DateTime.UtcNow)
                 return;
 
             StartEventStream(auth, cancellationToken);
@@ -282,9 +367,9 @@ namespace JoinGameAfk.MVP.Controller
         private void StartEventStream(AuthModel auth, CancellationToken cancellationToken)
         {
             _eventStream?.Dispose();
-            _isEventStreamAvailable = true;
-            _eventStreamUnavailableForCurrentClient = false;
-            _eventStream = new Lcu.LeagueClientEventStream(auth, OnLcuEventReceived, Log);
+            _isEventStreamAvailable = false;
+            _isEventStreamConnecting = true;
+            _eventStream = new Lcu.LeagueClientEventStream(auth, OnLcuEventReceived, OnEventStreamConnected, Log);
             var eventStream = _eventStream;
 
             _eventStreamTask = Task.Run(async () =>
@@ -293,15 +378,11 @@ namespace JoinGameAfk.MVP.Controller
                 {
                     await eventStream.RunAsync(cancellationToken);
 
-                    if (!cancellationToken.IsCancellationRequested && _champSelectSettings.UseChampSelectEventStream)
+                    if (!cancellationToken.IsCancellationRequested
+                        && _champSelectSettings.UseChampSelectEventStream
+                        && ReferenceEquals(_eventStream, eventStream))
                     {
-                        _isEventStreamAvailable = false;
-                        _eventStreamUnavailableForCurrentClient = true;
-                        _eventStream?.Dispose();
-                        _eventStream = null;
-                        _eventStreamTask = null;
-                        Log("LCU websocket event stream closed. Falling back to polling.");
-                        SignalLcuEvent();
+                        ScheduleEventStreamRetry("LCU websocket event stream closed.");
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -309,18 +390,73 @@ namespace JoinGameAfk.MVP.Controller
                 }
                 catch (Exception ex)
                 {
-                    if (cancellationToken.IsCancellationRequested || !_champSelectSettings.UseChampSelectEventStream)
+                    if (cancellationToken.IsCancellationRequested
+                        || !_champSelectSettings.UseChampSelectEventStream
+                        || !ReferenceEquals(_eventStream, eventStream))
                         return;
 
-                    Log($"LCU websocket event stream unavailable. Falling back to polling. {ex.Message}");
-                    _isEventStreamAvailable = false;
-                    _eventStreamUnavailableForCurrentClient = true;
-                    _eventStream?.Dispose();
-                    _eventStream = null;
-                    _eventStreamTask = null;
-                    SignalLcuEvent();
+                    ScheduleEventStreamRetry($"LCU websocket event stream unavailable. {ex.Message}");
                 }
             }, CancellationToken.None);
+        }
+
+        private void OnEventStreamConnected()
+        {
+            _isEventStreamConnecting = false;
+            _isEventStreamAvailable = true;
+            _eventStreamRetryAttempt = 0;
+            _nextEventStreamRetryAtUtc = DateTime.MinValue;
+            SignalLcuEvent();
+        }
+
+        private void ScheduleEventStreamRetry(string reason)
+        {
+            if (_processManager.GetLeagueAuth() is null)
+            {
+                RequestClientDisconnect("League Client process closed. Waiting for League Client process...");
+                return;
+            }
+
+            _eventStream?.Dispose();
+            _eventStream = null;
+            _eventStreamTask = null;
+            _isEventStreamConnecting = false;
+            _isEventStreamAvailable = false;
+
+            TimeSpan retryDelay = GetEventStreamRetryDelay(_eventStreamRetryAttempt);
+            _eventStreamRetryAttempt++;
+            _nextEventStreamRetryAtUtc = DateTime.UtcNow.Add(retryDelay);
+
+            Log($"{EnsureTrailingSentencePunctuation(reason)} Using regular polling and retrying live events in {FormatRetryDelay(retryDelay)}.");
+            SignalLcuEvent();
+        }
+
+        private void ResetEventStreamState()
+        {
+            _isEventStreamConnecting = false;
+            _isEventStreamAvailable = false;
+            _eventStreamRetryAttempt = 0;
+            _nextEventStreamRetryAtUtc = DateTime.MinValue;
+            _hasReceivedPhaseResponse = false;
+        }
+
+        private static TimeSpan GetEventStreamRetryDelay(int retryAttempt)
+        {
+            int index = Math.Clamp(retryAttempt, 0, EventStreamRetryDelays.Length - 1);
+            return EventStreamRetryDelays[index];
+        }
+
+        private static string FormatRetryDelay(TimeSpan delay)
+        {
+            return delay.TotalSeconds < 1
+                ? $"{delay.TotalMilliseconds:0} ms"
+                : $"{delay.TotalSeconds:0} seconds";
+        }
+
+        private static string EnsureTrailingSentencePunctuation(string text)
+        {
+            string trimmedText = text.TrimEnd();
+            return trimmedText.EndsWith('.') ? trimmedText : $"{trimmedText}.";
         }
 
         private void OnLcuEventReceived(Lcu.LeagueClientEvent apiEvent)
@@ -429,7 +565,14 @@ namespace JoinGameAfk.MVP.Controller
             if (IsChampSelectFlow(_lastObservedPhase))
                 return _lastObservedPhase;
 
-            return await GetCurrentPhaseAsync(http, cancellationToken);
+            var result = await TryGetCurrentPhaseAsync(http, cancellationToken);
+            if (result.ReceivedPhase)
+            {
+                _hasReceivedPhaseResponse = true;
+                return result.Phase;
+            }
+
+            return ClientPhase.Unknown;
         }
 
         private static bool TryGetPhaseFromEvent(Lcu.LeagueClientEvent apiEvent, out ClientPhase phase)
@@ -488,6 +631,14 @@ namespace JoinGameAfk.MVP.Controller
         private static bool IsDeleteEvent(Lcu.LeagueClientEvent apiEvent)
         {
             return string.Equals(apiEvent.EventType, "Delete", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSameAuth(AuthModel? left, AuthModel? right)
+        {
+            return left is not null
+                && right is not null
+                && string.Equals(left.Port, right.Port, StringComparison.Ordinal)
+                && string.Equals(left.Base64Token, right.Base64Token, StringComparison.Ordinal);
         }
 
         private async Task WaitForLoopDelayAsync(int? delayMs, CancellationToken cancellationToken)
@@ -611,7 +762,7 @@ namespace JoinGameAfk.MVP.Controller
             }
         }
 
-        private static async Task<ClientPhase> GetCurrentPhaseAsync(Lcu.LeagueClientHttp http, CancellationToken cancellationToken)
+        private static async Task<(bool ReceivedPhase, ClientPhase Phase)> TryGetCurrentPhaseAsync(Lcu.LeagueClientHttp http, CancellationToken cancellationToken)
         {
             try
             {
@@ -621,7 +772,7 @@ namespace JoinGameAfk.MVP.Controller
                 if (!trimmedResponseBody.StartsWith('"')
                     && TryParseClientPhase(trimmedResponseBody.Trim('"'), out var rawPhase))
                 {
-                    return rawPhase;
+                    return (true, rawPhase);
                 }
 
                 using var doc = JsonDocument.Parse(trimmedResponseBody);
@@ -629,7 +780,7 @@ namespace JoinGameAfk.MVP.Controller
                 {
                     string? phaseStr = doc.RootElement.GetString();
                     if (TryParseClientPhase(phaseStr, out var phase))
-                        return phase;
+                        return (true, phase);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -638,7 +789,7 @@ namespace JoinGameAfk.MVP.Controller
             }
             catch { }
 
-            return ClientPhase.Unknown;
+            return (false, ClientPhase.Unknown);
         }
 
         private static bool TryParseClientPhase(string? phaseText, out ClientPhase phase)
