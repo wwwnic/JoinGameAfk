@@ -13,11 +13,13 @@ namespace LcuClient
 
             private readonly AuthModel _authToken;
             private readonly HttpClient _httpClient;
+            private readonly Action<string>? _log;
             private bool _disposed;
 
-            public LeagueClientHttp(AuthModel aAuthToken)
+            public LeagueClientHttp(AuthModel aAuthToken, Action<string>? log = null)
             {
                 _authToken = aAuthToken ?? throw new ArgumentNullException(nameof(aAuthToken));
+                _log = log;
 
                 var handler = new HttpClientHandler
                 {
@@ -57,6 +59,12 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
+            public async Task<string> GetReadyCheckAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-matchmaking/v1/ready-check";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
             public async Task HoverChampionAsync(int actionId, int championId, CancellationToken cancellationToken = default)
             {
                 string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}";
@@ -72,6 +80,7 @@ namespace LcuClient
             private async Task<string> GetAsync(string endpoint, CancellationToken cancellationToken)
             {
                 ThrowIfDisposed();
+                LogRequest(HttpMethod.Get, endpoint, body: null);
                 using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
                 request.Headers.CacheControl = new CacheControlHeaderValue
                 {
@@ -92,6 +101,7 @@ namespace LcuClient
             private async Task<string> PostAsync(string endpoint, object? body, CancellationToken cancellationToken)
             {
                 ThrowIfDisposed();
+                LogRequest(HttpMethod.Post, endpoint, body);
                 using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
                 {
                     Content = CreateJsonContent(body)
@@ -108,6 +118,7 @@ namespace LcuClient
             private async Task<string> PatchAsync(string endpoint, object? body, CancellationToken cancellationToken)
             {
                 ThrowIfDisposed();
+                LogRequest(HttpMethod.Patch, endpoint, body);
                 using var request = new HttpRequestMessage(HttpMethod.Patch, endpoint)
                 {
                     Content = CreateJsonContent(body)
@@ -125,6 +136,15 @@ namespace LcuClient
             {
                 string endpoint = "/lol-matchmaking/v1/ready-check/accept";
                 await PostAsync(endpoint, body: null, cancellationToken).ConfigureAwait(false);
+            }
+
+            private void LogRequest(HttpMethod method, string endpoint, object? body)
+            {
+                string bodyText = body is null
+                    ? string.Empty
+                    : $" body={JsonSerializer.Serialize(body)}";
+
+                _log?.Invoke($"LCU request: {method.Method} {endpoint}{bodyText}");
             }
 
             private static StringContent? CreateJsonContent(object? body)

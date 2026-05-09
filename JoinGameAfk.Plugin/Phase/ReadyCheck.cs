@@ -1,4 +1,5 @@
-﻿using JoinGameAfk.Enums;
+using System.Text.Json;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using static LcuClient.Lcu;
@@ -44,6 +45,12 @@ public class ReadyCheck : IPhaseHandler
 
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!await IsReadyCheckStillInProgressAsync(cancellationToken))
+            {
+                Log("Ready check auto-accept skipped because it is no longer active.");
+                return;
+            }
+
             await _http.AcceptMatchAsync(cancellationToken);
             Log("Ready check accepted automatically.");
         }
@@ -55,6 +62,34 @@ public class ReadyCheck : IPhaseHandler
         catch (Exception ex)
         {
             Log($"Ready check auto-accept skipped: {ex.Message}");
+        }
+    }
+
+    private async Task<bool> IsReadyCheckStillInProgressAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            string json = await _http.GetReadyCheckAsync(cancellationToken);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+                return false;
+
+            string? state = root.TryGetProperty("state", out var stateProperty)
+                ? stateProperty.GetString()
+                : null;
+
+            return string.Equals(state, "InProgress", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log($"Ready check state could not be verified before auto-accept: {ex.Message}");
+            return false;
         }
     }
 

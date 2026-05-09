@@ -130,7 +130,7 @@ namespace JoinGameAfk.MVP.Controller
                             }
 
                             _isWaitingForClient = false;
-                            http = new Lcu.LeagueClientHttp(auth);
+                            http = new Lcu.LeagueClientHttp(auth, Log);
                             currentAuth = auth;
                             _eventStreamUnavailableForCurrentClient = false;
                             StartEventStreamIfEnabled(auth, ct);

@@ -32,9 +32,11 @@ namespace LcuClient
                 using var webSocket = CreateWebSocket();
                 _webSocket = webSocket;
 
+                _log?.Invoke($"LCU websocket request: CONNECT wss://127.0.0.1:{_authToken.Port}/");
                 await webSocket.ConnectAsync(new Uri($"wss://127.0.0.1:{_authToken.Port}/"), cancellationToken)
                     .ConfigureAwait(false);
 
+                _log?.Invoke("LCU websocket request: SUBSCRIBE OnJsonApiEvent");
                 await SendTextAsync(webSocket, "[5,\"OnJsonApiEvent\"]", cancellationToken)
                     .ConfigureAwait(false);
 
