@@ -23,6 +23,72 @@ namespace JoinGameAfk.View
             _phaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
             _canApply = canApply;
+            PreviewStoppedIndicator();
+        }
+
+        private void PreviewNeutralIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator(string.Empty);
+        }
+
+        private void PreviewClientStoppedIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Unknown, isWatcherRunning: true, isClientConnected: false);
+        }
+
+        private void PreviewWatchingIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Unknown, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewLobbyIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Lobby, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewInQueueIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Matchmaking, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewReadyCheckIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.ReadyCheck, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewPlanningIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Planning, isWatcherRunning: true, isClientConnected: true, "Hover");
+        }
+
+        private void PreviewBanIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Ban");
+        }
+
+        private void PreviewPickIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Pick");
+        }
+
+        private void PreviewHoverIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Hover");
+        }
+
+        private void PreviewFinalizationIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Finalization");
+        }
+
+        private void PreviewStoppedIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewStoppedIndicator();
+        }
+
+        private void PreviewInGameIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.InGame, isWatcherRunning: true, isClientConnected: true);
         }
 
         private void AddMyBan_Click(object sender, RoutedEventArgs e)
@@ -84,6 +150,29 @@ namespace JoinGameAfk.View
         private void Close_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void PreviewChampionSelectIndicator(string champSelectSubPhase)
+        {
+            PreviewIndicator(ClientPhase.ChampSelect, isWatcherRunning: true, isClientConnected: true, champSelectSubPhase);
+        }
+
+        private void PreviewStoppedIndicator()
+        {
+            PreviewIndicator(ClientPhase.Unknown, isWatcherRunning: false, isClientConnected: false);
+        }
+
+        private void PreviewIndicator(
+            ClientPhase phase,
+            bool isWatcherRunning,
+            bool isClientConnected,
+            string champSelectSubPhase = "")
+        {
+            TestPhaseIndicator.Update(
+                phase,
+                isWatcherRunning,
+                isClientConnected,
+                champSelectSubPhase);
         }
 
         private void AddChampionPlanItem(string text, List<DashboardChampionPlanItem> target, string statusText)

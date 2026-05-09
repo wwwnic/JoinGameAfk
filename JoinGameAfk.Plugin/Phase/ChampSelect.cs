@@ -547,7 +547,7 @@ public class ChampSelect : IPhaseHandler
         return champSelectPhase.ToUpperInvariant() switch
         {
             "BAN_PICK" => "Waiting",
-            "FINALIZATION" => "Waiting",
+            "FINALIZATION" => "Finalization",
             _ => "Waiting",
         };
     }

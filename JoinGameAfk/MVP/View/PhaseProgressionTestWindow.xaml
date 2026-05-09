@@ -1,6 +1,7 @@
 <Window x:Class="JoinGameAfk.View.PhaseProgressionTestWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:JoinGameAfk.View.Controls"
         Title="Phase Progression Tester"
         Width="720"
         Height="640"
@@ -72,6 +73,82 @@
             </StackPanel>
 
             <StackPanel Grid.Row="1">
+                <Border Style="{StaticResource TesterSectionStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Phase Indicator"
+                                   Style="{StaticResource TesterLabelStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <controls:PhaseStatusIndicator x:Name="TestPhaseIndicator"
+                                                           Grid.Column="0"
+                                                           Width="42"
+                                                           Height="42"
+                                                           VerticalAlignment="Center" />
+
+                            <WrapPanel Grid.Column="2"
+                                       VerticalAlignment="Center">
+                                <Button Content="Stopped"
+                                        Click="PreviewStoppedIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Client stopped"
+                                        Click="PreviewClientStoppedIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Watching"
+                                        Click="PreviewWatchingIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Lobby"
+                                        Click="PreviewLobbyIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="In queue"
+                                        Click="PreviewInQueueIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Ready check"
+                                        Click="PreviewReadyCheckIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Planning"
+                                        Click="PreviewPlanningIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Champ select"
+                                        Click="PreviewNeutralIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Ban"
+                                        Click="PreviewBanIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Pick"
+                                        Click="PreviewPickIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Hover"
+                                        Click="PreviewHoverIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Finalization"
+                                        Click="PreviewFinalizationIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="In game"
+                                        Click="PreviewInGameIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                            </WrapPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <Border Style="{StaticResource TesterSectionStyle}">
                     <StackPanel>
                         <TextBlock Text="Bans"

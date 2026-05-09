@@ -1,14 +1,12 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
 
 namespace JoinGameAfk.View.Controls
 {
     public partial class PhaseStatusIndicator : UserControl
     {
-        private Storyboard? _championSelectStoryboard;
         private bool _isChampionAnimationRunning;
         private ChampionAnimationPalette? _activeChampionAnimationPalette;
         private ClientPhase _phase = ClientPhase.Unknown;
@@ -21,7 +19,8 @@ namespace JoinGameAfk.View.Controls
             Neutral,
             Ban,
             Pick,
-            Hover
+            Hover,
+            Finalization
         }
 
         public PhaseStatusIndicator()
@@ -50,10 +49,12 @@ namespace JoinGameAfk.View.Controls
         {
             if (ShouldShowChampionAnimation())
             {
+                var palette = GetChampionAnimationPalette();
+
                 if (IsLoaded)
-                    ShowChampionAnimation(GetChampionAnimationPalette());
+                    ShowChampionAnimation(palette);
                 else
-                    ShowChampionGlyphWithoutAnimation();
+                    ShowChampionGlyphWithoutAnimation(palette);
 
                 return;
             }
@@ -98,14 +99,16 @@ namespace JoinGameAfk.View.Controls
                 "Ban" => ChampionAnimationPalette.Ban,
                 "Pick" => ChampionAnimationPalette.Pick,
                 "Hover" => ChampionAnimationPalette.Hover,
+                "Finalization" => ChampionAnimationPalette.Finalization,
                 _ => ChampionAnimationPalette.Neutral
             };
         }
 
-        private void ShowChampionGlyphWithoutAnimation()
+        private void ShowChampionGlyphWithoutAnimation(ChampionAnimationPalette palette)
         {
             PhaseCircle.Visibility = Visibility.Collapsed;
             ChampionGlyph.Visibility = Visibility.Visible;
+            ApplyChampionAnimationPalette(palette);
         }
 
         private void ShowChampionAnimation(ChampionAnimationPalette palette)
@@ -118,9 +121,9 @@ namespace JoinGameAfk.View.Controls
 
             StopChampionAnimation();
             ApplyChampionAnimationPalette(palette);
-            ChampionSelectStoryboard?.Begin(this, true);
-            _isChampionAnimationRunning = ChampionSelectStoryboard is not null;
-            _activeChampionAnimationPalette = _isChampionAnimationRunning ? palette : null;
+            ChampionPolyhedron.Start();
+            _isChampionAnimationRunning = true;
+            _activeChampionAnimationPalette = palette;
         }
 
         private void StopChampionAnimation()
@@ -128,34 +131,18 @@ namespace JoinGameAfk.View.Controls
             if (!_isChampionAnimationRunning)
                 return;
 
-            ChampionSelectStoryboard?.Stop(this);
+            ChampionPolyhedron.Stop();
             _isChampionAnimationRunning = false;
             _activeChampionAnimationPalette = null;
         }
 
-        private Storyboard? ChampionSelectStoryboard =>
-            _championSelectStoryboard ??= (TryFindResource("ChampionSelectStoryboard") as Storyboard)?.Clone();
-
         private void ApplyChampionAnimationPalette(ChampionAnimationPalette palette)
         {
-            if (ChampionSelectStoryboard is not Storyboard storyboard)
-                return;
-
             var colors = GetChampionPaletteColors(palette);
 
-            ChampionPulse.Stroke = new SolidColorBrush(colors.PulseColor);
-
-            foreach (Timeline timeline in storyboard.Children)
-            {
-                if (timeline is not ColorAnimationUsingKeyFrames colorAnimation)
-                    continue;
-
-                string targetName = Storyboard.GetTargetName(colorAnimation);
-                if (string.Equals(targetName, "ChampionCoreBrush", StringComparison.Ordinal))
-                    SetChampionKeyFrameColors(colorAnimation, colors.CoreColors);
-                else if (string.Equals(targetName, "ChampionShadowBrush", StringComparison.Ordinal))
-                    SetChampionKeyFrameColors(colorAnimation, colors.ShadowColors);
-            }
+            ChampionPolyhedron.PrimaryColor = colors.Primary;
+            ChampionPolyhedron.SecondaryColor = colors.Secondary;
+            ChampionPolyhedron.RidgeColor = colors.Ridge;
         }
 
         private Brush ResourceBrush(string key, Brush fallback)
@@ -163,34 +150,31 @@ namespace JoinGameAfk.View.Controls
             return TryFindResource(key) as Brush ?? fallback;
         }
 
-        private static (Color[] CoreColors, Color[] ShadowColors, Color PulseColor) GetChampionPaletteColors(ChampionAnimationPalette palette)
+        private static ChampionPaletteColors GetChampionPaletteColors(ChampionAnimationPalette palette)
         {
             return palette switch
             {
-                ChampionAnimationPalette.Ban => (
-                    new[] { Rgb(239, 68, 68), Rgb(249, 115, 22), Rgb(220, 38, 38), Rgb(239, 68, 68) },
-                    new[] { Rgb(127, 29, 29), Rgb(251, 113, 133), Rgb(153, 27, 27), Rgb(127, 29, 29) },
-                    Argb(128, 248, 113, 113)),
-                ChampionAnimationPalette.Pick => (
-                    new[] { Rgb(56, 189, 248), Rgb(37, 99, 235), Rgb(34, 211, 238), Rgb(56, 189, 248) },
-                    new[] { Rgb(30, 64, 175), Rgb(125, 211, 252), Rgb(30, 58, 138), Rgb(30, 64, 175) },
-                    Argb(128, 125, 211, 252)),
-                ChampionAnimationPalette.Hover => (
-                    new[] { Rgb(245, 158, 11), Rgb(251, 191, 36), Rgb(167, 139, 250), Rgb(245, 158, 11) },
-                    new[] { Rgb(180, 83, 9), Rgb(124, 58, 237), Rgb(249, 115, 22), Rgb(180, 83, 9) },
-                    Argb(128, 251, 191, 36)),
-                _ => (
-                    new[] { Rgb(34, 211, 238), Rgb(167, 139, 250), Rgb(245, 158, 11), Rgb(34, 211, 238) },
-                    new[] { Rgb(124, 58, 237), Rgb(239, 68, 68), Rgb(56, 189, 248), Rgb(124, 58, 237) },
-                    Argb(128, 255, 255, 255))
+                ChampionAnimationPalette.Ban => new(
+                    Rgb(239, 68, 68),
+                    Rgb(127, 29, 29),
+                    Argb(220, 254, 202, 202)),
+                ChampionAnimationPalette.Pick => new(
+                    Rgb(56, 189, 248),
+                    Rgb(30, 64, 175),
+                    Argb(220, 219, 234, 254)),
+                ChampionAnimationPalette.Hover => new(
+                    Rgb(245, 158, 11),
+                    Rgb(124, 58, 237),
+                    Argb(220, 254, 243, 199)),
+                ChampionAnimationPalette.Finalization => new(
+                    Rgb(168, 85, 247),
+                    Rgb(76, 29, 149),
+                    Argb(235, 245, 208, 255)),
+                _ => new(
+                    Rgb(34, 211, 238),
+                    Rgb(124, 58, 237),
+                    Argb(220, 236, 254, 255))
             };
-        }
-
-        private static void SetChampionKeyFrameColors(ColorAnimationUsingKeyFrames animation, IReadOnlyList<Color> colors)
-        {
-            int count = Math.Min(animation.KeyFrames.Count, colors.Count);
-            for (int i = 0; i < count; i++)
-                animation.KeyFrames[i].Value = colors[i];
         }
 
         private static Color Rgb(byte red, byte green, byte blue) =>
@@ -198,5 +182,10 @@ namespace JoinGameAfk.View.Controls
 
         private static Color Argb(byte alpha, byte red, byte green, byte blue) =>
             Color.FromArgb(alpha, red, green, blue);
+
+        private sealed record ChampionPaletteColors(
+            Color Primary,
+            Color Secondary,
+            Color Ridge);
     }
 }
