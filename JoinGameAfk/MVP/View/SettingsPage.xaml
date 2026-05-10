@@ -12,6 +12,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
@@ -604,6 +605,30 @@
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
+                    <TextBlock Text="Legal"
+                               Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="Riot Games notice."
+                               Style="{StaticResource SectionDescriptionStyle}"
+                               Margin="0,4,0,0" />
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <StackPanel>
+                            <TextBlock Text="JoinGameAfk uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="JoinGameAfk isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="6"
+                    Style="{StaticResource SectionCardStyle}"
+                    Margin="0,0,0,12">
+                <StackPanel>
                     <TextBlock Text="Performance"
                                Style="{StaticResource SectionTitleStyle}" />
                     <TextBlock Text="Choose live LCU events or regular polling for League Client updates."
@@ -735,7 +760,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="6"
+            <Border Grid.Row="7"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
