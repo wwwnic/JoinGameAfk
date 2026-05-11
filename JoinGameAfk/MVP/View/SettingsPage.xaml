@@ -344,6 +344,38 @@
                         </Grid>
                     </Border>
 
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Open pick/ban overlay automatically"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, the overlay opens when champion select starts and closes when champion select ends." />
+                                </StackPanel>
+                                <TextBlock Text="Shows the overlay only for champion select and planning phases."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoShowPickBanOverlayCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="When disabled, the overlay only opens from the toolbar button." />
+                        </Grid>
+                    </Border>
+
                     <StackPanel x:Name="ChampionSelectAutomationOptionsPanel">
                     <Border Style="{StaticResource SettingRowStyle}">
                         <Grid>

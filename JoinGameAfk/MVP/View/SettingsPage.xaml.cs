@@ -77,6 +77,7 @@ namespace JoinGameAfk.View
             _settings.ReadyCheckSoundNotificationKey = GetSelectedReadyCheckSoundKey();
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.ChampionSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
+            _settings.AutoShowPickBanOverlayEnabled = AutoShowPickBanOverlayCheckBox.IsChecked == true;
             _settings.AutoHoverChampionEnabled = _settings.ChampionSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
             _settings.AutoLockSelectionEnabled = _settings.ChampionSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
@@ -143,6 +144,7 @@ namespace JoinGameAfk.View
                 SelectReadyCheckSound(_settings.ReadyCheckSoundNotificationKey);
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
                 ChampionSelectAutomationCheckBox.IsChecked = championSelectAutomationEnabled;
+                AutoShowPickBanOverlayCheckBox.IsChecked = _settings.AutoShowPickBanOverlayEnabled;
                 AutoHoverChampionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
                 AutoLockSelectionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
                 PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();

@@ -25,6 +25,7 @@ namespace JoinGameAfk.View
         private readonly Frame[] _frames;
         private readonly PhaseProgressionPage _dashboardPage;
         private readonly LogsPage _logsPage;
+        private readonly ChampSelectSettings _settings;
         private PhaseController? _phaseController;
         private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
         private PickBanOverlayWindow? _pickBanOverlayWindow;
@@ -34,15 +35,19 @@ namespace JoinGameAfk.View
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
+        private bool _isPickBanOverlayAutoOpened;
+        private bool _isClosingAutoPickBanOverlay;
+        private bool _suppressAutoPickBanOverlayForCurrentChampSelect;
 
         public int ActiveTabIndex => _activeTabIndex;
 
-        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage)
+        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, ChampSelectSettings settings)
         {
             InitializeComponent();
 
             _dashboardPage = dashboardPage;
             _logsPage = logsPage;
+            _settings = settings;
             DashboardFrame.Content = dashboardPage;
             ChampionPrioritiesFrame.Content = championPrioritiesPage;
             SettingsFrame.Content = settingsPage;
@@ -54,6 +59,7 @@ namespace JoinGameAfk.View
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
             Closed += MainWindow_Closed;
             _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
+            _settings.Saved += Settings_Saved;
             AppThemeManager.ThemeChanged += RefreshTheme;
             ActivateTab(0);
             SetWatcherState(false);
@@ -71,6 +77,7 @@ namespace JoinGameAfk.View
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
             AppThemeManager.ThemeChanged -= RefreshTheme;
+            _settings.Saved -= Settings_Saved;
             _dashboardPage.DashboardStatusChanged -= UpdateDashboardStatus;
             _pickBanOverlayWindow?.Close();
         }
@@ -96,6 +103,7 @@ namespace JoinGameAfk.View
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.SetWatcherState(_isWatcherRunning);
+                SynchronizeAutoPickBanOverlay();
             });
         }
 
@@ -107,6 +115,7 @@ namespace JoinGameAfk.View
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.SetClientConnection(_isClientConnected);
+                SynchronizeAutoPickBanOverlay();
             });
         }
 
@@ -133,7 +142,7 @@ namespace JoinGameAfk.View
 
         private void PickBanOverlayButton_Click(object sender, RoutedEventArgs e)
         {
-            ShowPickBanOverlay();
+            ShowPickBanOverlay(autoOpened: false);
             WindowState = WindowState.Minimized;
         }
 
@@ -360,10 +369,16 @@ namespace JoinGameAfk.View
         {
             Dispatcher.Invoke(() =>
             {
+                bool wasChampSelectFlow = IsChampSelectFlow(_currentPhase);
+                bool isChampSelectFlow = IsChampSelectFlow(phase);
+                if (wasChampSelectFlow != isChampSelectFlow)
+                    _suppressAutoPickBanOverlayForCurrentChampSelect = false;
+
                 _currentPhase = phase;
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.UpdatePhase(_currentPhase);
+                SynchronizeAutoPickBanOverlay();
             });
         }
 
@@ -385,6 +400,11 @@ namespace JoinGameAfk.View
                 RefreshWatcherButton();
                 RefreshPhaseText();
             });
+        }
+
+        private void Settings_Saved()
+        {
+            Dispatcher.Invoke(SynchronizeAutoPickBanOverlay);
         }
 
         private void RefreshPhaseIndicator()
@@ -428,14 +448,32 @@ namespace JoinGameAfk.View
             };
         }
 
-        private void ShowPickBanOverlay()
+        private void ShowPickBanOverlay(bool autoOpened)
         {
             if (_pickBanOverlayWindow is null)
             {
                 _pickBanOverlayWindow = new PickBanOverlayWindow();
-                _pickBanOverlayWindow.Closed += (_, _) => _pickBanOverlayWindow = null;
+                _pickBanOverlayWindow.Closed += (_, _) =>
+                {
+                    bool wasAutoOpened = _isPickBanOverlayAutoOpened;
+                    _pickBanOverlayWindow = null;
+                    _isPickBanOverlayAutoOpened = false;
+
+                    if (wasAutoOpened
+                        && !_isClosingAutoPickBanOverlay
+                        && IsChampSelectFlow(_currentPhase))
+                    {
+                        _suppressAutoPickBanOverlayForCurrentChampSelect = true;
+                    }
+                };
                 PositionPickBanOverlay(_pickBanOverlayWindow);
             }
+
+            if (!autoOpened)
+                _suppressAutoPickBanOverlayForCurrentChampSelect = false;
+
+            if (autoOpened || _pickBanOverlayWindow.IsVisible)
+                _isPickBanOverlayAutoOpened = autoOpened;
 
             RefreshPickBanOverlayState(_pickBanOverlayWindow);
 
@@ -443,6 +481,51 @@ namespace JoinGameAfk.View
                 _pickBanOverlayWindow.Show();
 
             _pickBanOverlayWindow.Activate();
+        }
+
+        private void SynchronizeAutoPickBanOverlay()
+        {
+            if (ShouldAutoShowPickBanOverlay())
+            {
+                if (_pickBanOverlayWindow is null || !_pickBanOverlayWindow.IsVisible)
+                    ShowPickBanOverlay(autoOpened: true);
+
+                return;
+            }
+
+            CloseAutoPickBanOverlay();
+        }
+
+        private bool ShouldAutoShowPickBanOverlay()
+        {
+            return _settings.AutoShowPickBanOverlayEnabled
+                && _isWatcherRunning
+                && _isClientConnected
+                && !_suppressAutoPickBanOverlayForCurrentChampSelect
+                && IsChampSelectFlow(_currentPhase);
+        }
+
+        private void CloseAutoPickBanOverlay()
+        {
+            if (!_isPickBanOverlayAutoOpened)
+                return;
+
+            _isClosingAutoPickBanOverlay = true;
+            try
+            {
+                _pickBanOverlayWindow?.Close();
+                _pickBanOverlayWindow = null;
+                _isPickBanOverlayAutoOpened = false;
+            }
+            finally
+            {
+                _isClosingAutoPickBanOverlay = false;
+            }
+        }
+
+        private static bool IsChampSelectFlow(ClientPhase phase)
+        {
+            return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
         private void RefreshPickBanOverlayState(PickBanOverlayWindow overlayWindow)

@@ -51,6 +51,11 @@ namespace JoinGameAfk.Model
         public bool ChampionSelectAutomationEnabled { get; set; } = true;
 
         /// <summary>
+        /// Whether the pick/ban overlay should open automatically during champion select.
+        /// </summary>
+        public bool AutoShowPickBanOverlayEnabled { get; set; } = true;
+
+        /// <summary>
         /// Whether the app should automatically hover configured champions during pick or ban.
         /// </summary>
         public bool AutoHoverChampionEnabled { get; set; } = true;
@@ -188,6 +193,7 @@ namespace JoinGameAfk.Model
             ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
             PickLockDelaySeconds = defaults.PickLockDelaySeconds;
             ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
+            AutoShowPickBanOverlayEnabled = defaults.AutoShowPickBanOverlayEnabled;
             AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
             ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
             BanLockDelaySeconds = defaults.BanLockDelaySeconds;
