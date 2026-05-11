@@ -15,6 +15,8 @@ namespace JoinGameAfk.View
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
 
+        public event Action<double, double>? PositionChangedByUser;
+
         public PickBanOverlayWindow()
         {
             InitializeComponent();
@@ -170,7 +172,10 @@ namespace JoinGameAfk.View
         private void DragHandle_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
+            {
                 DragMove();
+                PositionChangedByUser?.Invoke(Left, Top);
+            }
         }
 
         private void TopmostButton_Click(object sender, RoutedEventArgs e)

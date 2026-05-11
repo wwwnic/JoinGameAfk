@@ -450,9 +450,13 @@ namespace JoinGameAfk.View
 
         private void ShowPickBanOverlay(bool autoOpened)
         {
+            bool shouldLogAutoOpen = autoOpened
+                && (_pickBanOverlayWindow is null || !_pickBanOverlayWindow.IsVisible);
+
             if (_pickBanOverlayWindow is null)
             {
                 _pickBanOverlayWindow = new PickBanOverlayWindow();
+                _pickBanOverlayWindow.PositionChangedByUser += PickBanOverlayWindow_PositionChangedByUser;
                 _pickBanOverlayWindow.Closed += (_, _) =>
                 {
                     bool wasAutoOpened = _isPickBanOverlayAutoOpened;
@@ -464,6 +468,7 @@ namespace JoinGameAfk.View
                         && IsChampSelectFlow(_currentPhase))
                     {
                         _suppressAutoPickBanOverlayForCurrentChampSelect = true;
+                        LogAutoOverlay("Pick/ban overlay auto-open suppressed for this champion select because the overlay was closed manually.");
                     }
                 };
                 PositionPickBanOverlay(_pickBanOverlayWindow);
@@ -479,6 +484,9 @@ namespace JoinGameAfk.View
 
             if (!_pickBanOverlayWindow.IsVisible)
                 _pickBanOverlayWindow.Show();
+
+            if (shouldLogAutoOpen)
+                LogAutoOverlay("Pick/ban overlay auto-opened for champion select.");
 
             _pickBanOverlayWindow.Activate();
         }
@@ -510,17 +518,44 @@ namespace JoinGameAfk.View
             if (!_isPickBanOverlayAutoOpened)
                 return;
 
+            string closeReason = GetAutoPickBanOverlayCloseReason();
             _isClosingAutoPickBanOverlay = true;
             try
             {
                 _pickBanOverlayWindow?.Close();
                 _pickBanOverlayWindow = null;
                 _isPickBanOverlayAutoOpened = false;
+                LogAutoOverlay($"Pick/ban overlay auto-closed ({closeReason}).");
             }
             finally
             {
                 _isClosingAutoPickBanOverlay = false;
             }
+        }
+
+        private string GetAutoPickBanOverlayCloseReason()
+        {
+            if (!_settings.AutoShowPickBanOverlayEnabled)
+                return "auto-open setting disabled";
+
+            if (!_isWatcherRunning)
+                return "watcher stopped";
+
+            if (!_isClientConnected)
+                return "League Client disconnected";
+
+            if (!IsChampSelectFlow(_currentPhase))
+                return "champion select ended";
+
+            if (_suppressAutoPickBanOverlayForCurrentChampSelect)
+                return "manual suppression active";
+
+            return "conditions no longer match";
+        }
+
+        private void LogAutoOverlay(string message)
+        {
+            _logsPage.WriteLine(message);
         }
 
         private static bool IsChampSelectFlow(ClientPhase phase)
@@ -539,6 +574,13 @@ namespace JoinGameAfk.View
 
         private void PositionPickBanOverlay(PickBanOverlayWindow overlayWindow)
         {
+            Rect virtualScreenBounds = GetVirtualScreenBounds();
+            if (TryGetSavedPickBanOverlayPosition(out double savedLeft, out double savedTop))
+            {
+                ApplyOverlayPosition(overlayWindow, savedLeft, savedTop, virtualScreenBounds);
+                return;
+            }
+
             Rect anchorBounds = WindowState == WindowState.Normal
                 ? new Rect(Left, Top, ActualWidth > 0 ? ActualWidth : Width, ActualHeight > 0 ? ActualHeight : Height)
                 : RestoreBounds;
@@ -547,8 +589,75 @@ namespace JoinGameAfk.View
             double targetLeft = anchorBounds.Right - overlayWindow.Width - 18;
             double targetTop = anchorBounds.Top + 76;
 
-            overlayWindow.Left = Math.Clamp(targetLeft, workArea.Left + 8, workArea.Right - overlayWindow.Width - 8);
-            overlayWindow.Top = Math.Clamp(targetTop, workArea.Top + 8, workArea.Bottom - overlayWindow.Height - 8);
+            ApplyOverlayPosition(overlayWindow, targetLeft, targetTop, workArea);
+        }
+
+        private void PickBanOverlayWindow_PositionChangedByUser(double left, double top)
+        {
+            if (!double.IsFinite(left) || !double.IsFinite(top))
+                return;
+
+            Rect bounds = GetVirtualScreenBounds();
+            _settings.PickBanOverlayLeft = ClampToRange(left, bounds.Left + 8, bounds.Right - GetOverlayWidth(_pickBanOverlayWindow) - 8);
+            _settings.PickBanOverlayTop = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetOverlayHeight(_pickBanOverlayWindow) - 8);
+            _settings.Save();
+        }
+
+        private bool TryGetSavedPickBanOverlayPosition(out double left, out double top)
+        {
+            left = 0;
+            top = 0;
+
+            if (_settings.PickBanOverlayLeft is not double savedLeft
+                || _settings.PickBanOverlayTop is not double savedTop
+                || !double.IsFinite(savedLeft)
+                || !double.IsFinite(savedTop))
+            {
+                return false;
+            }
+
+            left = savedLeft;
+            top = savedTop;
+            return true;
+        }
+
+        private static void ApplyOverlayPosition(PickBanOverlayWindow overlayWindow, double left, double top, Rect bounds)
+        {
+            overlayWindow.Left = ClampToRange(left, bounds.Left + 8, bounds.Right - GetOverlayWidth(overlayWindow) - 8);
+            overlayWindow.Top = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetOverlayHeight(overlayWindow) - 8);
+        }
+
+        private static Rect GetVirtualScreenBounds()
+        {
+            return new Rect(
+                SystemParameters.VirtualScreenLeft,
+                SystemParameters.VirtualScreenTop,
+                Math.Max(1, SystemParameters.VirtualScreenWidth),
+                Math.Max(1, SystemParameters.VirtualScreenHeight));
+        }
+
+        private static double GetOverlayWidth(PickBanOverlayWindow? overlayWindow)
+        {
+            if (overlayWindow is null)
+                return 360;
+
+            return overlayWindow.ActualWidth > 0 ? overlayWindow.ActualWidth : overlayWindow.Width;
+        }
+
+        private static double GetOverlayHeight(PickBanOverlayWindow? overlayWindow)
+        {
+            if (overlayWindow is null)
+                return 420;
+
+            return overlayWindow.ActualHeight > 0 ? overlayWindow.ActualHeight : overlayWindow.Height;
+        }
+
+        private static double ClampToRange(double value, double min, double max)
+        {
+            if (max < min)
+                return min;
+
+            return Math.Clamp(value, min, max);
         }
 
         private Brush ResourceBrush(string key, Brush fallback)

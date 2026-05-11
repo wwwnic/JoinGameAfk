@@ -56,6 +56,16 @@ namespace JoinGameAfk.Model
         public bool AutoShowPickBanOverlayEnabled { get; set; } = true;
 
         /// <summary>
+        /// Last user-selected pick/ban overlay left position in WPF device-independent pixels.
+        /// </summary>
+        public double? PickBanOverlayLeft { get; set; }
+
+        /// <summary>
+        /// Last user-selected pick/ban overlay top position in WPF device-independent pixels.
+        /// </summary>
+        public double? PickBanOverlayTop { get; set; }
+
+        /// <summary>
         /// Whether the app should automatically hover configured champions during pick or ban.
         /// </summary>
         public bool AutoHoverChampionEnabled { get; set; } = true;
