@@ -17,6 +17,22 @@
         Topmost="True"
         Closed="Window_Closed">
     <Window.Resources>
+        <SolidColorBrush x:Key="UnavailableNotOwnedSurfaceBrush" Color="#3A2705" />
+        <SolidColorBrush x:Key="UnavailableNotOwnedAccentBrush" Color="#F59E0B" />
+        <SolidColorBrush x:Key="UnavailableNotOwnedTextBrush" Color="#FFE8A3" />
+        <SolidColorBrush x:Key="UnavailableBannedSurfaceBrush" Color="#351015" />
+        <SolidColorBrush x:Key="UnavailableBannedAccentBrush" Color="#EF4444" />
+        <SolidColorBrush x:Key="UnavailableBannedTextBrush" Color="#FECACA" />
+        <SolidColorBrush x:Key="UnavailableSelectedSurfaceBrush" Color="#261346" />
+        <SolidColorBrush x:Key="UnavailableSelectedAccentBrush" Color="#A78BFA" />
+        <SolidColorBrush x:Key="UnavailableSelectedTextBrush" Color="#DDD6FE" />
+        <SolidColorBrush x:Key="UnavailableFailedSurfaceBrush" Color="#1F2937" />
+        <SolidColorBrush x:Key="UnavailableFailedAccentBrush" Color="#94A3B8" />
+        <SolidColorBrush x:Key="UnavailableFailedTextBrush" Color="#E5E7EB" />
+        <SolidColorBrush x:Key="UnavailableBlockedSurfaceBrush" Color="#102A43" />
+        <SolidColorBrush x:Key="UnavailableBlockedAccentBrush" Color="#38BDF8" />
+        <SolidColorBrush x:Key="UnavailableBlockedTextBrush" Color="#BAE6FD" />
+
         <Style x:Key="OverlayTitleButtonStyle"
                TargetType="Button"
                BasedOn="{StaticResource TitleBarButtonStyle}">
@@ -55,6 +71,31 @@
                     <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
                     <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="NotOwned">
+                    <Setter Property="Background" Value="{StaticResource UnavailableNotOwnedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableNotOwnedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableNotOwnedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Banned">
+                    <Setter Property="Background" Value="{StaticResource UnavailableBannedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBannedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Selected">
+                    <Setter Property="Background" Value="{StaticResource UnavailableSelectedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableSelectedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Failed">
+                    <Setter Property="Background" Value="{StaticResource UnavailableFailedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableFailedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableFailedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Blocked">
+                    <Setter Property="Background" Value="{StaticResource UnavailableBlockedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBlockedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableBlockedTextBrush}" />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
@@ -73,10 +114,83 @@
                 <DataTrigger Binding="{Binding IsAvailable}" Value="False">
                     <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="NotOwned">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableNotOwnedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Banned">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Selected">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Failed">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableFailedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Blocked">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableBlockedTextBrush}" />
+                </DataTrigger>
                 <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
                 </DataTrigger>
             </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OverlayUnavailableHelpBadgeStyle" TargetType="Border">
+            <Setter Property="Width" Value="15" />
+            <Setter Property="Height" Value="15" />
+            <Setter Property="Margin" Value="5,0,0,0" />
+            <Setter Property="CornerRadius" Value="7.5" />
+            <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Help" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="100" />
+            <Setter Property="ToolTipService.ShowDuration" Value="20000" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsAvailable}" Value="False">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="NotOwned">
+                    <Setter Property="Background" Value="{StaticResource UnavailableNotOwnedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableNotOwnedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableNotOwnedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Banned">
+                    <Setter Property="Background" Value="{StaticResource UnavailableBannedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBannedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Selected">
+                    <Setter Property="Background" Value="{StaticResource UnavailableSelectedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableSelectedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Failed">
+                    <Setter Property="Background" Value="{StaticResource UnavailableFailedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableFailedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableFailedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding UnavailableReasonKind}" Value="Blocked">
+                    <Setter Property="Background" Value="{StaticResource UnavailableBlockedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBlockedAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableBlockedTextBrush}" />
+                </DataTrigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource TextInverseBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OverlayUnavailableHelpTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="LineHeight" Value="11" />
         </Style>
 
         <Style x:Key="OverlayHeaderTextStyle" TargetType="TextBlock">
@@ -324,10 +438,16 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Style="{StaticResource OverlayPlanChipStyle}"
-                                                        ToolTip="{Binding StatusText}">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               Style="{StaticResource OverlayPlanChipTextStyle}" />
+                                                <Border Style="{StaticResource OverlayPlanChipStyle}">
+                                                    <DockPanel LastChildFill="False">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Style="{StaticResource OverlayPlanChipTextStyle}" />
+                                                        <Border Style="{StaticResource OverlayUnavailableHelpBadgeStyle}"
+                                                                ToolTip="{Binding StatusText}">
+                                                            <TextBlock Text="?"
+                                                                       Style="{StaticResource OverlayUnavailableHelpTextStyle}" />
+                                                        </Border>
+                                                    </DockPanel>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -394,10 +514,16 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Style="{StaticResource OverlayPlanChipStyle}"
-                                                        ToolTip="{Binding StatusText}">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               Style="{StaticResource OverlayPlanChipTextStyle}" />
+                                                <Border Style="{StaticResource OverlayPlanChipStyle}">
+                                                    <DockPanel LastChildFill="False">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   Style="{StaticResource OverlayPlanChipTextStyle}" />
+                                                        <Border Style="{StaticResource OverlayUnavailableHelpBadgeStyle}"
+                                                                ToolTip="{Binding StatusText}">
+                                                            <TextBlock Text="?"
+                                                                       Style="{StaticResource OverlayUnavailableHelpTextStyle}" />
+                                                        </Border>
+                                                    </DockPanel>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

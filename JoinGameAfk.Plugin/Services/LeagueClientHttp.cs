@@ -60,6 +60,24 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
+            public async Task<string> GetCurrentSummonerAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-summoner/v1/current-summoner";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
+            public async Task<string> GetChampionInventoryMinimalAsync(long summonerId, CancellationToken cancellationToken = default)
+            {
+                string endpoint = $"/lol-champions/v1/inventories/{summonerId}/champions-minimal";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
+            public async Task<string> GetOwnedChampionsMinimalAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-champions/v1/owned-champions-minimal";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
             public async Task<string> GetReadyCheckAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-matchmaking/v1/ready-check";

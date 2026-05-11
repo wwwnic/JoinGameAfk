@@ -3,6 +3,7 @@ using System.Text.Json;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
+using LcuClient;
 using static LcuClient.Lcu;
 
 public class ChampSelect : IPhaseHandler
@@ -31,6 +32,7 @@ public class ChampSelect : IPhaseHandler
 
     private readonly LeagueClientHttp _http;
     private readonly ChampSelectSettings _settings;
+    private readonly LeagueChampionOwnershipService _ownershipService;
     private readonly Action<string>? _log;
     private string? _lastSessionId;
     private bool _hasPicked;
@@ -69,6 +71,7 @@ public class ChampSelect : IPhaseHandler
     {
         _http = http;
         _settings = settings;
+        _ownershipService = new LeagueChampionOwnershipService(http, log);
         _log = log;
     }
 
@@ -132,6 +135,7 @@ public class ChampSelect : IPhaseHandler
         var banChoices = GetMergedBanChampionChoices(assignedPosition);
         var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
         var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
+        ChampionOwnershipSnapshot ownershipSnapshot = await _ownershipService.GetSnapshotAsync(cancellationToken);
         TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
         string champSelectPhase = timerSnapshot.Phase;
         long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
@@ -185,7 +189,7 @@ public class ChampSelect : IPhaseHandler
 
                     if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                     {
-                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, cancellationToken);
+                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
                     }
                     else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                     {
@@ -195,10 +199,10 @@ public class ChampSelect : IPhaseHandler
             }
         }
 
-        LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
+        LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, ownershipSnapshot, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
     }
 
-    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
+    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, ChampionOwnershipSnapshot ownershipSnapshot, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
     {
         var activeLockCountdown = GetActiveLockCountdownStatus(localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
 
@@ -209,8 +213,8 @@ public class ChampSelect : IPhaseHandler
             TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId),
             MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam"),
             TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam"),
-            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds, "Pick"),
-            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds, "Ban"),
+            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds, ownershipSnapshot, requiresOwnedChampion: true, availableStatusText: "Pick"),
+            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, requiresOwnedChampion: false, availableStatusText: "Ban"),
             PickChampionText = "No picks configured",
             BanChampionText = "No bans configured",
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
@@ -250,14 +254,30 @@ public class ChampSelect : IPhaseHandler
             && _settings.AutoLockSelectionEnabled;
     }
 
-    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, string availableStatusText)
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, bool requiresOwnedChampion, string availableStatusText)
     {
         return championChoices
             .Select(choice =>
             {
-                string? unavailableStatus = failedChampionIds.Contains(choice.ChampionId)
-                    ? "Failed"
-                    : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, choice.ChampionId);
+                string? unavailableStatus;
+                string unavailableReasonKind;
+
+                if (failedChampionIds.Contains(choice.ChampionId))
+                {
+                    unavailableStatus = "Failed";
+                    unavailableReasonKind = DashboardChampionAvailabilityReason.Failed;
+                }
+                else
+                {
+                    unavailableStatus = GetChampionUnavailableStatus(root, localPlayerCellId, actionId, choice.ChampionId);
+                    unavailableReasonKind = GetUnavailableReasonKind(unavailableStatus);
+                }
+
+                if (unavailableStatus is null && requiresOwnedChampion)
+                {
+                    unavailableStatus = GetChampionOwnershipUnavailableStatus(ownershipSnapshot, choice.ChampionId);
+                    unavailableReasonKind = GetUnavailableReasonKind(unavailableStatus);
+                }
 
                 return new DashboardChampionPlanItem
                 {
@@ -265,7 +285,8 @@ public class ChampSelect : IPhaseHandler
                     Name = FormatChampion(choice.ChampionId),
                     SourcePosition = choice.SourcePosition,
                     IsAvailable = unavailableStatus is null,
-                    StatusText = unavailableStatus ?? availableStatusText
+                    StatusText = unavailableStatus ?? availableStatusText,
+                    UnavailableReasonKind = unavailableReasonKind
                 };
             })
             .ToList();
@@ -601,17 +622,23 @@ public class ChampSelect : IPhaseHandler
             Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
-    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
+    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
+
+        string? hoveredPickUnavailableStatus = _hoveredPickChampionId == 0
+            ? null
+            : GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, _hoveredPickChampionId, ownershipSnapshot);
 
         if (_hasHoveredPick
             && !_manualPickSelectionOverride
             && _hoveredPickChampionId != 0
-            && IsChampionUnavailable(root, localPlayerCellId, actionId, _hoveredPickChampionId))
+            && hoveredPickUnavailableStatus is not null)
         {
-            _failedPickChampionIds.Add(_hoveredPickChampionId);
-            LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(_hoveredPickChampionId)} is no longer available. Trying next configured champion.");
+            if (!string.Equals(hoveredPickUnavailableStatus, "Not owned", StringComparison.Ordinal))
+                _failedPickChampionIds.Add(_hoveredPickChampionId);
+
+            LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(_hoveredPickChampionId)} is no longer available ({hoveredPickUnavailableStatus}). Trying next configured champion.");
             ResetPickHover();
             _pendingPickHoverActionId = actionId;
             _pickHoverReadyAtUtc = DateTime.UtcNow;
@@ -644,7 +671,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastPickStatusMessage, $"Pick hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, isPickAction: true, actionLabel: "Pick", cancellationToken);
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: "Pick", cancellationToken);
             }
             else
             {
@@ -669,6 +696,21 @@ public class ChampSelect : IPhaseHandler
             }
 
             LogStatus(ref _lastPickStatusMessage, $"Pick hover not set yet. ActionId={actionId}. Will retry with remaining configured champions.");
+            return;
+        }
+
+        string? pickOwnershipUnavailableStatus = GetChampionOwnershipUnavailableStatus(ownershipSnapshot, championIdToLock);
+        if (pickOwnershipUnavailableStatus is not null)
+        {
+            CancelScheduledPickLock();
+            LogStatus(ref _lastPickStatusMessage, $"Pick target {FormatChampion(championIdToLock)} is blocked ({pickOwnershipUnavailableStatus}). The app will not lock this pick.");
+            if (!_manualPickSelectionOverride)
+            {
+                ResetPickHover();
+                _pendingPickHoverActionId = actionId;
+                _pickHoverReadyAtUtc = DateTime.UtcNow;
+            }
+
             return;
         }
 
@@ -763,7 +805,7 @@ public class ChampSelect : IPhaseHandler
             if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, isPickAction: false, actionLabel: "Ban", cancellationToken);
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
             }
             else
             {
@@ -960,14 +1002,16 @@ public class ChampSelect : IPhaseHandler
             _scheduledBanLock = null;
     }
 
-    private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
+    private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
     {
         foreach (var championId in championIds)
         {
             if (excludedChampionIds.Contains(championId))
                 continue;
 
-            string? unavailableStatus = GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: !isPickAction);
+            string? unavailableStatus = isPickAction
+                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, ownershipSnapshot)
+                : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: true);
             if (unavailableStatus is not null)
             {
                 Log($"{actionLabel}: skipping {FormatChampion(championId)} because it is unavailable ({unavailableStatus}).");
@@ -1029,6 +1073,32 @@ public class ChampSelect : IPhaseHandler
     private static bool IsChampionUnavailable(JsonElement root, int localPlayerCellId, int localActionId, int championId, bool includeLocalPlayerTeamSelection = false)
     {
         return GetChampionUnavailableStatus(root, localPlayerCellId, localActionId, championId, includeLocalPlayerTeamSelection) is not null;
+    }
+
+    private static string? GetPickChampionUnavailableStatus(JsonElement root, int localPlayerCellId, int localActionId, int championId, ChampionOwnershipSnapshot ownershipSnapshot)
+    {
+        return GetChampionUnavailableStatus(root, localPlayerCellId, localActionId, championId)
+            ?? GetChampionOwnershipUnavailableStatus(ownershipSnapshot, championId);
+    }
+
+    private static string? GetChampionOwnershipUnavailableStatus(ChampionOwnershipSnapshot ownershipSnapshot, int championId)
+    {
+        return ownershipSnapshot.IsKnownUnowned(championId)
+            ? "Not owned"
+            : null;
+    }
+
+    private static string GetUnavailableReasonKind(string? unavailableStatus)
+    {
+        return unavailableStatus switch
+        {
+            "Not owned" => DashboardChampionAvailabilityReason.NotOwned,
+            "Banned" => DashboardChampionAvailabilityReason.Banned,
+            "Picked" or "Locked" => DashboardChampionAvailabilityReason.Selected,
+            "Failed" => DashboardChampionAvailabilityReason.Failed,
+            null => DashboardChampionAvailabilityReason.None,
+            _ => DashboardChampionAvailabilityReason.Blocked
+        };
     }
 
     private static string? GetChampionUnavailableStatus(JsonElement root, int localPlayerCellId, int localActionId, int championId, bool includeLocalPlayerTeamSelection = false)

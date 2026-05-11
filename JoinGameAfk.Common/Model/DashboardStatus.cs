@@ -2,6 +2,16 @@ using JoinGameAfk.Enums;
 
 namespace JoinGameAfk.Model
 {
+    public static class DashboardChampionAvailabilityReason
+    {
+        public const string None = "";
+        public const string NotOwned = "NotOwned";
+        public const string Banned = "Banned";
+        public const string Selected = "Selected";
+        public const string Failed = "Failed";
+        public const string Blocked = "Blocked";
+    }
+
     public sealed record DashboardChampionPlanItem
     {
         public int ChampionId { get; init; }
@@ -9,8 +19,10 @@ namespace JoinGameAfk.Model
         public Position SourcePosition { get; init; } = Position.Default;
         public bool IsAvailable { get; init; } = true;
         public string StatusText { get; init; } = string.Empty;
+        public string UnavailableReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsPlanReference { get; init; }
         public string PlanReferenceText { get; init; } = string.Empty;
+        public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsOwnAction { get; init; }
     }
 
@@ -23,6 +35,7 @@ namespace JoinGameAfk.Model
         public bool IsLocalPlayer { get; init; }
         public bool IsPlanReference { get; init; }
         public string PlanReferenceText { get; init; } = string.Empty;
+        public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsOwnAction { get; init; }
     }
 

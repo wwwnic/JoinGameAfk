@@ -134,8 +134,8 @@ namespace JoinGameAfk.View
 
             return status with
             {
-                MyTeamBans = HighlightChampionSources(status.MyTeamBans, planLabelsByKey),
-                TheirTeamBans = HighlightChampionSources(status.TheirTeamBans, planLabelsByKey),
+                MyTeamBans = HighlightChampionSources(status.MyTeamBans, planLabelsByKey, DashboardChampionAvailabilityReason.Banned),
+                TheirTeamBans = HighlightChampionSources(status.TheirTeamBans, planLabelsByKey, DashboardChampionAvailabilityReason.Banned),
                 MyTeamSlots = HighlightTeamSources(status.MyTeamSlots, planLabelsByKey),
                 TheirTeamSlots = HighlightTeamSources(status.TheirTeamSlots, planLabelsByKey),
                 PickChampionPriority = HighlightPlanItems(status.PickChampionPriority, sourceLabelsByKey, ownActionLabelsByKey),
@@ -161,18 +161,19 @@ namespace JoinGameAfk.View
                 AddLabelForChampion(planLabelsByKey, champion.ChampionId, champion.Name, planLabel);
         }
 
-        private static IReadOnlyList<DashboardChampionPlanItem> HighlightChampionSources(IReadOnlyList<DashboardChampionPlanItem> champions, IReadOnlyDictionary<string, List<string>> planLabelsByKey)
+        private static IReadOnlyList<DashboardChampionPlanItem> HighlightChampionSources(IReadOnlyList<DashboardChampionPlanItem> champions, IReadOnlyDictionary<string, List<string>> planLabelsByKey, string planReferenceReasonKind)
         {
             return champions
                 .Select(champion =>
                 {
                     var planLabels = FindLabels(planLabelsByKey, champion.ChampionId, champion.Name);
                     return planLabels.Count == 0
-                        ? champion with { IsPlanReference = false, PlanReferenceText = string.Empty, IsOwnAction = false }
+                        ? champion with { IsPlanReference = false, PlanReferenceText = string.Empty, PlanReferenceReasonKind = DashboardChampionAvailabilityReason.None, IsOwnAction = false }
                         : champion with
                         {
                             IsPlanReference = true,
                             PlanReferenceText = $"Blocks {FormatLabelList(planLabels)}",
+                            PlanReferenceReasonKind = planReferenceReasonKind,
                             IsOwnAction = false
                         };
                 })
@@ -186,18 +187,20 @@ namespace JoinGameAfk.View
                 {
                     var planLabels = FindLabels(planLabelsByKey, slot.ChampionId, slot.ChampionName);
                     return planLabels.Count == 0
-                        ? slot with { IsPlanReference = false, PlanReferenceText = string.Empty, IsOwnAction = false }
+                        ? slot with { IsPlanReference = false, PlanReferenceText = string.Empty, PlanReferenceReasonKind = DashboardChampionAvailabilityReason.None, IsOwnAction = false }
                         : slot.IsLocalPlayer
                             ? slot with
                             {
                                 IsPlanReference = true,
                                 PlanReferenceText = $"In {FormatLabelList(planLabels)}",
+                                PlanReferenceReasonKind = DashboardChampionAvailabilityReason.Selected,
                                 IsOwnAction = true
                             }
                         : slot with
                         {
                             IsPlanReference = true,
                             PlanReferenceText = $"Blocks {FormatLabelList(planLabels)}",
+                            PlanReferenceReasonKind = DashboardChampionAvailabilityReason.Selected,
                             IsOwnAction = false
                         };
                 })
@@ -212,6 +215,9 @@ namespace JoinGameAfk.View
                     var ownActionLabels = FindLabels(ownActionLabelsByKey, champion.ChampionId, champion.Name);
                     if (ownActionLabels.Count > 0)
                     {
+                        if (!champion.IsAvailable)
+                            return champion with { IsOwnAction = false };
+
                         return champion with
                         {
                             IsOwnAction = true,
@@ -226,7 +232,8 @@ namespace JoinGameAfk.View
                         {
                             IsOwnAction = false,
                             IsAvailable = false,
-                            StatusText = $"Blocked by {FormatLabelList(sourceLabels)}"
+                            StatusText = $"Blocked by {FormatLabelList(sourceLabels)}",
+                            UnavailableReasonKind = GetSourceBlockerUnavailableReasonKind(sourceLabels)
                         };
                 })
                 .ToList();
@@ -288,6 +295,17 @@ namespace JoinGameAfk.View
                 2 => $"{labels[0]} and {labels[1]}",
                 _ => $"{string.Join(", ", labels.Take(labels.Count - 1))}, and {labels[^1]}"
             };
+        }
+
+        private static string GetSourceBlockerUnavailableReasonKind(IReadOnlyList<string> sourceLabels)
+        {
+            if (sourceLabels.Any(label => label.Contains("bans", StringComparison.OrdinalIgnoreCase)))
+                return DashboardChampionAvailabilityReason.Banned;
+
+            if (sourceLabels.Any(label => label.Contains("team", StringComparison.OrdinalIgnoreCase)))
+                return DashboardChampionAvailabilityReason.Selected;
+
+            return DashboardChampionAvailabilityReason.Blocked;
         }
 
         private static void UpdateTeamSlotList(ItemsControl itemsControl, IReadOnlyList<DashboardTeamSlotItem> slots)
