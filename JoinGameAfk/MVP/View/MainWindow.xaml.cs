@@ -25,6 +25,7 @@ namespace JoinGameAfk.View
         private readonly Frame[] _frames;
         private readonly PhaseProgressionPage _dashboardPage;
         private readonly LogsPage _logsPage;
+        private readonly ChampionPrioritiesPage _championPrioritiesPage;
         private readonly ChampSelectSettings _settings;
         private PhaseController? _phaseController;
         private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
@@ -47,6 +48,7 @@ namespace JoinGameAfk.View
 
             _dashboardPage = dashboardPage;
             _logsPage = logsPage;
+            _championPrioritiesPage = championPrioritiesPage;
             _settings = settings;
             DashboardFrame.Content = dashboardPage;
             ChampionPrioritiesFrame.Content = championPrioritiesPage;
@@ -375,6 +377,7 @@ namespace JoinGameAfk.View
                     _suppressAutoPickBanOverlayForCurrentChampSelect = false;
 
                 _currentPhase = phase;
+                _championPrioritiesPage.SetChampionSelectActive(isChampSelectFlow);
                 RefreshPhaseIndicator();
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.UpdatePhase(_currentPhase);

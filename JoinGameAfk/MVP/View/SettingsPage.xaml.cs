@@ -24,6 +24,7 @@ namespace JoinGameAfk.View
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
         private NumericInputRule _championHoverDelayRule = null!;
+        private NumericInputRule _planningHoverDelayRule = null!;
         private NumericInputRule _banLockDelayRule = null!;
         private NumericInputRule _champSelectPollIntervalRule = null!;
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
@@ -61,6 +62,7 @@ namespace JoinGameAfk.View
             _readyCheckAcceptDelayRule = InputValidator.AttachInteger(ReadyCheckAcceptDelayBox, "Auto accept delay", minimum: 0);
             _pickLockDelayRule = InputValidator.AttachInteger(PickLockDelayBox, "Pick lock timer", minimum: 0);
             _championHoverDelayRule = InputValidator.AttachInteger(ChampionHoverDelayBox, "Champion hover delay", minimum: 0);
+            _planningHoverDelayRule = InputValidator.AttachInteger(PlanningHoverDelayBox, "Planning hover delay", minimum: 0);
             _banLockDelayRule = InputValidator.AttachInteger(BanLockDelayBox, "Ban lock timer", minimum: 0);
             _champSelectPollIntervalRule = InputValidator.AttachInteger(ChampSelectPollIntervalBox, "Regular polling interval", minimum: 100, maximum: 5000);
             _champSelectEventFallbackPollIntervalRule = InputValidator.AttachInteger(EventFallbackPollIntervalBox, "Event fallback polling interval", minimum: 1000, maximum: 30000);
@@ -82,6 +84,7 @@ namespace JoinGameAfk.View
             _settings.AutoLockSelectionEnabled = _settings.ChampionSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
             _settings.ChampionHoverDelaySeconds = input.ChampionHoverDelaySeconds;
+            _settings.PlanningHoverDelaySeconds = input.PlanningHoverDelaySeconds;
             _settings.BanLockDelaySeconds = input.BanLockDelaySeconds;
             _settings.ChampSelectPollIntervalMs = input.ChampSelectPollIntervalMs;
             _settings.UseChampSelectEventStream = UseLiveEventsCheckBox.IsChecked == true;
@@ -149,6 +152,7 @@ namespace JoinGameAfk.View
                 AutoLockSelectionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
                 PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();
                 ChampionHoverDelayBox.Text = _settings.ChampionHoverDelaySeconds.ToString();
+                PlanningHoverDelayBox.Text = _settings.PlanningHoverDelaySeconds.ToString();
                 BanLockDelayBox.Text = _settings.BanLockDelaySeconds.ToString();
                 ChampSelectPollIntervalBox.Text = _settings.ChampSelectPollIntervalMs.ToString();
                 UseLiveEventsCheckBox.IsChecked = _settings.UseChampSelectEventStream;
@@ -295,6 +299,7 @@ namespace JoinGameAfk.View
             ReadyCheckAcceptDelayBox.IsEnabled = autoReadyCheckEnabled;
             ChampionSelectAutomationOptionsPanel.IsEnabled = championSelectAutomationEnabled;
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
+            PlanningHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
             PickLockDelayBox.IsEnabled = autoLockSelectionEnabled;
             BanLockDelayBox.IsEnabled = autoLockSelectionEnabled;
             bool liveEventsEnabled = UseLiveEventsCheckBox.IsChecked == true;
@@ -309,9 +314,15 @@ namespace JoinGameAfk.View
                 _readyCheckAcceptDelayRule.Validate();
 
             if (!autoHoverChampionEnabled)
+            {
                 InputValidator.SetValidationState(ChampionHoverDelayBox, InputValidationState.Valid);
+                InputValidator.SetValidationState(PlanningHoverDelayBox, InputValidationState.Valid);
+            }
             else if (_championHoverDelayRule is not null)
+            {
                 _championHoverDelayRule.Validate();
+                _planningHoverDelayRule?.Validate();
+            }
 
             if (!autoLockSelectionEnabled)
             {
@@ -381,6 +392,7 @@ namespace JoinGameAfk.View
 
             int readyCheckDelay = _settings.ReadyCheckAcceptDelaySeconds;
             int hoverDelay = _settings.ChampionHoverDelaySeconds;
+            int planningHoverDelay = _settings.PlanningHoverDelaySeconds;
             int pickDelay = _settings.PickLockDelaySeconds;
             int banDelay = _settings.BanLockDelaySeconds;
             int pollInterval = _settings.ChampSelectPollIntervalMs;
@@ -397,6 +409,7 @@ namespace JoinGameAfk.View
             if ((autoReadyCheckEnabled && !_readyCheckAcceptDelayRule.TryGetInt32(out readyCheckDelay))
                 || (autoLockSelectionEnabled && !_pickLockDelayRule.TryGetInt32(out pickDelay))
                 || (autoHoverChampionEnabled && !_championHoverDelayRule.TryGetInt32(out hoverDelay))
+                || (autoHoverChampionEnabled && !_planningHoverDelayRule.TryGetInt32(out planningHoverDelay))
                 || (autoLockSelectionEnabled && !_banLockDelayRule.TryGetInt32(out banDelay))
                 || (!useLiveEvents && !_champSelectPollIntervalRule.TryGetInt32(out pollInterval))
                 || (eventFallbackPollingEnabled && !_champSelectEventFallbackPollIntervalRule.TryGetInt32(out eventFallbackPollInterval)))
@@ -409,6 +422,7 @@ namespace JoinGameAfk.View
                 readyCheckDelay,
                 pickDelay,
                 hoverDelay,
+                planningHoverDelay,
                 banDelay,
                 pollInterval,
                 eventFallbackPollInterval);
@@ -432,7 +446,10 @@ namespace JoinGameAfk.View
                 yield return _pickLockDelayRule;
 
             if (autoHoverChampionEnabled)
+            {
                 yield return _championHoverDelayRule;
+                yield return _planningHoverDelayRule;
+            }
 
             if (autoLockSelectionEnabled)
                 yield return _banLockDelayRule;
@@ -660,6 +677,7 @@ namespace JoinGameAfk.View
             int ReadyCheckAcceptDelaySeconds,
             int PickLockDelaySeconds,
             int ChampionHoverDelaySeconds,
+            int PlanningHoverDelaySeconds,
             int BanLockDelaySeconds,
             int ChampSelectPollIntervalMs,
             int ChampSelectEventFallbackPollIntervalMs);

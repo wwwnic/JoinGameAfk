@@ -111,8 +111,15 @@ namespace JoinGameAfk.View
             TimerText.Text = snapshot.PhaseTimeText;
             LockTimerText.Text = snapshot.LockTimeText;
             LockTimerLabel.Text = snapshot.HasActiveLockTimer
-                ? $"{snapshot.ActiveLockActionType.ToLowerInvariant()} lock"
+                ? GetCountdownLabel(snapshot.ActiveLockActionType)
                 : "lock";
+        }
+
+        private static string GetCountdownLabel(string actionType)
+        {
+            return string.Equals(actionType, "Hover", StringComparison.Ordinal)
+                ? "hover"
+                : $"{actionType.ToLowerInvariant()} lock";
         }
 
         private void RefreshStatusDisplay()

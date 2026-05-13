@@ -34,6 +34,7 @@ public class ChampSelect : IPhaseHandler
     private readonly ChampSelectSettings _settings;
     private readonly LeagueChampionOwnershipService _ownershipService;
     private readonly Action<string>? _log;
+    private readonly Action? _requestRefresh;
     private string? _lastSessionId;
     private bool _hasPicked;
     private bool _hasBanned;
@@ -54,6 +55,8 @@ public class ChampSelect : IPhaseHandler
     private Position _lastAssignedPosition = Position.None;
     private int _pendingPickHoverActionId;
     private int _pendingBanHoverActionId;
+    private string _pendingPickHoverPhase = string.Empty;
+    private string _pendingBanHoverPhase = string.Empty;
     private DateTime _pickHoverReadyAtUtc;
     private DateTime _banHoverReadyAtUtc;
     private int _pickRetryStateActionId;
@@ -62,17 +65,22 @@ public class ChampSelect : IPhaseHandler
     private readonly HashSet<int> _failedBanChampionIds = [];
     private ScheduledLockState? _scheduledPickLock;
     private ScheduledLockState? _scheduledBanLock;
+    private CancellationTokenSource? _scheduledHoverWake;
+    private int _scheduledHoverWakeActionId;
+    private string _scheduledHoverWakePhase = string.Empty;
+    private DateTime _scheduledHoverWakeAtUtc;
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 
     public DashboardStatus LastDashboardStatus { get; private set; } = new();
 
-    public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null)
+    public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null, Action? requestRefresh = null)
     {
         _http = http;
         _settings = settings;
         _ownershipService = new LeagueChampionOwnershipService(http, log);
         _log = log;
+        _requestRefresh = requestRefresh;
     }
 
     public async Task HandleAsync(CancellationToken cancellationToken)
@@ -143,7 +151,7 @@ public class ChampSelect : IPhaseHandler
 
         if (!_hasLoggedSessionSummary)
         {
-            Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], automation={championSelectAutomationEnabled}, autoHover={_settings.AutoHoverChampionEnabled}, autoLock={_settings.AutoLockSelectionEnabled}, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
+            Log($"Champ Select session ready. Position={assignedPosition}, picks=[{FormatChampionIds(mergedPickIds)}], bans=[{FormatChampionIds(mergedBanIds)}], automation={championSelectAutomationEnabled}, autoHover={_settings.AutoHoverChampionEnabled}, autoLock={_settings.AutoLockSelectionEnabled}, hoverDelay={_settings.ChampionHoverDelaySeconds}s, planningHoverDelay={GetHoverDelaySeconds("PLANNING")}s, pickLockDelay={_settings.PickLockDelaySeconds}s, banLockDelay={_settings.BanLockDelaySeconds}s.");
             _hasLoggedSessionSummary = true;
         }
 
@@ -189,7 +197,7 @@ public class ChampSelect : IPhaseHandler
 
                     if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                     {
-                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
+                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
                     }
                     else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                     {
@@ -204,7 +212,7 @@ public class ChampSelect : IPhaseHandler
 
     private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, ChampionOwnershipSnapshot ownershipSnapshot, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
     {
-        var activeLockCountdown = GetActiveLockCountdownStatus(localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
+        var activeLockCountdown = GetActiveLockCountdownStatus(champSelectPhase, localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
 
         return new DashboardStatus
         {
@@ -229,8 +237,11 @@ public class ChampSelect : IPhaseHandler
         };
     }
 
-    private ActiveLockCountdownStatus GetActiveLockCountdownStatus(string? localPlayerActiveActionType, long timeLeftMs, DateTime timeLeftObservedAtUtc)
+    private ActiveLockCountdownStatus GetActiveLockCountdownStatus(string champSelectPhase, string? localPlayerActiveActionType, long timeLeftMs, DateTime timeLeftObservedAtUtc)
     {
+        if (IsPlanningPhase(champSelectPhase))
+            return GetPlanningHoverCountdownStatus();
+
         if (!ShouldShowActiveLockCountdown())
             return new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue);
 
@@ -246,6 +257,23 @@ public class ChampSelect : IPhaseHandler
                 timeLeftObservedAtUtc),
             _ => new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue)
         };
+    }
+
+    private ActiveLockCountdownStatus GetPlanningHoverCountdownStatus()
+    {
+        if (!_settings.ChampionSelectAutomationEnabled
+            || !_settings.AutoHoverChampionEnabled
+            || _hasHoveredPick
+            || _manualPickSelectionOverride
+            || _pendingPickHoverActionId == 0
+            || _pickHoverReadyAtUtc == DateTime.MinValue)
+        {
+            return new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue);
+        }
+
+        DateTime observedAtUtc = DateTime.UtcNow;
+        long millisecondsUntilHover = Math.Max(0, (long)Math.Ceiling((_pickHoverReadyAtUtc - observedAtUtc).TotalMilliseconds));
+        return new ActiveLockCountdownStatus("Hover", millisecondsUntilHover, observedAtUtc);
     }
 
     private bool ShouldShowActiveLockCountdown()
@@ -552,7 +580,7 @@ public class ChampSelect : IPhaseHandler
 
     private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType)
     {
-        if (string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+        if (IsPlanningPhase(champSelectPhase))
             return "Hover";
 
         if (localPlayerActiveActionType is not null)
@@ -571,6 +599,23 @@ public class ChampSelect : IPhaseHandler
             "FINALIZATION" => "Finalization",
             _ => "Waiting",
         };
+    }
+
+    private static bool CanHoverPickNow(string champSelectPhase, bool isPickInProgress)
+    {
+        return isPickInProgress || IsPlanningPhase(champSelectPhase);
+    }
+
+    private static bool IsPlanningPhase(string champSelectPhase)
+    {
+        return string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FormatChampSelectPhase(string champSelectPhase)
+    {
+        return string.IsNullOrWhiteSpace(champSelectPhase)
+            ? "unknown"
+            : champSelectPhase;
     }
 
     public void Reset()
@@ -595,6 +640,8 @@ public class ChampSelect : IPhaseHandler
         _lastAssignedPosition = Position.None;
         _pendingPickHoverActionId = 0;
         _pendingBanHoverActionId = 0;
+        _pendingPickHoverPhase = string.Empty;
+        _pendingBanHoverPhase = string.Empty;
         _pickHoverReadyAtUtc = DateTime.MinValue;
         _banHoverReadyAtUtc = DateTime.MinValue;
         _pickRetryStateActionId = 0;
@@ -603,6 +650,7 @@ public class ChampSelect : IPhaseHandler
         _failedBanChampionIds.Clear();
         CancelScheduledPickLock();
         CancelScheduledBanLock();
+        CancelScheduledHoverWake();
     }
 
     private void RefreshAssignedPosition(Position assignedPosition)
@@ -622,9 +670,10 @@ public class ChampSelect : IPhaseHandler
             Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
-    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
+    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
+        bool canHoverPickNow = CanHoverPickNow(champSelectPhase, isInProgress);
 
         string? hoveredPickUnavailableStatus = _hoveredPickChampionId == 0
             ? null
@@ -641,6 +690,7 @@ public class ChampSelect : IPhaseHandler
             LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(_hoveredPickChampionId)} is no longer available ({hoveredPickUnavailableStatus}). Trying next configured champion.");
             ResetPickHover();
             _pendingPickHoverActionId = actionId;
+            _pendingPickHoverPhase = champSelectPhase;
             _pickHoverReadyAtUtc = DateTime.UtcNow;
         }
 
@@ -663,19 +713,31 @@ public class ChampSelect : IPhaseHandler
         if (!_hasHoveredPick && !_manualPickSelectionOverride && !_settings.AutoHoverChampionEnabled)
         {
             _pendingPickHoverActionId = 0;
+            _pendingPickHoverPhase = string.Empty;
             _pickHoverReadyAtUtc = DateTime.MinValue;
             LogStatus(ref _lastPickStatusMessage, $"Pick action detected. Auto-hover is disabled, so the app is waiting for your manual champion selection.");
         }
         else if (!_hasHoveredPick && !_manualPickSelectionOverride)
         {
-            if (ShouldAttemptHover(actionId, isPickAction: true, out int hoverDelaySeconds))
+            if (!canHoverPickNow)
             {
-                LogStatus(ref _lastPickStatusMessage, $"Pick hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: "Pick", cancellationToken);
+                _pendingPickHoverActionId = 0;
+                _pendingPickHoverPhase = string.Empty;
+                _pickHoverReadyAtUtc = DateTime.MinValue;
+                LogStatus(ref _lastPickStatusMessage, $"Pick action is not active yet. Phase={FormatChampSelectPhase(champSelectPhase)}, timeLeft={FormatTimeLeft(timeLeftMs)}. Waiting before hovering.");
+                return;
+            }
+
+            string hoverActionLabel = IsPlanningPhase(champSelectPhase) ? "Hover" : "Pick";
+            if (ShouldAttemptHover(actionId, champSelectPhase, isPickAction: true, out int hoverDelaySeconds))
+            {
+                LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: hoverActionLabel, cancellationToken);
             }
             else
             {
-                LogStatus(ref _lastPickStatusMessage, $"Pick action detected. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Waiting {hoverDelaySeconds}s before hovering.");
+                ScheduleHoverWake(actionId, champSelectPhase, _pickHoverReadyAtUtc, cancellationToken);
+                LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} action detected. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Waiting {hoverDelaySeconds}s before hovering.");
             }
         }
 
@@ -708,6 +770,7 @@ public class ChampSelect : IPhaseHandler
             {
                 ResetPickHover();
                 _pendingPickHoverActionId = actionId;
+                _pendingPickHoverPhase = champSelectPhase;
                 _pickHoverReadyAtUtc = DateTime.UtcNow;
             }
 
@@ -758,6 +821,7 @@ public class ChampSelect : IPhaseHandler
 
             ResetPickHover();
             _pendingPickHoverActionId = actionId;
+            _pendingPickHoverPhase = champSelectPhase;
             _pickHoverReadyAtUtc = DateTime.UtcNow;
         }
     }
@@ -775,6 +839,7 @@ public class ChampSelect : IPhaseHandler
             LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(_hoveredBanChampionId)} is no longer available. Trying next configured champion.");
             ResetBanHover();
             _pendingBanHoverActionId = actionId;
+            _pendingBanHoverPhase = champSelectPhase;
             _banHoverReadyAtUtc = DateTime.UtcNow;
         }
 
@@ -794,21 +859,23 @@ public class ChampSelect : IPhaseHandler
             _hoveredBanChampionId = currentChampionId;
         }
 
-        if (!_hasHoveredBan && !_manualBanSelectionOverride && !_settings.AutoHoverChampionEnabled && !string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+        if (!_hasHoveredBan && !_manualBanSelectionOverride && !_settings.AutoHoverChampionEnabled && !IsPlanningPhase(champSelectPhase))
         {
             _pendingBanHoverActionId = 0;
+            _pendingBanHoverPhase = string.Empty;
             _banHoverReadyAtUtc = DateTime.MinValue;
             LogStatus(ref _lastBanStatusMessage, $"Ban action detected. Auto-hover is disabled, so the app is waiting for your manual champion selection.");
         }
-        else if (!_hasHoveredBan && !_manualBanSelectionOverride && !string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+        else if (!_hasHoveredBan && !_manualBanSelectionOverride && !IsPlanningPhase(champSelectPhase))
         {
-            if (ShouldAttemptHover(actionId, isPickAction: false, out int hoverDelaySeconds))
+            if (ShouldAttemptHover(actionId, champSelectPhase, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
                 await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
             }
             else
             {
+                ScheduleHoverWake(actionId, champSelectPhase, _banHoverReadyAtUtc, cancellationToken);
                 LogStatus(ref _lastBanStatusMessage, $"Ban action detected. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Waiting {hoverDelaySeconds}s before hovering.");
             }
         }
@@ -823,7 +890,7 @@ public class ChampSelect : IPhaseHandler
                 return;
             }
 
-            if (!string.Equals(champSelectPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+            if (!IsPlanningPhase(champSelectPhase))
             {
                 if (!_settings.AutoHoverChampionEnabled)
                 {
@@ -870,6 +937,7 @@ public class ChampSelect : IPhaseHandler
                 _failedBanChampionIds.Add(championIdToLock);
                 ResetBanHover();
                 _pendingBanHoverActionId = actionId;
+                _pendingBanHoverPhase = champSelectPhase;
                 _banHoverReadyAtUtc = DateTime.UtcNow;
             }
 
@@ -896,6 +964,7 @@ public class ChampSelect : IPhaseHandler
 
             ResetBanHover();
             _pendingBanHoverActionId = actionId;
+            _pendingBanHoverPhase = champSelectPhase;
             _banHoverReadyAtUtc = DateTime.UtcNow;
         }
     }
@@ -988,6 +1057,70 @@ public class ChampSelect : IPhaseHandler
         _scheduledBanLock = null;
     }
 
+    private void ScheduleHoverWake(int actionId, string champSelectPhase, DateTime wakeAtUtc, CancellationToken cancellationToken)
+    {
+        if (_requestRefresh is null || wakeAtUtc <= DateTime.UtcNow)
+            return;
+
+        string phaseKey = string.IsNullOrWhiteSpace(champSelectPhase)
+            ? string.Empty
+            : champSelectPhase;
+
+        if (_scheduledHoverWake is not null
+            && _scheduledHoverWakeActionId == actionId
+            && string.Equals(_scheduledHoverWakePhase, phaseKey, StringComparison.OrdinalIgnoreCase)
+            && Math.Abs((_scheduledHoverWakeAtUtc - wakeAtUtc).TotalMilliseconds) < 250
+            && !_scheduledHoverWake.IsCancellationRequested)
+        {
+            return;
+        }
+
+        CancelScheduledHoverWake();
+
+        var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _scheduledHoverWake = linkedCts;
+        _scheduledHoverWakeActionId = actionId;
+        _scheduledHoverWakePhase = phaseKey;
+        _scheduledHoverWakeAtUtc = wakeAtUtc;
+        _ = RunScheduledHoverWakeAsync(wakeAtUtc, linkedCts);
+    }
+
+    private async Task RunScheduledHoverWakeAsync(DateTime wakeAtUtc, CancellationTokenSource wakeCancellationTokenSource)
+    {
+        try
+        {
+            TimeSpan delay = wakeAtUtc - DateTime.UtcNow;
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, wakeCancellationTokenSource.Token);
+
+            _requestRefresh?.Invoke();
+        }
+        catch (OperationCanceledException) when (wakeCancellationTokenSource.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_scheduledHoverWake, wakeCancellationTokenSource))
+            {
+                _scheduledHoverWake = null;
+                _scheduledHoverWakeActionId = 0;
+                _scheduledHoverWakePhase = string.Empty;
+                _scheduledHoverWakeAtUtc = DateTime.MinValue;
+            }
+
+            wakeCancellationTokenSource.Dispose();
+        }
+    }
+
+    private void CancelScheduledHoverWake()
+    {
+        _scheduledHoverWake?.Cancel();
+        _scheduledHoverWake = null;
+        _scheduledHoverWakeActionId = 0;
+        _scheduledHoverWakePhase = string.Empty;
+        _scheduledHoverWakeAtUtc = DateTime.MinValue;
+    }
+
     private void ClearScheduledLockIfCurrent(ScheduledLockState scheduledLock, bool isPickAction)
     {
         if (isPickAction)
@@ -1034,6 +1167,7 @@ public class ChampSelect : IPhaseHandler
                     _hoveredBanChampionId = championId;
                 }
 
+                CancelScheduledHoverWake();
                 Log($"{actionLabel}: hover succeeded with {FormatChampion(championId)} on actionId={actionId}.");
                 break;
             }
@@ -1187,10 +1321,12 @@ public class ChampSelect : IPhaseHandler
     private void ResetPickHover()
     {
         CancelScheduledPickLock();
+        CancelScheduledHoverWake();
         _hasHoveredPick = false;
         _manualPickSelectionOverride = false;
         _hoveredPickChampionId = 0;
         _pendingPickHoverActionId = 0;
+        _pendingPickHoverPhase = string.Empty;
         _pickHoverReadyAtUtc = DateTime.MinValue;
         _lastPickStatusMessage = null;
     }
@@ -1198,37 +1334,53 @@ public class ChampSelect : IPhaseHandler
     private void ResetBanHover()
     {
         CancelScheduledBanLock();
+        CancelScheduledHoverWake();
         _hasHoveredBan = false;
         _manualBanSelectionOverride = false;
         _hoveredBanChampionId = 0;
         _pendingBanHoverActionId = 0;
+        _pendingBanHoverPhase = string.Empty;
         _banHoverReadyAtUtc = DateTime.MinValue;
         _lastBanStatusMessage = null;
     }
 
-    private bool ShouldAttemptHover(int actionId, bool isPickAction, out int hoverDelaySeconds)
+    private bool ShouldAttemptHover(int actionId, string champSelectPhase, bool isPickAction, out int hoverDelaySeconds)
     {
-        hoverDelaySeconds = Math.Max(0, _settings.ChampionHoverDelaySeconds);
+        string phaseKey = string.IsNullOrWhiteSpace(champSelectPhase)
+            ? string.Empty
+            : champSelectPhase;
+        hoverDelaySeconds = GetHoverDelaySeconds(phaseKey);
         DateTime now = DateTime.UtcNow;
 
         if (isPickAction)
         {
-            if (_pendingPickHoverActionId != actionId)
+            if (_pendingPickHoverActionId != actionId || !string.Equals(_pendingPickHoverPhase, phaseKey, StringComparison.OrdinalIgnoreCase))
             {
                 _pendingPickHoverActionId = actionId;
+                _pendingPickHoverPhase = phaseKey;
                 _pickHoverReadyAtUtc = now.AddSeconds(hoverDelaySeconds);
             }
 
             return now >= _pickHoverReadyAtUtc;
         }
 
-        if (_pendingBanHoverActionId != actionId)
+        if (_pendingBanHoverActionId != actionId || !string.Equals(_pendingBanHoverPhase, phaseKey, StringComparison.OrdinalIgnoreCase))
         {
             _pendingBanHoverActionId = actionId;
+            _pendingBanHoverPhase = phaseKey;
             _banHoverReadyAtUtc = now.AddSeconds(hoverDelaySeconds);
         }
 
         return now >= _banHoverReadyAtUtc;
+    }
+
+    private int GetHoverDelaySeconds(string champSelectPhase)
+    {
+        int configuredDelaySeconds = Math.Max(0, _settings.ChampionHoverDelaySeconds);
+
+        return IsPlanningPhase(champSelectPhase)
+            ? Math.Max(configuredDelaySeconds, Math.Max(0, _settings.PlanningHoverDelaySeconds))
+            : configuredDelaySeconds;
     }
 
     private static Position GetAssignedPosition(JsonElement root, int localPlayerCellId)

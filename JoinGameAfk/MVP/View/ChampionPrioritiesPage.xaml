@@ -41,6 +41,21 @@
             <Setter Property="Padding" Value="16" />
         </Style>
 
+        <Style x:Key="PriorityLockBannerStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsChampionSelectLockActive}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="PriorityRowStyle" TargetType="Border">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
@@ -182,11 +197,31 @@
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="6" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0"
+                    <Border Grid.Row="0"
+                            Style="{StaticResource PriorityLockBannerStyle}">
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Path Width="14"
+                                  Height="14"
+                                  Margin="0,0,8,0"
+                                  VerticalAlignment="Center"
+                                  Stretch="Uniform"
+                                  Fill="{DynamicResource TextSecondaryBrush}"
+                                  Data="M7,10 V7 A5,5 0 0 1 17,7 V10 H18 A2,2 0 0 1 20,12 V20 A2,2 0 0 1 18,22 H6 A2,2 0 0 1 4,20 V12 A2,2 0 0 1 6,10 H7 M9,10 H15 V7 A3,3 0 0 0 9,7 V10 Z" />
+                            <TextBlock Text="Champion priorities are locked during champion select."
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="1"
                           Margin="6,0,6,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110" />
@@ -208,7 +243,7 @@
                     </Grid>
 
                     <ItemsControl x:Name="PositionList"
-                                  Grid.Row="2">
+                                  Grid.Row="3">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel />
@@ -244,7 +279,8 @@
                                                 Tag="Pick"
                                                 Background="{Binding PickBackgroundBrush, FallbackValue=Transparent}"
                                                 BorderBrush="{Binding PickBorderBrush, FallbackValue=Transparent}"
-                                                AllowDrop="True"
+                                                AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                IsEnabled="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                 Focusable="True"
                                                 GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
                                                 KeyDown="ChampionTarget_KeyDown"
@@ -270,7 +306,7 @@
                                                                 <Grid Margin="0,3,6,3"
                                                                       VerticalAlignment="Center"
                                                                       Background="Transparent"
-                                                                      AllowDrop="True"
+                                                                      AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                                       DragOver="ChampionItem_DragOver"
                                                                       Drop="ChampionItem_Drop">
                                                                     <Grid.ColumnDefinitions>
@@ -330,7 +366,8 @@
                                                 Tag="Ban"
                                                 Background="{Binding BanBackgroundBrush, FallbackValue=Transparent}"
                                                 BorderBrush="{Binding BanBorderBrush, FallbackValue=Transparent}"
-                                                AllowDrop="True"
+                                                AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
+                                                IsEnabled="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                 Focusable="True"
                                                 GotKeyboardFocus="ChampionTarget_GotKeyboardFocus"
                                                 KeyDown="ChampionTarget_KeyDown"
@@ -356,7 +393,7 @@
                                                                 <Grid Margin="0,3,6,3"
                                                                       VerticalAlignment="Center"
                                                                       Background="Transparent"
-                                                                      AllowDrop="True"
+                                                                      AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                                       DragOver="ChampionItem_DragOver"
                                                                       Drop="ChampionItem_Drop">
                                                                     <Grid.ColumnDefinitions>
@@ -561,6 +598,7 @@
                                     <DataTemplate>
                                         <Button Click="ChampionReferenceButton_Click"
                                                 AutomationProperties.Name="{Binding Name}"
+                                                IsEnabled="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                 PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
                                                 PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
                                                 Style="{StaticResource ChampionReferenceButtonStyle}">

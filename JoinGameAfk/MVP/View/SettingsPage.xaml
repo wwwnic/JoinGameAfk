@@ -460,9 +460,9 @@
                                     <Button Style="{StaticResource InfoIndicatorStyle}"
                                             Content="?"
                                             Margin="8,0,0,0"
-                                            ToolTip="Seconds to wait before hovering your configured champion." />
+                                            ToolTip="Seconds after a pick or ban action starts before hovering your configured champion." />
                                 </StackPanel>
-                                <TextBlock Text="Seconds after a matching pick or ban action is detected."
+                                <TextBlock Text="Used after a pick or ban action starts."
                                            Style="{StaticResource FieldHintStyle}" />
                             </StackPanel>
 
@@ -470,6 +470,34 @@
                                      Grid.Column="2"
                                      Style="{StaticResource InputTextBoxStyle}"
                                      ToolTip="Number of seconds to wait before auto-hovering a configured champion." />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Planning hover delay"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            ToolTip="Minimum seconds after planning phase starts before hovering your configured pick." />
+                                </StackPanel>
+                                <TextBlock Text="Planning uses the larger of this delay and the champion hover delay."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <TextBox x:Name="PlanningHoverDelayBox"
+                                     Grid.Column="2"
+                                     Style="{StaticResource InputTextBoxStyle}"
+                                     ToolTip="Minimum number of seconds to wait before auto-hovering during planning phase." />
                         </Grid>
                     </Border>
 

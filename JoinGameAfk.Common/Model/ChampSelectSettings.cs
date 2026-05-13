@@ -76,6 +76,11 @@ namespace JoinGameAfk.Model
         public int ChampionHoverDelaySeconds { get; set; } = 2;
 
         /// <summary>
+        /// Minimum number of seconds to wait before automatically hovering a configured champion during planning.
+        /// </summary>
+        public int PlanningHoverDelaySeconds { get; set; } = 10;
+
+        /// <summary>
         /// Lock the ban when this many seconds (or fewer) remain on the timer. 0 = lock immediately.
         /// </summary>
         public int BanLockDelaySeconds { get; set; } = 11;
@@ -206,6 +211,7 @@ namespace JoinGameAfk.Model
             AutoShowPickBanOverlayEnabled = defaults.AutoShowPickBanOverlayEnabled;
             AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
             ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
+            PlanningHoverDelaySeconds = defaults.PlanningHoverDelaySeconds;
             BanLockDelaySeconds = defaults.BanLockDelaySeconds;
             AutoLockSelectionEnabled = defaults.AutoLockSelectionEnabled;
             ChampSelectPollIntervalMs = defaults.ChampSelectPollIntervalMs;

@@ -99,6 +99,13 @@ namespace JoinGameAfk.View
 
             string lockText = $"Lock in {snapshot.LockTimeText}";
 
+            if (string.Equals(snapshot.ActiveLockActionType, "Hover", StringComparison.Ordinal))
+            {
+                PickPlanLockText.Text = $"Hover in {snapshot.LockTimeText}";
+                BanPlanLockText.Text = "--";
+                return;
+            }
+
             if (string.Equals(snapshot.ActiveLockActionType, "Pick", StringComparison.Ordinal))
             {
                 PickPlanLockText.Text = lockText;

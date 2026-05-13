@@ -113,6 +113,7 @@ The champion select flow currently supports:
 - separate **Pick** and **Ban** priority lists
 - drag-and-drop reordering of priorities
 - hover delay before attempting a champion
+- a longer planning-phase wait before the first hover
 - optional auto-lock close to timer expiry
 - fallback behavior when you manually change the selected champion
 

@@ -54,6 +54,30 @@ namespace JoinGameAfk.View
         private int? _dragHoverTargetIndex;
         private bool _isChampionReferenceHeightUpdatePending;
 
+        public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
+            nameof(IsChampionSelectLockActive),
+            typeof(bool),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata(false));
+
+        public bool IsChampionSelectLockActive
+        {
+            get => (bool)GetValue(IsChampionSelectLockActiveProperty);
+            private set => SetValue(IsChampionSelectLockActiveProperty, value);
+        }
+
+        public static readonly DependencyProperty IsPriorityEditingEnabledProperty = DependencyProperty.Register(
+            nameof(IsPriorityEditingEnabled),
+            typeof(bool),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata(true));
+
+        public bool IsPriorityEditingEnabled
+        {
+            get => (bool)GetValue(IsPriorityEditingEnabledProperty);
+            private set => SetValue(IsPriorityEditingEnabledProperty, value);
+        }
+
         public static readonly DependencyProperty HasSelectedChampionsProperty = DependencyProperty.Register(
             nameof(HasSelectedChampions),
             typeof(bool),
@@ -157,6 +181,32 @@ namespace JoinGameAfk.View
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
         }
 
+        public void SetChampionSelectActive(bool isActive)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (IsChampionSelectLockActive == isActive)
+                    return;
+
+                if (isActive)
+                {
+                    if (_isChampionDragActive)
+                        FinishChampionDrag(drop: false);
+
+                    ClearChampionSelection();
+                    ClearInsertionIndicator();
+                    HideDragPreview();
+                    IsSearchDeleteDropTarget = false;
+                    ClearPendingChampionSelection();
+                }
+
+                IsChampionSelectLockActive = isActive;
+                IsPriorityEditingEnabled = !isActive;
+                AllowDrop = !isActive;
+                RefreshTargetBrushes();
+            });
+        }
+
         private void ChampionPrioritiesPage_Unloaded(object sender, RoutedEventArgs e)
         {
             AppThemeManager.ThemeChanged -= RefreshTheme;
@@ -220,6 +270,9 @@ namespace JoinGameAfk.View
                 }
             }
 
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (e.Key != Key.Enter || _filteredChampions.Count == 0)
                 return;
 
@@ -240,6 +293,9 @@ namespace JoinGameAfk.View
 
         private void DeleteSelectedButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (DeleteSelectedChampions())
             {
                 e.Handled = true;
@@ -264,7 +320,7 @@ namespace JoinGameAfk.View
 
         private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            if (_activeTargetRow is null || IsSearchBoxFocused() || string.IsNullOrEmpty(e.Text))
+            if (!IsPriorityEditingEnabled || _activeTargetRow is null || IsSearchBoxFocused() || string.IsNullOrEmpty(e.Text))
                 return;
 
             FocusSearchBox();
@@ -280,6 +336,9 @@ namespace JoinGameAfk.View
                 e.Handled = true;
                 return;
             }
+
+            if (!IsPriorityEditingEnabled)
+                return;
 
             if (!_isChampionDragActive
                 && !IsSearchBoxFocused()
@@ -328,6 +387,9 @@ namespace JoinGameAfk.View
 
         private void ChampionReferenceButton_Click(object sender, RoutedEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (_suppressReferenceChampionClick)
             {
                 _suppressReferenceChampionClick = false;
@@ -344,6 +406,9 @@ namespace JoinGameAfk.View
 
         private void ChampionReferenceButton_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not ChampionInfo champion)
                 return;
 
@@ -354,6 +419,9 @@ namespace JoinGameAfk.View
 
         private void ChampionReferenceButton_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (_isChampionDragActive)
                 return;
 
@@ -373,6 +441,9 @@ namespace JoinGameAfk.View
 
         private void ChampionTarget_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not PositionRow row)
                 return;
 
@@ -386,6 +457,9 @@ namespace JoinGameAfk.View
 
         private void ChampionTarget_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!TryResolveChampionTarget(sender, out var row, out bool isPick))
                 return;
 
@@ -395,6 +469,9 @@ namespace JoinGameAfk.View
 
         private void ChampionTarget_KeyDown(object sender, KeyEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (e.Key != Key.Enter && e.Key != Key.Space)
                 return;
 
@@ -427,6 +504,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 
@@ -436,6 +516,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_KeyDown(object sender, KeyEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 
@@ -565,7 +648,7 @@ namespace JoinGameAfk.View
 
         private bool TryAddChampionToActiveTarget(ChampionInfo champion)
         {
-            if (_activeTargetRow is null)
+            if (!IsPriorityEditingEnabled || _activeTargetRow is null)
                 return false;
 
             InsertChampion(_activeTargetRow, _activeTargetIsPick, champion, null);
@@ -682,6 +765,9 @@ namespace JoinGameAfk.View
 
         private bool DeleteSelectedChampions()
         {
+            if (!IsPriorityEditingEnabled)
+                return false;
+
             bool removedAny = false;
 
             foreach (var row in _rows)
@@ -704,6 +790,9 @@ namespace JoinGameAfk.View
 
         private bool TryDeleteFocusedOrSelectedChampion(ChampionSelectionItem? fallbackChampion = null)
         {
+            if (!IsPriorityEditingEnabled)
+                return false;
+
             TryGetFocusedChampionTarget(out var focusedRow, out bool focusedIsPick, out var focusedChampion);
 
             if (DeleteSelectedChampions())
@@ -765,6 +854,9 @@ namespace JoinGameAfk.View
 
         private bool DeleteChampion(ChampionSelectionItem champion)
         {
+            if (!IsPriorityEditingEnabled)
+                return false;
+
             var collection = GetChampionCollection(champion.Row, champion.IsPick);
             if (!collection.Remove(champion))
                 return false;
@@ -798,6 +890,9 @@ namespace JoinGameAfk.View
 
         private bool DeleteDraggedChampion(ChampionDragData champion)
         {
+            if (!IsPriorityEditingEnabled)
+                return false;
+
             if (champion.SourceItem is not ChampionSelectionItem sourceItem)
                 return false;
 
@@ -836,6 +931,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
 
@@ -855,6 +953,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_MouseMove(object sender, MouseEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (_isChampionDragActive)
                 return;
 
@@ -901,6 +1002,13 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_DragOver(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
             if (!TryGetChampionDragData(e, out var champion) || (sender as FrameworkElement)?.DataContext is not ChampionSelectionItem targetChampion)
             {
                 e.Effects = DragDropEffects.None;
@@ -943,6 +1051,9 @@ namespace JoinGameAfk.View
 
         private void ChampionItem_Drop(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!TryGetChampionDragData(e, out var champion) || (sender as FrameworkElement)?.DataContext is not ChampionSelectionItem targetChampion)
                 return;
 
@@ -962,6 +1073,13 @@ namespace JoinGameAfk.View
 
         private void ChampionList_DragOver(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
             if (!TryGetChampionDragData(e, out var champion) || sender is not FrameworkElement listElement || listElement.DataContext is not PositionRow row)
             {
                 e.Effects = DragDropEffects.None;
@@ -996,6 +1114,9 @@ namespace JoinGameAfk.View
 
         private void ChampionList_Drop(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!TryGetChampionDragData(e, out var champion) || sender is not FrameworkElement listElement || listElement.DataContext is not PositionRow row)
                 return;
 
@@ -1013,6 +1134,13 @@ namespace JoinGameAfk.View
 
         private void Page_DragOver(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
             if (!TryGetChampionDragData(e, out _))
                 return;
 
@@ -1031,6 +1159,9 @@ namespace JoinGameAfk.View
 
         private void Page_DragLeave(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!TryGetChampionDragData(e, out _))
                 return;
 
@@ -1047,6 +1178,13 @@ namespace JoinGameAfk.View
 
         private void SearchArea_PreviewDragOver(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+            {
+                e.Effects = DragDropEffects.None;
+                e.Handled = true;
+                return;
+            }
+
             if (!TryGetChampionDragData(e, out var champion))
                 return;
 
@@ -1066,6 +1204,9 @@ namespace JoinGameAfk.View
 
         private void SearchArea_PreviewDrop(object sender, DragEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!TryGetChampionDragData(e, out var champion))
                 return;
 
@@ -1080,6 +1221,9 @@ namespace JoinGameAfk.View
 
         private void Page_PreviewMouseMove(object sender, MouseEventArgs e)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (!_isChampionDragActive)
                 return;
 
@@ -1158,6 +1302,9 @@ namespace JoinGameAfk.View
 
         private void InsertChampion(PositionRow row, bool isPick, ChampionInfo champion, int? targetIndex)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             var collection = GetChampionCollection(row, isPick);
             int existingIndex = collection.ToList().FindIndex(item => item.ChampionId == champion.Id);
             if (existingIndex >= 0)
@@ -1185,6 +1332,9 @@ namespace JoinGameAfk.View
 
         private void MoveChampionToTarget(ChampionSelectionItem champion, PositionRow targetRow, bool targetIsPick, int? targetIndex)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             var sourceCollection = GetChampionCollection(champion.Row, champion.IsPick);
             var targetCollection = GetChampionCollection(targetRow, targetIsPick);
             int sourceIndex = sourceCollection.IndexOf(champion);
@@ -1237,6 +1387,9 @@ namespace JoinGameAfk.View
 
         private void DropChampionOnTarget(ChampionDragData champion, PositionRow targetRow, bool targetIsPick, int? targetIndex)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (champion.SourceItem is not null)
                 MoveChampionToTarget(champion.SourceItem, targetRow, targetIsPick, targetIndex);
             else
@@ -1245,6 +1398,9 @@ namespace JoinGameAfk.View
 
         private void StartChampionDrag(DependencyObject source, ChampionDragData champion, Point position)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (_isChampionDragActive)
                 FinishChampionDrag(drop: false);
 
@@ -1335,6 +1491,9 @@ namespace JoinGameAfk.View
 
         private void UpdateManualChampionDrag(Point pagePosition)
         {
+            if (!IsPriorityEditingEnabled)
+                return;
+
             if (_activeChampionDragData is not ChampionDragData champion)
                 return;
 
@@ -1851,10 +2010,10 @@ namespace JoinGameAfk.View
         {
             foreach (var row in _rows)
             {
-                bool pickDropHover = _isChampionDragActive && ReferenceEquals(_dragHoverRow, row) && _dragHoverIsPick;
-                bool banDropHover = _isChampionDragActive && ReferenceEquals(_dragHoverRow, row) && !_dragHoverIsPick;
-                bool pickActive = ReferenceEquals(_activeTargetRow, row) && _activeTargetIsPick;
-                bool banActive = ReferenceEquals(_activeTargetRow, row) && !_activeTargetIsPick;
+                bool pickDropHover = IsPriorityEditingEnabled && _isChampionDragActive && ReferenceEquals(_dragHoverRow, row) && _dragHoverIsPick;
+                bool banDropHover = IsPriorityEditingEnabled && _isChampionDragActive && ReferenceEquals(_dragHoverRow, row) && !_dragHoverIsPick;
+                bool pickActive = IsPriorityEditingEnabled && ReferenceEquals(_activeTargetRow, row) && _activeTargetIsPick;
+                bool banActive = IsPriorityEditingEnabled && ReferenceEquals(_activeTargetRow, row) && !_activeTargetIsPick;
 
                 row.PickBorderBrush = pickDropHover ? _dropHoverTargetBrush : pickActive ? _activeTargetBrush : _inactiveTargetBrush;
                 row.BanBorderBrush = banDropHover ? _dropHoverTargetBrush : banActive ? _activeTargetBrush : _inactiveTargetBrush;

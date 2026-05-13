@@ -716,7 +716,7 @@ namespace JoinGameAfk.MVP.Controller
         {
             _phaseHandlers.Clear();
             _phaseHandlers.Add(new ReadyCheck(http, _champSelectSettings, Log));
-            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log));
+            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent));
         }
 
         private void Log(string message)
