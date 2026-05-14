@@ -29,6 +29,9 @@ namespace JoinGameAfk
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
 
+                if (champSelectSettings.PickBanOverlayOpenOnStartup)
+                    fMainWindow.ShowPickBanOverlayOnStartup();
+
                 if (champSelectSettings.StartWatcherOnStartup)
                     fPhaseController?.Start();
 

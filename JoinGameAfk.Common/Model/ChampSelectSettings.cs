@@ -61,6 +61,16 @@ namespace JoinGameAfk.Model
         public bool AutoShowPickBanOverlayEnabled { get; set; } = true;
 
         /// <summary>
+        /// Whether the pick/ban overlay should open automatically when the app starts.
+        /// </summary>
+        public bool PickBanOverlayOpenOnStartup { get; set; }
+
+        /// <summary>
+        /// Whether the pick/ban overlay should close automatically after champion select is over.
+        /// </summary>
+        public bool PickBanOverlayAutoCloseAfterChampSelectEnabled { get; set; } = true;
+
+        /// <summary>
         /// Last user-selected pick/ban overlay left position in WPF device-independent pixels.
         /// </summary>
         public double? PickBanOverlayLeft { get; set; }
@@ -199,7 +209,7 @@ namespace JoinGameAfk.Model
         public bool IsChampionSelectAutomationActive()
         {
             return ChampionSelectAutomationEnabled
-                && (AutoShowPickBanOverlayEnabled || AutoHoverChampionEnabled || AutoLockSelectionEnabled);
+                && (AutoHoverChampionEnabled || AutoLockSelectionEnabled);
         }
 
         public void ResetConfigurableOptionsToDefaults()
@@ -215,6 +225,8 @@ namespace JoinGameAfk.Model
             PickLockDelaySeconds = defaults.PickLockDelaySeconds;
             ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
             AutoShowPickBanOverlayEnabled = defaults.AutoShowPickBanOverlayEnabled;
+            PickBanOverlayOpenOnStartup = defaults.PickBanOverlayOpenOnStartup;
+            PickBanOverlayAutoCloseAfterChampSelectEnabled = defaults.PickBanOverlayAutoCloseAfterChampSelectEnabled;
             AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
             ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
             PlanningHoverDelaySeconds = defaults.PlanningHoverDelaySeconds;

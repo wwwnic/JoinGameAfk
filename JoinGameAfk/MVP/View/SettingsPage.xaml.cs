@@ -80,7 +80,9 @@ namespace JoinGameAfk.View
             _settings.ReadyCheckSoundNotificationKey = GetSelectedReadyCheckSoundKey();
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.ChampionSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
-            _settings.AutoShowPickBanOverlayEnabled = _settings.ChampionSelectAutomationEnabled && AutoShowPickBanOverlayCheckBox.IsChecked == true;
+            _settings.AutoShowPickBanOverlayEnabled = AutoShowPickBanOverlayCheckBox.IsChecked == true;
+            _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled = AutoClosePickBanOverlayCheckBox.IsChecked == true;
+            _settings.PickBanOverlayOpenOnStartup = OpenPickBanOverlayOnStartupCheckBox.IsChecked == true;
             _settings.AutoHoverChampionEnabled = _settings.ChampionSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
             _settings.AutoLockSelectionEnabled = _settings.ChampionSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
@@ -149,7 +151,9 @@ namespace JoinGameAfk.View
                 SelectReadyCheckSound(_settings.ReadyCheckSoundNotificationKey);
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
                 ChampionSelectAutomationCheckBox.IsChecked = championSelectAutomationEnabled;
-                AutoShowPickBanOverlayCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoShowPickBanOverlayEnabled;
+                AutoShowPickBanOverlayCheckBox.IsChecked = _settings.AutoShowPickBanOverlayEnabled;
+                AutoClosePickBanOverlayCheckBox.IsChecked = _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled;
+                OpenPickBanOverlayOnStartupCheckBox.IsChecked = _settings.PickBanOverlayOpenOnStartup;
                 AutoHoverChampionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
                 AutoLockSelectionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
                 PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();
@@ -178,9 +182,7 @@ namespace JoinGameAfk.View
             }
 
             if (!_isUpdatingAutomationControls
-                && (ReferenceEquals(sender, AutoShowPickBanOverlayCheckBox)
-                    || ReferenceEquals(sender, AutoHoverChampionCheckBox)
-                    || ReferenceEquals(sender, AutoLockSelectionCheckBox)))
+                && (ReferenceEquals(sender, AutoHoverChampionCheckBox) || ReferenceEquals(sender, AutoLockSelectionCheckBox)))
             {
                 SyncChampionSelectAutomationCheckBoxFromChildren();
             }
@@ -225,18 +227,15 @@ namespace JoinGameAfk.View
                 {
                     if (championSelectAutomationEnabled)
                     {
-                        if (AutoShowPickBanOverlayCheckBox.IsChecked != true
-                            && AutoHoverChampionCheckBox.IsChecked != true
+                        if (AutoHoverChampionCheckBox.IsChecked != true
                             && AutoLockSelectionCheckBox.IsChecked != true)
                         {
-                            AutoShowPickBanOverlayCheckBox.IsChecked = true;
                             AutoHoverChampionCheckBox.IsChecked = true;
                             AutoLockSelectionCheckBox.IsChecked = true;
                         }
                     }
                     else
                     {
-                        AutoShowPickBanOverlayCheckBox.IsChecked = false;
                         AutoHoverChampionCheckBox.IsChecked = false;
                         AutoLockSelectionCheckBox.IsChecked = false;
                     }
@@ -271,8 +270,7 @@ namespace JoinGameAfk.View
 
         private void SyncChampionSelectAutomationCheckBoxFromChildren()
         {
-            bool hasChampionSelectAutomation = AutoShowPickBanOverlayCheckBox.IsChecked == true
-                || AutoHoverChampionCheckBox.IsChecked == true
+            bool hasChampionSelectAutomation = AutoHoverChampionCheckBox.IsChecked == true
                 || AutoLockSelectionCheckBox.IsChecked == true;
 
             if (ChampionSelectAutomationCheckBox.IsChecked == hasChampionSelectAutomation)
@@ -306,7 +304,6 @@ namespace JoinGameAfk.View
             ReadyCheckSoundComboBox.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckSoundPreviewButton.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckAcceptDelayBox.IsEnabled = autoReadyCheckEnabled;
-            AutoShowPickBanOverlayCheckBox.IsEnabled = championSelectAutomationEnabled;
             ChampionSelectAutomationOptionsPanel.IsEnabled = championSelectAutomationEnabled;
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
             PlanningHoverDelayBox.IsEnabled = autoHoverChampionEnabled;

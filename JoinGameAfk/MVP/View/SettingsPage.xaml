@@ -14,6 +14,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
@@ -372,9 +373,9 @@
                                             Content="?"
                                             Margin="8,0,0,0"
                                             VerticalAlignment="Center"
-                                            ToolTip="Turn this off if you want the app to take no automated overlay, pick, or ban actions during champion select." />
+                                            ToolTip="Turn this off if you want the app to take no automated pick or ban actions during champion select." />
                                 </StackPanel>
-                                <TextBlock Text="Master switch for overlay, champion hover, and lock actions."
+                                <TextBlock Text="Master switch for champion hover and lock actions."
                                            Style="{StaticResource FieldHintStyle}"
                                            Margin="0,3,0,0" />
                             </StackPanel>
@@ -386,40 +387,6 @@
                                       Checked="ChampionSelectAutomationCheckBox_StateChanged"
                                       Unchecked="ChampionSelectAutomationCheckBox_StateChanged"
                                       ToolTip="When disabled, the app monitors champion select but does not hover or lock champions." />
-                        </Grid>
-                    </Border>
-
-                    <Border Style="{StaticResource SettingRowStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="14" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0">
-                                <StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <TextBlock Text="Open pick/ban overlay automatically"
-                                               Style="{StaticResource FieldLabelStyle}" />
-                                    <Button Style="{StaticResource InfoIndicatorStyle}"
-                                            Content="?"
-                                            Margin="8,0,0,0"
-                                            VerticalAlignment="Center"
-                                            ToolTip="When enabled, the overlay opens when champion select starts and closes when champion select ends." />
-                                </StackPanel>
-                                <TextBlock Text="Shows the overlay only for champion select and planning phases."
-                                           Style="{StaticResource FieldHintStyle}"
-                                           Margin="0,3,0,0" />
-                            </StackPanel>
-
-                            <CheckBox x:Name="AutoShowPickBanOverlayCheckBox"
-                                      Grid.Column="2"
-                                      Style="{StaticResource AppCheckBoxStyle}"
-                                      VerticalAlignment="Center"
-                                      Checked="AutomationCheckBox_StateChanged"
-                                      Unchecked="AutomationCheckBox_StateChanged"
-                                      ToolTip="When disabled, the overlay only opens from the toolbar button." />
                         </Grid>
                     </Border>
 
@@ -624,6 +591,114 @@
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
+                    <TextBlock Text="Mini Overlay"
+                               Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="Pick/ban overlay window behavior."
+                               Style="{StaticResource SectionDescriptionStyle}"
+                               Margin="0,4,0,0" />
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Open when champion select starts"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, the mini overlay opens automatically for champion select and planning phases." />
+                                </StackPanel>
+                                <TextBlock Text="Manual close still suppresses reopening for the current champion select."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoShowPickBanOverlayCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="When disabled, the mini overlay only opens from the toolbar button or startup option." />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Close when champion select is over"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, an overlay that was visible during champion select closes after champion select ends, the watcher stops, or the League Client disconnects." />
+                                </StackPanel>
+                                <TextBlock Text="Keeps the overlay from staying open after the draft context is gone."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="AutoClosePickBanOverlayCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="When disabled, the mini overlay stays open until closed manually." />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Open on app startup"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, the mini overlay opens after the main app window appears." />
+                                </StackPanel>
+                                <TextBlock Text="Uses the last saved overlay position when available."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="OpenPickBanOverlayOnStartupCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="When disabled, startup leaves the mini overlay closed." />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="6"
+                    Style="{StaticResource SectionCardStyle}"
+                    Margin="0,0,0,12">
+                <StackPanel>
                     <TextBlock Text="Champion Data"
                                Style="{StaticResource SectionTitleStyle}" />
                     <TextBlock Text="Riot Data Dragon sync."
@@ -708,7 +783,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="6"
+            <Border Grid.Row="7"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -732,7 +807,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="7"
+            <Border Grid.Row="8"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -867,7 +942,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="8"
+            <Border Grid.Row="9"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>

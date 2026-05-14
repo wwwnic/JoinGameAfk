@@ -40,6 +40,7 @@ namespace JoinGameAfk.View
         private string _champSelectSubPhase = string.Empty;
         private bool _isPickBanOverlayAutoOpened;
         private bool _isClosingAutoPickBanOverlay;
+        private bool _isPickBanOverlayVisibleDuringChampSelect;
         private bool _suppressAutoPickBanOverlayForCurrentChampSelect;
 
         public int ActiveTabIndex => _activeTabIndex;
@@ -193,6 +194,11 @@ namespace JoinGameAfk.View
         {
             ShowPickBanOverlay(autoOpened: false);
             WindowState = WindowState.Minimized;
+        }
+
+        public void ShowPickBanOverlayOnStartup()
+        {
+            Dispatcher.TryInvoke(() => ShowPickBanOverlay(autoOpened: true, autoOpenReason: "on startup"));
         }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -498,7 +504,7 @@ namespace JoinGameAfk.View
             };
         }
 
-        private void ShowPickBanOverlay(bool autoOpened)
+        private void ShowPickBanOverlay(bool autoOpened, string autoOpenReason = "for champion select")
         {
             bool shouldLogAutoOpen = autoOpened
                 && (_pickBanOverlayWindow is null || !_pickBanOverlayWindow.IsVisible);
@@ -512,6 +518,7 @@ namespace JoinGameAfk.View
                     bool wasAutoOpened = _isPickBanOverlayAutoOpened;
                     _pickBanOverlayWindow = null;
                     _isPickBanOverlayAutoOpened = false;
+                    _isPickBanOverlayVisibleDuringChampSelect = false;
 
                     if (wasAutoOpened
                         && !_isClosingAutoPickBanOverlay
@@ -535,23 +542,30 @@ namespace JoinGameAfk.View
             if (!_pickBanOverlayWindow.IsVisible)
                 _pickBanOverlayWindow.Show();
 
+            TrackPickBanOverlayVisibleDuringChampSelect();
+
             if (shouldLogAutoOpen)
-                LogAutoOverlay("Pick/ban overlay auto-opened for champion select.");
+                LogAutoOverlay($"Pick/ban overlay auto-opened {autoOpenReason}.");
 
             _pickBanOverlayWindow.Activate();
         }
 
         private void SynchronizeAutoPickBanOverlay()
         {
+            TrackPickBanOverlayVisibleDuringChampSelect();
+
             if (ShouldAutoShowPickBanOverlay())
             {
                 if (_pickBanOverlayWindow is null || !_pickBanOverlayWindow.IsVisible)
                     ShowPickBanOverlay(autoOpened: true);
+                else
+                    _isPickBanOverlayVisibleDuringChampSelect = true;
 
                 return;
             }
 
-            CloseAutoPickBanOverlay();
+            if (ShouldAutoClosePickBanOverlay())
+                CloseAutoPickBanOverlay();
         }
 
         private bool ShouldAutoShowPickBanOverlay()
@@ -563,9 +577,23 @@ namespace JoinGameAfk.View
                 && IsChampSelectFlow(_currentPhase);
         }
 
+        private bool ShouldAutoClosePickBanOverlay()
+        {
+            return _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled
+                && _isPickBanOverlayVisibleDuringChampSelect
+                && _pickBanOverlayWindow?.IsVisible == true
+                && (!_isWatcherRunning || !_isClientConnected || !IsChampSelectFlow(_currentPhase));
+        }
+
+        private void TrackPickBanOverlayVisibleDuringChampSelect()
+        {
+            if (_pickBanOverlayWindow?.IsVisible == true && IsChampSelectFlow(_currentPhase))
+                _isPickBanOverlayVisibleDuringChampSelect = true;
+        }
+
         private void CloseAutoPickBanOverlay()
         {
-            if (!_isPickBanOverlayAutoOpened)
+            if (_pickBanOverlayWindow?.IsVisible != true)
                 return;
 
             string closeReason = GetAutoPickBanOverlayCloseReason();
@@ -575,6 +603,7 @@ namespace JoinGameAfk.View
                 _pickBanOverlayWindow?.Close();
                 _pickBanOverlayWindow = null;
                 _isPickBanOverlayAutoOpened = false;
+                _isPickBanOverlayVisibleDuringChampSelect = false;
                 LogAutoOverlay($"Pick/ban overlay auto-closed ({closeReason}).");
             }
             finally
@@ -585,9 +614,6 @@ namespace JoinGameAfk.View
 
         private string GetAutoPickBanOverlayCloseReason()
         {
-            if (!_settings.AutoShowPickBanOverlayEnabled)
-                return "auto-open setting disabled";
-
             if (!_isWatcherRunning)
                 return "watcher stopped";
 
