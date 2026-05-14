@@ -11,8 +11,10 @@ using LcuClient;
 
 namespace JoinGameAfk.MVP.Controller
 {
-    public class PhaseController
+    public class PhaseController : IDisposable
     {
+        private static readonly TimeSpan EventStreamStopTimeout = TimeSpan.FromSeconds(2);
+
         private static readonly TimeSpan[] EventStreamRetryDelays =
         [
             TimeSpan.FromSeconds(2),
@@ -38,6 +40,7 @@ namespace JoinGameAfk.MVP.Controller
         private readonly Lcu.ProcessManager _processManager;
 
         private CancellationTokenSource? _cts;
+        private Task? _runLoopTask;
         private Lcu.LeagueClientEventStream? _eventStream;
         private Task? _eventStreamTask;
         private readonly object _lcuEventSignalLock = new();
@@ -58,6 +61,8 @@ namespace JoinGameAfk.MVP.Controller
         private DateTime _nextEventStreamRetryAtUtc;
         private bool _hasReceivedPhaseResponse;
         private bool _isWaitingForClient;
+        private bool _isShutdownRequested;
+        private bool _disposed;
 
         public bool IsRunning => _isRunning;
 
@@ -74,8 +79,13 @@ namespace JoinGameAfk.MVP.Controller
 
         public void Start()
         {
-            if (_isRunning) return;
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(PhaseController));
 
+            if (_isRunning || _runLoopTask is { IsCompleted: false })
+                return;
+
+            _isShutdownRequested = false;
             _isRunning = true;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
@@ -91,24 +101,86 @@ namespace JoinGameAfk.MVP.Controller
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
 
-            _cts = new CancellationTokenSource();
-            _ = RunLoopAsync(_cts.Token);
+            var cancellationTokenSource = new CancellationTokenSource();
+            _cts = cancellationTokenSource;
+            _runLoopTask = Task.Run(() => RunLoopAsync(cancellationTokenSource.Token), CancellationToken.None);
+            _ = ObserveRunLoopCompletionAsync(_runLoopTask, cancellationTokenSource);
         }
 
         public void Stop()
         {
-            if (!_isRunning) return;
+            StopCore(updateUi: true);
+        }
+
+        public void Shutdown()
+        {
+            _isShutdownRequested = true;
+            StopCore(updateUi: false);
+        }
+
+        private void StopCore(bool updateUi)
+        {
+            if (!_isRunning && _runLoopTask is not { IsCompleted: false })
+                return;
 
             _isRunning = false;
-            _cts?.Cancel();
+            try
+            {
+                _cts?.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+
             _eventStream?.Dispose();
+            SignalLcuEvent();
             ResetEventStreamState();
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
+            if (!updateUi || _isShutdownRequested)
+                return;
+
             fPhaseProgressionPage.SetWatcherState(false);
             fPhaseProgressionPage.SetClientConnection(false);
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            Shutdown();
+            _champSelectSettings.Saved -= OnSettingsSaved;
+        }
+
+        private async Task ObserveRunLoopCompletionAsync(Task runLoopTask, CancellationTokenSource cancellationTokenSource)
+        {
+            try
+            {
+                await runLoopTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+            {
+                // If cancellation was requested, we don't consider it an error.
+            }
+            catch (Exception ex)
+            {
+                if (!_isShutdownRequested)
+                    LogError($"Watcher stopped unexpectedly. {ex.Message}");
+            }
+            finally
+            {
+                if (ReferenceEquals(_runLoopTask, runLoopTask))
+                {
+                    _runLoopTask = null;
+                    _cts = null;
+                }
+
+                cancellationTokenSource.Dispose();
+            }
         }
 
         private async Task RunLoopAsync(CancellationToken ct)
@@ -256,9 +328,13 @@ namespace JoinGameAfk.MVP.Controller
             }
             finally
             {
+                Task? eventStreamTask = _eventStreamTask;
                 _eventStream?.Dispose();
                 _eventStream = null;
                 _eventStreamTask = null;
+                if (eventStreamTask is not null)
+                    await WaitForEventStreamTaskToStopAsync(eventStreamTask, ct);
+
                 ResetEventStreamState();
                 ClearClientDisconnectRequest();
                 ClearPendingLcuEvents();
@@ -678,7 +754,8 @@ namespace JoinGameAfk.MVP.Controller
 
         private void OnSettingsSaved()
         {
-            SignalLcuEvent();
+            if (!_isShutdownRequested)
+                SignalLcuEvent();
         }
 
         private void ResetLcuEventSignal()
@@ -721,14 +798,43 @@ namespace JoinGameAfk.MVP.Controller
 
         private void Log(string message)
         {
-            _logsPage.WriteLine(message);
+            if (!_isShutdownRequested)
+                _logsPage.WriteLine(message);
+
             Console.WriteLine(message);
         }
 
         private void LogError(string message)
         {
-            _logsPage.WriteErrorLine(message);
+            if (!_isShutdownRequested)
+                _logsPage.WriteErrorLine(message);
+
             Console.Error.WriteLine(message);
+        }
+
+        private async Task WaitForEventStreamTaskToStopAsync(Task eventStreamTask, CancellationToken cancellationToken)
+        {
+            try
+            {
+                Task completedTask = await Task.WhenAny(
+                        eventStreamTask,
+                        Task.Delay(EventStreamStopTimeout, CancellationToken.None))
+                    .ConfigureAwait(false);
+
+                if (!ReferenceEquals(completedTask, eventStreamTask))
+                    return;
+
+                await eventStreamTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // If cancellation was requested, we don't consider it an error.
+            }
+            catch (Exception ex)
+            {
+                if (!_isShutdownRequested && !cancellationToken.IsCancellationRequested)
+                    LogError($"LCU websocket event stream stopped with an error. {ex.Message}");
+            }
         }
 
         private async Task<bool> TryHandleChampSelectAsync(ChampSelect champSelect, LcuEventSnapshot eventSnapshot, CancellationToken cancellationToken)

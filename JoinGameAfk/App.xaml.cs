@@ -38,6 +38,12 @@ namespace JoinGameAfk
             }
         }
 
+        private void Application_Exit(object sender, ExitEventArgs e)
+        {
+            fPhaseController?.Dispose();
+            fPhaseController = null;
+        }
+
         private MainWindow CreateMainWindow(ChampSelectSettings champSelectSettings, int activeTabIndex = 0)
         {
             fDashboardPage = new PhaseProgressionPage();

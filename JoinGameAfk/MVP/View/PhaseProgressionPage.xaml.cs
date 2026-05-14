@@ -39,7 +39,7 @@ namespace JoinGameAfk.View
 
         public void UpdatePhase(ClientPhase phase)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 PhaseChanged?.Invoke(phase);
             });
@@ -47,7 +47,7 @@ namespace JoinGameAfk.View
 
         public void SetWatcherState(bool isRunning)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 WatcherStateChanged?.Invoke(isRunning);
             });
@@ -55,7 +55,7 @@ namespace JoinGameAfk.View
 
         public void SetClientConnection(bool isConnected)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 ClientConnectionChanged?.Invoke(isConnected);
             });
@@ -63,7 +63,7 @@ namespace JoinGameAfk.View
 
         public void UpdateDashboardStatus(DashboardStatus status)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 status = ApplyPlanBlockerHighlights(status);
 
@@ -355,7 +355,7 @@ namespace JoinGameAfk.View
 
         private void QueueLogRowResize()
         {
-            Dispatcher.InvokeAsync(UpdateLogRowHeight, DispatcherPriority.Loaded);
+            Dispatcher.TryInvokeAsync(UpdateLogRowHeight, DispatcherPriority.Loaded);
         }
 
         private void UpdateLogRowHeight()

@@ -10,6 +10,7 @@ using System.Windows.Media;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
+using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
@@ -122,6 +123,8 @@ namespace JoinGameAfk.View
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
+            _phaseController?.Dispose();
+            _phaseController = null;
             AppThemeManager.ThemeChanged -= RefreshTheme;
             _settings.Saved -= Settings_Saved;
             _dashboardPage.DashboardStatusChanged -= UpdateDashboardStatus;
@@ -139,7 +142,7 @@ namespace JoinGameAfk.View
 
         public void SetWatcherState(bool isRunning)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 _isWatcherRunning = isRunning;
                 if (_isWatcherRunning)
@@ -155,7 +158,7 @@ namespace JoinGameAfk.View
 
         public void SetClientConnection(bool isConnected)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 _isClientConnected = isConnected;
                 RefreshPhaseIndicator();
@@ -167,7 +170,7 @@ namespace JoinGameAfk.View
 
         public void UpdateChampSelectSubPhase(string subPhase)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 _champSelectSubPhase = subPhase;
                 RefreshPhaseIndicator();
@@ -413,7 +416,7 @@ namespace JoinGameAfk.View
 
         public void UpdatePhaseIndicator(ClientPhase phase)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 bool wasChampSelectFlow = IsChampSelectFlow(_currentPhase);
                 bool isChampSelectFlow = IsChampSelectFlow(phase);
@@ -431,7 +434,7 @@ namespace JoinGameAfk.View
 
         private void UpdateDashboardStatus(DashboardStatus status)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 _lastDashboardStatus = status;
                 _pickBanOverlayWindow?.UpdateDashboardStatus(status);
@@ -440,7 +443,7 @@ namespace JoinGameAfk.View
 
         private void RefreshTheme()
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 ActivateTab(_activeTabIndex);
                 RefreshPhaseIndicator();
@@ -451,7 +454,7 @@ namespace JoinGameAfk.View
 
         private void Settings_Saved()
         {
-            Dispatcher.Invoke(SynchronizeAutoPickBanOverlay);
+            Dispatcher.TryInvoke(SynchronizeAutoPickBanOverlay);
         }
 
         private void RefreshPhaseIndicator()

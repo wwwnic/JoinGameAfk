@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Controls;
+using JoinGameAfk.Services;
 
 namespace JoinGameAfk.View
 {
@@ -12,7 +13,7 @@ namespace JoinGameAfk.View
 
         public void WriteLine(string message)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 LogTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
                 LogTextBox.ScrollToEnd();
@@ -21,7 +22,7 @@ namespace JoinGameAfk.View
 
         public void WriteErrorLine(string message)
         {
-            Dispatcher.Invoke(() =>
+            Dispatcher.TryInvoke(() =>
             {
                 LogTextBox.AppendText($"[{DateTime.Now:HH:mm:ss}] ERROR: {message}{Environment.NewLine}");
                 LogTextBox.ScrollToEnd();
