@@ -15,6 +15,11 @@ namespace JoinGameAfk.Model
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
         /// <summary>
+        /// Whether the watcher should start automatically when the app starts.
+        /// </summary>
+        public bool StartWatcherOnStartup { get; set; } = false;
+
+        /// <summary>
         /// Whether the app should perform in-queue automation.
         /// </summary>
         public bool InQueueAutomationEnabled { get; set; } = true;
@@ -194,13 +199,14 @@ namespace JoinGameAfk.Model
         public bool IsChampionSelectAutomationActive()
         {
             return ChampionSelectAutomationEnabled
-                && (AutoHoverChampionEnabled || AutoLockSelectionEnabled);
+                && (AutoShowPickBanOverlayEnabled || AutoHoverChampionEnabled || AutoLockSelectionEnabled);
         }
 
         public void ResetConfigurableOptionsToDefaults()
         {
             var defaults = new ChampSelectSettings();
 
+            StartWatcherOnStartup = defaults.StartWatcherOnStartup;
             InQueueAutomationEnabled = defaults.InQueueAutomationEnabled;
             AutoReadyCheckEnabled = defaults.AutoReadyCheckEnabled;
             ReadyCheckSoundNotificationEnabled = defaults.ReadyCheckSoundNotificationEnabled;

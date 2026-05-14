@@ -29,6 +29,9 @@ namespace JoinGameAfk
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
 
+                if (champSelectSettings.StartWatcherOnStartup)
+                    fPhaseController?.Start();
+
                 _ = AutoUpdateChampionCatalogOnStartupAsync(champSelectSettings);
             }
             catch (Exception ex)

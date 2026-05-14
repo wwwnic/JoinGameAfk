@@ -73,13 +73,14 @@ namespace JoinGameAfk.View
             if (!TryReadSettingsInput(out var input))
                 return;
 
+            _settings.StartWatcherOnStartup = StartWatcherOnStartupCheckBox.IsChecked == true;
             _settings.InQueueAutomationEnabled = InQueueAutomationCheckBox.IsChecked == true;
             _settings.AutoReadyCheckEnabled = _settings.InQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
             _settings.ReadyCheckSoundNotificationEnabled = _settings.InQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             _settings.ReadyCheckSoundNotificationKey = GetSelectedReadyCheckSoundKey();
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.ChampionSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
-            _settings.AutoShowPickBanOverlayEnabled = AutoShowPickBanOverlayCheckBox.IsChecked == true;
+            _settings.AutoShowPickBanOverlayEnabled = _settings.ChampionSelectAutomationEnabled && AutoShowPickBanOverlayCheckBox.IsChecked == true;
             _settings.AutoHoverChampionEnabled = _settings.ChampionSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
             _settings.AutoLockSelectionEnabled = _settings.ChampionSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
@@ -108,7 +109,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default automation, sound, timing, performance, and theme settings?\n\nChampion priorities are kept.",
+                "Restore default startup, automation, sound, timing, performance, and theme settings?\n\nChampion priorities are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -141,13 +142,14 @@ namespace JoinGameAfk.View
             _isUpdatingAutomationControls = true;
             try
             {
+                StartWatcherOnStartupCheckBox.IsChecked = _settings.StartWatcherOnStartup;
                 InQueueAutomationCheckBox.IsChecked = inQueueAutomationEnabled;
                 AutoReadyCheckCheckBox.IsChecked = inQueueAutomationEnabled && _settings.AutoReadyCheckEnabled;
                 ReadyCheckSoundNotificationCheckBox.IsChecked = inQueueAutomationEnabled && _settings.ReadyCheckSoundNotificationEnabled;
                 SelectReadyCheckSound(_settings.ReadyCheckSoundNotificationKey);
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
                 ChampionSelectAutomationCheckBox.IsChecked = championSelectAutomationEnabled;
-                AutoShowPickBanOverlayCheckBox.IsChecked = _settings.AutoShowPickBanOverlayEnabled;
+                AutoShowPickBanOverlayCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoShowPickBanOverlayEnabled;
                 AutoHoverChampionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
                 AutoLockSelectionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
                 PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();
@@ -176,7 +178,9 @@ namespace JoinGameAfk.View
             }
 
             if (!_isUpdatingAutomationControls
-                && (ReferenceEquals(sender, AutoHoverChampionCheckBox) || ReferenceEquals(sender, AutoLockSelectionCheckBox)))
+                && (ReferenceEquals(sender, AutoShowPickBanOverlayCheckBox)
+                    || ReferenceEquals(sender, AutoHoverChampionCheckBox)
+                    || ReferenceEquals(sender, AutoLockSelectionCheckBox)))
             {
                 SyncChampionSelectAutomationCheckBoxFromChildren();
             }
@@ -221,14 +225,18 @@ namespace JoinGameAfk.View
                 {
                     if (championSelectAutomationEnabled)
                     {
-                        if (AutoHoverChampionCheckBox.IsChecked != true && AutoLockSelectionCheckBox.IsChecked != true)
+                        if (AutoShowPickBanOverlayCheckBox.IsChecked != true
+                            && AutoHoverChampionCheckBox.IsChecked != true
+                            && AutoLockSelectionCheckBox.IsChecked != true)
                         {
+                            AutoShowPickBanOverlayCheckBox.IsChecked = true;
                             AutoHoverChampionCheckBox.IsChecked = true;
                             AutoLockSelectionCheckBox.IsChecked = true;
                         }
                     }
                     else
                     {
+                        AutoShowPickBanOverlayCheckBox.IsChecked = false;
                         AutoHoverChampionCheckBox.IsChecked = false;
                         AutoLockSelectionCheckBox.IsChecked = false;
                     }
@@ -263,7 +271,8 @@ namespace JoinGameAfk.View
 
         private void SyncChampionSelectAutomationCheckBoxFromChildren()
         {
-            bool hasChampionSelectAutomation = AutoHoverChampionCheckBox.IsChecked == true
+            bool hasChampionSelectAutomation = AutoShowPickBanOverlayCheckBox.IsChecked == true
+                || AutoHoverChampionCheckBox.IsChecked == true
                 || AutoLockSelectionCheckBox.IsChecked == true;
 
             if (ChampionSelectAutomationCheckBox.IsChecked == hasChampionSelectAutomation)
@@ -297,6 +306,7 @@ namespace JoinGameAfk.View
             ReadyCheckSoundComboBox.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckSoundPreviewButton.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckAcceptDelayBox.IsEnabled = autoReadyCheckEnabled;
+            AutoShowPickBanOverlayCheckBox.IsEnabled = championSelectAutomationEnabled;
             ChampionSelectAutomationOptionsPanel.IsEnabled = championSelectAutomationEnabled;
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
             PlanningHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
