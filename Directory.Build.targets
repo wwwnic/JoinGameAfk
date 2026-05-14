@@ -1,0 +1,27 @@
+<Project>
+  <Target Name="ResolveGitInformationalVersion"
+          BeforeTargets="GetAssemblyVersion"
+          Condition="'$(UseGitInformationalVersion)' != 'false' and '$(GenerateAssemblyInfo)' != 'false' and '$(InformationalVersion)' == ''">
+    <Exec Command="git -C &quot;$(MSBuildProjectDirectory)&quot; describe --tags --dirty --match &quot;v[0-9]*.[0-9]*.[0-9]*&quot;"
+          ConsoleToMsBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="Low"
+          StandardErrorImportance="Low">
+      <Output TaskParameter="ConsoleOutput" ItemName="_GitDescribeOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitDescribeExitCode" />
+    </Exec>
+
+    <PropertyGroup Condition="'$(_GitDescribeExitCode)' == '0' and '@(_GitDescribeOutput)' != ''">
+      <_GitInformationalVersion>@(_GitDescribeOutput->'%(Identity)', '')</_GitInformationalVersion>
+      <_GitInformationalVersionIsValid>$([System.Text.RegularExpressions.Regex]::IsMatch("$(_GitInformationalVersion)", "^v\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?(?:-dirty)?$"))</_GitInformationalVersionIsValid>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(_GitInformationalVersionIsValid)' == 'True'">
+      <InformationalVersion>$(_GitInformationalVersion)</InformationalVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(InformationalVersion)' == ''">
+      <InformationalVersion>dev</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+</Project>

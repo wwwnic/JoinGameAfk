@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -45,6 +46,7 @@ namespace JoinGameAfk.View
         public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, ChampSelectSettings settings)
         {
             InitializeComponent();
+            SetApplicationVersion();
 
             _dashboardPage = dashboardPage;
             _logsPage = logsPage;
@@ -68,6 +70,48 @@ namespace JoinGameAfk.View
             SetClientConnection(false);
             UpdatePhaseIndicator(ClientPhase.Unknown);
             UpdateMaximizeRestoreButton();
+        }
+
+        private void SetApplicationVersion()
+        {
+            string version = GetDisplayVersion();
+            AppVersionText.Text = version;
+            Title = $"JoinGameAfk {version}";
+            AutomationProperties.SetName(AppVersionText, $"Application version {version}");
+        }
+
+        private static string GetDisplayVersion()
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            string? informationalVersion = assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion;
+
+            if (string.IsNullOrWhiteSpace(informationalVersion)
+                && assembly.GetName().Version is Version assemblyVersion)
+            {
+                informationalVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}.{assemblyVersion.Build}";
+            }
+
+            return FormatDisplayVersion(informationalVersion);
+        }
+
+        private static string FormatDisplayVersion(string? version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return "v0.0.0";
+
+            version = version.Trim();
+            int metadataIndex = version.IndexOf('+', StringComparison.Ordinal);
+            if (metadataIndex > 0)
+                version = version[..metadataIndex];
+
+            if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                return version;
+
+            return char.IsDigit(version[0])
+                ? $"v{version}"
+                : version;
         }
 
         private void MainWindow_SourceInitialized(object? sender, EventArgs e)

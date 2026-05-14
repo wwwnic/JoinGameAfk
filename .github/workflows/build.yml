@@ -24,14 +24,25 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Resolve app version
+        shell: pwsh
+        run: |
+          $refName = "${{ github.ref_name }}"
+          if ($refName -notmatch '^v?(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)$') {
+            throw "Release ref '$refName' is not a supported app version tag. Expected vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-suffix."
+          }
+
+          "APP_VERSION=$($Matches.version)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "Resolved app version: $($Matches.version)"
+
       - name: Restore dependencies
         run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
 
       - name: Build solution
-        run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore
+        run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION
 
       - name: Publish single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
 
       - name: Verify single-file artifact
         shell: pwsh
@@ -55,7 +66,7 @@ jobs:
         run: Copy-Item -Path ${{ github.workspace }}\publish-single\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
 
       - name: Publish split app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-split
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-split
 
       - name: Create split zip
         run: Compress-Archive -Path publish-split\* -DestinationPath JoinGameAfk-win-x64.zip

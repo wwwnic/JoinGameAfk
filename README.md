@@ -246,6 +246,15 @@ Notable components:
 dotnet build
 ```
 
+The app displays its version in the main window. Local builds use the nearest Git tag that matches the app version format.
+
+Examples:
+
+- `v2.0.4`
+- `v2.0.4-beta`
+
+If the working tree has local changes, the displayed version includes `-dirty`. If no valid version tag is available, the app displays `dev`.
+
 ### Publish as a single executable
 
 ```powershell
@@ -253,6 +262,28 @@ dotnet publish .\JoinGameAfk\JoinGameAfk.csproj -c Release -r win-x64 -p:Publish
 ```
 
 The published app can stay as a single exe because editable files are stored in `%LocalAppData%\JoinGameAfk` instead of next to the executable.
+
+### Release a version
+
+GitHub releases are created by pushing a version tag. The release workflow uses the tag that triggered the build, so the app version shown in the main window matches the release tag.
+
+```powershell
+git commit -m "Your release changes"
+git tag v2.0.4
+git push
+git push origin v2.0.4
+```
+
+Supported release tag format is `vMAJOR.MINOR.PATCH` with an optional prerelease suffix, such as `v2.0.4-beta` or `v2.0.4-beta.1`.
+
+Unsupported examples:
+
+- `v2.0`
+- `v2.0.4.1`
+- `release-v2.0.4`
+- `v2.0.4+build.5`
+
+If two valid tags point at the same commit, each pushed tag can create its own release. The artifact version is based on the tag that triggered that specific workflow run.
 
 ### Run
 
