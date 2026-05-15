@@ -89,11 +89,59 @@
         <Style x:Key="PriorityChampionTextStyle"
                TargetType="TextBlock"
                BasedOn="{StaticResource ChampionChipTextStyle}">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="9.5" />
         </Style>
 
         <Style x:Key="ReferenceChampionTextStyle"
                TargetType="TextBlock"
                BasedOn="{StaticResource ChampionChipTextStyle}">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="LineHeight" Value="9.5" />
+        </Style>
+
+        <Style x:Key="ChampionPortraitSlotStyle" TargetType="Border">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+        </Style>
+
+        <Style x:Key="ChampionTileLabelViewboxStyle" TargetType="Viewbox">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StretchDirection" Value="DownOnly" />
+        </Style>
+
+        <Style x:Key="ChampionPortraitStateBorderStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="RoleFilterButtonStyle" TargetType="Button">
@@ -303,7 +351,7 @@
                                                         </ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Grid Margin="0,3,6,3"
+                                                                <Grid Margin="0,1,4,2"
                                                                       VerticalAlignment="Center"
                                                                       Background="Transparent"
                                                                       AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
@@ -330,8 +378,29 @@
                                                                             KeyDown="ChampionItem_KeyDown"
                                                                             PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                             MouseMove="ChampionItem_MouseMove">
-                                                                        <TextBlock Text="{Binding DisplayText}"
-                                                                                   Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                        <Grid Width="48"
+                                                                              Height="64"
+                                                                              ClipToBounds="True">
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto" />
+                                                                                <RowDefinition Height="0" />
+                                                                                <RowDefinition Height="Auto" />
+                                                                            </Grid.RowDefinitions>
+
+                                                                            <Border Grid.Row="0"
+                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}" />
+
+                                                                            <Viewbox Grid.Row="2"
+                                                                                     Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                                                                <TextBlock Width="48"
+                                                                                           Text="{Binding DisplayText}"
+                                                                                           Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                            </Viewbox>
+
+                                                                            <Border Grid.Row="0"
+                                                                                    Panel.ZIndex="10"
+                                                                                    Style="{StaticResource ChampionPortraitStateBorderStyle}" />
+                                                                        </Grid>
                                                                     </Border>
 
                                                                     <Border Grid.Column="2"
@@ -347,7 +416,7 @@
                                                 </Grid>
 
                                                 <Border Width="3"
-                                                        Height="28"
+                                                        Height="64"
                                                         Margin="4,2,0,0"
                                                         Background="{DynamicResource AccentBlueBrush}"
                                                         CornerRadius="2"
@@ -390,7 +459,7 @@
                                                         </ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
-                                                                <Grid Margin="0,3,6,3"
+                                                                <Grid Margin="0,1,4,2"
                                                                       VerticalAlignment="Center"
                                                                       Background="Transparent"
                                                                       AllowDrop="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
@@ -417,8 +486,29 @@
                                                                             KeyDown="ChampionItem_KeyDown"
                                                                             PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
                                                                             MouseMove="ChampionItem_MouseMove">
-                                                                        <TextBlock Text="{Binding DisplayText}"
-                                                                                   Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                        <Grid Width="48"
+                                                                              Height="64"
+                                                                              ClipToBounds="True">
+                                                                            <Grid.RowDefinitions>
+                                                                                <RowDefinition Height="Auto" />
+                                                                                <RowDefinition Height="0" />
+                                                                                <RowDefinition Height="Auto" />
+                                                                            </Grid.RowDefinitions>
+
+                                                                            <Border Grid.Row="0"
+                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}" />
+
+                                                                            <Viewbox Grid.Row="2"
+                                                                                     Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                                                                <TextBlock Width="48"
+                                                                                           Text="{Binding DisplayText}"
+                                                                                           Style="{StaticResource PriorityChampionTextStyle}" />
+                                                                            </Viewbox>
+
+                                                                            <Border Grid.Row="0"
+                                                                                    Panel.ZIndex="10"
+                                                                                    Style="{StaticResource ChampionPortraitStateBorderStyle}" />
+                                                                        </Grid>
                                                                     </Border>
 
                                                                     <Border Grid.Column="2"
@@ -434,7 +524,7 @@
                                                 </Grid>
 
                                                 <Border Width="3"
-                                                        Height="28"
+                                                        Height="64"
                                                         Margin="4,2,0,0"
                                                         Background="{DynamicResource AccentBlueBrush}"
                                                         CornerRadius="2"
@@ -602,9 +692,23 @@
                                                 PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
                                                 PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
                                                 Style="{StaticResource ChampionReferenceButtonStyle}">
-                                            <TextBlock Style="{StaticResource ReferenceChampionTextStyle}">
-                                                <Run Text="{Binding Name, Mode=OneWay}" />
-                                            </TextBlock>
+                                            <Grid Width="48">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="0" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <Border Grid.Row="0"
+                                                        Style="{StaticResource ChampionPortraitSlotStyle}" />
+
+                                                <Viewbox Grid.Row="2"
+                                                         Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                                    <TextBlock Width="48"
+                                                               Text="{Binding Name}"
+                                                               Style="{StaticResource ReferenceChampionTextStyle}" />
+                                                </Viewbox>
+                                            </Grid>
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

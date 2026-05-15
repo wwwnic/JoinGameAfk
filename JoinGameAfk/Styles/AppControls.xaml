@@ -518,14 +518,14 @@
     </Style>
 
     <Style x:Key="ChampionPillBorderStyle" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="10,0" />
-        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Width" Value="48" />
+        <Setter Property="Height" Value="64" />
         <Setter Property="HorizontalAlignment" Value="Left" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="Cursor" Value="SizeAll" />
@@ -533,28 +533,24 @@
         <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSoftBrush}" />
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
                 <Setter Property="ToolTip" Value="Drag to reorder" />
             </Trigger>
             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource AccentBlueDeepBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
                 <Setter Property="ToolTip" Value="Selected" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                <Setter Property="Opacity" Value="0.55" />
+                <Setter Property="ToolTip" Value="Dragging" />
             </DataTrigger>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>
                     <Condition Binding="{Binding IsSelected}" Value="True" />
                     <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
                 </MultiDataTrigger.Conditions>
-                <Setter Property="Background" Value="{DynamicResource AccentBlueStrongBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
             </MultiDataTrigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
-                <Setter Property="BorderThickness" Value="2" />
                 <Setter Property="ToolTip" Value="Press Enter or Space to select. Press Backspace or Delete to remove champions." />
             </Trigger>
             <MultiDataTrigger>
@@ -562,13 +558,9 @@
                     <Condition Binding="{Binding IsSelected}" Value="True" />
                     <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsKeyboardFocused}" Value="True" />
                 </MultiDataTrigger.Conditions>
-                <Setter Property="Background" Value="{DynamicResource AccentBlueStrongBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
             </MultiDataTrigger>
             <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
-                <Setter Property="Background" Value="{DynamicResource DangerSurfaceDeepBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
                 <Setter Property="ToolTip" Value="This existing champion will be replaced if you drop here." />
             </DataTrigger>
@@ -576,17 +568,18 @@
     </Style>
 
     <Style x:Key="ChampionReferenceButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Cursor" Value="SizeAll" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Margin" Value="0,3,6,3" />
-        <Setter Property="MinHeight" Value="28" />
-        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Margin" Value="0,1,4,2" />
+        <Setter Property="Width" Value="48" />
+        <Setter Property="Height" Value="64" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="HorizontalAlignment" Value="Left" />
-        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="ToolTip" Value="Click to add to the selected list, or drag into a pick/ban list." />
@@ -608,17 +601,14 @@
         </Setter>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
-                <Setter Property="BorderThickness" Value="2" />
+                <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{DynamicResource AppInputPressedBrush}" />
                 <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
             </Trigger>
         </Style.Triggers>

@@ -1406,6 +1406,9 @@ namespace JoinGameAfk.View
 
             _isChampionDragActive = true;
             _activeChampionDragData = champion;
+            if (champion.SourceItem is not null)
+                champion.SourceItem.IsDragging = true;
+
             RefreshTargetBrushes();
             ShowDragPreview(champion.PreviewText, position);
 
@@ -1642,6 +1645,9 @@ namespace JoinGameAfk.View
         {
             ClearInsertionIndicator();
             IsSearchDeleteDropTarget = false;
+            if (_activeChampionDragData?.SourceItem is not null)
+                _activeChampionDragData.SourceItem.IsDragging = false;
+
             _isChampionDragActive = false;
             _activeChampionDragData = null;
             _draggedChampion = null;
@@ -2177,6 +2183,7 @@ namespace JoinGameAfk.View
         private Visibility _insertAfterIndicatorVisibility = Visibility.Collapsed;
         private bool _isDuplicateDropTarget;
         private bool _isSelected;
+        private bool _isDragging;
         private string _displayText = "";
 
         public int ChampionId { get; init; }
@@ -2211,6 +2218,12 @@ namespace JoinGameAfk.View
         {
             get => _isSelected;
             set => SetProperty(ref _isSelected, value);
+        }
+
+        public bool IsDragging
+        {
+            get => _isDragging;
+            set => SetProperty(ref _isDragging, value);
         }
 
         private void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
