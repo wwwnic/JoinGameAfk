@@ -2,11 +2,14 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Theme;
@@ -24,6 +27,7 @@ namespace JoinGameAfk.View
         private readonly ChampSelectSettings _settings;
         private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
+        private List<ChampionReferenceItem> _filteredChampionReferences;
         private readonly List<PositionRow> _rows;
         private readonly ObservableCollection<RoleFilterOption> _roleFilters;
         private readonly HashSet<Position> _activeRoleFilters = [];
@@ -126,7 +130,8 @@ namespace JoinGameAfk.View
                 .OrderBy(champion => champion.Name)
                 .ToList();
             _filteredChampions = [.. _allChampions];
-            ChampionReferenceList.ItemsSource = _filteredChampions;
+            _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
+            ChampionReferenceList.ItemsSource = _filteredChampionReferences;
 
             _roleFilters =
             [
@@ -397,9 +402,10 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            if ((sender as FrameworkElement)?.DataContext is not ChampionInfo champion)
+            if ((sender as FrameworkElement)?.DataContext is not ChampionReferenceItem championReference)
                 return;
 
+            var champion = championReference.Champion;
             TryAddChampionToActiveTarget(champion);
             _draggedReferenceChampion = null;
         }
@@ -409,11 +415,11 @@ namespace JoinGameAfk.View
             if (!IsPriorityEditingEnabled)
                 return;
 
-            if ((sender as FrameworkElement)?.DataContext is not ChampionInfo champion)
+            if ((sender as FrameworkElement)?.DataContext is not ChampionReferenceItem championReference)
                 return;
 
             _suppressReferenceChampionClick = false;
-            _draggedReferenceChampion = champion;
+            _draggedReferenceChampion = championReference.Champion;
             _dragStartPoint = e.GetPosition(this);
         }
 
@@ -564,7 +570,15 @@ namespace JoinGameAfk.View
                     .ThenBy(result => result.Champion.Id)
                     .Select(result => result.Champion)];
 
-            ChampionReferenceList.ItemsSource = _filteredChampions;
+            _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
+            ChampionReferenceList.ItemsSource = _filteredChampionReferences;
+        }
+
+        private static List<ChampionReferenceItem> CreateChampionReferenceItems(IEnumerable<ChampionInfo> champions)
+        {
+            return champions
+                .Select(champion => new ChampionReferenceItem(champion))
+                .ToList();
         }
 
         private bool MatchesActiveRoleFilter(ChampionInfo champion)
@@ -2144,6 +2158,138 @@ namespace JoinGameAfk.View
 
     }
 
+    internal sealed class ChampionReferenceItem
+    {
+        private readonly ChampionChipLabel _chipLabel;
+
+        public ChampionReferenceItem(ChampionInfo champion)
+        {
+            Champion = champion;
+            _chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
+        }
+
+        public ChampionInfo Champion { get; }
+        public string Name => Champion.Name;
+        public string ChipDisplayText => _chipLabel.Text;
+        public double ChipDisplayFontSize => _chipLabel.FontSize;
+        public string ToolTipText => $"{_chipLabel.ToolTipName}\nClick to add to the selected list, or drag into a pick/ban list.";
+    }
+
+    internal sealed record ChampionChipLabel(string Text, double FontSize, string ToolTipName);
+
+    internal static class ChampionChipLabelFormatter
+    {
+        public const double DefaultFontSize = 10;
+        private const double SmallFontSize = 9.25;
+        private const double MinimumFontSize = 8;
+        private const string LabelBreakSeedConfigPath = "Assets/champion-chip-label-breaks.json";
+
+        private static readonly Lazy<IReadOnlyDictionary<string, string>> ConfiguredBreaks = new(LoadConfiguredBreaks);
+
+        public static ChampionChipLabel Format(string name)
+        {
+            string normalizedName = string.IsNullOrWhiteSpace(name) ? "Unknown Champion" : name.Trim();
+            string text = ConfiguredBreaks.Value.TryGetValue(normalizedName, out string? configuredText)
+                ? configuredText
+                : normalizedName;
+
+            return new ChampionChipLabel(text, GetFontSize(text), normalizedName);
+        }
+
+        private static IReadOnlyDictionary<string, string> LoadConfiguredBreaks()
+        {
+            EnsureConfiguredBreaksFileExists();
+
+            string filePath = AppStorage.ChampionChipLabelBreaksFilePath;
+            if (!File.Exists(filePath))
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                string json = File.ReadAllText(filePath);
+                var configuredBreaks = JsonSerializer.Deserialize<Dictionary<string, string>>(
+                    json,
+                    new JsonSerializerOptions
+                    {
+                        AllowTrailingCommas = true,
+                        ReadCommentHandling = JsonCommentHandling.Skip
+                    });
+
+                return configuredBreaks?
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Key) && !string.IsNullOrWhiteSpace(entry.Value))
+                    .ToDictionary(
+                        entry => entry.Key.Trim(),
+                        entry => NormalizeConfiguredBreak(entry.Value),
+                        StringComparer.OrdinalIgnoreCase)
+                    ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+        }
+
+        private static void EnsureConfiguredBreaksFileExists()
+        {
+            if (File.Exists(AppStorage.ChampionChipLabelBreaksFilePath))
+                return;
+
+            try
+            {
+                AppStorage.EnsureDirectoryExists();
+                string json = LoadSeedConfiguredBreaksJson();
+                File.WriteAllText(AppStorage.ChampionChipLabelBreaksFilePath, CreateConfiguredBreaksFileContents(json));
+            }
+            catch
+            {
+            }
+        }
+
+        private static string LoadSeedConfiguredBreaksJson()
+        {
+            string seedFilePath = Path.Combine(AppContext.BaseDirectory, LabelBreakSeedConfigPath);
+            return File.Exists(seedFilePath)
+                ? File.ReadAllText(seedFilePath)
+                : $"{{{Environment.NewLine}}}";
+        }
+
+        private static string CreateConfiguredBreaksFileContents(string json)
+        {
+            string header = string.Join(Environment.NewLine,
+            [
+                "// JoinGameAfk champion chip label breaks.",
+                "// Edit this file to control where long champion names wrap in the Champion Priorities UI.",
+                "// Keys are exact champion names. Values are displayed labels; use \\n inside a string to force a line break.",
+                ""
+            ]);
+
+            return $"{header}{json.Trim()}{Environment.NewLine}";
+        }
+
+        private static double GetFontSize(string text)
+        {
+            int longestLineLength = text
+                .Split('\n')
+                .Max(line => line.Length);
+
+            if (longestLineLength <= 8)
+                return DefaultFontSize;
+
+            if (longestLineLength <= 10)
+                return SmallFontSize;
+
+            return MinimumFontSize;
+        }
+
+        private static string NormalizeConfiguredBreak(string text)
+        {
+            return text
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Trim();
+        }
+    }
+
     public class RoleFilterOption : INotifyPropertyChanged
     {
         private bool _isSelected;
@@ -2185,6 +2331,9 @@ namespace JoinGameAfk.View
         private bool _isSelected;
         private bool _isDragging;
         private string _displayText = "";
+        private string _chipDisplayText = "";
+        private double _chipDisplayFontSize = ChampionChipLabelFormatter.DefaultFontSize;
+        private string _toolTipText = "";
 
         public int ChampionId { get; init; }
         public PositionRow Row { get; init; } = null!;
@@ -2193,7 +2342,33 @@ namespace JoinGameAfk.View
         public string DisplayText
         {
             get => _displayText;
-            set => SetProperty(ref _displayText, value);
+            set
+            {
+                if (EqualityComparer<string>.Default.Equals(_displayText, value))
+                    return;
+
+                _displayText = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DisplayText)));
+                ApplyChipLabel(value);
+            }
+        }
+
+        public string ChipDisplayText
+        {
+            get => _chipDisplayText;
+            private set => SetProperty(ref _chipDisplayText, value);
+        }
+
+        public double ChipDisplayFontSize
+        {
+            get => _chipDisplayFontSize;
+            private set => SetProperty(ref _chipDisplayFontSize, value);
+        }
+
+        public string ToolTipText
+        {
+            get => _toolTipText;
+            private set => SetProperty(ref _toolTipText, value);
         }
 
         public Visibility InsertBeforeIndicatorVisibility
@@ -2224,6 +2399,14 @@ namespace JoinGameAfk.View
         {
             get => _isDragging;
             set => SetProperty(ref _isDragging, value);
+        }
+
+        private void ApplyChipLabel(string displayText)
+        {
+            var chipLabel = ChampionChipLabelFormatter.Format(displayText);
+            ChipDisplayText = chipLabel.Text;
+            ChipDisplayFontSize = chipLabel.FontSize;
+            ToolTipText = $"{chipLabel.ToolTipName}\nDrag to reorder. Press Enter or Space to select. Press Backspace or Delete to remove champions.";
         }
 
         private void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")

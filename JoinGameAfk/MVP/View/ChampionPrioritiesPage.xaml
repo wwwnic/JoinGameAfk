@@ -92,7 +92,7 @@
             <Setter Property="FontSize" Value="10" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="TextAlignment" Value="Center" />
-            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
             <Setter Property="LineHeight" Value="9.5" />
         </Style>
 
@@ -102,7 +102,7 @@
             <Setter Property="FontSize" Value="10" />
             <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="TextAlignment" Value="Center" />
-            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
             <Setter Property="LineHeight" Value="9.5" />
         </Style>
 
@@ -374,6 +374,7 @@
                                                                             Tag="ChampionPill"
                                                                             Style="{StaticResource ChampionPillBorderStyle}"
                                                                             AutomationProperties.Name="{Binding DisplayText}"
+                                                                            ToolTip="{Binding ToolTipText}"
                                                                             GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
                                                                             KeyDown="ChampionItem_KeyDown"
                                                                             PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
@@ -392,8 +393,8 @@
 
                                                                             <Viewbox Grid.Row="2"
                                                                                      Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                                                <TextBlock Width="48"
-                                                                                           Text="{Binding DisplayText}"
+                                                                                <TextBlock Text="{Binding ChipDisplayText}"
+                                                                                           FontSize="{Binding ChipDisplayFontSize}"
                                                                                            Style="{StaticResource PriorityChampionTextStyle}" />
                                                                             </Viewbox>
 
@@ -482,6 +483,7 @@
                                                                             Tag="ChampionPill"
                                                                             Style="{StaticResource ChampionPillBorderStyle}"
                                                                             AutomationProperties.Name="{Binding DisplayText}"
+                                                                            ToolTip="{Binding ToolTipText}"
                                                                             GotKeyboardFocus="ChampionItem_GotKeyboardFocus"
                                                                             KeyDown="ChampionItem_KeyDown"
                                                                             PreviewMouseLeftButtonDown="ChampionItem_PreviewMouseLeftButtonDown"
@@ -500,8 +502,8 @@
 
                                                                             <Viewbox Grid.Row="2"
                                                                                      Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                                                <TextBlock Width="48"
-                                                                                           Text="{Binding DisplayText}"
+                                                                                <TextBlock Text="{Binding ChipDisplayText}"
+                                                                                           FontSize="{Binding ChipDisplayFontSize}"
                                                                                            Style="{StaticResource PriorityChampionTextStyle}" />
                                                                             </Viewbox>
 
@@ -688,6 +690,7 @@
                                     <DataTemplate>
                                         <Button Click="ChampionReferenceButton_Click"
                                                 AutomationProperties.Name="{Binding Name}"
+                                                ToolTip="{Binding ToolTipText}"
                                                 IsEnabled="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                 PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
                                                 PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
@@ -704,8 +707,8 @@
 
                                                 <Viewbox Grid.Row="2"
                                                          Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                    <TextBlock Width="48"
-                                                               Text="{Binding Name}"
+                                                    <TextBlock Text="{Binding ChipDisplayText}"
+                                                               FontSize="{Binding ChipDisplayFontSize}"
                                                                Style="{StaticResource ReferenceChampionTextStyle}" />
                                                 </Viewbox>
                                             </Grid>

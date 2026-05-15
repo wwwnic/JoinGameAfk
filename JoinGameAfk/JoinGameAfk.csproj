@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
+    <Content Include="Assets\champion-chip-label-breaks.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Remove="Assets\Sounds\*.wav" />
     <Resource Include="Assets\Sounds\*.wav" />
   </ItemGroup>
