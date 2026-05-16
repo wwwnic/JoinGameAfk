@@ -16,6 +16,11 @@ namespace JoinGameAfk.View
     public partial class SettingsPage : Page
     {
         private static readonly TimeSpan SavedMessageDuration = TimeSpan.FromSeconds(3);
+        private static readonly Thickness CleanSettingsScrollPadding = new(0);
+        private static readonly Thickness DirtySettingsScrollPadding = new(0, 0, 0, 92);
+        private static readonly Thickness DirtyAndStatusSettingsScrollPadding = new(0, 0, 0, 174);
+        private static readonly Thickness FloatingStatusBottomMargin = new(0, 0, 18, 16);
+        private static readonly Thickness FloatingStatusAboveDirtyMargin = new(0, 0, 18, 98);
 
         private readonly ChampSelectSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
@@ -34,6 +39,7 @@ namespace JoinGameAfk.View
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
         private bool _isUpdatingChampionPictureControls;
+        private bool _isApplyingSettingsToControls;
 
         public SettingsPage(
             ChampSelectSettings settings,
@@ -55,7 +61,8 @@ namespace JoinGameAfk.View
             _savedMessageTimer.Tick += (_, _) =>
             {
                 _savedMessageTimer.Stop();
-                SavedLabel.Visibility = Visibility.Collapsed;
+                FloatingSettingsStatusBar.Visibility = Visibility.Collapsed;
+                UpdateSettingsScrollPadding();
             };
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
@@ -71,6 +78,8 @@ namespace JoinGameAfk.View
             ApplySettingsToControls();
             AttachNumericInputValidation();
             UpdateAutomationInputStates();
+            AttachDirtyStateTracking();
+            RefreshDirtyState();
         }
 
         private void AttachNumericInputValidation()
@@ -82,6 +91,182 @@ namespace JoinGameAfk.View
             _banLockDelayRule = InputValidator.AttachInteger(BanLockDelayBox, "Ban lock timer", minimum: 0);
             _champSelectPollIntervalRule = InputValidator.AttachInteger(ChampSelectPollIntervalBox, "Regular polling interval", minimum: 100, maximum: 5000);
             _champSelectEventFallbackPollIntervalRule = InputValidator.AttachInteger(EventFallbackPollIntervalBox, "Event fallback polling interval", minimum: 1000, maximum: 30000);
+        }
+
+        private void AttachDirtyStateTracking()
+        {
+            CheckBox[] checkBoxes =
+            [
+                StartWatcherOnStartupCheckBox,
+                InQueueAutomationCheckBox,
+                AutoReadyCheckCheckBox,
+                ReadyCheckSoundNotificationCheckBox,
+                ChampionSelectAutomationCheckBox,
+                AutoShowPickBanOverlayCheckBox,
+                AutoClosePickBanOverlayCheckBox,
+                OpenPickBanOverlayOnStartupCheckBox,
+                AutoHoverChampionCheckBox,
+                AutoLockSelectionCheckBox,
+                UseLiveEventsCheckBox,
+                EventFallbackPollingCheckBox,
+                AutoUpdateChampionCatalogOnStartupCheckBox
+            ];
+
+            foreach (var checkBox in checkBoxes)
+            {
+                checkBox.Checked += DirtyTrackedControl_Changed;
+                checkBox.Unchecked += DirtyTrackedControl_Changed;
+            }
+
+            ThemeComboBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
+            ReadyCheckSoundComboBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
+
+            ReadyCheckAcceptDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            PickLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            ChampionHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            PlanningHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            BanLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            ChampSelectPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
+            EventFallbackPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
+        }
+
+        private void DirtyTrackedControl_Changed(object sender, RoutedEventArgs e)
+        {
+            RefreshDirtyState();
+        }
+
+        private void DirtyTrackedControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshDirtyState();
+        }
+
+        private void DirtyTrackedControl_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            RefreshDirtyState();
+        }
+
+        private void RefreshDirtyState()
+        {
+            if (_isApplyingSettingsToControls)
+                return;
+
+            bool hasDirtySettings = CaptureCurrentSettingsSnapshot() != CaptureSavedSettingsSnapshot();
+            DirtySettingsBar.Visibility = hasDirtySettings ? Visibility.Visible : Visibility.Collapsed;
+            if (hasDirtySettings)
+            {
+                _savedMessageTimer.Stop();
+                FloatingSettingsStatusBar.Visibility = Visibility.Collapsed;
+            }
+
+            UpdateSettingsScrollPadding();
+        }
+
+        private void UpdateSettingsScrollPadding()
+        {
+            bool hasDirtySettings = DirtySettingsBar.Visibility == Visibility.Visible;
+            bool hasFloatingStatus = FloatingSettingsStatusBar.Visibility == Visibility.Visible;
+
+            FloatingSettingsStatusBar.Margin = hasDirtySettings
+                ? FloatingStatusAboveDirtyMargin
+                : FloatingStatusBottomMargin;
+
+            SettingsScrollViewer.Padding = (hasDirtySettings, hasFloatingStatus) switch
+            {
+                (true, true) => DirtyAndStatusSettingsScrollPadding,
+                (true, false) => DirtySettingsScrollPadding,
+                (false, true) => DirtySettingsScrollPadding,
+                _ => CleanSettingsScrollPadding
+            };
+        }
+
+        private SettingsPageSnapshot CaptureCurrentSettingsSnapshot()
+        {
+            bool inQueueAutomationEnabled = InQueueAutomationCheckBox.IsChecked == true;
+            bool autoReadyCheckEnabled = inQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
+            bool readyCheckSoundNotificationEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
+            bool championSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
+            bool autoHoverChampionEnabled = championSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
+            bool autoLockSelectionEnabled = championSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
+            bool useLiveEvents = UseLiveEventsCheckBox.IsChecked == true;
+            bool eventFallbackPollingEnabled = EventFallbackPollingCheckBox.IsChecked == true;
+
+            return new SettingsPageSnapshot(
+                StartWatcherOnStartupCheckBox.IsChecked == true,
+                inQueueAutomationEnabled,
+                autoReadyCheckEnabled,
+                readyCheckSoundNotificationEnabled,
+                GetSelectedReadyCheckSoundKey(),
+                autoReadyCheckEnabled ? CreateNumericSnapshot(ReadyCheckAcceptDelayBox) : string.Empty,
+                championSelectAutomationEnabled,
+                AutoShowPickBanOverlayCheckBox.IsChecked == true,
+                AutoClosePickBanOverlayCheckBox.IsChecked == true,
+                OpenPickBanOverlayOnStartupCheckBox.IsChecked == true,
+                autoHoverChampionEnabled,
+                autoLockSelectionEnabled,
+                autoLockSelectionEnabled ? CreateNumericSnapshot(PickLockDelayBox) : string.Empty,
+                autoHoverChampionEnabled ? CreateNumericSnapshot(ChampionHoverDelayBox) : string.Empty,
+                autoHoverChampionEnabled ? CreateNumericSnapshot(PlanningHoverDelayBox) : string.Empty,
+                autoLockSelectionEnabled ? CreateNumericSnapshot(BanLockDelayBox) : string.Empty,
+                useLiveEvents ? string.Empty : CreateNumericSnapshot(ChampSelectPollIntervalBox),
+                useLiveEvents,
+                eventFallbackPollingEnabled,
+                useLiveEvents && eventFallbackPollingEnabled ? CreateNumericSnapshot(EventFallbackPollIntervalBox) : string.Empty,
+                GetSelectedThemeKey(),
+                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true,
+                CreateChampionImageSelectionsSignature(_pendingChampionImageFileNames));
+        }
+
+        private SettingsPageSnapshot CaptureSavedSettingsSnapshot()
+        {
+            bool inQueueAutomationEnabled = _settings.InQueueAutomationEnabled;
+            bool autoReadyCheckEnabled = inQueueAutomationEnabled && _settings.AutoReadyCheckEnabled;
+            bool readyCheckSoundNotificationEnabled = inQueueAutomationEnabled && _settings.ReadyCheckSoundNotificationEnabled;
+            bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
+            bool autoHoverChampionEnabled = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
+            bool autoLockSelectionEnabled = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
+            bool useLiveEvents = _settings.UseChampSelectEventStream;
+            bool eventFallbackPollingEnabled = _settings.ChampSelectEventFallbackPollingEnabled;
+
+            return new SettingsPageSnapshot(
+                _settings.StartWatcherOnStartup,
+                inQueueAutomationEnabled,
+                autoReadyCheckEnabled,
+                readyCheckSoundNotificationEnabled,
+                NotificationSoundPlayer.NormalizeReadyCheckSoundKey(_settings.ReadyCheckSoundNotificationKey),
+                autoReadyCheckEnabled ? _settings.ReadyCheckAcceptDelaySeconds.ToString() : string.Empty,
+                championSelectAutomationEnabled,
+                _settings.AutoShowPickBanOverlayEnabled,
+                _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled,
+                _settings.PickBanOverlayOpenOnStartup,
+                autoHoverChampionEnabled,
+                autoLockSelectionEnabled,
+                autoLockSelectionEnabled ? _settings.PickLockDelaySeconds.ToString() : string.Empty,
+                autoHoverChampionEnabled ? _settings.ChampionHoverDelaySeconds.ToString() : string.Empty,
+                autoHoverChampionEnabled ? _settings.PlanningHoverDelaySeconds.ToString() : string.Empty,
+                autoLockSelectionEnabled ? _settings.BanLockDelaySeconds.ToString() : string.Empty,
+                useLiveEvents ? string.Empty : _settings.ChampSelectPollIntervalMs.ToString(),
+                useLiveEvents,
+                eventFallbackPollingEnabled,
+                useLiveEvents && eventFallbackPollingEnabled ? _settings.ChampSelectEventFallbackPollIntervalMs.ToString() : string.Empty,
+                AppThemeManager.NormalizeThemeKey(_settings.ThemeKey),
+                _settings.AutoUpdateChampionCatalogOnStartup,
+                CreateChampionImageSelectionsSignature(_settings.ChampionImageFileNames));
+        }
+
+        private static string CreateNumericSnapshot(TextBox textBox)
+        {
+            return int.TryParse(textBox.Text, out int value)
+                ? value.ToString()
+                : $"invalid:{textBox.Text}";
+        }
+
+        private static string CreateChampionImageSelectionsSignature(IReadOnlyDictionary<int, string> selections)
+        {
+            return string.Join(
+                "|",
+                NormalizeChampionImageSelections(new Dictionary<int, string>(selections))
+                    .OrderBy(entry => entry.Key)
+                    .Select(entry => $"{entry.Key}:{entry.Value.ToUpperInvariant()}"));
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -115,6 +300,7 @@ namespace JoinGameAfk.View
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
+            RefreshDirtyState();
             if (shouldReloadTheme && _reloadUiForTheme is not null)
             {
                 _reloadUiForTheme(_settings);
@@ -144,6 +330,7 @@ namespace JoinGameAfk.View
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
+            RefreshDirtyState();
             if (shouldReloadTheme && _reloadUiForTheme is not null)
             {
                 _reloadUiForTheme(_settings);
@@ -158,6 +345,7 @@ namespace JoinGameAfk.View
             bool inQueueAutomationEnabled = _settings.InQueueAutomationEnabled;
             bool championSelectAutomationEnabled = _settings.IsChampionSelectAutomationActive();
 
+            _isApplyingSettingsToControls = true;
             _isUpdatingAutomationControls = true;
             try
             {
@@ -187,6 +375,7 @@ namespace JoinGameAfk.View
             finally
             {
                 _isUpdatingAutomationControls = false;
+                _isApplyingSettingsToControls = false;
             }
         }
 
@@ -504,9 +693,12 @@ namespace JoinGameAfk.View
         private void ShowStatusMessage(string message, string brushResourceKey, Brush fallbackBrush)
         {
             _savedMessageTimer.Stop();
-            SavedLabel.Text = message;
-            SavedLabel.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
-            SavedLabel.Visibility = Visibility.Visible;
+            var messageBrush = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+            FloatingSettingsStatusText.Text = message;
+            FloatingSettingsStatusText.Foreground = messageBrush;
+            FloatingSettingsStatusBar.BorderBrush = messageBrush;
+            FloatingSettingsStatusBar.Visibility = Visibility.Visible;
+            UpdateSettingsScrollPadding();
             _savedMessageTimer.Start();
         }
 
@@ -796,6 +988,7 @@ namespace JoinGameAfk.View
             _pendingChampionImageFileNames[champion.Id] = selectedOption.FileName;
             RefreshChampionPicturePreview(champion, selectedOption);
             RefreshChampionPictureChampionOptions(champion.Id);
+            RefreshDirtyState();
         }
 
         private void ResetChampionPictureButton_Click(object sender, RoutedEventArgs e)
@@ -806,6 +999,7 @@ namespace JoinGameAfk.View
             _pendingChampionImageFileNames.Remove(champion.Id);
             RefreshChampionPictureTileOptions();
             RefreshChampionPictureChampionOptions(champion.Id);
+            RefreshDirtyState();
         }
 
         private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
@@ -1122,5 +1316,30 @@ namespace JoinGameAfk.View
             int BanLockDelaySeconds,
             int ChampSelectPollIntervalMs,
             int ChampSelectEventFallbackPollIntervalMs);
+
+        private readonly record struct SettingsPageSnapshot(
+            bool StartWatcherOnStartup,
+            bool InQueueAutomationEnabled,
+            bool AutoReadyCheckEnabled,
+            bool ReadyCheckSoundNotificationEnabled,
+            string ReadyCheckSoundNotificationKey,
+            string ReadyCheckAcceptDelaySeconds,
+            bool ChampionSelectAutomationEnabled,
+            bool AutoShowPickBanOverlayEnabled,
+            bool PickBanOverlayAutoCloseAfterChampSelectEnabled,
+            bool PickBanOverlayOpenOnStartup,
+            bool AutoHoverChampionEnabled,
+            bool AutoLockSelectionEnabled,
+            string PickLockDelaySeconds,
+            string ChampionHoverDelaySeconds,
+            string PlanningHoverDelaySeconds,
+            string BanLockDelaySeconds,
+            string ChampSelectPollIntervalMs,
+            bool UseChampSelectEventStream,
+            bool ChampSelectEventFallbackPollingEnabled,
+            string ChampSelectEventFallbackPollIntervalMs,
+            string ThemeKey,
+            bool AutoUpdateChampionCatalogOnStartup,
+            string ChampionImageSelections);
     }
 }
