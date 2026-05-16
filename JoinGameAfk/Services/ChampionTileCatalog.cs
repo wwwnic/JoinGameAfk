@@ -70,6 +70,7 @@ namespace JoinGameAfk.Services
     public static class ChampionTileCatalog
     {
         private const int ChampionTileCacheFileVersion = 1;
+        private const int ChampionTileDecodePixelWidth = 96;
         private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
         private const string DragontailArchiveUrlFormat = "https://ddragon.leagueoflegends.com/cdn/dragontail-{0}.tgz";
         private const string ChampionTileArchivePathSegment = "img/champion/tiles/";
@@ -610,6 +611,7 @@ namespace JoinGameAfk.Services
                 bitmap.BeginInit();
                 bitmap.CacheOption = BitmapCacheOption.OnLoad;
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                bitmap.DecodePixelWidth = ChampionTileDecodePixelWidth;
                 bitmap.UriSource = new Uri(filePath, UriKind.Absolute);
                 bitmap.EndInit();
                 bitmap.Freeze();

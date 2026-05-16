@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
@@ -58,6 +59,9 @@ namespace JoinGameAfk.View
         private bool _dragHoverInsertAfter;
         private int? _dragHoverTargetIndex;
         private bool _isChampionReferenceHeightUpdatePending;
+        private bool _isPreferenceSavePending;
+        private DispatcherOperation? _pendingPreferenceSaveOperation;
+        private string _championImageSelectionSignature;
 
         public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
             nameof(IsChampionSelectLockActive),
@@ -123,6 +127,7 @@ namespace JoinGameAfk.View
         {
             InitializeComponent();
             _settings = settings;
+            _championImageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
             RefreshThemeBrushes();
             Unloaded += ChampionPrioritiesPage_Unloaded;
             AppThemeManager.ThemeChanged += RefreshTheme;
@@ -217,6 +222,9 @@ namespace JoinGameAfk.View
 
         private void ChampionPrioritiesPage_Unloaded(object sender, RoutedEventArgs e)
         {
+            _pendingPreferenceSaveOperation?.Abort();
+            _pendingPreferenceSaveOperation = null;
+            FlushPendingPreferenceSave();
             AppThemeManager.ThemeChanged -= RefreshTheme;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
@@ -230,6 +238,11 @@ namespace JoinGameAfk.View
 
         private void Settings_Saved()
         {
+            string imageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
+            if (string.Equals(imageSelectionSignature, _championImageSelectionSignature, StringComparison.Ordinal))
+                return;
+
+            _championImageSelectionSignature = imageSelectionSignature;
             Dispatcher.InvokeAsync(RefreshChampionImages);
         }
 
@@ -252,6 +265,7 @@ namespace JoinGameAfk.View
 
         private void RefreshChampionImages()
         {
+            _championImageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
             foreach (var champion in _rows.SelectMany(row => row.PickChampions.Concat(row.BanChampions)))
             {
                 champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(champion.ChampionId, _settings);
@@ -2102,7 +2116,38 @@ namespace JoinGameAfk.View
                 };
             }
 
+            QueuePreferenceSave();
+        }
+
+        private void QueuePreferenceSave()
+        {
+            if (_isPreferenceSavePending)
+                return;
+
+            _isPreferenceSavePending = true;
+            _pendingPreferenceSaveOperation = Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(FlushPendingPreferenceSave));
+        }
+
+        private void FlushPendingPreferenceSave()
+        {
+            if (!_isPreferenceSavePending)
+                return;
+
+            _pendingPreferenceSaveOperation = null;
+            _isPreferenceSavePending = false;
             _settings.Save();
+        }
+
+        private static string CreateChampionImageSelectionSignature(IReadOnlyDictionary<int, string> selections)
+        {
+            return string.Join(
+                "|",
+                selections
+                    .Where(entry => entry.Key > 0 && !string.IsNullOrWhiteSpace(entry.Value))
+                    .OrderBy(entry => entry.Key)
+                    .Select(entry => $"{entry.Key}:{Path.GetFileName(entry.Value.Trim()).ToUpperInvariant()}"));
         }
 
         private static void UpdateRowTextFromCollection(PositionRow row, bool isPick)
