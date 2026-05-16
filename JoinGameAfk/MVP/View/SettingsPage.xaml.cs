@@ -682,6 +682,15 @@ namespace JoinGameAfk.View
                 return;
             }
 
+            if (fileCount <= 0)
+            {
+                SetChampionPictureCacheStatus(
+                    $"Picture cache has Riot Data Dragon {syncInfo.DataDragonVersion} recorded, but no champion tile jpg files were found. Use Download Archive to restore champion pictures.",
+                    "DangerTextBrush",
+                    Brushes.IndianRed);
+                return;
+            }
+
             if (!string.IsNullOrWhiteSpace(syncInfo.ArchiveFilePath))
             {
                 SetChampionPictureCacheStatus(

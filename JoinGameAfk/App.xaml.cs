@@ -119,12 +119,13 @@ namespace JoinGameAfk
             }
 
             var tileSyncInfo = ChampionTileCatalog.GetCacheSyncInfo();
-            bool championPicturesNeedUpdate = !IsDataDragonVersionCurrent(tileSyncInfo.DataDragonVersion, latestDataDragonVersion);
+            bool championPicturesNeedUpdate = tileSyncInfo.CachedTileCount <= 0
+                || !IsDataDragonVersionCurrent(tileSyncInfo.DataDragonVersion, latestDataDragonVersion);
             if (championPicturesNeedUpdate)
             {
                 try
                 {
-                    fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; latest version: {latestDataDragonVersion}. Installing the archive only because the version changed.");
+                    fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; cached files: {tileSyncInfo.CachedTileCount}; latest version: {latestDataDragonVersion}. Installing the archive because the version changed or the picture cache is empty.");
                     var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(latestDataDragonVersion, CreateChampionTileArchiveLogProgress());
                     string archiveCleanupText = result.ArchiveDeleted
                         ? "archive removed after extraction"

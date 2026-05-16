@@ -72,6 +72,7 @@ namespace JoinGameAfk.Services
         private const int ChampionTileCacheFileVersion = 1;
         private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
         private const string DragontailArchiveUrlFormat = "https://ddragon.leagueoflegends.com/cdn/dragontail-{0}.tgz";
+        private const string ChampionTileArchivePathSegment = "img/champion/tiles/";
         private static readonly TimeSpan ArchiveDownloadTimeout = TimeSpan.FromMinutes(45);
 
         private static readonly JsonSerializerOptions CacheSerializerOptions = new()
@@ -226,6 +227,9 @@ namespace JoinGameAfk.Services
             try
             {
                 extractionResult = ExtractChampionTilesFromTarGz(archiveFilePath, cancellationToken);
+                if (extractionResult.CheckedTileCount == 0)
+                    throw new InvalidOperationException("No champion tile jpg files were found in the Riot Data Dragon archive.");
+
                 progress?.Report(new ChampionTileArchiveProgress(
                     archiveSizeBytes,
                     archiveSizeBytes,
@@ -478,8 +482,7 @@ namespace JoinGameAfk.Services
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string normalizedEntryName = entry.Name.Replace('\\', '/');
-                if (!normalizedEntryName.Contains("/img/champion/tiles/", StringComparison.OrdinalIgnoreCase)
-                    || !normalizedEntryName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                if (!IsChampionTileArchiveEntry(normalizedEntryName)
                     || entry.DataStream is null)
                 {
                     continue;
@@ -520,6 +523,13 @@ namespace JoinGameAfk.Services
                 checkedTileCount,
                 updatedTileCount,
                 unchangedTileCount);
+        }
+
+        private static bool IsChampionTileArchiveEntry(string normalizedEntryName)
+        {
+            return normalizedEntryName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                && (normalizedEntryName.StartsWith(ChampionTileArchivePathSegment, StringComparison.OrdinalIgnoreCase)
+                    || normalizedEntryName.Contains($"/{ChampionTileArchivePathSegment}", StringComparison.OrdinalIgnoreCase));
         }
 
         private static void SaveCacheFile(
