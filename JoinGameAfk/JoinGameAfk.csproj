@@ -11,9 +11,12 @@
 
   <ItemGroup>
     <Content Include="Assets\logo.ico" />
-    <Content Include="Assets\champion-chip-label-breaks.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Remove="Assets\champion-chip-label-breaks.json" />
+    <EmbeddedResource Include="Assets\champion-chip-label-breaks.json" LogicalName="JoinGameAfk.Assets.champion-chip-label-breaks.json" />
+    <None Remove="Assets\champion-tile-cache.json" />
+    <None Remove="Assets\ChampionTiles\*.jpg" />
+    <EmbeddedResource Include="Assets\champion-tile-cache.json" Condition="Exists('Assets\champion-tile-cache.json')" LogicalName="JoinGameAfk.Assets.champion-tile-cache.json" />
+    <EmbeddedResource Include="Assets\ChampionTiles\*.jpg" LogicalName="JoinGameAfk.Assets.ChampionTiles.%(Filename)%(Extension)" />
     <None Remove="Assets\Sounds\*.wav" />
     <Resource Include="Assets\Sounds\*.wav" />
   </ItemGroup>

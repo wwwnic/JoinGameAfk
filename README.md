@@ -132,6 +132,7 @@ The settings page currently exposes:
 - champ select polling rate
 - reset automation, timing, performance, and theme defaults
 - optional champion list update on startup, rate-limited to once every 24 hours
+- champion picture cache download and per-champion picture selection
 
 ---
 
@@ -192,7 +193,7 @@ Observed action types include:
 - hover champion
 - complete pick/ban action
 
-If you manually update the champion list, or enable **Update champion list on startup**, the app also contacts Riot Data Dragon at `ddragon.leagueoflegends.com` to download public champion version/name data. The startup check runs only when the last successful sync is older than 24 hours; the manual button can still be used any time. That path updates only the local `champions.json` file and does not send champion priorities or settings.
+If you manually update the champion list, enable **Update champion list on startup**, or manually download champion pictures, the app also contacts Riot Data Dragon at `ddragon.leagueoflegends.com` to download public champion version/name data and champion tile JPGs. The startup check runs only when the last successful sync is older than 24 hours; the manual buttons can still be used any time. These paths update local files in `%LocalAppData%\JoinGameAfk` and do not send champion priorities or settings.
 
 ---
 
@@ -261,7 +262,17 @@ If the working tree has local changes, the displayed version includes `-dirty`. 
 dotnet publish .\JoinGameAfk\JoinGameAfk.csproj -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true
 ```
 
-The published app can stay as a single exe because editable files are stored in `%LocalAppData%\JoinGameAfk` instead of next to the executable.
+The published app can stay as a single exe because editable files are stored in `%LocalAppData%\JoinGameAfk` instead of next to the executable. Release builds can also embed an ignored champion tile seed cache generated during the build, then copy it into `%LocalAppData%\JoinGameAfk` on first launch if no local picture cache exists.
+
+### Generate the champion tile seed cache
+
+The GitHub release workflow runs this automatically before publishing. To do the same locally:
+
+```powershell
+dotnet run --project .\JoinGameAfk.ChampionTileSeeder\JoinGameAfk.ChampionTileSeeder.csproj -- --tile-directory .\JoinGameAfk\Assets\ChampionTiles --cache-file .\JoinGameAfk\Assets\champion-tile-cache.json
+```
+
+`JoinGameAfk/Assets/ChampionTiles/` and `JoinGameAfk/Assets/champion-tile-cache.json` are ignored by git so Riot/Data Dragon image files are not committed to the repository.
 
 ### Release a version
 
@@ -356,7 +367,7 @@ as long as the MIT license terms are included.
 
 ## Riot Games notice
 
-JoinGameAfk uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences. Champion images are not downloaded or bundled.
+JoinGameAfk uses public champion names and champion tile JPGs from Riot Data Dragon to identify and display player-configured pick/ban preferences. Champion images are not committed to this repository; release artifacts may include an embedded champion tile seed cache generated from Riot Data Dragon during the GitHub build.
 
 > JoinGameAfk isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 

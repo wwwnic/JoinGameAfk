@@ -24,9 +24,21 @@ namespace JoinGameAfk
                 champSelectSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(champSelectSettings.ThemeKey);
                 AppThemeManager.ApplyTheme(champSelectSettings.ThemeKey);
 
+                ChampionTileSeedCacheResult? bundledTileSeedResult = null;
+                string? bundledTileSeedError = null;
+                try
+                {
+                    bundledTileSeedResult = ChampionTileCatalog.InstallBundledSeedCacheIfNeeded();
+                }
+                catch (Exception ex)
+                {
+                    bundledTileSeedError = FormatException(ex);
+                }
+
                 fMainWindow = CreateMainWindow(champSelectSettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
+                LogBundledChampionTileSeedResult(bundledTileSeedResult, bundledTileSeedError);
 
                 if (champSelectSettings.PickBanOverlayOpenOnStartup)
                     fMainWindow.ShowPickBanOverlayOnStartup();
@@ -41,6 +53,20 @@ namespace JoinGameAfk
             {
                 MessageBox.Show(ex.Message, "An error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
+            }
+        }
+
+        private void LogBundledChampionTileSeedResult(ChampionTileSeedCacheResult? result, string? error)
+        {
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                fLogsPage?.WriteErrorLine($"Bundled champion picture cache install failed. Existing local picture cache was kept. {error}");
+                return;
+            }
+
+            if (result?.Installed == true)
+            {
+                fLogsPage?.WriteLine($"Bundled champion picture cache installed from release assets. Version: {FormatDataDragonVersion(result.DataDragonVersion)}; copied {result.ImportedCount} jpg files to {result.CacheDirectory}.");
             }
         }
 

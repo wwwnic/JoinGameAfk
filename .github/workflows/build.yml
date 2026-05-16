@@ -38,6 +38,14 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
 
+      - name: Generate champion tile seed cache
+        shell: pwsh
+        run: >
+          dotnet run --project JoinGameAfk.ChampionTileSeeder/JoinGameAfk.ChampionTileSeeder.csproj --configuration Release --
+          --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
+          --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
+          --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
+
       - name: Build solution
         run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION
 

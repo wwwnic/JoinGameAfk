@@ -2423,7 +2423,7 @@ namespace JoinGameAfk.View
         public const double DefaultFontSize = 10;
         private const double SmallFontSize = 9.25;
         private const double MinimumFontSize = 8;
-        private const string LabelBreakSeedConfigPath = "Assets/champion-chip-label-breaks.json";
+        private const string LabelBreakSeedResourceName = "JoinGameAfk.Assets.champion-chip-label-breaks.json";
 
         private static readonly Lazy<IReadOnlyDictionary<string, string>> ConfiguredBreaks = new(LoadConfiguredBreaks);
 
@@ -2488,10 +2488,12 @@ namespace JoinGameAfk.View
 
         private static string LoadSeedConfiguredBreaksJson()
         {
-            string seedFilePath = Path.Combine(AppContext.BaseDirectory, LabelBreakSeedConfigPath);
-            return File.Exists(seedFilePath)
-                ? File.ReadAllText(seedFilePath)
-                : $"{{{Environment.NewLine}}}";
+            using Stream? stream = typeof(ChampionChipLabelFormatter).Assembly.GetManifestResourceStream(LabelBreakSeedResourceName);
+            if (stream is null)
+                return $"{{{Environment.NewLine}}}";
+
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
         }
 
         private static string CreateConfiguredBreaksFileContents(string json)
