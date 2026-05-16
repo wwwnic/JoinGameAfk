@@ -780,6 +780,148 @@
                                        Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Champion pictures"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Choose which local Data Dragon champion tile appears in champion priority chips."
+                                           Style="{StaticResource FieldHintStyle}" />
+                                <TextBlock Text="Champion pictures are Riot Games-owned assets provided through Riot Data Dragon. The app downloads the dragontail archive into local app storage, then extracts champion tiles into the cache."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0" />
+                                <TextBlock x:Name="ChampionPictureFolderPathTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0" />
+                                <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0" />
+                                <TextBlock x:Name="ChampionPictureStatusTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0" />
+                                <TextBlock x:Name="ChampionPictureDownloadStatusLabel"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0"
+                                           Visibility="Collapsed" />
+                                <ProgressBar x:Name="ChampionPictureDownloadProgressBar"
+                                             Height="8"
+                                             Minimum="0"
+                                             Maximum="100"
+                                             Margin="0,8,0,0"
+                                             Visibility="Collapsed" />
+                            </StackPanel>
+
+                            <Grid Grid.Column="2"
+                                  Width="570">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <ComboBox x:Name="ChampionPictureChampionComboBox"
+                                          Grid.Row="0"
+                                          Grid.Column="0"
+                                          DisplayMemberPath="Name"
+                                          SelectionChanged="ChampionPictureChampionComboBox_SelectionChanged"
+                                          Style="{StaticResource AppComboBoxStyle}"
+                                          ToolTip="Champion to configure." />
+
+                                <ComboBox x:Name="ChampionPictureComboBox"
+                                          Grid.Row="0"
+                                          Grid.Column="2"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectionChanged="ChampionPictureComboBox_SelectionChanged"
+                                          Style="{StaticResource AppComboBoxStyle}"
+                                          ToolTip="Picture to use for the selected champion." />
+
+                                <Button x:Name="ResetChampionPictureButton"
+                                        Grid.Row="0"
+                                        Grid.Column="4"
+                                        Content="Use Default"
+                                        Click="ResetChampionPictureButton_Click"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,8"
+                                        ToolTip="Remove the custom picture selection for this champion." />
+
+                                <Border Grid.Column="6"
+                                        Grid.RowSpan="3"
+                                        Width="52"
+                                        Height="52"
+                                        Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        ClipToBounds="True">
+                                    <Image x:Name="ChampionPicturePreviewImage"
+                                           Stretch="UniformToFill"
+                                           SnapsToDevicePixels="True" />
+                                </Border>
+
+                                <WrapPanel Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="5"
+                                           HorizontalAlignment="Right">
+                                    <Button x:Name="OpenChampionPictureFolderButton"
+                                            Content="Open Pictures Folder"
+                                            Click="OpenChampionPictureFolderButton_Click"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="12,8"
+                                            ToolTip="Open the local folder where champion tile jpg files are stored." />
+                                    <Button x:Name="ImportChampionPicturesButton"
+                                            Content="Import Folder"
+                                            Click="ImportChampionPicturesButton_Click"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="12,8"
+                                            Margin="8,0,0,0"
+                                            ToolTip="Copy local champion tile jpg files into the app cache." />
+                                    <Button x:Name="ReloadChampionPicturesButton"
+                                            Content="Reload Pictures"
+                                            Click="ReloadChampionPicturesButton_Click"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            Padding="12,8"
+                                            Margin="8,0,0,0"
+                                            ToolTip="Rescan the local champion picture folder." />
+                                    <Button x:Name="DownloadChampionPictureArchiveButton"
+                                            Content="Download Archive"
+                                            Click="DownloadChampionPictureArchiveButton_Click"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Padding="12,8"
+                                            Margin="8,0,0,0"
+                                            ToolTip="Download the latest Riot Data Dragon dragontail archive and extract champion tiles into the local cache." />
+                                </WrapPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 
@@ -795,10 +937,14 @@
 
                     <Border Style="{StaticResource SettingRowStyle}">
                         <StackPanel>
-                            <TextBlock Text="JoinGameAfk uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences."
+                            <TextBlock Text="JoinGameAfk uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences. Champion pictures, when configured, are Riot Games-owned assets provided through Riot Data Dragon and loaded from your local app storage."
                                        Style="{StaticResource FieldHintStyle}"
                                        TextWrapping="Wrap" />
-                            <TextBlock Text="JoinGameAfk isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc."
+                            <TextBlock Text="JoinGameAfk was created under Riot Games' Legal Jibber Jabber policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,8,0,0" />
+                            <TextBlock Text="JoinGameAfk is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc."
                                        Style="{StaticResource FieldHintStyle}"
                                        TextWrapping="Wrap"
                                        Margin="0,8,0,0" />

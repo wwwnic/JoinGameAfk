@@ -12,6 +12,7 @@ using System.Windows.Media;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 
 namespace JoinGameAfk.View
@@ -184,6 +185,8 @@ namespace JoinGameAfk.View
             };
             PageScrollViewer.SizeChanged += (_, _) => QueueChampionReferenceListHeightUpdate();
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
+            _settings.Saved += Settings_Saved;
         }
 
         public void SetChampionSelectActive(bool isActive)
@@ -216,11 +219,23 @@ namespace JoinGameAfk.View
         {
             AppThemeManager.ThemeChanged -= RefreshTheme;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
+            _settings.Saved -= Settings_Saved;
         }
 
         private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
         {
             Dispatcher.InvokeAsync(RefreshChampionCatalogView);
+        }
+
+        private void Settings_Saved()
+        {
+            Dispatcher.InvokeAsync(RefreshChampionImages);
+        }
+
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.InvokeAsync(RefreshChampionImages);
         }
 
         private void RefreshChampionCatalogView()
@@ -230,8 +245,20 @@ namespace JoinGameAfk.View
                 .ToList();
 
             RefreshConfiguredChampionDisplayText();
+            RefreshChampionImages();
             UpdateChampionFilter();
             QueueChampionReferenceListHeightUpdate();
+        }
+
+        private void RefreshChampionImages()
+        {
+            foreach (var champion in _rows.SelectMany(row => row.PickChampions.Concat(row.BanChampions)))
+            {
+                champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(champion.ChampionId, _settings);
+            }
+
+            _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
+            ChampionReferenceList.ItemsSource = _filteredChampionReferences;
         }
 
         private void RefreshConfiguredChampionDisplayText()
@@ -574,10 +601,10 @@ namespace JoinGameAfk.View
             ChampionReferenceList.ItemsSource = _filteredChampionReferences;
         }
 
-        private static List<ChampionReferenceItem> CreateChampionReferenceItems(IEnumerable<ChampionInfo> champions)
+        private List<ChampionReferenceItem> CreateChampionReferenceItems(IEnumerable<ChampionInfo> champions)
         {
             return champions
-                .Select(champion => new ChampionReferenceItem(champion))
+                .Select(champion => new ChampionReferenceItem(champion, _settings))
                 .ToList();
         }
 
@@ -1435,12 +1462,13 @@ namespace JoinGameAfk.View
             UpdateManualChampionDrag(position);
         }
 
-        private static ChampionSelectionItem CreateSelectionItem(PositionRow row, int championId, bool isPick)
+        private ChampionSelectionItem CreateSelectionItem(PositionRow row, int championId, bool isPick)
         {
             return new ChampionSelectionItem
             {
                 ChampionId = championId,
                 DisplayText = ChampionCatalog.FormatWithName(championId),
+                PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(championId, _settings),
                 Row = row,
                 IsPick = isPick
             };
@@ -2162,14 +2190,16 @@ namespace JoinGameAfk.View
     {
         private readonly ChampionChipLabel _chipLabel;
 
-        public ChampionReferenceItem(ChampionInfo champion)
+        public ChampionReferenceItem(ChampionInfo champion, ChampSelectSettings settings)
         {
             Champion = champion;
             _chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
+            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion, settings)?.ImageSource;
         }
 
         public ChampionInfo Champion { get; }
         public string Name => Champion.Name;
+        public ImageSource? PortraitImageSource { get; }
         public string ChipDisplayText => _chipLabel.Text;
         public double ChipDisplayFontSize => _chipLabel.FontSize;
         public string ToolTipText => $"{_chipLabel.ToolTipName}\nClick to add to the selected list, or drag into a pick/ban list.";
@@ -2334,6 +2364,7 @@ namespace JoinGameAfk.View
         private string _chipDisplayText = "";
         private double _chipDisplayFontSize = ChampionChipLabelFormatter.DefaultFontSize;
         private string _toolTipText = "";
+        private ImageSource? _portraitImageSource;
 
         public int ChampionId { get; init; }
         public PositionRow Row { get; init; } = null!;
@@ -2369,6 +2400,12 @@ namespace JoinGameAfk.View
         {
             get => _toolTipText;
             private set => SetProperty(ref _toolTipText, value);
+        }
+
+        public ImageSource? PortraitImageSource
+        {
+            get => _portraitImageSource;
+            set => SetProperty(ref _portraitImageSource, value);
         }
 
         public Visibility InsertBeforeIndicatorVisibility

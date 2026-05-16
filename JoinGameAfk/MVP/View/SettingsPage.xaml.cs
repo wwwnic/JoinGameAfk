@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -9,6 +10,7 @@ using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.Validation;
+using Microsoft.Win32;
 
 namespace JoinGameAfk.View
 {
@@ -21,6 +23,7 @@ namespace JoinGameAfk.View
         private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
+        private readonly Dictionary<int, string> _pendingChampionImageFileNames;
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
         private NumericInputRule _championHoverDelayRule = null!;
@@ -29,6 +32,7 @@ namespace JoinGameAfk.View
         private NumericInputRule _champSelectPollIntervalRule = null!;
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
+        private bool _isUpdatingChampionPictureControls;
 
         public SettingsPage(ChampSelectSettings settings, Action<ChampSelectSettings>? reloadUiForTheme = null)
         {
@@ -36,6 +40,7 @@ namespace JoinGameAfk.View
             _settings = settings;
             _reloadUiForTheme = reloadUiForTheme;
             _notificationSoundPlayer = new NotificationSoundPlayer(ShowValidationMessage);
+            _pendingChampionImageFileNames = new Dictionary<int, string>(_settings.ChampionImageFileNames);
             _savedMessageTimer = new DispatcherTimer
             {
                 Interval = SavedMessageDuration
@@ -47,11 +52,14 @@ namespace JoinGameAfk.View
             };
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
+            ChampionPictureFolderPathTextBlock.Text = ChampionTileCatalog.TileDirectoryPath;
             RefreshChampionCatalogSyncStatus();
+            RefreshChampionPictureCacheStatus();
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
             LoadReadyCheckSoundOptions();
+            LoadChampionPictureOptions();
             ApplySettingsToControls();
             AttachNumericInputValidation();
             UpdateAutomationInputStates();
@@ -95,6 +103,7 @@ namespace JoinGameAfk.View
             _settings.ChampSelectEventFallbackPollIntervalMs = input.ChampSelectEventFallbackPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
             _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
+            _settings.ChampionImageFileNames = NormalizeChampionImageSelections(_pendingChampionImageFileNames);
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
@@ -569,6 +578,19 @@ namespace JoinGameAfk.View
             return result == MessageBoxResult.OK;
         }
 
+        private bool ConfirmChampionPictureRefresh()
+        {
+            var result = MessageBox.Show(
+                Window.GetWindow(this),
+                "This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files from the local archive into the picture cache. Existing cached archive files are reused when the Data Dragon version has not changed.\n\nContinue?",
+                "Download Data Dragon Archive",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information,
+                MessageBoxResult.Cancel);
+
+            return result == MessageBoxResult.OK;
+        }
+
         private void RefreshChampionCatalogSyncStatus(ChampionCatalogRefreshResult? refreshResult = null)
         {
             string? dataDragonVersion = refreshResult?.DataDragonVersion;
@@ -608,6 +630,11 @@ namespace JoinGameAfk.View
                 .ToString("g");
         }
 
+        private static string FormatByteCount(long bytes)
+        {
+            return $"{bytes / 1024d / 1024d:0.0} MB";
+        }
+
         private void SetChampionCatalogSyncStatus(string message, string brushResourceKey, Brush fallbackBrush)
         {
             ChampionCatalogSyncStatusTextBlock.Text = message;
@@ -621,9 +648,51 @@ namespace JoinGameAfk.View
             ChampionCatalogRefreshStatusLabel.Visibility = Visibility.Visible;
         }
 
+        private void RefreshChampionPictureCacheStatus(ChampionTileArchiveInstallResult? refreshResult = null)
+        {
+            if (refreshResult is not null)
+            {
+                SetChampionPictureCacheStatus(
+                    $"Picture cache synced with Riot Data Dragon {refreshResult.DataDragonVersion}. Extracted {refreshResult.ExtractedTileCount} champion tiles from the local archive. Local folder currently has {refreshResult.CachedTileCount} jpg files. Last sync: {FormatLastSyncedAt(refreshResult.LastSyncedAtUtc)}.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+                return;
+            }
+
+            var syncInfo = ChampionTileCatalog.GetCacheSyncInfo();
+            int fileCount = ChampionTileCatalog.GetTileFileCount();
+            if (string.IsNullOrWhiteSpace(syncInfo.DataDragonVersion))
+            {
+                SetChampionPictureCacheStatus(
+                    $"Local picture cache has {fileCount} jpg files. It has not been synced with Riot Data Dragon yet.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+                return;
+            }
+
+            string archiveText = string.IsNullOrWhiteSpace(syncInfo.ArchiveFilePath)
+                ? "No archive recorded."
+                : $"{Path.GetFileName(syncInfo.ArchiveFilePath)} ({FormatByteCount(syncInfo.ArchiveSizeBytes)})";
+
+            SetChampionPictureCacheStatus(
+                $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive: {archiveText}. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
+                "TextSoftBrush",
+                Brushes.SlateGray);
+        }
+
+        private void SetChampionPictureCacheStatus(string message, string brushResourceKey, Brush fallbackBrush)
+        {
+            ChampionPictureCacheStatusTextBlock.Text = message;
+            ChampionPictureCacheStatusTextBlock.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+        }
+
         private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
         {
-            Dispatcher.InvokeAsync(() => RefreshChampionCatalogSyncStatus());
+            Dispatcher.InvokeAsync(() =>
+            {
+                RefreshChampionCatalogSyncStatus();
+                LoadChampionPictureOptions();
+            });
         }
 
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
@@ -641,6 +710,247 @@ namespace JoinGameAfk.View
         private void LoadReadyCheckSoundOptions()
         {
             ReadyCheckSoundComboBox.ItemsSource = NotificationSoundPlayer.ReadyCheckSoundOptions;
+        }
+
+        private void LoadChampionPictureOptions()
+        {
+            int? selectedChampionId = (ChampionPictureChampionComboBox.SelectedItem as ChampionInfo)?.Id;
+            var champions = ChampionCatalog.All
+                .OrderBy(champion => champion.Name)
+                .ToList();
+
+            _isUpdatingChampionPictureControls = true;
+            try
+            {
+                ChampionPictureChampionComboBox.ItemsSource = champions;
+                ChampionPictureChampionComboBox.SelectedItem = selectedChampionId is int championId
+                    ? champions.FirstOrDefault(champion => champion.Id == championId) ?? champions.FirstOrDefault()
+                    : champions.FirstOrDefault();
+            }
+            finally
+            {
+                _isUpdatingChampionPictureControls = false;
+            }
+
+            RefreshChampionPictureTileOptions();
+        }
+
+        private void ChampionPictureChampionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingChampionPictureControls)
+                return;
+
+            RefreshChampionPictureTileOptions();
+        }
+
+        private void ChampionPictureComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingChampionPictureControls)
+                return;
+
+            if (ChampionPictureChampionComboBox.SelectedItem is not ChampionInfo champion
+                || ChampionPictureComboBox.SelectedItem is not ChampionTileOption selectedOption)
+            {
+                return;
+            }
+
+            _pendingChampionImageFileNames[champion.Id] = selectedOption.FileName;
+            RefreshChampionPicturePreview(champion, selectedOption);
+        }
+
+        private void ResetChampionPictureButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ChampionPictureChampionComboBox.SelectedItem is not ChampionInfo champion)
+                return;
+
+            _pendingChampionImageFileNames.Remove(champion.Id);
+            RefreshChampionPictureTileOptions();
+        }
+
+        private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                AppStorage.EnsureChampionTileDirectoryExists();
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = ChampionTileCatalog.TileDirectoryPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Unable to open champion pictures folder: {ex.Message}", "Open Folder Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ImportChampionPicturesButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select champion picture folder",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+                return;
+
+            try
+            {
+                var result = ChampionTileCatalog.ImportFromDirectory(dialog.FolderName);
+                LoadChampionPictureOptions();
+                RefreshChampionPictureCacheStatus();
+                ShowStatusMessage(
+                    $"Imported {result.ImportedCount} champion pictures into the local cache. Skipped {result.SkippedCount}; failed {result.FailedCount}.",
+                    result.FailedCount == 0 ? "AccentGreenTextBrush" : "DangerTextBrush",
+                    result.FailedCount == 0 ? Brushes.ForestGreen : Brushes.IndianRed);
+            }
+            catch (Exception ex)
+            {
+                ShowValidationMessage($"Champion picture import failed. {ex.Message}");
+            }
+        }
+
+        private void ReloadChampionPicturesButton_Click(object sender, RoutedEventArgs e)
+        {
+            AppStorage.EnsureChampionTileDirectoryExists();
+            ChampionTileCatalog.Reload();
+            LoadChampionPictureOptions();
+            RefreshChampionPictureCacheStatus();
+            ShowStatusMessage($"Champion pictures reloaded from local storage ({ChampionTileCatalog.GetTileFileCount()} files).", "AccentGreenTextBrush", Brushes.ForestGreen);
+        }
+
+        private async void DownloadChampionPictureArchiveButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmChampionPictureRefresh())
+            {
+                ChampionPictureDownloadStatusLabel.Text = "Data Dragon archive download canceled.";
+                ChampionPictureDownloadStatusLabel.Visibility = Visibility.Visible;
+                return;
+            }
+
+            SetChampionPictureDownloadControlsEnabled(false);
+            ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
+            ChampionPictureDownloadProgressBar.IsIndeterminate = true;
+            ChampionPictureDownloadProgressBar.Value = 0;
+            ChampionPictureDownloadStatusLabel.Visibility = Visibility.Visible;
+            ChampionPictureDownloadStatusLabel.Foreground = TryFindResource("TextSoftBrush") as Brush ?? Brushes.SlateGray;
+            ChampionPictureDownloadStatusLabel.Text = "Preparing Riot Data Dragon archive download...";
+
+            try
+            {
+                var progress = new Progress<ChampionTileArchiveProgress>(snapshot =>
+                {
+                    ChampionPictureDownloadStatusLabel.Text = snapshot.Message;
+                    if (snapshot.TotalBytes is long totalBytes && totalBytes > 0)
+                    {
+                        ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+                        ChampionPictureDownloadProgressBar.Maximum = totalBytes;
+                        ChampionPictureDownloadProgressBar.Value = Math.Min(snapshot.BytesCompleted, totalBytes);
+                    }
+                    else
+                    {
+                        ChampionPictureDownloadProgressBar.IsIndeterminate = true;
+                    }
+                });
+
+                var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(progress);
+                LoadChampionPictureOptions();
+                RefreshChampionPictureCacheStatus(result);
+                ChampionPictureDownloadStatusLabel.Foreground = TryFindResource("AccentGreenTextBrush") as Brush ?? Brushes.ForestGreen;
+                ChampionPictureDownloadStatusLabel.Text =
+                    $"Data Dragon archive {result.DataDragonVersion} installed. Archive: {FormatByteCount(result.ArchiveSizeBytes)}. Extracted {result.ExtractedTileCount} champion tiles. Cache now has {result.CachedTileCount} jpg files.";
+            }
+            catch (Exception ex)
+            {
+                ChampionPictureDownloadStatusLabel.Foreground = TryFindResource("DangerTextBrush") as Brush ?? Brushes.IndianRed;
+                ChampionPictureDownloadStatusLabel.Text = $"Data Dragon archive install failed. Existing cache was kept. {ex.Message}";
+            }
+            finally
+            {
+                ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+                SetChampionPictureDownloadControlsEnabled(true);
+            }
+        }
+
+        private void SetChampionPictureDownloadControlsEnabled(bool enabled)
+        {
+            DownloadChampionPictureArchiveButton.IsEnabled = enabled;
+            ImportChampionPicturesButton.IsEnabled = enabled;
+            ReloadChampionPicturesButton.IsEnabled = enabled;
+            OpenChampionPictureFolderButton.IsEnabled = enabled;
+        }
+
+        private void RefreshChampionPictureTileOptions()
+        {
+            ChampionInfo? champion = ChampionPictureChampionComboBox.SelectedItem as ChampionInfo;
+            List<ChampionTileOption> options = champion is null
+                ? []
+                : ChampionTileCatalog.GetOptions(champion).ToList();
+
+            _isUpdatingChampionPictureControls = true;
+            try
+            {
+                ChampionPictureComboBox.ItemsSource = options;
+                ChampionPictureComboBox.IsEnabled = options.Count > 0;
+                ResetChampionPictureButton.IsEnabled = champion is not null
+                    && _pendingChampionImageFileNames.ContainsKey(champion.Id);
+
+                ChampionTileOption? selectedOption = null;
+                if (champion is not null && options.Count > 0)
+                {
+                    if (_pendingChampionImageFileNames.TryGetValue(champion.Id, out string? selectedFileName))
+                    {
+                        selectedOption = options.FirstOrDefault(option =>
+                            string.Equals(option.FileName, selectedFileName, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    selectedOption ??= ChampionTileCatalog.GetSelectedOption(champion, new ChampSelectSettings
+                    {
+                        ChampionImageFileNames = []
+                    });
+                }
+
+                ChampionPictureComboBox.SelectedItem = selectedOption;
+                RefreshChampionPicturePreview(champion, selectedOption);
+            }
+            finally
+            {
+                _isUpdatingChampionPictureControls = false;
+            }
+        }
+
+        private void RefreshChampionPicturePreview(ChampionInfo? champion, ChampionTileOption? selectedOption)
+        {
+            ChampionPicturePreviewImage.Source = selectedOption?.ImageSource;
+            bool hasOverride = champion is not null && _pendingChampionImageFileNames.ContainsKey(champion.Id);
+            ResetChampionPictureButton.IsEnabled = hasOverride;
+
+            if (champion is null)
+            {
+                ChampionPictureStatusTextBlock.Text = "No champion selected.";
+                return;
+            }
+
+            if (selectedOption is null)
+            {
+                ChampionPictureStatusTextBlock.Text = $"No local pictures found for {champion.Name}. Add Data Dragon tile jpgs to the folder below, then reload.";
+                return;
+            }
+
+            ChampionPictureStatusTextBlock.Text = hasOverride
+                ? $"Selected {selectedOption.FileName} for {champion.Name}. Save settings to keep it."
+                : $"Using default {selectedOption.FileName} for {champion.Name}.";
+        }
+
+        private static Dictionary<int, string> NormalizeChampionImageSelections(Dictionary<int, string> selections)
+        {
+            return selections
+                .Where(entry => entry.Key > 0 && !string.IsNullOrWhiteSpace(entry.Value))
+                .ToDictionary(
+                    entry => entry.Key,
+                    entry => Path.GetFileName(entry.Value.Trim()));
         }
 
         private void SelectReadyCheckSound(string? soundKey)

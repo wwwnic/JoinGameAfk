@@ -389,7 +389,12 @@
                                                                             </Grid.RowDefinitions>
 
                                                                             <Border Grid.Row="0"
-                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}" />
+                                                                                    ClipToBounds="True"
+                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}">
+                                                                                <Image Source="{Binding PortraitImageSource}"
+                                                                                       Stretch="UniformToFill"
+                                                                                       SnapsToDevicePixels="True" />
+                                                                            </Border>
 
                                                                             <Viewbox Grid.Row="2"
                                                                                      Style="{StaticResource ChampionTileLabelViewboxStyle}">
@@ -498,7 +503,12 @@
                                                                             </Grid.RowDefinitions>
 
                                                                             <Border Grid.Row="0"
-                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}" />
+                                                                                    ClipToBounds="True"
+                                                                                    Style="{StaticResource ChampionPortraitSlotStyle}">
+                                                                                <Image Source="{Binding PortraitImageSource}"
+                                                                                       Stretch="UniformToFill"
+                                                                                       SnapsToDevicePixels="True" />
+                                                                            </Border>
 
                                                                             <Viewbox Grid.Row="2"
                                                                                      Style="{StaticResource ChampionTileLabelViewboxStyle}">
@@ -703,7 +713,12 @@
                                                 </Grid.RowDefinitions>
 
                                                 <Border Grid.Row="0"
-                                                        Style="{StaticResource ChampionPortraitSlotStyle}" />
+                                                        ClipToBounds="True"
+                                                        Style="{StaticResource ChampionPortraitSlotStyle}">
+                                                    <Image Source="{Binding PortraitImageSource}"
+                                                           Stretch="UniformToFill"
+                                                           SnapsToDevicePixels="True" />
+                                                </Border>
 
                                                 <Viewbox Grid.Row="2"
                                                          Style="{StaticResource ChampionTileLabelViewboxStyle}">

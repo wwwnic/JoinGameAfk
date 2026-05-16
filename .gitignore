@@ -65,3 +65,7 @@ nunit-*.xml
 .vs/
 .dotnet-home/
 .build-verify/
+
+# Local champion image assets are user-provided Riot/Data Dragon files.
+# Keep them outside source control so the GitHub repo does not redistribute them.
+JoinGameAfk/Assets/ChampionTiles/
