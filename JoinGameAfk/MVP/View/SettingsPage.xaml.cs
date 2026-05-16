@@ -741,18 +741,21 @@ namespace JoinGameAfk.View
 
         private void LoadChampionPictureOptions()
         {
-            int? selectedChampionId = (ChampionPictureChampionComboBox.SelectedItem as ChampionInfo)?.Id;
+            int? selectedChampionId = GetSelectedChampionPictureChampion()?.Id;
             var champions = ChampionCatalog.All
                 .OrderBy(champion => champion.Name)
+                .ToList();
+            var championOptions = champions
+                .Select(CreateChampionPictureChampionOption)
                 .ToList();
 
             _isUpdatingChampionPictureControls = true;
             try
             {
-                ChampionPictureChampionComboBox.ItemsSource = champions;
+                ChampionPictureChampionComboBox.ItemsSource = championOptions;
                 ChampionPictureChampionComboBox.SelectedItem = selectedChampionId is int championId
-                    ? champions.FirstOrDefault(champion => champion.Id == championId) ?? champions.FirstOrDefault()
-                    : champions.FirstOrDefault();
+                    ? championOptions.FirstOrDefault(option => option.Champion.Id == championId) ?? championOptions.FirstOrDefault()
+                    : championOptions.FirstOrDefault();
             }
             finally
             {
@@ -770,28 +773,30 @@ namespace JoinGameAfk.View
             RefreshChampionPictureTileOptions();
         }
 
-        private void ChampionPictureComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ChampionPictureTileListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isUpdatingChampionPictureControls)
                 return;
 
-            if (ChampionPictureChampionComboBox.SelectedItem is not ChampionInfo champion
-                || ChampionPictureComboBox.SelectedItem is not ChampionTileOption selectedOption)
+            if (GetSelectedChampionPictureChampion() is not ChampionInfo champion
+                || ChampionPictureTileListBox.SelectedItem is not ChampionTileOption selectedOption)
             {
                 return;
             }
 
             _pendingChampionImageFileNames[champion.Id] = selectedOption.FileName;
             RefreshChampionPicturePreview(champion, selectedOption);
+            RefreshChampionPictureChampionOptions(champion.Id);
         }
 
         private void ResetChampionPictureButton_Click(object sender, RoutedEventArgs e)
         {
-            if (ChampionPictureChampionComboBox.SelectedItem is not ChampionInfo champion)
+            if (GetSelectedChampionPictureChampion() is not ChampionInfo champion)
                 return;
 
             _pendingChampionImageFileNames.Remove(champion.Id);
             RefreshChampionPictureTileOptions();
+            RefreshChampionPictureChampionOptions(champion.Id);
         }
 
         private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
@@ -930,7 +935,7 @@ namespace JoinGameAfk.View
 
         private void RefreshChampionPictureTileOptions()
         {
-            ChampionInfo? champion = ChampionPictureChampionComboBox.SelectedItem as ChampionInfo;
+            ChampionInfo? champion = GetSelectedChampionPictureChampion();
             List<ChampionTileOption> options = champion is null
                 ? []
                 : ChampionTileCatalog.GetOptions(champion).ToList();
@@ -938,33 +943,84 @@ namespace JoinGameAfk.View
             _isUpdatingChampionPictureControls = true;
             try
             {
-                ChampionPictureComboBox.ItemsSource = options;
-                ChampionPictureComboBox.IsEnabled = options.Count > 0;
+                ChampionPictureTileListBox.ItemsSource = options;
+                ChampionPictureTileListBox.IsEnabled = options.Count > 0;
                 ResetChampionPictureButton.IsEnabled = champion is not null
                     && _pendingChampionImageFileNames.ContainsKey(champion.Id);
 
-                ChampionTileOption? selectedOption = null;
-                if (champion is not null && options.Count > 0)
-                {
-                    if (_pendingChampionImageFileNames.TryGetValue(champion.Id, out string? selectedFileName))
-                    {
-                        selectedOption = options.FirstOrDefault(option =>
-                            string.Equals(option.FileName, selectedFileName, StringComparison.OrdinalIgnoreCase));
-                    }
+                ChampionTileOption? selectedOption = champion is null
+                    ? null
+                    : GetSelectedChampionPictureOption(champion, options);
 
-                    selectedOption ??= ChampionTileCatalog.GetSelectedOption(champion, new ChampSelectSettings
-                    {
-                        ChampionImageFileNames = []
-                    });
-                }
+                ChampionPictureTileListBox.SelectedItem = selectedOption;
+                if (selectedOption is not null)
+                    ChampionPictureTileListBox.ScrollIntoView(selectedOption);
 
-                ChampionPictureComboBox.SelectedItem = selectedOption;
                 RefreshChampionPicturePreview(champion, selectedOption);
             }
             finally
             {
                 _isUpdatingChampionPictureControls = false;
             }
+        }
+
+        private void RefreshChampionPictureChampionOptions(int selectedChampionId)
+        {
+            var championOptions = ChampionCatalog.All
+                .OrderBy(champion => champion.Name)
+                .Select(CreateChampionPictureChampionOption)
+                .ToList();
+
+            _isUpdatingChampionPictureControls = true;
+            try
+            {
+                ChampionPictureChampionComboBox.ItemsSource = championOptions;
+                ChampionPictureChampionComboBox.SelectedItem =
+                    championOptions.FirstOrDefault(option => option.Champion.Id == selectedChampionId)
+                    ?? championOptions.FirstOrDefault();
+            }
+            finally
+            {
+                _isUpdatingChampionPictureControls = false;
+            }
+        }
+
+        private ChampionPictureChampionOption CreateChampionPictureChampionOption(ChampionInfo champion)
+        {
+            ChampionTileOption? selectedOption = GetSelectedChampionPictureOption(champion);
+            return new ChampionPictureChampionOption(champion, selectedOption?.FileName);
+        }
+
+        private ChampionInfo? GetSelectedChampionPictureChampion()
+        {
+            return ChampionPictureChampionComboBox.SelectedItem switch
+            {
+                ChampionPictureChampionOption option => option.Champion,
+                ChampionInfo champion => champion,
+                _ => null
+            };
+        }
+
+        private ChampionTileOption? GetSelectedChampionPictureOption(
+            ChampionInfo champion,
+            IReadOnlyList<ChampionTileOption>? options = null)
+        {
+            options ??= ChampionTileCatalog.GetOptions(champion);
+            if (options.Count == 0)
+                return null;
+
+            if (_pendingChampionImageFileNames.TryGetValue(champion.Id, out string? selectedFileName))
+            {
+                var pendingOption = options.FirstOrDefault(option =>
+                    string.Equals(option.FileName, selectedFileName, StringComparison.OrdinalIgnoreCase));
+                if (pendingOption is not null)
+                    return pendingOption;
+            }
+
+            return ChampionTileCatalog.GetSelectedOption(champion, new ChampSelectSettings
+            {
+                ChampionImageFileNames = []
+            });
         }
 
         private void RefreshChampionPicturePreview(ChampionInfo? champion, ChampionTileOption? selectedOption)
@@ -1034,6 +1090,19 @@ namespace JoinGameAfk.View
         private bool SelectedThemeRequiresReload()
         {
             return !string.Equals(GetSelectedThemeKey(), AppThemeManager.CurrentThemeKey, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class ChampionPictureChampionOption(ChampionInfo champion, string? fileName)
+        {
+            public ChampionInfo Champion { get; } = champion;
+
+            public string Name => Champion.Name;
+
+            public string AppliedPictureText => string.IsNullOrWhiteSpace(fileName)
+                ? "No local picture"
+                : fileName;
+
+            public ImageSource? ImageSource => ChampionTileCatalog.GetImageSource(fileName);
         }
 
         private readonly record struct SettingsInputValues(

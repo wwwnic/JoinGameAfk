@@ -15,6 +15,17 @@ namespace JoinGameAfk.Services
     public sealed record ChampionTileOption(string FileName, string DisplayName)
     {
         public ImageSource? ImageSource => ChampionTileCatalog.GetImageSource(FileName);
+
+        public string ShortDisplayName
+        {
+            get
+            {
+                int detailsIndex = DisplayName.IndexOf(" (", StringComparison.Ordinal);
+                return detailsIndex > 0
+                    ? DisplayName[..detailsIndex]
+                    : DisplayName;
+            }
+        }
     }
 
     public sealed record ChampionTileImportResult(int ImportedCount, int SkippedCount, int FailedCount, string SourceDirectory, string CacheDirectory);
