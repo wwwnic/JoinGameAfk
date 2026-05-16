@@ -18,19 +18,19 @@
 
 ### Dashboard
 
-![JoinGameAfk dashboard view](docs/images/dashboard.jpg)
+![JoinGameAfk dashboard view](docs/images/dashboard-portraits.jpg)
 
 The dashboard shows the current phase, timers, bans, both teams, role-aware pick/ban plans, unavailable champion warnings, and the live watcher log.
 
 ### Champion Priorities
 
-![JoinGameAfk champion priorities view](docs/images/champion-priorities.jpg)
+![JoinGameAfk champion priorities view](docs/images/champion-priorities-tab.jpg)
 
 Build pick and ban priority lists per role with champion tiles, search, role filters, drag-and-drop ordering, and per-champion picture selection.
 
 ### Pick/Ban Overlay
 
-![JoinGameAfk pick ban overlay](docs/images/overlay.jpg)
+![JoinGameAfk pick ban overlay](docs/images/pick-ban-overlay.jpg)
 
 The optional overlay keeps your current pick and ban plan visible during champion select without needing the main window in front.
 
