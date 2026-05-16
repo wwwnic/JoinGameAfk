@@ -1717,7 +1717,7 @@ namespace JoinGameAfk.View
         private void ShowDragPreview(ChampionDragData champion, Point position)
         {
             DragPreviewImage.Source = champion.PreviewImageSource;
-            DragPreviewImageFrame.Visibility = champion.PreviewImageSource is null ? Visibility.Collapsed : Visibility.Visible;
+            DragPreviewImageFrame.Visibility = Visibility.Visible;
             DragPreviewText.Text = champion.PreviewText;
             UpdateDragPreviewPosition(position);
             DragPreviewPopup.IsOpen = true;

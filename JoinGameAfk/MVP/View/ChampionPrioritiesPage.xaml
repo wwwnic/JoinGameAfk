@@ -450,9 +450,16 @@
                                                                             <Border Grid.Row="0"
                                                                                     ClipToBounds="True"
                                                                                     Style="{StaticResource ChampionPortraitSlotStyle}">
-                                                                                <Image Source="{Binding PortraitImageSource}"
-                                                                                       Stretch="UniformToFill"
-                                                                                       SnapsToDevicePixels="True" />
+                                                                                <Grid>
+                                                                                    <viewControls:ChampionMysteryGlyph Width="30"
+                                                                                                                       Height="30"
+                                                                                                                       HorizontalAlignment="Center"
+                                                                                                                       VerticalAlignment="Center"
+                                                                                                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                                                                                    <Image Source="{Binding PortraitImageSource}"
+                                                                                           Stretch="UniformToFill"
+                                                                                           SnapsToDevicePixels="True" />
+                                                                                </Grid>
                                                                             </Border>
 
                                                                             <Viewbox Grid.Row="2"
@@ -563,9 +570,16 @@
                                                                             <Border Grid.Row="0"
                                                                                     ClipToBounds="True"
                                                                                     Style="{StaticResource ChampionPortraitSlotStyle}">
-                                                                                <Image Source="{Binding PortraitImageSource}"
-                                                                                       Stretch="UniformToFill"
-                                                                                       SnapsToDevicePixels="True" />
+                                                                                <Grid>
+                                                                                    <viewControls:ChampionMysteryGlyph Width="30"
+                                                                                                                       Height="30"
+                                                                                                                       HorizontalAlignment="Center"
+                                                                                                                       VerticalAlignment="Center"
+                                                                                                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                                                                                    <Image Source="{Binding PortraitImageSource}"
+                                                                                           Stretch="UniformToFill"
+                                                                                           SnapsToDevicePixels="True" />
+                                                                                </Grid>
                                                                             </Border>
 
                                                                             <Viewbox Grid.Row="2"
@@ -795,9 +809,16 @@
                                                 <Border Grid.Row="0"
                                                         ClipToBounds="True"
                                                         Style="{StaticResource ChampionPortraitSlotStyle}">
-                                                    <Image Source="{Binding PortraitImageSource}"
-                                                           Stretch="UniformToFill"
-                                                           SnapsToDevicePixels="True" />
+                                                    <Grid>
+                                                        <viewControls:ChampionMysteryGlyph Width="30"
+                                                                                           Height="30"
+                                                                                           HorizontalAlignment="Center"
+                                                                                           VerticalAlignment="Center"
+                                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
+                                                        <Image Source="{Binding PortraitImageSource}"
+                                                               Stretch="UniformToFill"
+                                                               SnapsToDevicePixels="True" />
+                                                    </Grid>
                                                 </Border>
 
                                                 <Viewbox Grid.Row="2"
@@ -863,9 +884,16 @@
                                 BorderThickness="1"
                                 CornerRadius="3"
                                 ClipToBounds="True">
-                            <Image x:Name="DragPreviewImage"
-                                   Stretch="UniformToFill"
-                                   SnapsToDevicePixels="True" />
+                            <Grid>
+                                <viewControls:ChampionMysteryGlyph Width="24"
+                                                                   Height="24"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource TextSubtleBrush}" />
+                                <Image x:Name="DragPreviewImage"
+                                       Stretch="UniformToFill"
+                                       SnapsToDevicePixels="True" />
+                            </Grid>
                         </Border>
                         <TextBlock x:Name="DragPreviewText"
                                    MaxWidth="150"
