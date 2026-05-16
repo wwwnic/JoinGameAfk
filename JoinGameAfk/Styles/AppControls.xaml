@@ -543,6 +543,11 @@
                 <Setter Property="Opacity" Value="0.55" />
                 <Setter Property="ToolTip" Value="Dragging" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding IsSwapDropTarget}" Value="True">
+                <Setter Property="Opacity" Value="0.72" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                <Setter Property="ToolTip" Value="Drop target" />
+            </DataTrigger>
             <MultiDataTrigger>
                 <MultiDataTrigger.Conditions>
                     <Condition Binding="{Binding IsSelected}" Value="True" />
@@ -574,7 +579,7 @@
         <Setter Property="Cursor" Value="SizeAll" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Margin" Value="0,1,4,2" />
+        <Setter Property="Margin" Value="0,1,0,1" />
         <Setter Property="Width" Value="48" />
         <Setter Property="Height" Value="64" />
         <Setter Property="Padding" Value="0" />

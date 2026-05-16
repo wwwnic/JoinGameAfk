@@ -15,6 +15,7 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
+using JoinGameAfk.View.Controls;
 
 namespace JoinGameAfk.View
 {
@@ -22,8 +23,9 @@ namespace JoinGameAfk.View
     {
         private const double DragAutoScrollEdgeDistance = 56;
         private const double DragAutoScrollStep = 28;
-        private const double ChampionReferenceListMinHeight = 110;
-        private const double ChampionReferenceHeightBuffer = 2;
+        private const double PriorityChampionChipWidth = 48;
+        private const double PriorityChampionChipHeight = 64;
+        private const int DefaultPriorityChampionChipsPerRow = 5;
         private const string ChampionPillTag = "ChampionPill";
 
         private readonly ChampSelectSettings _settings;
@@ -52,13 +54,13 @@ namespace JoinGameAfk.View
         private ChampionDragData? _activeChampionDragData;
         private UIElement? _dragCaptureElement;
         private ChampionSelectionItem? _dragHoverChampion;
+        private ChampionSelectionItem? _swapDropChampion;
         private ChampionSelectionItem? _duplicateDropChampion;
         private ChampionSelectionItem? _selectionAnchorChampion;
         private PositionRow? _dragHoverRow;
         private bool _dragHoverIsPick;
         private bool _dragHoverInsertAfter;
         private int? _dragHoverTargetIndex;
-        private bool _isChampionReferenceHeightUpdatePending;
         private bool _isPreferenceSavePending;
         private DispatcherOperation? _pendingPreferenceSaveOperation;
         private string _championImageSelectionSignature;
@@ -184,11 +186,6 @@ namespace JoinGameAfk.View
                 SetActiveTarget(_rows[0], isPick: true);
             }
 
-            Loaded += (_, _) =>
-            {
-                QueueChampionReferenceListHeightUpdate();
-            };
-            PageScrollViewer.SizeChanged += (_, _) => QueueChampionReferenceListHeightUpdate();
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
             _settings.Saved += Settings_Saved;
@@ -260,7 +257,6 @@ namespace JoinGameAfk.View
             RefreshConfiguredChampionDisplayText();
             RefreshChampionImages();
             UpdateChampionFilter();
-            QueueChampionReferenceListHeightUpdate();
         }
 
         private void RefreshChampionImages()
@@ -285,11 +281,6 @@ namespace JoinGameAfk.View
                 UpdateRowTextFromCollection(row, isPick: true);
                 UpdateRowTextFromCollection(row, isPick: false);
             }
-        }
-
-        private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            QueueChampionReferenceListHeightUpdate();
         }
 
         private void ChampionSearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -481,7 +472,7 @@ namespace JoinGameAfk.View
 
             var champion = _draggedReferenceChampion;
             _suppressReferenceChampionClick = true;
-            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromReference(champion), currentPosition);
+            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromReference(champion, _settings), currentPosition);
 
             e.Handled = true;
         }
@@ -658,47 +649,6 @@ namespace JoinGameAfk.View
                 return 5;
 
             return -1;
-        }
-
-        private void QueueChampionReferenceListHeightUpdate()
-        {
-            if (_isChampionReferenceHeightUpdatePending)
-                return;
-
-            _isChampionReferenceHeightUpdatePending = true;
-            Dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Loaded,
-                new Action(() =>
-                {
-                    _isChampionReferenceHeightUpdatePending = false;
-                    UpdateChampionReferenceListHeight();
-                }));
-        }
-
-        private void UpdateChampionReferenceListHeight()
-        {
-            if (!IsLoaded)
-                return;
-
-            double viewportHeight = PageScrollViewer.ViewportHeight > 0
-                ? PageScrollViewer.ViewportHeight
-                : PageScrollViewer.ActualHeight > 0
-                    ? PageScrollViewer.ActualHeight
-                    : ActualHeight;
-
-            if (viewportHeight <= 0)
-                return;
-
-            double bottomSpacing = ContentGrid.Margin.Bottom
-                + ChampionSearchCard.Padding.Bottom
-                + ChampionSearchCard.BorderThickness.Bottom;
-
-            double availableHeight = viewportHeight
-                - ChampionReferenceBorder.TranslatePoint(new Point(0, 0), PageScrollViewer).Y
-                - bottomSpacing
-                - ChampionReferenceHeightBuffer;
-
-            ChampionReferenceBorder.Height = Math.Max(ChampionReferenceListMinHeight, Math.Floor(availableHeight));
         }
 
         private bool TryAddChampionToActiveTarget(ChampionInfo champion)
@@ -1079,9 +1029,22 @@ namespace JoinGameAfk.View
             }
 
             var itemElement = sender as FrameworkElement;
-            Point pagePosition = e.GetPosition(this);
-            int? targetIndex = ResolveDropIndexFromListAncestor(itemElement, targetChampion.Row, targetChampion.IsPick, pagePosition)
-                ?? ResolveDropIndexFromItem(itemElement, targetChampion, pagePosition);
+            if (TryShowSameLaneSwapPreview(champion, targetChampion))
+            {
+                SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
+                if (!UpdateDragFeedback(e))
+                {
+                    e.Effects = DragDropEffects.None;
+                    e.Handled = true;
+                    return;
+                }
+
+                e.Effects = GetDragDropEffect(champion);
+                e.Handled = true;
+                return;
+            }
+
+            int? targetIndex = ResolveDropIndexFromItem(itemElement, targetChampion);
             if (targetIndex is not int resolvedTargetIndex)
             {
                 e.Effects = DragDropEffects.None;
@@ -1116,10 +1079,15 @@ namespace JoinGameAfk.View
                 return;
 
             var itemElement = sender as FrameworkElement;
-            Point pagePosition = e.GetPosition(this);
+            if (DropChampionOnSwapTarget(champion, targetChampion))
+            {
+                ClearInsertionIndicator();
+                e.Handled = true;
+                return;
+            }
+
             int? targetIndex = ResolveDropIndexFromHover(targetChampion.Row, targetChampion.IsPick)
-                ?? ResolveDropIndexFromListAncestor(itemElement, targetChampion.Row, targetChampion.IsPick, pagePosition)
-                ?? ResolveDropIndexFromItem(itemElement, targetChampion, pagePosition);
+                ?? ResolveDropIndexFromItem(itemElement, targetChampion);
 
             DropChampionOnTarget(champion, targetChampion.Row, targetChampion.IsPick, targetIndex);
             ClearInsertionIndicator();
@@ -1150,7 +1118,7 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            int targetIndex = ResolveDropIndexFromList(listElement, row, isPick, e.GetPosition(this));
+            int targetIndex = ResolveAppendDropIndex(row, isPick);
             ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
 
             ShowDuplicateDropWarning(champion, row, isPick);
@@ -1179,10 +1147,10 @@ namespace JoinGameAfk.View
             if (!CanDropChampion(champion, row, isPick))
                 return;
 
-            int targetIndex = ResolveDropIndexFromHover(row, isPick)
-                ?? ResolveDropIndexFromList(listElement, row, isPick, e.GetPosition(this));
+            int resolvedTargetIndex = ResolveDropIndexFromHover(row, isPick)
+                ?? ResolveAppendDropIndex(row, isPick);
 
-            DropChampionOnTarget(champion, row, isPick, targetIndex);
+            DropChampionOnTarget(champion, row, isPick, resolvedTargetIndex);
             ClearInsertionIndicator();
             e.Handled = true;
         }
@@ -1451,6 +1419,37 @@ namespace JoinGameAfk.View
                 InsertChampion(targetRow, targetIsPick, champion.ToChampionInfo(), targetIndex);
         }
 
+        private bool DropChampionOnSwapTarget(ChampionDragData champion, ChampionSelectionItem targetChampion)
+        {
+            if (champion.SourceItem is not ChampionSelectionItem sourceChampion
+                || !IsSamePriorityLaneDrag(champion, targetChampion.Row, targetChampion.IsPick))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(sourceChampion, targetChampion))
+                return true;
+
+            SwapChampionsInLane(sourceChampion, targetChampion);
+            return true;
+        }
+
+        private void SwapChampionsInLane(ChampionSelectionItem sourceChampion, ChampionSelectionItem targetChampion)
+        {
+            var collection = GetChampionCollection(sourceChampion.Row, sourceChampion.IsPick);
+            int sourceIndex = collection.IndexOf(sourceChampion);
+            int targetIndex = collection.IndexOf(targetChampion);
+            if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
+                return;
+
+            collection[sourceIndex] = targetChampion;
+            collection[targetIndex] = sourceChampion;
+            UpdateRowTextFromCollection(sourceChampion.Row, sourceChampion.IsPick);
+            SaveChampionPreferences();
+            RefreshSelectedChampionState();
+            SetActiveTarget(sourceChampion.Row, sourceChampion.IsPick);
+        }
+
         private void StartChampionDrag(DependencyObject source, ChampionDragData champion, Point position)
         {
             if (!IsPriorityEditingEnabled)
@@ -1465,7 +1464,7 @@ namespace JoinGameAfk.View
                 champion.SourceItem.IsDragging = true;
 
             RefreshTargetBrushes();
-            ShowDragPreview(champion.PreviewText, position);
+            ShowDragPreview(champion, position);
 
             if (source is UIElement sourceElement && sourceElement.CaptureMouse())
             {
@@ -1510,6 +1509,10 @@ namespace JoinGameAfk.View
                     if (IsSearchDeleteDropTarget && CanDeleteChampionFromSearchArea(_activeChampionDragData))
                     {
                         DeleteDraggedChampion(_activeChampionDragData);
+                    }
+                    else if (_swapDropChampion is not null)
+                    {
+                        DropChampionOnSwapTarget(_activeChampionDragData, _swapDropChampion);
                     }
                     else if (_dragHoverRow is not null && _dragHoverTargetIndex is int targetIndex)
                     {
@@ -1571,21 +1574,6 @@ namespace JoinGameAfk.View
 
             IsSearchDeleteDropTarget = false;
             DependencyObject? hitElement = InputHitTest(pagePosition) as DependencyObject;
-            if (TryFindChampionListTarget(hitElement, out var listElement, out var row, out bool isPick))
-            {
-                if (!CanDropChampion(champion, row, isPick))
-                {
-                    ClearInsertionIndicator();
-                    return;
-                }
-
-                int targetIndex = ResolveDropIndexFromList(listElement, row, isPick, pagePosition);
-                ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
-                ShowDuplicateDropWarning(champion, row, isPick);
-                SetActiveTarget(row, isPick, focusSearch: false);
-                return;
-            }
-
             if (TryFindChampionItemTarget(hitElement, out var itemElement, out var targetChampion))
             {
                 if (!CanDropChampion(champion, targetChampion.Row, targetChampion.IsPick))
@@ -1594,7 +1582,13 @@ namespace JoinGameAfk.View
                     return;
                 }
 
-                int? targetIndex = ResolveDropIndexFromItem(itemElement, targetChampion, pagePosition);
+                if (TryShowSameLaneSwapPreview(champion, targetChampion))
+                {
+                    SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
+                    return;
+                }
+
+                int? targetIndex = ResolveDropIndexFromItem(itemElement, targetChampion);
                 if (targetIndex is not int resolvedTargetIndex)
                 {
                     ClearInsertionIndicator();
@@ -1604,6 +1598,35 @@ namespace JoinGameAfk.View
                 ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex);
                 ShowDuplicateDropWarning(champion, targetChampion.Row, targetChampion.IsPick);
                 SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
+                return;
+            }
+
+            if (TryFindAppendDropTarget(pagePosition, out var appendRow, out bool appendIsPick, out int appendTargetIndex))
+            {
+                if (!CanDropChampion(champion, appendRow, appendIsPick))
+                {
+                    ClearInsertionIndicator();
+                    return;
+                }
+
+                ShowInsertionIndicatorAtIndex(appendRow, appendIsPick, appendTargetIndex);
+                ShowDuplicateDropWarning(champion, appendRow, appendIsPick);
+                SetActiveTarget(appendRow, appendIsPick, focusSearch: false);
+                return;
+            }
+
+            if (TryFindChampionListTarget(hitElement, out var listElement, out var row, out bool isPick))
+            {
+                if (!CanDropChampion(champion, row, isPick))
+                {
+                    ClearInsertionIndicator();
+                    return;
+                }
+
+                int targetIndex = ResolveAppendDropIndex(row, isPick);
+                ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
+                ShowDuplicateDropWarning(champion, row, isPick);
+                SetActiveTarget(row, isPick, focusSearch: false);
                 return;
             }
 
@@ -1630,15 +1653,10 @@ namespace JoinGameAfk.View
 
         private bool UpdateDragFeedback(DragEventArgs e)
         {
-            return UpdateDragFeedback(e.GetPosition(this), e.GetPosition(PageScrollViewer));
+            return UpdateDragFeedback(e.GetPosition(this));
         }
 
         private bool UpdateDragFeedback(Point pagePosition)
-        {
-            return UpdateDragFeedback(pagePosition, TranslatePoint(pagePosition, PageScrollViewer));
-        }
-
-        private bool UpdateDragFeedback(Point pagePosition, Point scrollViewerPosition)
         {
             if (!IsPointInsideElement(this, pagePosition))
             {
@@ -1647,26 +1665,45 @@ namespace JoinGameAfk.View
                 return false;
             }
 
-            AutoScrollPageWhileDragging(scrollViewerPosition);
+            AutoScrollScrollableRegionWhileDragging(pagePosition);
             UpdateDragPreviewPosition(pagePosition);
             return true;
         }
 
-        private void AutoScrollPageWhileDragging(Point position)
+        private void AutoScrollScrollableRegionWhileDragging(Point pagePosition)
         {
-            if (PageScrollViewer.ScrollableHeight <= 0 || PageScrollViewer.ViewportHeight <= 0)
+            if (TryAutoScrollViewerWhileDragging(PriorityListScrollViewer, pagePosition))
                 return;
 
-            if (position.Y < DragAutoScrollEdgeDistance)
+            TryAutoScrollViewerWhileDragging(ChampionReferenceScrollViewer, pagePosition);
+        }
+
+        private bool TryAutoScrollViewerWhileDragging(ScrollViewer scrollViewer, Point pagePosition)
+        {
+            if (!scrollViewer.IsVisible || scrollViewer.ScrollableHeight <= 0 || scrollViewer.ViewportHeight <= 0)
+                return false;
+
+            Point position = TranslatePoint(pagePosition, scrollViewer);
+            if (!IsPointInsideElement(scrollViewer, position))
+                return false;
+
+            double edgeDistance = Math.Min(
+                DragAutoScrollEdgeDistance,
+                Math.Max(16, scrollViewer.ActualHeight / 4));
+
+            if (position.Y < edgeDistance)
             {
-                PageScrollViewer.ScrollToVerticalOffset(Math.Max(0, PageScrollViewer.VerticalOffset - DragAutoScrollStep));
-                return;
+                scrollViewer.ScrollToVerticalOffset(Math.Max(0, scrollViewer.VerticalOffset - DragAutoScrollStep));
+                return true;
             }
 
-            if (position.Y > PageScrollViewer.ViewportHeight - DragAutoScrollEdgeDistance)
+            if (position.Y > scrollViewer.ActualHeight - edgeDistance)
             {
-                PageScrollViewer.ScrollToVerticalOffset(Math.Min(PageScrollViewer.ScrollableHeight, PageScrollViewer.VerticalOffset + DragAutoScrollStep));
+                scrollViewer.ScrollToVerticalOffset(Math.Min(scrollViewer.ScrollableHeight, scrollViewer.VerticalOffset + DragAutoScrollStep));
+                return true;
             }
+
+            return false;
         }
 
         private static bool IsPointInsideElement(FrameworkElement element, Point point)
@@ -1677,9 +1714,11 @@ namespace JoinGameAfk.View
                 && point.Y <= element.ActualHeight;
         }
 
-        private void ShowDragPreview(string text, Point position)
+        private void ShowDragPreview(ChampionDragData champion, Point position)
         {
-            DragPreviewText.Text = text;
+            DragPreviewImage.Source = champion.PreviewImageSource;
+            DragPreviewImageFrame.Visibility = champion.PreviewImageSource is null ? Visibility.Collapsed : Visibility.Visible;
+            DragPreviewText.Text = champion.PreviewText;
             UpdateDragPreviewPosition(position);
             DragPreviewPopup.IsOpen = true;
         }
@@ -1695,6 +1734,8 @@ namespace JoinGameAfk.View
         private void HideDragPreview()
         {
             DragPreviewPopup.IsOpen = false;
+            DragPreviewImage.Source = null;
+            DragPreviewImageFrame.Visibility = Visibility.Collapsed;
         }
 
         private void ClearDragState()
@@ -1717,6 +1758,28 @@ namespace JoinGameAfk.View
             return isPick ? row.PickChampions : row.BanChampions;
         }
 
+        private static bool IsSamePriorityLaneDrag(ChampionDragData champion, PositionRow targetRow, bool targetIsPick)
+        {
+            return champion.SourceItem is not null
+                && ReferenceEquals(champion.SourceItem.Row, targetRow)
+                && champion.SourceItem.IsPick == targetIsPick;
+        }
+
+        private bool TryShowSameLaneSwapPreview(ChampionDragData champion, ChampionSelectionItem targetChampion)
+        {
+            if (!IsSamePriorityLaneDrag(champion, targetChampion.Row, targetChampion.IsPick))
+                return false;
+
+            if (ReferenceEquals(champion.SourceItem, targetChampion))
+            {
+                ShowSameLaneNoOpPreview(targetChampion.Row, targetChampion.IsPick);
+                return true;
+            }
+
+            ShowSwapPreview(targetChampion);
+            return true;
+        }
+
         private int? ResolveDropIndexFromHover(PositionRow row, bool isPick)
         {
             return ReferenceEquals(_dragHoverRow, row) && _dragHoverIsPick == isPick
@@ -1724,50 +1787,64 @@ namespace JoinGameAfk.View
                 : null;
         }
 
-        private int? ResolveDropIndexFromListAncestor(DependencyObject? start, PositionRow row, bool isPick, Point pagePosition)
+        private static int ResolveAppendDropIndex(PositionRow row, bool isPick)
         {
-            if (TryFindChampionListTarget(start, out var listElement, out var targetRow, out bool targetIsPick)
-                && ReferenceEquals(targetRow, row)
-                && targetIsPick == isPick)
-            {
-                return ResolveDropIndexFromList(listElement, row, isPick, pagePosition);
-            }
-
-            return null;
+            return GetChampionCollection(row, isPick).Count;
         }
 
-        private int ResolveDropIndexFromList(FrameworkElement listElement, PositionRow row, bool isPick, Point pagePosition)
+        private bool TryFindAppendDropTarget(
+            Point pagePosition,
+            [NotNullWhen(true)] out PositionRow? row,
+            out bool isPick,
+            out int targetIndex)
         {
-            var collection = GetChampionCollection(row, isPick);
-            if (collection.Count == 0)
-                return 0;
-
-            var itemsControl = FindVisualChild<ItemsControl>(listElement);
-            if (itemsControl is null)
-                return collection.Count;
-
-            Point itemsPosition = TranslatePoint(pagePosition, itemsControl);
-            if (!IsPointInsideElement(itemsControl, itemsPosition))
-                return collection.Count;
-
-            var layouts = GetChampionPillLayouts(itemsControl, collection);
-            if (layouts.Count == 0)
-                return collection.Count;
-
-            var rows = GroupChampionPillRows(layouts);
-            var selectedRow = rows[0];
-            for (int i = 0; i < rows.Count - 1; i++)
+            foreach (var candidateRow in _rows)
             {
-                double rowBoundary = (rows[i].CenterY + rows[i + 1].CenterY) / 2;
-                if (pagePosition.Y < rowBoundary)
+                if (TryResolveAppendDropIndex(candidateRow, isPick: true, pagePosition, out targetIndex))
                 {
-                    selectedRow = rows[i];
-                    return ResolveDropIndexFromPillRow(selectedRow, pagePosition.X);
+                    row = candidateRow;
+                    isPick = true;
+                    return true;
+                }
+
+                if (TryResolveAppendDropIndex(candidateRow, isPick: false, pagePosition, out targetIndex))
+                {
+                    row = candidateRow;
+                    isPick = false;
+                    return true;
                 }
             }
 
-            selectedRow = rows[^1];
-            return ResolveDropIndexFromPillRow(selectedRow, pagePosition.X);
+            row = null;
+            isPick = false;
+            targetIndex = 0;
+            return false;
+        }
+
+        private bool TryResolveAppendDropIndex(PositionRow row, bool isPick, Point pagePosition, out int targetIndex)
+        {
+            targetIndex = ResolveAppendDropIndex(row, isPick);
+            var itemsControl = FindChampionItemsControl(row, isPick);
+            return itemsControl is not null
+                && IsPointerInsideAppendDropBounds(row, isPick, pagePosition, itemsControl, null);
+        }
+
+        private bool IsPointerInsideAppendDropBounds(
+            PositionRow row,
+            bool isPick,
+            Point pagePosition,
+            ItemsControl? itemsControl,
+            FrameworkElement? fallbackElement)
+        {
+            int targetIndex = GetChampionCollection(row, isPick).Count;
+            Rect appendBounds = ResolveDropPreviewBounds(row, isPick, targetIndex, itemsControl);
+            Point pointerPosition = itemsControl is not null
+                ? TranslatePoint(pagePosition, itemsControl)
+                : fallbackElement is not null
+                    ? TranslatePoint(pagePosition, fallbackElement)
+                    : pagePosition;
+
+            return appendBounds.Contains(pointerPosition);
         }
 
         private List<ChampionPillLayout> GetChampionPillLayouts(
@@ -1784,7 +1861,7 @@ namespace JoinGameAfk.View
                 if (pillElement is null || pillElement.ActualWidth <= 0 || pillElement.ActualHeight <= 0)
                     continue;
 
-                Point topLeft = pillElement.TranslatePoint(new Point(0, 0), this);
+                Point topLeft = pillElement.TranslatePoint(new Point(0, 0), itemsControl);
                 layouts.Add(new ChampionPillLayout(
                     i,
                     new Rect(topLeft, new Size(pillElement.ActualWidth, pillElement.ActualHeight))));
@@ -1793,48 +1870,15 @@ namespace JoinGameAfk.View
             return layouts;
         }
 
-        private static List<ChampionPillRow> GroupChampionPillRows(List<ChampionPillLayout> layouts)
-        {
-            var rows = new List<ChampionPillRow>();
-            foreach (var layout in layouts.OrderBy(layout => layout.Bounds.Top).ThenBy(layout => layout.Bounds.Left))
-            {
-                var row = rows.Count > 0 ? rows[^1] : null;
-                if (row is null || layout.Bounds.Top > row.Bottom + 1)
-                {
-                    row = new ChampionPillRow();
-                    rows.Add(row);
-                }
-
-                row.Add(layout);
-            }
-
-            foreach (var row in rows)
-                row.SortItems();
-
-            return rows;
-        }
-
-        private static int ResolveDropIndexFromPillRow(ChampionPillRow row, double pointerX)
-        {
-            foreach (var layout in row.Items)
-            {
-                if (pointerX < layout.CenterX)
-                    return layout.Index;
-            }
-
-            return row.Items[^1].Index + 1;
-        }
-
-        private int? ResolveDropIndexFromItem(FrameworkElement? itemElement, ChampionSelectionItem targetChampion, Point pagePosition)
+        private static int? ResolveDropIndexFromItem(FrameworkElement? itemElement, ChampionSelectionItem targetChampion)
         {
             if (itemElement is null)
                 return null;
 
-            var pillElement = FindTaggedVisualChild(itemElement, ChampionPillTag) ?? itemElement;
-            return ResolveDropIndexFromItemPosition(itemElement, targetChampion, TranslatePoint(pagePosition, pillElement));
+            return ResolveDropIndexFromItemPosition(itemElement, targetChampion);
         }
 
-        private static int? ResolveDropIndexFromItemPosition(FrameworkElement? itemElement, ChampionSelectionItem targetChampion, Point pointerPositionInPill)
+        private static int? ResolveDropIndexFromItemPosition(FrameworkElement? itemElement, ChampionSelectionItem targetChampion)
         {
             if (itemElement is null)
                 return null;
@@ -1844,9 +1888,7 @@ namespace JoinGameAfk.View
             if (targetIndex < 0)
                 return null;
 
-            var pillElement = FindTaggedVisualChild(itemElement, ChampionPillTag) ?? itemElement;
-            bool insertAfter = pointerPositionInPill.X >= pillElement.ActualWidth / 2;
-            return insertAfter ? targetIndex + 1 : targetIndex;
+            return targetIndex;
         }
 
         private static bool TryFindChampionItemTarget(
@@ -1993,18 +2035,58 @@ namespace JoinGameAfk.View
             return null;
         }
 
+        private void ShowSameLaneNoOpPreview(PositionRow row, bool isPick)
+        {
+            if (_swapDropChampion is null
+                && _dragHoverChampion is null
+                && ReferenceEquals(_dragHoverRow, row)
+                && _dragHoverIsPick == isPick
+                && _dragHoverTargetIndex is null)
+            {
+                RefreshTargetBrushes();
+                return;
+            }
+
+            ClearInsertionIndicator();
+            _dragHoverRow = row;
+            _dragHoverIsPick = isPick;
+            _dragHoverInsertAfter = false;
+            _dragHoverTargetIndex = null;
+            RefreshTargetBrushes();
+        }
+
+        private void ShowSwapPreview(ChampionSelectionItem targetChampion)
+        {
+            var collection = GetChampionCollection(targetChampion.Row, targetChampion.IsPick);
+            int targetIndex = collection.IndexOf(targetChampion);
+            if (targetIndex < 0)
+            {
+                ClearInsertionIndicator();
+                return;
+            }
+
+            if (ReferenceEquals(_swapDropChampion, targetChampion)
+                && ReferenceEquals(_dragHoverRow, targetChampion.Row)
+                && _dragHoverIsPick == targetChampion.IsPick
+                && _dragHoverTargetIndex == targetIndex)
+            {
+                RefreshTargetBrushes();
+                return;
+            }
+
+            ClearInsertionIndicator();
+            _swapDropChampion = targetChampion;
+            _dragHoverRow = targetChampion.Row;
+            _dragHoverIsPick = targetChampion.IsPick;
+            _dragHoverInsertAfter = false;
+            _dragHoverTargetIndex = targetIndex;
+            ShowDropPreview(targetChampion.Row, targetChampion.IsPick, targetIndex, DropActionKind.Swap);
+            RefreshTargetBrushes();
+        }
+
         private void ShowInsertionIndicator(PositionRow row, bool isPick, ChampionSelectionItem? champion, bool insertAfter, int targetIndex)
         {
             int resolvedTargetIndex = targetIndex;
-            if (champion is null)
-            {
-                var collection = GetChampionCollection(row, isPick);
-                if (collection.Count > 0)
-                {
-                    champion = collection[^1];
-                    insertAfter = true;
-                }
-            }
 
             if (ReferenceEquals(_dragHoverChampion, champion)
                 && ReferenceEquals(_dragHoverRow, row)
@@ -2024,43 +2106,145 @@ namespace JoinGameAfk.View
             _dragHoverInsertAfter = insertAfter;
             _dragHoverTargetIndex = resolvedTargetIndex;
 
-            if (champion is not null)
-            {
-                if (insertAfter)
-                    champion.InsertAfterIndicatorVisibility = Visibility.Visible;
-                else
-                    champion.InsertBeforeIndicatorVisibility = Visibility.Visible;
+            ShowDropPreview(row, isPick, resolvedTargetIndex, ResolveDropPreviewEffect(row, isPick, resolvedTargetIndex));
+            RefreshTargetBrushes();
+        }
 
-                RefreshTargetBrushes();
-                return;
-            }
+        private void ShowDropPreview(PositionRow row, bool isPick, int targetIndex, DropActionKind effect)
+        {
+            Rect bounds = ResolveDropPreviewBounds(row, isPick, targetIndex, null);
+            double minHeight = bounds.Top + bounds.Height;
 
             if (isPick)
-                row.PickDropIndicatorVisibility = Visibility.Visible;
+            {
+                row.PickEndGhostEffect = effect;
+                row.PickEndGhostLeft = bounds.Left;
+                row.PickEndGhostTop = bounds.Top;
+                row.PickEndGhostMinHeight = minHeight;
+                row.PickEndGhostVisibility = Visibility.Visible;
+            }
             else
-                row.BanDropIndicatorVisibility = Visibility.Visible;
+            {
+                row.BanEndGhostEffect = effect;
+                row.BanEndGhostLeft = bounds.Left;
+                row.BanEndGhostTop = bounds.Top;
+                row.BanEndGhostMinHeight = minHeight;
+                row.BanEndGhostVisibility = Visibility.Visible;
+            }
+        }
 
-            RefreshTargetBrushes();
+        private static DropActionKind ResolveDropPreviewEffect(PositionRow row, bool isPick, int targetIndex)
+        {
+            return targetIndex >= GetChampionCollection(row, isPick).Count
+                ? DropActionKind.Append
+                : DropActionKind.Insert;
+        }
+
+        private Rect ResolveDropPreviewBounds(PositionRow row, bool isPick, int targetIndex, ItemsControl? itemsControl)
+        {
+            int resolvedTargetIndex = Math.Clamp(targetIndex, 0, GetChampionCollection(row, isPick).Count);
+            itemsControl ??= FindChampionItemsControl(row, isPick);
+            if (itemsControl is null)
+                return CreateFallbackDropPreviewBounds(null, resolvedTargetIndex);
+
+            var collection = GetChampionCollection(row, isPick);
+            var layouts = GetChampionPillLayouts(itemsControl, collection);
+            var targetLayout = layouts.FirstOrDefault(layout => layout.Index == resolvedTargetIndex);
+            if (targetLayout is not null)
+                return targetLayout.Bounds;
+
+            var lastLayout = layouts.FirstOrDefault(layout => layout.Index == collection.Count - 1);
+            if (lastLayout is not null && resolvedTargetIndex == collection.Count)
+            {
+                double previewWidth = lastLayout.Bounds.Width > 0 ? lastLayout.Bounds.Width : PriorityChampionChipWidth;
+                double previewHeight = lastLayout.Bounds.Height > 0 ? lastLayout.Bounds.Height : PriorityChampionChipHeight;
+                double left = lastLayout.Bounds.Right;
+                double top = lastLayout.Bounds.Top;
+
+                if (itemsControl.ActualWidth > 0 && left + previewWidth > itemsControl.ActualWidth + 0.5)
+                {
+                    left = 0;
+                    top = lastLayout.Bounds.Bottom;
+                }
+
+                return new Rect(left, top, previewWidth, previewHeight);
+            }
+
+            return CreateFallbackDropPreviewBounds(itemsControl, resolvedTargetIndex);
+        }
+
+        private ItemsControl? FindChampionItemsControl(PositionRow row, bool isPick)
+        {
+            if (PositionList.ItemContainerGenerator.ContainerFromItem(row) is not DependencyObject rowContainer)
+                return null;
+
+            var listElement = FindChampionListElement(rowContainer, row, isPick);
+            return listElement is null ? null : FindVisualChild<ItemsControl>(listElement);
+        }
+
+        private static FrameworkElement? FindChampionListElement(DependencyObject parent, PositionRow row, bool isPick)
+        {
+            if (parent is FrameworkElement element
+                && element.AllowDrop
+                && ReferenceEquals(element.DataContext, row)
+                && element.Tag is string tag
+                && string.Equals(tag, isPick ? "Pick" : "Ban", StringComparison.OrdinalIgnoreCase))
+            {
+                return element;
+            }
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                FrameworkElement? descendant = FindChampionListElement(VisualTreeHelper.GetChild(parent, i), row, isPick);
+                if (descendant is not null)
+                    return descendant;
+            }
+
+            return null;
+        }
+
+        private static Rect CreateFallbackDropPreviewBounds(ItemsControl? itemsControl, int targetIndex)
+        {
+            int resolvedTargetIndex = Math.Max(0, targetIndex);
+            double availableWidth = itemsControl?.ActualWidth > 0
+                ? itemsControl.ActualWidth
+                : PriorityChampionChipWidth * DefaultPriorityChampionChipsPerRow;
+            int chipsPerRow = Math.Max(1, (int)Math.Floor(availableWidth / PriorityChampionChipWidth));
+            int column = resolvedTargetIndex % chipsPerRow;
+            int line = resolvedTargetIndex / chipsPerRow;
+
+            return new Rect(
+                column * PriorityChampionChipWidth,
+                line * PriorityChampionChipHeight,
+                PriorityChampionChipWidth,
+                PriorityChampionChipHeight);
         }
 
         private void ClearInsertionIndicator()
         {
             if (_dragHoverChampion is not null)
             {
-                _dragHoverChampion.InsertBeforeIndicatorVisibility = Visibility.Collapsed;
-                _dragHoverChampion.InsertAfterIndicatorVisibility = Visibility.Collapsed;
+                _dragHoverChampion.IsSwapDropTarget = false;
             }
+
+            if (_swapDropChampion is not null)
+                _swapDropChampion.IsSwapDropTarget = false;
 
             if (_dragHoverRow is not null)
             {
-                _dragHoverRow.PickDropIndicatorVisibility = Visibility.Collapsed;
-                _dragHoverRow.BanDropIndicatorVisibility = Visibility.Collapsed;
+                _dragHoverRow.PickEndGhostVisibility = Visibility.Collapsed;
+                _dragHoverRow.BanEndGhostVisibility = Visibility.Collapsed;
+                _dragHoverRow.PickEndGhostMinHeight = 0;
+                _dragHoverRow.BanEndGhostMinHeight = 0;
+                _dragHoverRow.PickEndGhostEffect = DropActionKind.None;
+                _dragHoverRow.BanEndGhostEffect = DropActionKind.None;
             }
 
             if (_duplicateDropChampion is not null)
                 _duplicateDropChampion.IsDuplicateDropTarget = false;
 
             _dragHoverChampion = null;
+            _swapDropChampion = null;
             _duplicateDropChampion = null;
             _dragHoverRow = null;
             _dragHoverInsertAfter = false;
@@ -2168,6 +2352,7 @@ namespace JoinGameAfk.View
         {
             public int ChampionId { get; private init; }
             public string ChampionName { get; private init; } = "";
+            public ImageSource? PreviewImageSource { get; private init; }
             public ChampionSelectionItem? SourceItem { get; private init; }
             public string PreviewText => ChampionName;
 
@@ -2177,16 +2362,18 @@ namespace JoinGameAfk.View
                 {
                     ChampionId = champion.ChampionId,
                     ChampionName = champion.DisplayText,
+                    PreviewImageSource = champion.PortraitImageSource,
                     SourceItem = champion
                 };
             }
 
-            public static ChampionDragData FromReference(ChampionInfo champion)
+            public static ChampionDragData FromReference(ChampionInfo champion, ChampSelectSettings settings)
             {
                 return new ChampionDragData
                 {
                     ChampionId = champion.Id,
-                    ChampionName = champion.Name
+                    ChampionName = champion.Name,
+                    PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion, settings)?.ImageSource
                 };
             }
 
@@ -2206,27 +2393,6 @@ namespace JoinGameAfk.View
 
             public int Index { get; }
             public Rect Bounds { get; }
-            public double CenterX => Bounds.Left + Bounds.Width / 2;
-        }
-
-        private sealed class ChampionPillRow
-        {
-            public List<ChampionPillLayout> Items { get; } = [];
-            public double Top { get; private set; } = double.PositiveInfinity;
-            public double Bottom { get; private set; } = double.NegativeInfinity;
-            public double CenterY => Top + (Bottom - Top) / 2;
-
-            public void Add(ChampionPillLayout layout)
-            {
-                Items.Add(layout);
-                Top = Math.Min(Top, layout.Bounds.Top);
-                Bottom = Math.Max(Bottom, layout.Bounds.Bottom);
-            }
-
-            public void SortItems()
-            {
-                Items.Sort((left, right) => left.Bounds.Left.CompareTo(right.Bounds.Left));
-            }
         }
 
     }
@@ -2400,9 +2566,8 @@ namespace JoinGameAfk.View
     {
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        private Visibility _insertBeforeIndicatorVisibility = Visibility.Collapsed;
-        private Visibility _insertAfterIndicatorVisibility = Visibility.Collapsed;
         private bool _isDuplicateDropTarget;
+        private bool _isSwapDropTarget;
         private bool _isSelected;
         private bool _isDragging;
         private string _displayText = "";
@@ -2453,22 +2618,16 @@ namespace JoinGameAfk.View
             set => SetProperty(ref _portraitImageSource, value);
         }
 
-        public Visibility InsertBeforeIndicatorVisibility
-        {
-            get => _insertBeforeIndicatorVisibility;
-            set => SetProperty(ref _insertBeforeIndicatorVisibility, value);
-        }
-
-        public Visibility InsertAfterIndicatorVisibility
-        {
-            get => _insertAfterIndicatorVisibility;
-            set => SetProperty(ref _insertAfterIndicatorVisibility, value);
-        }
-
         public bool IsDuplicateDropTarget
         {
             get => _isDuplicateDropTarget;
             set => SetProperty(ref _isDuplicateDropTarget, value);
+        }
+
+        public bool IsSwapDropTarget
+        {
+            get => _isSwapDropTarget;
+            set => SetProperty(ref _isSwapDropTarget, value);
         }
 
         public bool IsSelected
@@ -2509,8 +2668,16 @@ namespace JoinGameAfk.View
         private Brush _banBorderBrush = Brushes.Transparent;
         private Brush _pickBackgroundBrush = Brushes.Transparent;
         private Brush _banBackgroundBrush = Brushes.Transparent;
-        private Visibility _pickDropIndicatorVisibility = Visibility.Collapsed;
-        private Visibility _banDropIndicatorVisibility = Visibility.Collapsed;
+        private Visibility _pickEndGhostVisibility = Visibility.Collapsed;
+        private Visibility _banEndGhostVisibility = Visibility.Collapsed;
+        private double _pickEndGhostLeft;
+        private double _pickEndGhostTop;
+        private double _pickEndGhostMinHeight;
+        private double _banEndGhostLeft;
+        private double _banEndGhostTop;
+        private double _banEndGhostMinHeight;
+        private DropActionKind _pickEndGhostEffect = DropActionKind.None;
+        private DropActionKind _banEndGhostEffect = DropActionKind.None;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -2561,39 +2728,87 @@ namespace JoinGameAfk.View
             set => SetProperty(ref _banBackgroundBrush, value);
         }
 
-        public Visibility PickDropIndicatorVisibility
+        public Visibility PickEndGhostVisibility
         {
-            get => _pickDropIndicatorVisibility;
+            get => _pickEndGhostVisibility;
             set
             {
-                if (EqualityComparer<Visibility>.Default.Equals(_pickDropIndicatorVisibility, value))
+                if (EqualityComparer<Visibility>.Default.Equals(_pickEndGhostVisibility, value))
                     return;
 
-                _pickDropIndicatorVisibility = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PickDropIndicatorVisibility)));
+                _pickEndGhostVisibility = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PickEndGhostVisibility)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(PickPlaceholderVisibility)));
             }
         }
 
-        public Visibility BanDropIndicatorVisibility
+        public Visibility BanEndGhostVisibility
         {
-            get => _banDropIndicatorVisibility;
+            get => _banEndGhostVisibility;
             set
             {
-                if (EqualityComparer<Visibility>.Default.Equals(_banDropIndicatorVisibility, value))
+                if (EqualityComparer<Visibility>.Default.Equals(_banEndGhostVisibility, value))
                     return;
 
-                _banDropIndicatorVisibility = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BanDropIndicatorVisibility)));
+                _banEndGhostVisibility = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BanEndGhostVisibility)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(BanPlaceholderVisibility)));
             }
         }
 
-        public Visibility PickPlaceholderVisibility => PickChampions.Count == 0 && PickDropIndicatorVisibility != Visibility.Visible
+        public double PickEndGhostLeft
+        {
+            get => _pickEndGhostLeft;
+            set => SetProperty(ref _pickEndGhostLeft, value);
+        }
+
+        public double PickEndGhostTop
+        {
+            get => _pickEndGhostTop;
+            set => SetProperty(ref _pickEndGhostTop, value);
+        }
+
+        public double PickEndGhostMinHeight
+        {
+            get => _pickEndGhostMinHeight;
+            set => SetProperty(ref _pickEndGhostMinHeight, value);
+        }
+
+        public double BanEndGhostLeft
+        {
+            get => _banEndGhostLeft;
+            set => SetProperty(ref _banEndGhostLeft, value);
+        }
+
+        public double BanEndGhostTop
+        {
+            get => _banEndGhostTop;
+            set => SetProperty(ref _banEndGhostTop, value);
+        }
+
+        public double BanEndGhostMinHeight
+        {
+            get => _banEndGhostMinHeight;
+            set => SetProperty(ref _banEndGhostMinHeight, value);
+        }
+
+        public DropActionKind PickEndGhostEffect
+        {
+            get => _pickEndGhostEffect;
+            set => SetProperty(ref _pickEndGhostEffect, value);
+        }
+
+        public DropActionKind BanEndGhostEffect
+        {
+            get => _banEndGhostEffect;
+            set => SetProperty(ref _banEndGhostEffect, value);
+        }
+
+        public Visibility PickPlaceholderVisibility => PickChampions.Count == 0 && PickEndGhostVisibility != Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        public Visibility BanPlaceholderVisibility => BanChampions.Count == 0 && BanDropIndicatorVisibility != Visibility.Visible
+        public Visibility BanPlaceholderVisibility => BanChampions.Count == 0 && BanEndGhostVisibility != Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
 
