@@ -22,13 +22,41 @@ namespace JoinGameAfk.Plugin.Services
                 Timeout = RequestTimeout
             };
 
-            string dataDragonVersion = await FetchLatestVersionAsync(httpClient, cancellationToken).ConfigureAwait(false);
+            string dataDragonVersion = await FetchLatestDataDragonVersionAsync(httpClient, cancellationToken).ConfigureAwait(false);
             var champions = await FetchChampionsAsync(httpClient, dataDragonVersion, cancellationToken).ConfigureAwait(false);
 
             return new ChampionCatalogRemoteData(dataDragonVersion, champions);
         }
 
-        private static async Task<string> FetchLatestVersionAsync(HttpClient httpClient, CancellationToken cancellationToken)
+        public async Task<string> FetchLatestDataDragonVersionAsync(CancellationToken cancellationToken = default)
+        {
+            using var httpClient = new HttpClient
+            {
+                Timeout = RequestTimeout
+            };
+
+            return await FetchLatestDataDragonVersionAsync(httpClient, cancellationToken).ConfigureAwait(false);
+        }
+
+        public async Task<ChampionCatalogRemoteData> FetchChampionCatalogAsync(
+            string dataDragonVersion,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(dataDragonVersion))
+                throw new ArgumentException("Data Dragon version is required.", nameof(dataDragonVersion));
+
+            dataDragonVersion = dataDragonVersion.Trim();
+
+            using var httpClient = new HttpClient
+            {
+                Timeout = RequestTimeout
+            };
+
+            var champions = await FetchChampionsAsync(httpClient, dataDragonVersion, cancellationToken).ConfigureAwait(false);
+            return new ChampionCatalogRemoteData(dataDragonVersion, champions);
+        }
+
+        private static async Task<string> FetchLatestDataDragonVersionAsync(HttpClient httpClient, CancellationToken cancellationToken)
         {
             using var response = await httpClient.GetAsync(VersionsUrl, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();

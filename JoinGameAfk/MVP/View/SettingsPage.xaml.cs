@@ -56,6 +56,7 @@ namespace JoinGameAfk.View
             RefreshChampionCatalogSyncStatus();
             RefreshChampionPictureCacheStatus();
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
             Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
             LoadReadyCheckSoundOptions();
@@ -569,8 +570,8 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Enable champion list updates on startup?\n\nWhen this is on, JoinGameAfk will use your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com, but only if the last successful sync is older than 24 hours.\n\nIt only downloads Riot's public champion version and champion-name data, then updates your local champions.json file.\n\nYou can still use Update Champion List manually at any time.\n\nIf the request fails, the app keeps your existing local champion list and continues normally.",
-                "Allow Startup Champion List Update",
+                "Check champion data updates on startup?\n\nWhen this is on, JoinGameAfk uses your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com and fetch only the latest version first.\n\nIf your local champion list version is different, it downloads Riot's public champion-name data and updates champions.json. If your local picture cache version is different, it downloads the Data Dragon dragontail archive and extracts champion tiles.\n\nIf everything is already current, no champion list or image archive is downloaded.\n\nIf a request fails, the app keeps your existing local champion data and continues normally.",
+                "Allow Startup Champion Data Update Check",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
                 MessageBoxResult.Cancel);
@@ -695,9 +696,19 @@ namespace JoinGameAfk.View
             });
         }
 
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                RefreshChampionPictureCacheStatus();
+                LoadChampionPictureOptions();
+            });
+        }
+
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
         {
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
             Unloaded -= SettingsPage_Unloaded;
         }
 

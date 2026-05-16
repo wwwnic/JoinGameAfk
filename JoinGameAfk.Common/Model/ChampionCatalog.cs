@@ -275,10 +275,16 @@ namespace JoinGameAfk.Model
         {
             ArgumentNullException.ThrowIfNull(remoteService);
 
-            var rolesByChampionId = LoadKnownRolesByChampionId();
-
             var remoteCatalog = await remoteService.FetchLatestChampionCatalogAsync(cancellationToken)
                 .ConfigureAwait(false);
+            return RefreshFromDataDragon(remoteCatalog);
+        }
+
+        public static ChampionCatalogRefreshResult RefreshFromDataDragon(ChampionCatalogRemoteData remoteCatalog)
+        {
+            ArgumentNullException.ThrowIfNull(remoteCatalog);
+
+            var rolesByChampionId = LoadKnownRolesByChampionId();
             string dataDragonVersion = remoteCatalog.DataDragonVersion.Trim();
 
             if (string.IsNullOrWhiteSpace(dataDragonVersion))

@@ -131,7 +131,7 @@ namespace JoinGameAfk.Model
         public string ThemeKey { get; set; } = "draft-desk";
 
         /// <summary>
-        /// Whether the app should refresh the champion list from Riot Data Dragon when it starts.
+        /// Whether the app should check Riot Data Dragon for champion list and picture updates when it starts.
         /// </summary>
         public bool AutoUpdateChampionCatalogOnStartup { get; set; }
 

@@ -160,11 +160,21 @@ namespace JoinGameAfk.Services
             IProgress<ChampionTileArchiveProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            progress?.Report(new ChampionTileArchiveProgress(0, null, "Checking latest Riot Data Dragon version..."));
+            string dataDragonVersion = await FetchLatestVersionAsync(cancellationToken).ConfigureAwait(false);
+
+            return await InstallDataDragonArchiveAsync(dataDragonVersion, progress, cancellationToken).ConfigureAwait(false);
+        }
+
+        public static async Task<ChampionTileArchiveInstallResult> InstallDataDragonArchiveAsync(
+            string dataDragonVersion,
+            IProgress<ChampionTileArchiveProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
             AppStorage.EnsureChampionTileDirectoryExists();
             AppStorage.EnsureChampionTileArchiveDirectoryExists();
 
-            progress?.Report(new ChampionTileArchiveProgress(0, null, "Checking latest Riot Data Dragon version..."));
-            string dataDragonVersion = await FetchLatestVersionAsync(cancellationToken).ConfigureAwait(false);
+            dataDragonVersion = NormalizeDataDragonVersion(dataDragonVersion);
             string archiveFilePath = Path.Combine(AppStorage.ChampionTileArchiveDirectoryPath, $"dragontail-{dataDragonVersion}.tgz");
 
             long archiveSizeBytes = await EnsureArchiveDownloadedAsync(
@@ -518,6 +528,21 @@ namespace JoinGameAfk.Services
         private static string FormatMegabytes(long bytes)
         {
             return $"{bytes / 1024d / 1024d:0.0} MB";
+        }
+
+        private static string NormalizeDataDragonVersion(string dataDragonVersion)
+        {
+            if (string.IsNullOrWhiteSpace(dataDragonVersion))
+                throw new ArgumentException("Data Dragon version is required.", nameof(dataDragonVersion));
+
+            string trimmed = dataDragonVersion.Trim();
+            if (!string.Equals(trimmed, Path.GetFileName(trimmed), StringComparison.Ordinal)
+                || trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                throw new ArgumentException("Data Dragon version is not a valid file name segment.", nameof(dataDragonVersion));
+            }
+
+            return trimmed;
         }
 
         private sealed class ChampionTileCacheFile

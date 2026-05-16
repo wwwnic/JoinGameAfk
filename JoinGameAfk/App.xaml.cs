@@ -3,6 +3,7 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
 using JoinGameAfk.Plugin.Services;
+using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.View;
 
@@ -10,8 +11,6 @@ namespace JoinGameAfk
 {
     public partial class App : Application
     {
-        private static readonly TimeSpan ChampionCatalogAutoUpdateInterval = TimeSpan.FromHours(24);
-
         private MainWindow? fMainWindow;
         private PhaseProgressionPage? fDashboardPage;
         private LogsPage? fLogsPage;
@@ -35,7 +34,7 @@ namespace JoinGameAfk
                 if (champSelectSettings.StartWatcherOnStartup)
                     fPhaseController?.Start();
 
-                _ = AutoUpdateChampionCatalogOnStartupAsync(champSelectSettings);
+                _ = AutoSyncChampionDataOnStartupAsync(champSelectSettings);
             }
             catch (Exception ex)
             {
@@ -76,42 +75,84 @@ namespace JoinGameAfk
             return mainWindow;
         }
 
-        private async Task AutoUpdateChampionCatalogOnStartupAsync(ChampSelectSettings champSelectSettings)
+        private async Task AutoSyncChampionDataOnStartupAsync(ChampSelectSettings champSelectSettings)
         {
             if (!champSelectSettings.AutoUpdateChampionCatalogOnStartup)
                 return;
 
-            var syncInfo = ChampionCatalog.GetLocalSyncInfo();
-            if (!ShouldAutoUpdateChampionCatalog(syncInfo.LastSyncedAtUtc, out DateTime nextUpdateAtUtc))
-            {
-                fLogsPage?.WriteLine($"Champion list auto-update skipped. Last sync was less than 24 hours ago; next automatic check is after {nextUpdateAtUtc.ToLocalTime():g}. Use Settings > Update Champion List to sync manually.");
-                return;
-            }
+            var remoteService = new DataDragonChampionCatalogService();
+            string latestDataDragonVersion;
 
-            fLogsPage?.WriteLine("Champion list auto-update is enabled. Contacting Riot Data Dragon to refresh champion names.");
+            fLogsPage?.WriteLine("Champion data startup update check is enabled. Checking the latest Riot Data Dragon version.");
 
             try
             {
-                var result = await ChampionCatalog.RefreshFromDataDragonAsync(new DataDragonChampionCatalogService());
-                fLogsPage?.WriteLine($"Champion list auto-update completed. Riot Data Dragon {result.DataDragonVersion} ({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
+                latestDataDragonVersion = await remoteService.FetchLatestDataDragonVersionAsync();
             }
             catch (Exception ex)
             {
-                fLogsPage?.WriteErrorLine($"Champion list auto-update failed. Existing local champion list was kept. {ex.Message}");
+                fLogsPage?.WriteErrorLine($"Champion data startup update check failed. Existing local champion data was kept. {ex.Message}");
+                return;
+            }
+
+            var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
+            bool championListNeedsUpdate = !IsDataDragonVersionCurrent(catalogSyncInfo.DataDragonVersion, latestDataDragonVersion);
+            if (championListNeedsUpdate)
+            {
+                try
+                {
+                    fLogsPage?.WriteLine($"Champion list update available. Local version: {FormatDataDragonVersion(catalogSyncInfo.DataDragonVersion)}; latest version: {latestDataDragonVersion}.");
+                    var remoteCatalog = await remoteService.FetchChampionCatalogAsync(latestDataDragonVersion);
+                    var result = ChampionCatalog.RefreshFromDataDragon(remoteCatalog);
+                    fLogsPage?.WriteLine($"Champion list updated to Riot Data Dragon {result.DataDragonVersion} ({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
+                }
+                catch (Exception ex)
+                {
+                    fLogsPage?.WriteErrorLine($"Champion list update failed. Existing local champion list was kept. {ex.Message}");
+                }
+            }
+            else
+            {
+                fLogsPage?.WriteLine($"Champion list is already current with Riot Data Dragon {latestDataDragonVersion}.");
+            }
+
+            var tileSyncInfo = ChampionTileCatalog.GetCacheSyncInfo();
+            bool championPicturesNeedUpdate = !IsDataDragonVersionCurrent(tileSyncInfo.DataDragonVersion, latestDataDragonVersion);
+            if (championPicturesNeedUpdate)
+            {
+                try
+                {
+                    fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; latest version: {latestDataDragonVersion}. Installing the archive only because the version changed.");
+                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(latestDataDragonVersion);
+                    fLogsPage?.WriteLine($"Champion pictures updated to Riot Data Dragon {result.DataDragonVersion}. Archive: {FormatMegabytes(result.ArchiveSizeBytes)}. Extracted {result.ExtractedTileCount} champion tiles; cache now has {result.CachedTileCount} jpg files.");
+                }
+                catch (Exception ex)
+                {
+                    fLogsPage?.WriteErrorLine($"Champion picture update failed. Existing local picture cache was kept. {ex.Message}");
+                }
+            }
+            else
+            {
+                fLogsPage?.WriteLine($"Champion pictures are already current with Riot Data Dragon {latestDataDragonVersion}.");
             }
         }
 
-        private static bool ShouldAutoUpdateChampionCatalog(DateTime? lastSyncedAtUtc, out DateTime nextUpdateAtUtc)
+        private static bool IsDataDragonVersionCurrent(string? localVersion, string latestVersion)
         {
-            nextUpdateAtUtc = DateTime.MinValue;
+            return !string.IsNullOrWhiteSpace(localVersion)
+                && string.Equals(localVersion.Trim(), latestVersion.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
 
-            if (lastSyncedAtUtc is null)
-                return true;
+        private static string FormatDataDragonVersion(string? dataDragonVersion)
+        {
+            return string.IsNullOrWhiteSpace(dataDragonVersion)
+                ? "none"
+                : dataDragonVersion.Trim();
+        }
 
-            DateTime normalizedLastSyncedAtUtc = DateTime.SpecifyKind(lastSyncedAtUtc.Value, DateTimeKind.Utc);
-            nextUpdateAtUtc = normalizedLastSyncedAtUtc.Add(ChampionCatalogAutoUpdateInterval);
-
-            return DateTime.UtcNow >= nextUpdateAtUtc;
+        private static string FormatMegabytes(long bytes)
+        {
+            return $"{bytes / 1024d / 1024d:0.0} MB";
         }
 
         private void ReloadUiForTheme(ChampSelectSettings champSelectSettings)
