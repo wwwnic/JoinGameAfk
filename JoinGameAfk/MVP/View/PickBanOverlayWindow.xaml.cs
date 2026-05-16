@@ -9,7 +9,9 @@ namespace JoinGameAfk.View
 {
     public partial class PickBanOverlayWindow : Window
     {
+        private readonly ChampSelectSettings _settings;
         private readonly DraftCountdownTimer _draftCountdownTimer;
+        private DashboardStatus _lastDashboardStatus = new();
         private ClientPhase _currentPhase = ClientPhase.Unknown;
         private bool _isWatcherRunning;
         private bool _isClientConnected;
@@ -17,8 +19,9 @@ namespace JoinGameAfk.View
 
         public event Action<double, double>? PositionChangedByUser;
 
-        public PickBanOverlayWindow()
+        public PickBanOverlayWindow(ChampSelectSettings settings)
         {
+            _settings = settings;
             InitializeComponent();
 
             _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
@@ -26,6 +29,9 @@ namespace JoinGameAfk.View
             RefreshStatusDisplay();
             RefreshTopmostButton();
             UpdateDashboardStatus(new DashboardStatus());
+            _settings.Saved += Settings_Saved;
+            ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
         }
 
         public void SetWatcherState(bool isRunning)
@@ -68,23 +74,44 @@ namespace JoinGameAfk.View
         {
             Dispatch(() =>
             {
-                PickPlanList.ItemsSource = status.PickChampionPriority;
-                BanPlanList.ItemsSource = status.BanChampionPriority;
-
-                UpdatePlanPlaceholder(
-                    PickPlaceholderText,
-                    status.PickChampionPriority,
-                    status.PickChampionText);
-                UpdatePlanPlaceholder(
-                    BanPlaceholderText,
-                    status.BanChampionPriority,
-                    status.BanChampionText);
-
-                PickLockText.Text = GetPlanLockText(status.PickLockText);
-                BanLockText.Text = GetPlanLockText(status.BanLockText);
-                PositionText.Text = GetPositionText(status.CurrentPosition);
-                _draftCountdownTimer.Update(status);
+                _lastDashboardStatus = status;
+                RenderDashboardStatus(status);
             });
+        }
+
+        private void Settings_Saved()
+        {
+            Dispatch(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatch(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatch(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void RenderDashboardStatus(DashboardStatus status)
+        {
+            PickPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.PickChampionPriority, _settings);
+            BanPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.BanChampionPriority, _settings);
+
+            UpdatePlanPlaceholder(
+                PickPlaceholderText,
+                status.PickChampionPriority,
+                status.PickChampionText);
+            UpdatePlanPlaceholder(
+                BanPlaceholderText,
+                status.BanChampionPriority,
+                status.BanChampionText);
+
+            PickLockText.Text = GetPlanLockText(status.PickLockText);
+            BanLockText.Text = GetPlanLockText(status.BanLockText);
+            PositionText.Text = GetPositionText(status.CurrentPosition);
+            _draftCountdownTimer.Update(status);
         }
 
         private void Dispatch(Action action)
@@ -207,6 +234,9 @@ namespace JoinGameAfk.View
         private void Window_Closed(object? sender, EventArgs e)
         {
             _draftCountdownTimer.Stop();
+            _settings.Saved -= Settings_Saved;
+            ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
@@ -16,10 +17,13 @@ namespace JoinGameAfk.View
         public event Action<DashboardStatus>? DashboardStatusChanged;
 
         private const double MinimumLogRowHeight = 150;
+        private readonly ChampSelectSettings _settings;
         private readonly DraftCountdownTimer _draftCountdownTimer;
+        private DashboardStatus _lastDashboardStatus = new();
 
-        public PhaseProgressionPage()
+        public PhaseProgressionPage(ChampSelectSettings settings)
         {
+            _settings = settings;
             InitializeComponent();
 
             _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
@@ -29,7 +33,33 @@ namespace JoinGameAfk.View
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
             Loaded += (_, _) => QueueLogRowResize();
-            Unloaded += (_, _) => _draftCountdownTimer.Stop();
+            Unloaded += PhaseProgressionPage_Unloaded;
+            _settings.Saved += Settings_Saved;
+            ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
+        }
+
+        private void PhaseProgressionPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _draftCountdownTimer.Stop();
+            _settings.Saved -= Settings_Saved;
+            ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
+        }
+
+        private void Settings_Saved()
+        {
+            Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
         }
 
         internal void SetLogsPage(LogsPage logsPage)
@@ -65,25 +95,31 @@ namespace JoinGameAfk.View
         {
             Dispatcher.TryInvoke(() =>
             {
-                status = ApplyPlanBlockerHighlights(status);
-
-                UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "No bans yet.");
-                UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "No bans yet.");
-                UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
-                UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
-                UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
-                UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
-                UpdatePlanDisplay(status);
-
-                string champSelectSubPhase = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
-                    ? "Idle"
-                    : status.ChampSelectSubPhase;
-                ChampSelectSubPhaseText.Text = champSelectSubPhase;
-                ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
-                DashboardStatusChanged?.Invoke(status);
-                _draftCountdownTimer.Update(status);
-                QueueLogRowResize();
+                _lastDashboardStatus = status;
+                RenderDashboardStatus(status);
             });
+        }
+
+        private void RenderDashboardStatus(DashboardStatus status)
+        {
+            status = ApplyPlanBlockerHighlights(status);
+
+            UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "No bans yet.");
+            UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "No bans yet.");
+            UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
+            UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
+            UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
+            UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
+            UpdatePlanDisplay(status);
+
+            string champSelectSubPhase = string.IsNullOrWhiteSpace(status.ChampSelectSubPhase)
+                ? "Idle"
+                : status.ChampSelectSubPhase;
+            ChampSelectSubPhaseText.Text = champSelectSubPhase;
+            ChampSelectSubPhaseChanged?.Invoke(champSelectSubPhase);
+            DashboardStatusChanged?.Invoke(status);
+            _draftCountdownTimer.Update(status);
+            QueueLogRowResize();
         }
 
         private void RenderCountdownTimers(DraftCountdownTimerSnapshot snapshot)
@@ -315,9 +351,9 @@ namespace JoinGameAfk.View
             return DashboardChampionAvailabilityReason.Blocked;
         }
 
-        private static void UpdateTeamSlotList(ItemsControl itemsControl, IReadOnlyList<DashboardTeamSlotItem> slots)
+        private void UpdateTeamSlotList(ItemsControl itemsControl, IReadOnlyList<DashboardTeamSlotItem> slots)
         {
-            itemsControl.ItemsSource = slots;
+            itemsControl.ItemsSource = slots.Select(CreateTeamSlotViewItem).ToList();
         }
 
         private void UpdatePlanDisplay(DashboardStatus status)
@@ -333,9 +369,9 @@ namespace JoinGameAfk.View
                 : lockText;
         }
 
-        private static void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)
+        private void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)
         {
-            itemsControl.ItemsSource = champions;
+            itemsControl.ItemsSource = DashboardChampionPlanDisplay.CreateList(champions, _settings);
 
             bool hasChampions = champions.Count > 0;
             placeholderText.Visibility = hasChampions ? Visibility.Collapsed : Visibility.Visible;
@@ -346,6 +382,44 @@ namespace JoinGameAfk.View
             placeholderText.Text = string.IsNullOrWhiteSpace(fallbackText)
                 ? string.Empty
                 : fallbackText;
+        }
+
+        private DashboardTeamSlotViewItem CreateTeamSlotViewItem(DashboardTeamSlotItem slot)
+        {
+            string championName = GetChampionDisplayName(slot.ChampionId, slot.ChampionName);
+
+            return new DashboardTeamSlotViewItem
+            {
+                ChampionId = slot.ChampionId,
+                ChampionName = championName,
+                RoleName = slot.RoleName,
+                IsLocalPlayer = slot.IsLocalPlayer,
+                IsPlanReference = slot.IsPlanReference,
+                PlanReferenceText = slot.PlanReferenceText,
+                PlanReferenceReasonKind = slot.PlanReferenceReasonKind,
+                IsOwnAction = slot.IsOwnAction,
+                PortraitImageSource = GetChampionPortrait(slot.ChampionId, championName)
+            };
+        }
+
+        private ImageSource? GetChampionPortrait(int championId, string championName)
+        {
+            if (championId > 0)
+                return ChampionTileCatalog.GetSelectedImageSource(championId, _settings);
+
+            return ChampionCatalog.TryGetByName(championName, out var champion)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id, _settings)
+                : null;
+        }
+
+        private static string GetChampionDisplayName(int championId, string fallbackName)
+        {
+            if (championId > 0 && ChampionCatalog.TryGetById(championId, out var champion))
+                return champion!.Name;
+
+            return string.IsNullOrWhiteSpace(fallbackName)
+                ? "No champion"
+                : fallbackName;
         }
 
         private void Page_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -372,5 +446,19 @@ namespace JoinGameAfk.View
             if (!LogRow.Height.IsAbsolute || Math.Abs(LogRow.Height.Value - targetHeight) > 0.5)
                 LogRow.Height = new GridLength(targetHeight);
         }
+
+        private sealed class DashboardTeamSlotViewItem
+        {
+            public int ChampionId { get; init; }
+            public string ChampionName { get; init; } = "No champion";
+            public string RoleName { get; init; } = "None";
+            public bool IsLocalPlayer { get; init; }
+            public bool IsPlanReference { get; init; }
+            public string PlanReferenceText { get; init; } = string.Empty;
+            public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
+            public bool IsOwnAction { get; init; }
+            public ImageSource? PortraitImageSource { get; init; }
+        }
+
     }
 }

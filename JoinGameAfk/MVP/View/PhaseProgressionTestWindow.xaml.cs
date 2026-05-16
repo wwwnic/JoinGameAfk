@@ -204,7 +204,6 @@ namespace JoinGameAfk.View
             target.Add(new DashboardTeamSlotItem
             {
                 ChampionId = championId,
-                ChampionInitial = GetChampionInitial(championName),
                 ChampionName = championName,
                 RoleName = string.IsNullOrWhiteSpace(roleName) ? "Manual test" : roleName
             });
@@ -249,12 +248,5 @@ namespace JoinGameAfk.View
                 : 0;
         }
 
-        private static string GetChampionInitial(string championName)
-        {
-            char firstLetter = championName.FirstOrDefault(char.IsLetterOrDigit);
-            return firstLetter == default
-                ? "?"
-                : char.ToUpperInvariant(firstLetter).ToString();
-        }
     }
 }

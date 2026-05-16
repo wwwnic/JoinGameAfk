@@ -78,7 +78,7 @@ namespace JoinGameAfk
 
         private MainWindow CreateMainWindow(ChampSelectSettings champSelectSettings, int activeTabIndex = 0)
         {
-            fDashboardPage = new PhaseProgressionPage();
+            fDashboardPage = new PhaseProgressionPage(champSelectSettings);
             var logsPage = new LogsPage();
             fLogsPage = logsPage;
             fDashboardPage.SetLogsPage(logsPage);

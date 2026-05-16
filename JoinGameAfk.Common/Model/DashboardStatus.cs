@@ -29,7 +29,6 @@ namespace JoinGameAfk.Model
     public sealed record DashboardTeamSlotItem
     {
         public int ChampionId { get; init; }
-        public string ChampionInitial { get; init; } = "?";
         public string ChampionName { get; init; } = "No champion";
         public string RoleName { get; init; } = "None";
         public bool IsLocalPlayer { get; init; }

@@ -410,7 +410,6 @@ public class ChampSelect : IPhaseHandler
             slots.Add(new DashboardTeamSlotItem
             {
                 ChampionId = championId,
-                ChampionInitial = GetChampionInitial(championName, championId),
                 ChampionName = championName,
                 RoleName = GetPositionDisplayName(position),
                 IsLocalPlayer = isLocalPlayer
@@ -428,14 +427,6 @@ public class ChampSelect : IPhaseHandler
         return TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent > 0
             ? championPickIntent
             : 0;
-    }
-
-    private static string GetChampionInitial(string championName, int championId)
-    {
-        if (championId <= 0 || string.IsNullOrWhiteSpace(championName))
-            return "?";
-
-        return championName[..1].ToUpperInvariant();
     }
 
     private static string GetPositionDisplayName(Position position)

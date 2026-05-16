@@ -511,7 +511,7 @@ namespace JoinGameAfk.View
 
             if (_pickBanOverlayWindow is null)
             {
-                _pickBanOverlayWindow = new PickBanOverlayWindow();
+                _pickBanOverlayWindow = new PickBanOverlayWindow(_settings);
                 _pickBanOverlayWindow.PositionChangedByUser += PickBanOverlayWindow_PositionChangedByUser;
                 _pickBanOverlayWindow.Closed += (_, _) =>
                 {
