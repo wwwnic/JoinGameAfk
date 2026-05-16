@@ -558,13 +558,25 @@
         <Setter Property="Height" Value="64" />
         <Setter Property="MinHeight" Value="64" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Margin" Value="0,0,3,0" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="CornerRadius" Value="0" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+    </Style>
+
+    <Style x:Key="PlannerChampionChipListFrameStyle" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="MinHeight" Value="74" />
+        <Setter Property="ClipToBounds" Value="True" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         <Setter Property="UseLayoutRounding" Value="True" />
     </Style>

@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:JoinGameAfk.View.Controls"
         Title="Pick/Ban Overlay"
         Width="360"
-        Height="420"
+        Height="435"
         MinWidth="300"
         MinHeight="260"
         WindowStartupLocation="Manual"
@@ -269,12 +269,8 @@
                             </Grid>
 
                             <Border Grid.Row="2"
-                                    Background="{DynamicResource AppSurfaceInsetBrush}"
-                                    BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="7"
-                                    MinHeight="72">
+                                    Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                    Margin="0,6,0,6">
                                 <Grid>
                                     <TextBlock x:Name="PickPlaceholderText"
                                                Text="Waiting for champion select."
@@ -379,12 +375,8 @@
                             </Grid>
 
                             <Border Grid.Row="2"
-                                    Background="{DynamicResource AppSurfaceInsetBrush}"
-                                    BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="7"
-                                    MinHeight="72">
+                                    Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                    Margin="0,6,0,6">
                                 <Grid>
                                     <TextBlock x:Name="BanPlaceholderText"
                                                Text="Waiting for champion select."
