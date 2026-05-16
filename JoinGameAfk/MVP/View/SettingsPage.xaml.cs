@@ -10,7 +10,6 @@ using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.Validation;
-using Microsoft.Win32;
 
 namespace JoinGameAfk.View
 {
@@ -21,6 +20,8 @@ namespace JoinGameAfk.View
         private readonly ChampSelectSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
+        private readonly Action<string>? _logMessage;
+        private readonly Action<string>? _logErrorMessage;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
         private readonly Dictionary<int, string> _pendingChampionImageFileNames;
@@ -34,11 +35,17 @@ namespace JoinGameAfk.View
         private bool _isUpdatingAutomationControls;
         private bool _isUpdatingChampionPictureControls;
 
-        public SettingsPage(ChampSelectSettings settings, Action<ChampSelectSettings>? reloadUiForTheme = null)
+        public SettingsPage(
+            ChampSelectSettings settings,
+            Action<ChampSelectSettings>? reloadUiForTheme = null,
+            Action<string>? logMessage = null,
+            Action<string>? logErrorMessage = null)
         {
             InitializeComponent();
             _settings = settings;
             _reloadUiForTheme = reloadUiForTheme;
+            _logMessage = logMessage;
+            _logErrorMessage = logErrorMessage;
             _notificationSoundPlayer = new NotificationSoundPlayer(ShowValidationMessage);
             _pendingChampionImageFileNames = new Dictionary<int, string>(_settings.ChampionImageFileNames);
             _savedMessageTimer = new DispatcherTimer
@@ -570,7 +577,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Check champion data updates on startup?\n\nWhen this is on, JoinGameAfk uses your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com and fetch only the latest version first.\n\nIf your local champion list version is different, it downloads Riot's public champion-name data and updates champions.json. If your local picture cache version is different, it downloads the Data Dragon dragontail archive and extracts champion tiles.\n\nIf everything is already current, no champion list or image archive is downloaded.\n\nIf a request fails, the app keeps your existing local champion data and continues normally.",
+                "Check champion data updates on startup?\n\nWhen this is on, JoinGameAfk uses your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com and fetch only the latest version first.\n\nIf your local champion list version is different, it downloads Riot's public champion-name data and updates champions.json. If your local picture cache version is different, it downloads the Data Dragon dragontail archive, extracts champion tiles, then deletes the archive.\n\nIf everything is already current, no champion list or image archive is downloaded.\n\nIf a request fails, the app keeps your existing local champion data and continues normally.",
                 "Allow Startup Champion Data Update Check",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -583,7 +590,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files from the local archive into the picture cache. Existing cached archive files are reused when the Data Dragon version has not changed.\n\nContinue?",
+                "This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\nContinue?",
                 "Download Data Dragon Archive",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -653,10 +660,14 @@ namespace JoinGameAfk.View
         {
             if (refreshResult is not null)
             {
+                string archiveCleanupText = refreshResult.ArchiveDeleted
+                    ? "then removed the archive"
+                    : $"but archive cleanup failed ({refreshResult.ArchiveDeleteError})";
+
                 SetChampionPictureCacheStatus(
-                    $"Picture cache synced with Riot Data Dragon {refreshResult.DataDragonVersion}. Extracted {refreshResult.ExtractedTileCount} champion tiles from the local archive. Local folder currently has {refreshResult.CachedTileCount} jpg files. Last sync: {FormatLastSyncedAt(refreshResult.LastSyncedAtUtc)}.",
-                    "TextSoftBrush",
-                    Brushes.SlateGray);
+                    $"Picture cache synced with Riot Data Dragon {refreshResult.DataDragonVersion}. Downloaded {FormatByteCount(refreshResult.ArchiveSizeBytes)} archive, checked {refreshResult.CheckedTileCount} champion tiles, updated {refreshResult.UpdatedTileCount}, unchanged {refreshResult.UnchangedTileCount}, {archiveCleanupText}. Local folder currently has {refreshResult.CachedTileCount} jpg files. Last sync: {FormatLastSyncedAt(refreshResult.LastSyncedAtUtc)}.",
+                    refreshResult.ArchiveDeleted ? "TextSoftBrush" : "DangerTextBrush",
+                    refreshResult.ArchiveDeleted ? Brushes.SlateGray : Brushes.IndianRed);
                 return;
             }
 
@@ -671,12 +682,17 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            string archiveText = string.IsNullOrWhiteSpace(syncInfo.ArchiveFilePath)
-                ? "No archive recorded."
-                : $"{Path.GetFileName(syncInfo.ArchiveFilePath)} ({FormatByteCount(syncInfo.ArchiveSizeBytes)})";
+            if (!string.IsNullOrWhiteSpace(syncInfo.ArchiveFilePath))
+            {
+                SetChampionPictureCacheStatus(
+                    $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive cleanup did not complete; {Path.GetFileName(syncInfo.ArchiveFilePath)} ({FormatByteCount(syncInfo.ArchiveSizeBytes)}) is still in local storage. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
+                    "DangerTextBrush",
+                    Brushes.IndianRed);
+                return;
+            }
 
             SetChampionPictureCacheStatus(
-                $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive: {archiveText}. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
+                $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive files are removed after extraction. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
                 "TextSoftBrush",
                 Brushes.SlateGray);
         }
@@ -795,34 +811,6 @@ namespace JoinGameAfk.View
             }
         }
 
-        private void ImportChampionPicturesButton_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select champion picture folder",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                Multiselect = false
-            };
-
-            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
-                return;
-
-            try
-            {
-                var result = ChampionTileCatalog.ImportFromDirectory(dialog.FolderName);
-                LoadChampionPictureOptions();
-                RefreshChampionPictureCacheStatus();
-                ShowStatusMessage(
-                    $"Imported {result.ImportedCount} champion pictures into the local cache. Skipped {result.SkippedCount}; failed {result.FailedCount}.",
-                    result.FailedCount == 0 ? "AccentGreenTextBrush" : "DangerTextBrush",
-                    result.FailedCount == 0 ? Brushes.ForestGreen : Brushes.IndianRed);
-            }
-            catch (Exception ex)
-            {
-                ShowValidationMessage($"Champion picture import failed. {ex.Message}");
-            }
-        }
-
         private void ReloadChampionPicturesButton_Click(object sender, RoutedEventArgs e)
         {
             AppStorage.EnsureChampionTileDirectoryExists();
@@ -838,9 +826,11 @@ namespace JoinGameAfk.View
             {
                 ChampionPictureDownloadStatusLabel.Text = "Data Dragon archive download canceled.";
                 ChampionPictureDownloadStatusLabel.Visibility = Visibility.Visible;
+                LogMessage("Champion picture archive download canceled by user.");
                 return;
             }
 
+            LogMessage("Manual champion picture archive install started.");
             SetChampionPictureDownloadControlsEnabled(false);
             ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
             ChampionPictureDownloadProgressBar.IsIndeterminate = true;
@@ -851,9 +841,20 @@ namespace JoinGameAfk.View
 
             try
             {
+                string? lastLoggedArchiveProgressMessage = null;
                 var progress = new Progress<ChampionTileArchiveProgress>(snapshot =>
                 {
                     ChampionPictureDownloadStatusLabel.Text = snapshot.Message;
+                    if (ShouldLogChampionTileArchiveProgress(snapshot.Message)
+                        && !string.Equals(snapshot.Message, lastLoggedArchiveProgressMessage, StringComparison.Ordinal))
+                    {
+                        lastLoggedArchiveProgressMessage = snapshot.Message;
+                        if (IsChampionTileArchiveWarning(snapshot.Message))
+                            LogErrorMessage(snapshot.Message);
+                        else
+                            LogMessage(snapshot.Message);
+                    }
+
                     if (snapshot.TotalBytes is long totalBytes && totalBytes > 0)
                     {
                         ChampionPictureDownloadProgressBar.IsIndeterminate = false;
@@ -869,14 +870,23 @@ namespace JoinGameAfk.View
                 var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(progress);
                 LoadChampionPictureOptions();
                 RefreshChampionPictureCacheStatus(result);
-                ChampionPictureDownloadStatusLabel.Foreground = TryFindResource("AccentGreenTextBrush") as Brush ?? Brushes.ForestGreen;
+                ChampionPictureDownloadStatusLabel.Foreground = result.ArchiveDeleted
+                    ? TryFindResource("AccentGreenTextBrush") as Brush ?? Brushes.ForestGreen
+                    : TryFindResource("DangerTextBrush") as Brush ?? Brushes.IndianRed;
+                string archiveCleanupText = result.ArchiveDeleted
+                    ? "then removed the archive"
+                    : $"but could not remove the archive ({result.ArchiveDeleteError})";
                 ChampionPictureDownloadStatusLabel.Text =
-                    $"Data Dragon archive {result.DataDragonVersion} installed. Archive: {FormatByteCount(result.ArchiveSizeBytes)}. Extracted {result.ExtractedTileCount} champion tiles. Cache now has {result.CachedTileCount} jpg files.";
+                    $"Data Dragon archive {result.DataDragonVersion} installed. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}, checked {result.CheckedTileCount} champion tiles, updated {result.UpdatedTileCount}, unchanged {result.UnchangedTileCount}, {archiveCleanupText}. Cache now has {result.CachedTileCount} jpg files.";
+                LogMessage($"Manual champion picture archive install completed for Riot Data Dragon {result.DataDragonVersion}. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}; checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; cache now has {result.CachedTileCount} jpg files.");
+                if (!result.ArchiveDeleted)
+                    LogErrorMessage($"Champion picture archive cleanup failed after successful extraction. {result.ArchiveDeleteError}");
             }
             catch (Exception ex)
             {
                 ChampionPictureDownloadStatusLabel.Foreground = TryFindResource("DangerTextBrush") as Brush ?? Brushes.IndianRed;
                 ChampionPictureDownloadStatusLabel.Text = $"Data Dragon archive install failed. Existing cache was kept. {ex.Message}";
+                LogErrorMessage($"Manual champion picture archive install failed. Existing cache was kept. {FormatException(ex)}");
             }
             finally
             {
@@ -888,9 +898,34 @@ namespace JoinGameAfk.View
         private void SetChampionPictureDownloadControlsEnabled(bool enabled)
         {
             DownloadChampionPictureArchiveButton.IsEnabled = enabled;
-            ImportChampionPicturesButton.IsEnabled = enabled;
             ReloadChampionPicturesButton.IsEnabled = enabled;
             OpenChampionPictureFolderButton.IsEnabled = enabled;
+        }
+
+        private void LogMessage(string message)
+        {
+            _logMessage?.Invoke(message);
+        }
+
+        private void LogErrorMessage(string message)
+        {
+            _logErrorMessage?.Invoke(message);
+        }
+
+        private static bool ShouldLogChampionTileArchiveProgress(string message)
+        {
+            return !string.IsNullOrWhiteSpace(message)
+                && !message.StartsWith("Downloading Data Dragon archive:", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsChampionTileArchiveWarning(string message)
+        {
+            return message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatException(Exception ex)
+        {
+            return $"{ex.GetType().Name}: {ex.Message}";
         }
 
         private void RefreshChampionPictureTileOptions()

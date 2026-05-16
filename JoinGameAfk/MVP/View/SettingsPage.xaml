@@ -800,9 +800,9 @@
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="Champion picture archive"
                                                Style="{StaticResource FieldLabelStyle}" />
-                                    <TextBlock Text="Download Riot Data Dragon's dragontail archive and extract champion tile jpg files into the local cache."
+                                    <TextBlock Text="Download Riot Data Dragon's dragontail archive, extract champion tile jpg files, then remove the archive."
                                                Style="{StaticResource FieldHintStyle}" />
-                                    <TextBlock Text="The archive is kept in local app storage and reused when the Data Dragon version has not changed."
+                                    <TextBlock Text="The archive is deleted after extraction so only champion tiles stay on disk."
                                                Style="{StaticResource FieldHintStyle}"
                                                Margin="0,4,0,0" />
                                 </StackPanel>
@@ -816,7 +816,7 @@
                                         MinWidth="168"
                                         HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
-                                        ToolTip="Download the latest Riot Data Dragon dragontail archive and extract champion tiles into the local cache." />
+                                        ToolTip="Download the latest Riot Data Dragon dragontail archive, extract champion tiles into the local cache, then delete the archive." />
                             </Grid>
 
                             <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"
@@ -937,13 +937,6 @@
                                             Style="{StaticResource SecondaryButtonStyle}"
                                             Padding="12,8"
                                             ToolTip="Open the local folder where champion tile jpg files are stored." />
-                                    <Button x:Name="ImportChampionPicturesButton"
-                                            Content="Import Folder"
-                                            Click="ImportChampionPicturesButton_Click"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Padding="12,8"
-                                            Margin="8,0,0,0"
-                                            ToolTip="Copy local champion tile jpg files into the app cache." />
                                     <Button x:Name="ReloadChampionPicturesButton"
                                             Content="Reload Pictures"
                                             Click="ReloadChampionPicturesButton_Click"

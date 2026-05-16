@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -22,12 +23,16 @@ namespace JoinGameAfk.Services
 
     public sealed record ChampionTileArchiveInstallResult(
         string DataDragonVersion,
-        string ArchiveFilePath,
+        string? ArchiveFilePath,
         long ArchiveSizeBytes,
-        int ExtractedTileCount,
+        int CheckedTileCount,
+        int UpdatedTileCount,
+        int UnchangedTileCount,
         int CachedTileCount,
         string CacheDirectory,
-        DateTime LastSyncedAtUtc);
+        DateTime LastSyncedAtUtc,
+        bool ArchiveDeleted = true,
+        string? ArchiveDeleteError = null);
 
     public sealed record ChampionTileCacheSyncInfo(
         string? DataDragonVersion,
@@ -36,6 +41,20 @@ namespace JoinGameAfk.Services
         string? ArchiveFilePath,
         long ArchiveSizeBytes,
         DateTime? LastSyncedAtUtc);
+
+    public sealed record ChampionTileArchiveCleanupFailure(string FilePath, string ErrorMessage);
+
+    public sealed record ChampionTileArchiveCleanupResult(
+        int DeletedFileCount,
+        IReadOnlyList<ChampionTileArchiveCleanupFailure> Failures)
+    {
+        public int FailedFileCount => Failures.Count;
+    }
+
+    public sealed record ChampionTileArchiveExtractionResult(
+        int CheckedTileCount,
+        int UpdatedTileCount,
+        int UnchangedTileCount);
 
     public static class ChampionTileCatalog
     {
@@ -95,16 +114,20 @@ namespace JoinGameAfk.Services
                 if (cacheFile is null)
                     return new ChampionTileCacheSyncInfo(null, GetTileFileCount(), TileDirectoryPath, null, 0, null);
 
-                long archiveSizeBytes = !string.IsNullOrWhiteSpace(cacheFile.ArchiveFilePath)
+                string? archiveFilePath = !string.IsNullOrWhiteSpace(cacheFile.ArchiveFilePath)
                     && File.Exists(cacheFile.ArchiveFilePath)
-                        ? new FileInfo(cacheFile.ArchiveFilePath).Length
-                        : cacheFile.ArchiveSizeBytes;
+                        ? cacheFile.ArchiveFilePath
+                        : null;
+
+                long archiveSizeBytes = archiveFilePath is not null
+                    ? new FileInfo(archiveFilePath).Length
+                    : cacheFile.ArchiveSizeBytes;
 
                 return new ChampionTileCacheSyncInfo(
                     cacheFile.DataDragonVersion,
                     GetTileFileCount(),
                     TileDirectoryPath,
-                    cacheFile.ArchiveFilePath,
+                    archiveFilePath,
                     archiveSizeBytes,
                     cacheFile.LastSyncedAtUtc);
             }
@@ -173,6 +196,7 @@ namespace JoinGameAfk.Services
         {
             AppStorage.EnsureChampionTileDirectoryExists();
             AppStorage.EnsureChampionTileArchiveDirectoryExists();
+            ReportArchiveCleanup(DeleteDownloadedArchives(), progress);
 
             dataDragonVersion = NormalizeDataDragonVersion(dataDragonVersion);
             string archiveFilePath = Path.Combine(AppStorage.ChampionTileArchiveDirectoryPath, $"dragontail-{dataDragonVersion}.tgz");
@@ -184,23 +208,87 @@ namespace JoinGameAfk.Services
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            progress?.Report(new ChampionTileArchiveProgress(0, null, "Extracting champion pictures from local Data Dragon archive..."));
-            int extractedTileCount = ExtractChampionTilesFromTarGz(archiveFilePath, cancellationToken);
+            progress?.Report(new ChampionTileArchiveProgress(0, null, "Checking champion pictures from local Data Dragon archive..."));
+            ChampionTileArchiveExtractionResult extractionResult;
+            bool archiveDeleted = false;
+            Exception? archiveDeleteException = null;
+            try
+            {
+                extractionResult = ExtractChampionTilesFromTarGz(archiveFilePath, cancellationToken);
+                progress?.Report(new ChampionTileArchiveProgress(
+                    archiveSizeBytes,
+                    archiveSizeBytes,
+                    $"Champion picture hash check complete. Checked {extractionResult.CheckedTileCount} tiles; updated {extractionResult.UpdatedTileCount}; unchanged {extractionResult.UnchangedTileCount}."));
+            }
+            finally
+            {
+                progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Removing Data Dragon archive after extraction..."));
+                archiveDeleted = TryDeleteFile(archiveFilePath, out archiveDeleteException);
+                if (archiveDeleted)
+                {
+                    progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Data Dragon archive removed after extraction."));
+                }
+                else
+                {
+                    progress?.Report(new ChampionTileArchiveProgress(
+                        archiveSizeBytes,
+                        archiveSizeBytes,
+                        $"Unable to remove Data Dragon archive after extraction: {FormatException(archiveDeleteException)}"));
+                }
+            }
 
             DateTime lastSyncedAtUtc = DateTime.UtcNow;
             var result = new ChampionTileArchiveInstallResult(
                 dataDragonVersion,
-                archiveFilePath,
+                archiveDeleted ? null : archiveFilePath,
                 archiveSizeBytes,
-                extractedTileCount,
+                extractionResult.CheckedTileCount,
+                extractionResult.UpdatedTileCount,
+                extractionResult.UnchangedTileCount,
                 GetTileFileCount(),
                 TileDirectoryPath,
-                lastSyncedAtUtc);
+                lastSyncedAtUtc,
+                archiveDeleted,
+                archiveDeleteException is null ? null : FormatException(archiveDeleteException));
 
-            SaveCacheFile(result);
+            SaveCacheFile(result, progress);
             Reload();
 
             return result;
+        }
+
+        public static ChampionTileArchiveCleanupResult DeleteDownloadedArchives()
+        {
+            var failures = new List<ChampionTileArchiveCleanupFailure>();
+            int deletedFileCount = 0;
+
+            try
+            {
+                if (!Directory.Exists(AppStorage.ChampionTileArchiveDirectoryPath))
+                    return new ChampionTileArchiveCleanupResult(deletedFileCount, failures);
+
+                foreach (string archiveFilePath in Directory.EnumerateFiles(AppStorage.ChampionTileArchiveDirectoryPath, "dragontail-*.tgz", SearchOption.TopDirectoryOnly))
+                {
+                    if (TryDeleteFile(archiveFilePath, out Exception? exception))
+                        deletedFileCount++;
+                    else
+                        failures.Add(new ChampionTileArchiveCleanupFailure(archiveFilePath, FormatException(exception)));
+                }
+
+                foreach (string temporaryArchiveFilePath in Directory.EnumerateFiles(AppStorage.ChampionTileArchiveDirectoryPath, "dragontail-*.tgz.download", SearchOption.TopDirectoryOnly))
+                {
+                    if (TryDeleteFile(temporaryArchiveFilePath, out Exception? exception))
+                        deletedFileCount++;
+                    else
+                        failures.Add(new ChampionTileArchiveCleanupFailure(temporaryArchiveFilePath, FormatException(exception)));
+                }
+            }
+            catch (Exception ex)
+            {
+                failures.Add(new ChampionTileArchiveCleanupFailure(AppStorage.ChampionTileArchiveDirectoryPath, FormatException(ex)));
+            }
+
+            return new ChampionTileArchiveCleanupResult(deletedFileCount, failures);
         }
 
         public static void Reload()
@@ -298,57 +386,76 @@ namespace JoinGameAfk.Services
                 progress?.Report(new ChampionTileArchiveProgress(
                     existingSize,
                     existingSize,
-                    $"Using cached Data Dragon archive {Path.GetFileName(archiveFilePath)} ({FormatMegabytes(existingSize)})."));
+                    $"Using existing Data Dragon archive {Path.GetFileName(archiveFilePath)} ({FormatMegabytes(existingSize)}) for extraction."));
                 return existingSize;
             }
 
             string archiveUrl = string.Format(CultureInfo.InvariantCulture, DragontailArchiveUrlFormat, dataDragonVersion);
             string temporaryArchiveFilePath = $"{archiveFilePath}.download";
 
-            if (File.Exists(temporaryArchiveFilePath))
-                File.Delete(temporaryArchiveFilePath);
-
-            using var httpClient = new HttpClient
+            try
             {
-                Timeout = ArchiveDownloadTimeout
-            };
+                if (File.Exists(temporaryArchiveFilePath))
+                    File.Delete(temporaryArchiveFilePath);
 
-            using var response = await httpClient.GetAsync(archiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            long? totalBytes = response.Content.Headers.ContentLength;
-            long bytesDownloaded = 0;
-            byte[] buffer = new byte[1024 * 128];
-
-            await using (var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-            await using (var destinationStream = File.Create(temporaryArchiveFilePath))
-            {
-                int bytesRead;
-                while ((bytesRead = await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                using var httpClient = new HttpClient
                 {
-                    await destinationStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
-                    bytesDownloaded += bytesRead;
+                    Timeout = ArchiveDownloadTimeout
+                };
 
-                    progress?.Report(new ChampionTileArchiveProgress(
-                        bytesDownloaded,
-                        totalBytes,
-                        totalBytes is long total
-                            ? $"Downloading Data Dragon archive: {FormatMegabytes(bytesDownloaded)} / {FormatMegabytes(total)}"
-                            : $"Downloading Data Dragon archive: {FormatMegabytes(bytesDownloaded)}"));
+                using var response = await httpClient.GetAsync(archiveUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                long? totalBytes = response.Content.Headers.ContentLength;
+                long bytesDownloaded = 0;
+                byte[] buffer = new byte[1024 * 128];
+
+                await using (var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+                await using (var destinationStream = File.Create(temporaryArchiveFilePath))
+                {
+                    int bytesRead;
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                    {
+                        await destinationStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                        bytesDownloaded += bytesRead;
+
+                        progress?.Report(new ChampionTileArchiveProgress(
+                            bytesDownloaded,
+                            totalBytes,
+                            totalBytes is long total
+                                ? $"Downloading Data Dragon archive: {FormatMegabytes(bytesDownloaded)} / {FormatMegabytes(total)}"
+                                : $"Downloading Data Dragon archive: {FormatMegabytes(bytesDownloaded)}"));
+                    }
                 }
+
+                if (!File.Exists(temporaryArchiveFilePath) || new FileInfo(temporaryArchiveFilePath).Length == 0)
+                    throw new InvalidOperationException("Riot Data Dragon archive download produced an empty file.");
+
+                File.Move(temporaryArchiveFilePath, archiveFilePath, overwrite: true);
+                return new FileInfo(archiveFilePath).Length;
             }
+            catch
+            {
+                if (!TryDeleteFile(temporaryArchiveFilePath, out Exception? cleanupException))
+                {
+                    progress?.Report(new ChampionTileArchiveProgress(
+                        0,
+                        null,
+                        $"Unable to remove partial Data Dragon archive download: {FormatException(cleanupException)}"));
+                }
 
-            if (!File.Exists(temporaryArchiveFilePath) || new FileInfo(temporaryArchiveFilePath).Length == 0)
-                throw new InvalidOperationException("Riot Data Dragon archive download produced an empty file.");
-
-            File.Move(temporaryArchiveFilePath, archiveFilePath, overwrite: true);
-            return new FileInfo(archiveFilePath).Length;
+                throw;
+            }
         }
 
-        private static int ExtractChampionTilesFromTarGz(string archiveFilePath, CancellationToken cancellationToken)
+        private static ChampionTileArchiveExtractionResult ExtractChampionTilesFromTarGz(
+            string archiveFilePath,
+            CancellationToken cancellationToken)
         {
-            int extractedTileCount = 0;
+            int checkedTileCount = 0;
+            int updatedTileCount = 0;
+            int unchangedTileCount = 0;
 
             using var fileStream = File.OpenRead(archiveFilePath);
             using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
@@ -372,15 +479,41 @@ namespace JoinGameAfk.Services
                     continue;
 
                 string destinationFilePath = Path.Combine(TileDirectoryPath, fileName);
-                using var outputStream = File.Create(destinationFilePath);
-                entry.DataStream.CopyTo(outputStream);
-                extractedTileCount++;
+                string temporaryTileFilePath = Path.Combine(TileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
+
+                try
+                {
+                    using (var outputStream = File.Create(temporaryTileFilePath))
+                    {
+                        entry.DataStream.CopyTo(outputStream);
+                    }
+
+                    checkedTileCount++;
+                    if (File.Exists(destinationFilePath)
+                        && FilesHaveSameSha256(destinationFilePath, temporaryTileFilePath))
+                    {
+                        unchangedTileCount++;
+                        continue;
+                    }
+
+                    File.Move(temporaryTileFilePath, destinationFilePath, overwrite: true);
+                    updatedTileCount++;
+                }
+                finally
+                {
+                    TryDeleteFile(temporaryTileFilePath, out _);
+                }
             }
 
-            return extractedTileCount;
+            return new ChampionTileArchiveExtractionResult(
+                checkedTileCount,
+                updatedTileCount,
+                unchangedTileCount);
         }
 
-        private static void SaveCacheFile(ChampionTileArchiveInstallResult result)
+        private static void SaveCacheFile(
+            ChampionTileArchiveInstallResult result,
+            IProgress<ChampionTileArchiveProgress>? progress)
         {
             try
             {
@@ -399,8 +532,12 @@ namespace JoinGameAfk.Services
                     AppStorage.ChampionTileCacheFilePath,
                     JsonSerializer.Serialize(cacheFile, CacheSerializerOptions));
             }
-            catch
+            catch (Exception ex)
             {
+                progress?.Report(new ChampionTileArchiveProgress(
+                    0,
+                    null,
+                    $"Unable to save champion picture cache metadata: {FormatException(ex)}"));
             }
         }
 
@@ -481,6 +618,16 @@ namespace JoinGameAfk.Services
             return true;
         }
 
+        private static bool FilesHaveSameSha256(string firstFilePath, string secondFilePath)
+        {
+            using var firstStream = File.OpenRead(firstFilePath);
+            using var secondStream = File.OpenRead(secondFilePath);
+
+            byte[] firstHash = SHA256.HashData(firstStream);
+            byte[] secondHash = SHA256.HashData(secondStream);
+            return firstHash.AsSpan().SequenceEqual(secondHash);
+        }
+
         private static string GetChampionTileKey(string championName)
         {
             string normalizedKey = NormalizeKey(championName);
@@ -543,6 +690,52 @@ namespace JoinGameAfk.Services
             }
 
             return trimmed;
+        }
+
+        private static void ReportArchiveCleanup(
+            ChampionTileArchiveCleanupResult cleanupResult,
+            IProgress<ChampionTileArchiveProgress>? progress)
+        {
+            if (cleanupResult.DeletedFileCount > 0)
+            {
+                progress?.Report(new ChampionTileArchiveProgress(
+                    0,
+                    null,
+                    $"Removed {cleanupResult.DeletedFileCount} stale Data Dragon archive file(s)."));
+            }
+
+            foreach (var failure in cleanupResult.Failures)
+            {
+                progress?.Report(new ChampionTileArchiveProgress(
+                    0,
+                    null,
+                    $"Unable to remove stale Data Dragon archive file '{Path.GetFileName(failure.FilePath)}': {failure.ErrorMessage}"));
+            }
+        }
+
+        private static bool TryDeleteFile(string filePath, out Exception? exception)
+        {
+            exception = null;
+
+            try
+            {
+                if (File.Exists(filePath))
+                    File.Delete(filePath);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                exception = ex;
+                return false;
+            }
+        }
+
+        private static string FormatException(Exception? exception)
+        {
+            return exception is null
+                ? "Unknown error."
+                : $"{exception.GetType().Name}: {exception.Message}";
         }
 
         private sealed class ChampionTileCacheFile

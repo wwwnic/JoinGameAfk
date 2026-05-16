@@ -34,6 +34,7 @@ namespace JoinGameAfk
                 if (champSelectSettings.StartWatcherOnStartup)
                     fPhaseController?.Start();
 
+                LogChampionTileArchiveCleanup(ChampionTileCatalog.DeleteDownloadedArchives());
                 _ = AutoSyncChampionDataOnStartupAsync(champSelectSettings);
             }
             catch (Exception ex)
@@ -52,15 +53,16 @@ namespace JoinGameAfk
         private MainWindow CreateMainWindow(ChampSelectSettings champSelectSettings, int activeTabIndex = 0)
         {
             fDashboardPage = new PhaseProgressionPage();
-            fLogsPage = new LogsPage();
-            fDashboardPage.SetLogsPage(fLogsPage);
+            var logsPage = new LogsPage();
+            fLogsPage = logsPage;
+            fDashboardPage.SetLogsPage(logsPage);
 
-            fPhaseController = new PhaseController(fDashboardPage, fLogsPage, champSelectSettings);
+            fPhaseController = new PhaseController(fDashboardPage, logsPage, champSelectSettings);
 
             var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
-            var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme);
+            var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme, logsPage.WriteLine, logsPage.WriteErrorLine);
 
-            var mainWindow = new MainWindow(fDashboardPage, fLogsPage, championPrioritiesPage, settingsPage, champSelectSettings);
+            var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings);
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
@@ -91,7 +93,7 @@ namespace JoinGameAfk
             }
             catch (Exception ex)
             {
-                fLogsPage?.WriteErrorLine($"Champion data startup update check failed. Existing local champion data was kept. {ex.Message}");
+                fLogsPage?.WriteErrorLine($"Champion data startup update check failed. Existing local champion data was kept. {FormatException(ex)}");
                 return;
             }
 
@@ -108,7 +110,7 @@ namespace JoinGameAfk
                 }
                 catch (Exception ex)
                 {
-                    fLogsPage?.WriteErrorLine($"Champion list update failed. Existing local champion list was kept. {ex.Message}");
+                    fLogsPage?.WriteErrorLine($"Champion list update failed. Existing local champion list was kept. {FormatException(ex)}");
                 }
             }
             else
@@ -123,12 +125,15 @@ namespace JoinGameAfk
                 try
                 {
                     fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; latest version: {latestDataDragonVersion}. Installing the archive only because the version changed.");
-                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(latestDataDragonVersion);
-                    fLogsPage?.WriteLine($"Champion pictures updated to Riot Data Dragon {result.DataDragonVersion}. Archive: {FormatMegabytes(result.ArchiveSizeBytes)}. Extracted {result.ExtractedTileCount} champion tiles; cache now has {result.CachedTileCount} jpg files.");
+                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(latestDataDragonVersion, CreateChampionTileArchiveLogProgress());
+                    string archiveCleanupText = result.ArchiveDeleted
+                        ? "archive removed after extraction"
+                        : $"archive cleanup failed ({result.ArchiveDeleteError})";
+                    fLogsPage?.WriteLine($"Champion pictures updated to Riot Data Dragon {result.DataDragonVersion}. Downloaded archive: {FormatMegabytes(result.ArchiveSizeBytes)}; {archiveCleanupText}. Checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; cache now has {result.CachedTileCount} jpg files.");
                 }
                 catch (Exception ex)
                 {
-                    fLogsPage?.WriteErrorLine($"Champion picture update failed. Existing local picture cache was kept. {ex.Message}");
+                    fLogsPage?.WriteErrorLine($"Champion picture update failed. Existing local picture cache was kept. {FormatException(ex)}");
                 }
             }
             else
@@ -153,6 +158,51 @@ namespace JoinGameAfk
         private static string FormatMegabytes(long bytes)
         {
             return $"{bytes / 1024d / 1024d:0.0} MB";
+        }
+
+        private IProgress<ChampionTileArchiveProgress> CreateChampionTileArchiveLogProgress()
+        {
+            string? lastLoggedMessage = null;
+
+            return new Progress<ChampionTileArchiveProgress>(snapshot =>
+            {
+                if (!ShouldLogChampionTileArchiveProgress(snapshot.Message)
+                    || string.Equals(snapshot.Message, lastLoggedMessage, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                lastLoggedMessage = snapshot.Message;
+                if (IsChampionTileArchiveWarning(snapshot.Message))
+                    fLogsPage?.WriteErrorLine(snapshot.Message);
+                else
+                    fLogsPage?.WriteLine(snapshot.Message);
+            });
+        }
+
+        private void LogChampionTileArchiveCleanup(ChampionTileArchiveCleanupResult cleanupResult)
+        {
+            if (cleanupResult.DeletedFileCount > 0)
+                fLogsPage?.WriteLine($"Removed {cleanupResult.DeletedFileCount} stale Data Dragon archive file(s) from local storage.");
+
+            foreach (var failure in cleanupResult.Failures)
+                fLogsPage?.WriteErrorLine($"Unable to remove stale Data Dragon archive file '{failure.FilePath}'. {failure.ErrorMessage}");
+        }
+
+        private static bool ShouldLogChampionTileArchiveProgress(string message)
+        {
+            return !string.IsNullOrWhiteSpace(message)
+                && !message.StartsWith("Downloading Data Dragon archive:", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsChampionTileArchiveWarning(string message)
+        {
+            return message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatException(Exception ex)
+        {
+            return $"{ex.GetType().Name}: {ex.Message}";
         }
 
         private void ReloadUiForTheme(ChampSelectSettings champSelectSettings)
