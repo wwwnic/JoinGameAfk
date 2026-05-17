@@ -165,50 +165,87 @@
             <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
-        <Style x:Key="RoleFilterButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="31" />
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Margin" Value="0,0,3,0" />
-            <Setter Property="Padding" Value="6,0" />
+        <Style x:Key="RoleFilterBarStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="5" />
+        </Style>
+
+        <Style x:Key="RoleFilterRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Focusable" Value="False" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="GroupName" Value="ChampionRoleFilter" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder"
-                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
-                                CornerRadius="6"
-                                Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
-                                TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center" />
-                        </Border>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid SnapsToDevicePixels="True">
+                            <Border x:Name="OptionBorder"
+                                    Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                    BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                    BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
+                                    CornerRadius="8"
+                                    Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                    TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True" />
+                            </Border>
+                            <Border x:Name="SelectedRail"
+                                    Width="12"
+                                    Height="2"
+                                    Margin="0,0,0,3"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"
+                                    Background="{DynamicResource AccentBlueBrush}"
+                                    CornerRadius="1"
+                                    IsHitTestVisible="False"
+                                    Opacity="0" />
+                            <Border x:Name="KeyboardFocusRing"
+                                    BorderBrush="{DynamicResource AccentBluePaleBrush}"
+                                    BorderThickness="2"
+                                    CornerRadius="8"
+                                    IsHitTestVisible="False"
+                                    Opacity="0" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="OptionBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                                <Setter TargetName="OptionBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="KeyboardFocusRing" Property="Opacity" Value="1" />
+                                <Setter TargetName="OptionBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="OptionBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                <Setter TargetName="OptionBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                <Setter TargetName="SelectedRail" Property="Opacity" Value="1" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="OptionBorder" Property="Opacity" Value="0.76" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="OptionBorder" Property="Opacity" Value="0.55" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                </Trigger>
-                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueStrongBrush}" />
-                    <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
-                </DataTrigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AppInputPressedBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
         <Style x:Key="SearchClearButtonStyle" TargetType="Button">
@@ -715,45 +752,55 @@
                                 ToolTip="Click or drag a champion chip into the active pick or ban list. Drop selected chips here to remove them." />
                     </Grid>
 
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+                    <Border Grid.Row="2"
+                            Style="{StaticResource RoleFilterBarStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="7" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0"
-                                Width="24"
-                                Height="30"
-                                ToolTip="Role filters">
-                            <Path Width="14"
-                                  Height="14"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  Stretch="Uniform"
-                                  Fill="{DynamicResource TextMutedBrush}"
-                                  Data="M3,4 H21 L14,12 V20 L10,22 V12 Z" />
-                        </Border>
+                            <Border Grid.Column="0"
+                                    Width="20"
+                                    Height="28"
+                                    ToolTip="Role filters">
+                                <Path Width="14"
+                                      Height="14"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Fill="{DynamicResource TextMutedBrush}"
+                                      Data="M3,4 H21 L14,12 V20 L10,22 V12 Z" />
+                            </Border>
 
-                        <ItemsControl x:Name="RoleFilterList"
-                                      Grid.Column="2"
-                                      VerticalAlignment="Center">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Content="{Binding DisplayText}"
-                                            AutomationProperties.Name="{Binding AutomationName}"
-                                            ToolTip="{Binding ToolTipText}"
-                                            Click="RoleFilterButton_Click"
-                                            Style="{StaticResource RoleFilterButtonStyle}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Grid>
+                            <ItemsControl x:Name="RoleFilterList"
+                                          Grid.Column="2"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <RadioButton AutomationProperties.Name="{Binding AutomationName}"
+                                                     ToolTip="{Binding ToolTipText}"
+                                                     IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                     Click="RoleFilterButton_Click"
+                                                     Style="{StaticResource RoleFilterRadioButtonStyle}">
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                                       Text="{Binding IconText}" />
+                                        </RadioButton>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </Border>
 
                     <Border x:Name="ChampionReferenceBorder"
                             Grid.Row="4"

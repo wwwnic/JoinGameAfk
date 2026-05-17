@@ -143,12 +143,14 @@ namespace JoinGameAfk.View
 
             _roleFilters =
             [
+                new(Position.None, "All"),
                 new(Position.Top, "Top"),
                 new(Position.Jungle, "Jungle"),
                 new(Position.Mid, "Mid"),
-                new(Position.Adc, "Adc"),
+                new(Position.Adc, "ADC"),
                 new(Position.Support, "Support")
             ];
+            _roleFilters[0].IsSelected = true;
             RoleFilterList.ItemsSource = _roleFilters;
 
             _rows = [];
@@ -344,15 +346,22 @@ namespace JoinGameAfk.View
             if ((sender as FrameworkElement)?.DataContext is not RoleFilterOption filter)
                 return;
 
-            filter.IsSelected = !filter.IsSelected;
-            if (filter.IsSelected)
-                _activeRoleFilters.Add(filter.Position);
-            else
-                _activeRoleFilters.Remove(filter.Position);
+            SelectRoleFilter(filter);
 
             UpdateChampionFilter();
             ChampionSearchBox.Focus();
             e.Handled = true;
+        }
+
+        private void SelectRoleFilter(RoleFilterOption selectedFilter)
+        {
+            _activeRoleFilters.Clear();
+
+            foreach (var filter in _roleFilters)
+                filter.IsSelected = ReferenceEquals(filter, selectedFilter);
+
+            if (selectedFilter.Position != Position.None)
+                _activeRoleFilters.Add(selectedFilter.Position);
         }
 
         private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -2543,12 +2552,16 @@ namespace JoinGameAfk.View
         {
             Position = position;
             DisplayText = displayText;
+            IconText = CreateIconText(position);
         }
 
         public Position Position { get; }
         public string DisplayText { get; }
-        public string AutomationName => $"Filter {Position} champions";
-        public string ToolTipText => $"Filter {Position} champions";
+        public string IconText { get; }
+        public string AutomationName => Position == JoinGameAfk.Enums.Position.None
+            ? "Show all champions"
+            : $"Filter {DisplayText} champions";
+        public string ToolTipText => AutomationName;
 
         public bool IsSelected
         {
@@ -2561,6 +2574,20 @@ namespace JoinGameAfk.View
                 _isSelected = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
             }
+        }
+
+        private static string CreateIconText(Position position)
+        {
+            return position switch
+            {
+                Position.None => "All",
+                Position.Top => "Top",
+                Position.Jungle => "Jg",
+                Position.Mid => "Mid",
+                Position.Adc => "ADC",
+                Position.Support => "Sup",
+                _ => "?"
+            };
         }
     }
 
