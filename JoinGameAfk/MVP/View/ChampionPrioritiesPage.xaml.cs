@@ -56,6 +56,7 @@ namespace JoinGameAfk.View
         private ChampionSelectionItem? _dragHoverChampion;
         private ChampionSelectionItem? _swapDropChampion;
         private ChampionSelectionItem? _duplicateDropChampion;
+        private ChampionSelectionItem? _moveOriginDropChampion;
         private ChampionSelectionItem? _selectionAnchorChampion;
         private PositionRow? _dragHoverRow;
         private bool _dragHoverIsPick;
@@ -125,6 +126,18 @@ namespace JoinGameAfk.View
             private set => SetValue(IsSearchDeleteDropTargetProperty, value);
         }
 
+        public static readonly DependencyProperty IsSearchDeleteDropHintVisibleProperty = DependencyProperty.Register(
+            nameof(IsSearchDeleteDropHintVisible),
+            typeof(bool),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata(false));
+
+        public bool IsSearchDeleteDropHintVisible
+        {
+            get => (bool)GetValue(IsSearchDeleteDropHintVisibleProperty);
+            private set => SetValue(IsSearchDeleteDropHintVisibleProperty, value);
+        }
+
         public ChampionPrioritiesPage(ChampSelectSettings settings)
         {
             InitializeComponent();
@@ -185,7 +198,7 @@ namespace JoinGameAfk.View
             PositionList.ItemsSource = _rows;
             if (_rows.Count > 0)
             {
-                SetActiveTarget(_rows[0], isPick: true);
+                SetActiveTarget(_rows[0], isPick: true, focusSearch: false);
             }
 
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
@@ -209,6 +222,7 @@ namespace JoinGameAfk.View
                     ClearInsertionIndicator();
                     HideDragPreview();
                     IsSearchDeleteDropTarget = false;
+                    IsSearchDeleteDropHintVisible = false;
                     ClearPendingChampionSelection();
                 }
 
@@ -326,7 +340,6 @@ namespace JoinGameAfk.View
             if (ChampionSearchBox.Text.Length > 0)
                 ChampionSearchBox.Clear();
 
-            FocusSearchBox();
             e.Handled = true;
         }
 
@@ -349,7 +362,6 @@ namespace JoinGameAfk.View
             SelectRoleFilter(filter);
 
             UpdateChampionFilter();
-            ChampionSearchBox.Focus();
             e.Handled = true;
         }
 
@@ -362,16 +374,6 @@ namespace JoinGameAfk.View
 
             if (selectedFilter.Position != Position.None)
                 _activeRoleFilters.Add(selectedFilter.Position);
-        }
-
-        private void Page_PreviewTextInput(object sender, TextCompositionEventArgs e)
-        {
-            if (!IsPriorityEditingEnabled || _activeTargetRow is null || IsSearchBoxFocused() || string.IsNullOrEmpty(e.Text))
-                return;
-
-            FocusSearchBox();
-            InsertSearchText(e.Text);
-            e.Handled = true;
         }
 
         private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -388,46 +390,32 @@ namespace JoinGameAfk.View
 
             if (!_isChampionDragActive
                 && !IsSearchBoxFocused()
+                && e.Key == Key.Escape
+                && (HasSelectedChampions || _activeTargetRow is not null))
+            {
+                ClearChampionSelection();
+                ClearActiveTarget();
+                e.Handled = true;
+                return;
+            }
+
+            if (!_isChampionDragActive
+                && !IsSearchBoxFocused()
+                && Keyboard.Modifiers == ModifierKeys.Control
+                && e.Key == Key.A)
+            {
+                SelectCurrentSelectionScope();
+                e.Handled = true;
+                return;
+            }
+
+            if (!_isChampionDragActive
+                && !IsSearchBoxFocused()
                 && IsChampionDeleteKey(e.Key)
                 && TryDeleteFocusedOrSelectedChampion())
             {
                 e.Handled = true;
                 return;
-            }
-
-            if (_activeTargetRow is null || IsSearchBoxFocused())
-                return;
-
-            if (Keyboard.Modifiers == ModifierKeys.Control)
-            {
-                if (e.Key == Key.A)
-                {
-                    FocusSearchBox();
-                    ChampionSearchBox.SelectAll();
-                    e.Handled = true;
-                    return;
-                }
-
-                if (e.Key == Key.Back)
-                {
-                    FocusSearchBox();
-                    ChampionSearchBox.Clear();
-                    e.Handled = true;
-                    return;
-                }
-            }
-
-            if (e.Key == Key.Back)
-            {
-                FocusSearchBox();
-                RemoveSearchText();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.Enter && !IsFocusWithinChampionPlan() && AddFirstFilteredChampion())
-            {
-                e.Handled = true;
             }
         }
 
@@ -494,12 +482,15 @@ namespace JoinGameAfk.View
             if ((sender as FrameworkElement)?.DataContext is not PositionRow row)
                 return;
 
-            bool isControlPressed = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
-            if (!isControlPressed && !TryFindChampionItemTarget(e.OriginalSource as DependencyObject, out _, out _))
-                ClearChampionSelection();
-
             bool isPick = string.Equals((sender as FrameworkElement)?.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
-            SetActiveTarget(row, isPick);
+            SetActiveTarget(row, isPick, focusSearch: false);
+
+            bool isChampionClick = TryFindChampionItemTarget(e.OriginalSource as DependencyObject, out _, out _);
+            if (e.ClickCount >= 2 && !isChampionClick)
+            {
+                SelectChampionScope(GetChampionCollection(row, isPick).ToList(), clearExistingSelection: false);
+                e.Handled = true;
+            }
         }
 
         private void ChampionTarget_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
@@ -666,7 +657,6 @@ namespace JoinGameAfk.View
                 return false;
 
             InsertChampion(_activeTargetRow, _activeTargetIsPick, champion, null);
-            ChampionSearchBox.Focus();
             return true;
         }
 
@@ -679,18 +669,27 @@ namespace JoinGameAfk.View
             return true;
         }
 
-        private void SetActiveTarget(PositionRow row, bool isPick, bool focusSearch = true)
+        private void SetActiveTarget(PositionRow row, bool isPick, bool focusSearch = false)
         {
             _activeTargetRow = row;
             _activeTargetIsPick = isPick;
 
             RefreshTargetBrushes();
+            RefreshSelectedChampionState();
 
             if (!focusSearch)
                 return;
 
             ChampionSearchBox.Focus();
             ChampionSearchBox.SelectAll();
+        }
+
+        private void ClearActiveTarget()
+        {
+            _activeTargetRow = null;
+            _activeTargetIsPick = false;
+            RefreshTargetBrushes();
+            RefreshSelectedChampionState();
         }
 
         private void UpdateChampionSelection(ChampionSelectionItem champion, ModifierKeys modifiers, bool shouldToggleSelection)
@@ -729,10 +728,7 @@ namespace JoinGameAfk.View
 
         private bool ShouldTreatClickAsControlSelection(ChampionSelectionItem champion, bool isShiftPressed)
         {
-            return !isShiftPressed
-                && HasSelectedChampions
-                && ReferenceEquals(_activeTargetRow, champion.Row)
-                && _activeTargetIsPick == champion.IsPick;
+            return !isShiftPressed;
         }
 
         private static bool TryGetSelectionRange(
@@ -774,6 +770,23 @@ namespace JoinGameAfk.View
             if (resetAnchor)
                 _selectionAnchorChampion = null;
 
+            RefreshSelectedChampionState();
+        }
+
+        private void SelectCurrentSelectionScope()
+        {
+            SelectChampionScope(GetCurrentSelectionScopeChampions(), clearExistingSelection: false);
+        }
+
+        private void SelectChampionScope(IReadOnlyList<ChampionSelectionItem> champions, bool clearExistingSelection)
+        {
+            if (clearExistingSelection)
+                ClearChampionSelection(resetAnchor: false);
+
+            foreach (var champion in champions)
+                champion.IsSelected = true;
+
+            _selectionAnchorChampion = champions.FirstOrDefault();
             RefreshSelectedChampionState();
         }
 
@@ -907,17 +920,34 @@ namespace JoinGameAfk.View
             if (!IsPriorityEditingEnabled)
                 return false;
 
-            if (champion.SourceItem is not ChampionSelectionItem sourceItem)
+            if (!champion.HasSourceItems)
                 return false;
 
-            var collection = GetChampionCollection(sourceItem.Row, sourceItem.IsPick);
-            if (!collection.Remove(sourceItem))
+            bool removedAny = false;
+            HashSet<(PositionRow Row, bool IsPick)> affectedTargets = [];
+
+            foreach (var sourceItem in champion.SourceItems.Distinct())
+            {
+                var collection = GetChampionCollection(sourceItem.Row, sourceItem.IsPick);
+                if (!collection.Remove(sourceItem))
+                    continue;
+
+                affectedTargets.Add((sourceItem.Row, sourceItem.IsPick));
+                removedAny = true;
+
+                if (ReferenceEquals(_selectionAnchorChampion, sourceItem))
+                    _selectionAnchorChampion = null;
+            }
+
+            if (!removedAny)
+            {
+                RefreshSelectedChampionState();
                 return false;
+            }
 
-            if (ReferenceEquals(_selectionAnchorChampion, sourceItem))
-                _selectionAnchorChampion = null;
+            foreach (var target in affectedTargets)
+                UpdateRowTextFromCollection(target.Row, target.IsPick);
 
-            UpdateRowTextFromCollection(sourceItem.Row, sourceItem.IsPick);
             SaveChampionPreferences();
             RefreshSelectedChampionState();
             return true;
@@ -925,7 +955,7 @@ namespace JoinGameAfk.View
 
         private static bool CanDeleteChampionFromSearchArea(ChampionDragData champion)
         {
-            return champion.SourceItem is not null;
+            return champion.HasSourceItems;
         }
 
         private bool IsPointerOverSearchDeleteArea(Point pagePosition)
@@ -935,12 +965,32 @@ namespace JoinGameAfk.View
 
         private void RefreshSelectedChampionState()
         {
-            int selectedChampionCount = _rows.Sum(row =>
-                row.PickChampions.Count(champion => champion.IsSelected)
-                + row.BanChampions.Count(champion => champion.IsSelected));
+            var champions = GetAllPriorityChampions();
+            int selectedChampionCount = champions.Count(champion => champion.IsSelected);
 
             HasSelectedChampions = selectedChampionCount > 0;
-            SelectedChampionCountText = $"({Math.Min(selectedChampionCount, 99)})";
+            SelectedChampionCountText = $"({selectedChampionCount})";
+        }
+
+        private List<ChampionSelectionItem> GetCurrentSelectionScopeChampions()
+        {
+            return _activeTargetRow is null
+                ? GetAllPriorityChampions()
+                : GetChampionCollection(_activeTargetRow, _activeTargetIsPick).ToList();
+        }
+
+        private List<ChampionSelectionItem> GetAllPriorityChampions()
+        {
+            return _rows
+                .SelectMany(row => row.PickChampions.Concat(row.BanChampions))
+                .ToList();
+        }
+
+        private List<ChampionSelectionItem> GetSelectedChampions()
+        {
+            return GetAllPriorityChampions()
+                .Where(champion => champion.IsSelected)
+                .ToList();
         }
 
         private void ChampionItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -950,6 +1000,16 @@ namespace JoinGameAfk.View
 
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
+
+            if (e.ClickCount >= 2)
+            {
+                ClearPendingChampionSelection();
+                _draggedChampion = null;
+                SelectChampionScope(GetChampionCollection(champion.Row, champion.IsPick).ToList(), clearExistingSelection: false);
+                SetActiveTarget(champion.Row, champion.IsPick, focusSearch: false);
+                e.Handled = true;
+                return;
+            }
 
             ModifierKeys modifiers = Keyboard.Modifiers;
             bool isShiftPressed = (modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
@@ -982,7 +1042,7 @@ namespace JoinGameAfk.View
 
             var champion = _draggedChampion;
             ClearPendingChampionSelection();
-            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromSelection(champion), currentPosition);
+            StartChampionDrag((DependencyObject)sender, CreateChampionDragData(champion), currentPosition);
 
             e.Handled = true;
         }
@@ -1032,6 +1092,7 @@ namespace JoinGameAfk.View
 
             if (!CanDropChampion(champion, targetChampion.Row, targetChampion.IsPick))
             {
+                ClearInsertionIndicator();
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
@@ -1061,7 +1122,7 @@ namespace JoinGameAfk.View
                 return;
             }
 
-            ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex);
+            ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex, champion);
             ShowDuplicateDropWarning(champion, targetChampion.Row, targetChampion.IsPick);
 
             SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
@@ -1122,13 +1183,14 @@ namespace JoinGameAfk.View
             bool isPick = string.Equals(listElement.Tag as string, "Pick", StringComparison.OrdinalIgnoreCase);
             if (!CanDropChampion(champion, row, isPick))
             {
+                ClearInsertionIndicator();
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
             }
 
             int targetIndex = ResolveAppendDropIndex(row, isPick);
-            ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
+            ShowInsertionIndicatorAtIndex(row, isPick, targetIndex, champion);
 
             ShowDuplicateDropWarning(champion, row, isPick);
 
@@ -1177,9 +1239,11 @@ namespace JoinGameAfk.View
                 return;
 
             IsSearchDeleteDropTarget = false;
+            IsSearchDeleteDropHintVisible = _activeChampionDragData?.IsBatchDeleteOnly == true;
             ClearInsertionIndicator();
             if (!UpdateDragFeedback(e))
             {
+                IsSearchDeleteDropHintVisible = false;
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
@@ -1201,6 +1265,7 @@ namespace JoinGameAfk.View
             if (!IsPointInsideElement(this, position))
             {
                 IsSearchDeleteDropTarget = false;
+                IsSearchDeleteDropHintVisible = false;
                 ClearInsertionIndicator();
                 HideDragPreview();
                 e.Effects = DragDropEffects.None;
@@ -1222,9 +1287,11 @@ namespace JoinGameAfk.View
 
             ClearInsertionIndicator();
             IsSearchDeleteDropTarget = CanDeleteChampionFromSearchArea(champion);
+            IsSearchDeleteDropHintVisible = IsSearchDeleteDropTarget;
             if (!UpdateDragFeedback(e))
             {
                 IsSearchDeleteDropTarget = false;
+                IsSearchDeleteDropHintVisible = false;
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
                 return;
@@ -1246,9 +1313,33 @@ namespace JoinGameAfk.View
                 DeleteDraggedChampion(champion);
 
             IsSearchDeleteDropTarget = false;
+            IsSearchDeleteDropHintVisible = false;
             ClearInsertionIndicator();
             e.Effects = DragDropEffects.None;
             e.Handled = true;
+        }
+
+        private void Page_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!IsPriorityEditingEnabled || _isChampionDragActive)
+                return;
+
+            var source = e.OriginalSource as DependencyObject;
+            if (!IsSearchTextBoxClick(source))
+                FocusPriorityPage();
+
+            if (!IsNeutralSelectionClearClick(source))
+                return;
+
+            ClearChampionSelection();
+            ClearActiveTarget();
+            ClearPendingChampionSelection();
+        }
+
+        private void FocusPriorityPage()
+        {
+            Focus();
+            Keyboard.Focus(this);
         }
 
         private void Page_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -1291,45 +1382,35 @@ namespace JoinGameAfk.View
             return ReferenceEquals(Keyboard.FocusedElement, ChampionSearchBox);
         }
 
-        private bool IsFocusWithinChampionPlan()
+        private bool IsSearchTextBoxClick(DependencyObject? source)
         {
-            return Keyboard.FocusedElement is DependencyObject focusedElement
-                && (TryFindChampionItemTarget(focusedElement, out _, out _)
-                    || TryFindChampionListTarget(focusedElement, out _, out _, out _));
+            return source is not null && IsDescendantOf(source, ChampionSearchBox);
+        }
+
+        private bool IsNeutralSelectionClearClick(DependencyObject? source)
+        {
+            if (source is null)
+                return false;
+
+            if (!IsDescendantOf(source, ContentGrid))
+                return false;
+
+            if (IsDescendantOf(source, ChampionSearchCard))
+                return false;
+
+            if (TryFindChampionItemTarget(source, out _, out _)
+                || TryFindChampionListTarget(source, out _, out _, out _))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private void FocusSearchBox()
         {
             ChampionSearchBox.Focus();
             ChampionSearchBox.CaretIndex = ChampionSearchBox.Text.Length;
-        }
-
-        private void InsertSearchText(string text)
-        {
-            int selectionStart = ChampionSearchBox.SelectionStart;
-            int selectionLength = ChampionSearchBox.SelectionLength;
-            string existingText = ChampionSearchBox.Text;
-
-            ChampionSearchBox.Text = existingText.Remove(selectionStart, selectionLength).Insert(selectionStart, text);
-            ChampionSearchBox.CaretIndex = selectionStart + text.Length;
-        }
-
-        private void RemoveSearchText()
-        {
-            if (ChampionSearchBox.SelectionLength > 0)
-            {
-                int selectionStart = ChampionSearchBox.SelectionStart;
-                ChampionSearchBox.Text = ChampionSearchBox.Text.Remove(selectionStart, ChampionSearchBox.SelectionLength);
-                ChampionSearchBox.CaretIndex = selectionStart;
-                return;
-            }
-
-            int caretIndex = ChampionSearchBox.CaretIndex;
-            if (caretIndex == 0)
-                return;
-
-            ChampionSearchBox.Text = ChampionSearchBox.Text.Remove(caretIndex - 1, 1);
-            ChampionSearchBox.CaretIndex = caretIndex - 1;
         }
 
         private void InsertChampion(PositionRow row, bool isPick, ChampionInfo champion, int? targetIndex)
@@ -1428,6 +1509,14 @@ namespace JoinGameAfk.View
                 InsertChampion(targetRow, targetIsPick, champion.ToChampionInfo(), targetIndex);
         }
 
+        private ChampionDragData CreateChampionDragData(ChampionSelectionItem champion)
+        {
+            var selectedChampions = GetSelectedChampions();
+            return champion.IsSelected && selectedChampions.Count > 1
+                ? ChampionDragData.FromBatchSelection(selectedChampions)
+                : ChampionDragData.FromSelection(champion);
+        }
+
         private bool DropChampionOnSwapTarget(ChampionDragData champion, ChampionSelectionItem targetChampion)
         {
             if (champion.SourceItem is not ChampionSelectionItem sourceChampion
@@ -1467,11 +1556,15 @@ namespace JoinGameAfk.View
             if (_isChampionDragActive)
                 FinishChampionDrag(drop: false);
 
+            if (champion.HasSourceItems && !champion.IsBatchDeleteOnly && HasSelectedChampions)
+                ClearChampionSelection();
+
             _isChampionDragActive = true;
             _activeChampionDragData = champion;
-            if (champion.SourceItem is not null)
-                champion.SourceItem.IsDragging = true;
+            foreach (var sourceItem in champion.SourceItems)
+                sourceItem.IsDragging = true;
 
+            IsSearchDeleteDropHintVisible = champion.IsBatchDeleteOnly;
             RefreshTargetBrushes();
             ShowDragPreview(champion, position);
 
@@ -1508,6 +1601,8 @@ namespace JoinGameAfk.View
 
         private void FinishChampionDrag(bool drop, Point? pagePosition = null)
         {
+            bool shouldClearBatchSelection = _activeChampionDragData?.IsBatchDeleteOnly == true;
+
             try
             {
                 if (drop && _activeChampionDragData is not null)
@@ -1517,7 +1612,7 @@ namespace JoinGameAfk.View
 
                     if (IsSearchDeleteDropTarget && CanDeleteChampionFromSearchArea(_activeChampionDragData))
                     {
-                        DeleteDraggedChampion(_activeChampionDragData);
+                        shouldClearBatchSelection = !DeleteDraggedChampion(_activeChampionDragData);
                     }
                     else if (_swapDropChampion is not null)
                     {
@@ -1537,6 +1632,9 @@ namespace JoinGameAfk.View
             {
                 ReleaseDragCapture();
                 HideDragPreview();
+                if (shouldClearBatchSelection)
+                    ClearChampionSelection();
+
                 ClearDragState();
             }
         }
@@ -1571,6 +1669,7 @@ namespace JoinGameAfk.View
             if (!UpdateDragFeedback(pagePosition))
             {
                 IsSearchDeleteDropTarget = false;
+                IsSearchDeleteDropHintVisible = false;
                 return;
             }
 
@@ -1578,10 +1677,12 @@ namespace JoinGameAfk.View
             {
                 ClearInsertionIndicator();
                 IsSearchDeleteDropTarget = true;
+                IsSearchDeleteDropHintVisible = true;
                 return;
             }
 
             IsSearchDeleteDropTarget = false;
+            IsSearchDeleteDropHintVisible = champion.IsBatchDeleteOnly;
             DependencyObject? hitElement = InputHitTest(pagePosition) as DependencyObject;
             if (TryFindChampionItemTarget(hitElement, out var itemElement, out var targetChampion))
             {
@@ -1604,7 +1705,7 @@ namespace JoinGameAfk.View
                     return;
                 }
 
-                ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex);
+                ShowInsertionIndicatorAtIndex(targetChampion.Row, targetChampion.IsPick, resolvedTargetIndex, champion);
                 ShowDuplicateDropWarning(champion, targetChampion.Row, targetChampion.IsPick);
                 SetActiveTarget(targetChampion.Row, targetChampion.IsPick, focusSearch: false);
                 return;
@@ -1618,7 +1719,7 @@ namespace JoinGameAfk.View
                     return;
                 }
 
-                ShowInsertionIndicatorAtIndex(appendRow, appendIsPick, appendTargetIndex);
+                ShowInsertionIndicatorAtIndex(appendRow, appendIsPick, appendTargetIndex, champion);
                 ShowDuplicateDropWarning(champion, appendRow, appendIsPick);
                 SetActiveTarget(appendRow, appendIsPick, focusSearch: false);
                 return;
@@ -1633,7 +1734,7 @@ namespace JoinGameAfk.View
                 }
 
                 int targetIndex = ResolveAppendDropIndex(row, isPick);
-                ShowInsertionIndicatorAtIndex(row, isPick, targetIndex);
+                ShowInsertionIndicatorAtIndex(row, isPick, targetIndex, champion);
                 ShowDuplicateDropWarning(champion, row, isPick);
                 SetActiveTarget(row, isPick, focusSearch: false);
                 return;
@@ -1644,14 +1745,12 @@ namespace JoinGameAfk.View
 
         private static bool CanDropChampion(ChampionDragData champion, PositionRow targetRow, bool targetIsPick)
         {
-            return champion is not null && targetRow is not null;
+            return !champion.IsBatchDeleteOnly;
         }
 
         private static DragDropEffects GetDragDropEffect(ChampionDragData champion)
         {
-            return champion.SourceItem is null
-                ? DragDropEffects.Copy
-                : DragDropEffects.Move;
+            return champion.HasSourceItems ? DragDropEffects.Move : DragDropEffects.Copy;
         }
 
         private static bool IsPastDragThreshold(Point start, Point current)
@@ -1726,7 +1825,7 @@ namespace JoinGameAfk.View
         private void ShowDragPreview(ChampionDragData champion, Point position)
         {
             DragPreviewImage.Source = champion.PreviewImageSource;
-            DragPreviewImageFrame.Visibility = Visibility.Visible;
+            DragPreviewImageFrame.Visibility = champion.IsBatchDeleteOnly ? Visibility.Collapsed : Visibility.Visible;
             DragPreviewText.Text = champion.PreviewText;
             UpdateDragPreviewPosition(position);
             DragPreviewPopup.IsOpen = true;
@@ -1751,8 +1850,12 @@ namespace JoinGameAfk.View
         {
             ClearInsertionIndicator();
             IsSearchDeleteDropTarget = false;
-            if (_activeChampionDragData?.SourceItem is not null)
-                _activeChampionDragData.SourceItem.IsDragging = false;
+            IsSearchDeleteDropHintVisible = false;
+            if (_activeChampionDragData is not null)
+            {
+                foreach (var sourceItem in _activeChampionDragData.SourceItems)
+                    sourceItem.IsDragging = false;
+            }
 
             _isChampionDragActive = false;
             _activeChampionDragData = null;
@@ -1772,6 +1875,52 @@ namespace JoinGameAfk.View
             return champion.SourceItem is not null
                 && ReferenceEquals(champion.SourceItem.Row, targetRow)
                 && champion.SourceItem.IsPick == targetIsPick;
+        }
+
+        private static bool TryResolveSameLaneSource(
+            ChampionDragData? champion,
+            PositionRow row,
+            bool isPick,
+            [NotNullWhen(true)] out ChampionSelectionItem? sourceItem,
+            [NotNullWhen(true)] out ObservableCollection<ChampionSelectionItem>? collection,
+            out int sourceIndex)
+        {
+            sourceItem = champion?.SourceItem;
+            collection = null;
+            sourceIndex = -1;
+
+            if (sourceItem is null || !ReferenceEquals(sourceItem.Row, row) || sourceItem.IsPick != isPick)
+                return false;
+
+            collection = GetChampionCollection(row, isPick);
+            sourceIndex = collection.IndexOf(sourceItem);
+            return sourceIndex >= 0;
+        }
+
+        private static bool IsSameLaneAppendNoOp(ChampionDragData? champion, PositionRow row, bool isPick, int targetIndex)
+        {
+            return TryResolveSameLaneSource(champion, row, isPick, out _, out var collection, out int sourceIndex)
+                && targetIndex >= collection.Count
+                && sourceIndex == collection.Count - 1;
+        }
+
+        private static bool TryResolveSameLaneMoveToEnd(
+            ChampionDragData? champion,
+            PositionRow row,
+            bool isPick,
+            int targetIndex,
+            [NotNullWhen(true)] out ChampionSelectionItem? sourceItem)
+        {
+            sourceItem = null;
+
+            if (!TryResolveSameLaneSource(champion, row, isPick, out var resolvedSource, out var collection, out int sourceIndex))
+                return false;
+
+            if (targetIndex < collection.Count || sourceIndex >= collection.Count - 1)
+                return false;
+
+            sourceItem = resolvedSource;
+            return true;
         }
 
         private bool TryShowSameLaneSwapPreview(ChampionDragData champion, ChampionSelectionItem targetChampion)
@@ -1958,6 +2107,17 @@ namespace JoinGameAfk.View
             return false;
         }
 
+        private static bool IsDescendantOf(DependencyObject start, DependencyObject ancestor)
+        {
+            for (DependencyObject? current = start; current is not null; current = GetParent(current))
+            {
+                if (ReferenceEquals(current, ancestor))
+                    return true;
+            }
+
+            return false;
+        }
+
         private static DependencyObject? GetParent(DependencyObject element)
         {
             if (element is FrameworkElement frameworkElement && frameworkElement.Parent is DependencyObject logicalParent)
@@ -1969,30 +2129,36 @@ namespace JoinGameAfk.View
             return VisualTreeHelper.GetParent(element);
         }
 
-        private void ShowInsertionIndicatorAtIndex(PositionRow row, bool isPick, int targetIndex)
+        private void ShowInsertionIndicatorAtIndex(PositionRow row, bool isPick, int targetIndex, ChampionDragData? champion = null)
         {
             var collection = GetChampionCollection(row, isPick);
             int index = Math.Clamp(targetIndex, 0, collection.Count);
 
+            if (IsSameLaneAppendNoOp(champion, row, isPick, index))
+            {
+                ShowSameLaneNoOpPreview(row, isPick);
+                return;
+            }
+
             if (collection.Count == 0)
             {
-                ShowInsertionIndicator(row, isPick, null, insertAfter: true, 0);
+                ShowInsertionIndicator(row, isPick, null, insertAfter: true, 0, champion);
                 return;
             }
 
             if (index == 0)
             {
-                ShowInsertionIndicator(row, isPick, collection[0], insertAfter: false, 0);
+                ShowInsertionIndicator(row, isPick, collection[0], insertAfter: false, 0, champion);
                 return;
             }
 
             if (index >= collection.Count)
             {
-                ShowInsertionIndicator(row, isPick, null, insertAfter: true, collection.Count);
+                ShowInsertionIndicator(row, isPick, null, insertAfter: true, collection.Count, champion);
                 return;
             }
 
-            ShowInsertionIndicator(row, isPick, collection[index], insertAfter: false, index);
+            ShowInsertionIndicator(row, isPick, collection[index], insertAfter: false, index, champion);
         }
 
         private void ShowDuplicateDropWarning(ChampionDragData champion, PositionRow row, bool isPick)
@@ -2093,7 +2259,13 @@ namespace JoinGameAfk.View
             RefreshTargetBrushes();
         }
 
-        private void ShowInsertionIndicator(PositionRow row, bool isPick, ChampionSelectionItem? champion, bool insertAfter, int targetIndex)
+        private void ShowInsertionIndicator(
+            PositionRow row,
+            bool isPick,
+            ChampionSelectionItem? champion,
+            bool insertAfter,
+            int targetIndex,
+            ChampionDragData? dragData = null)
         {
             int resolvedTargetIndex = targetIndex;
 
@@ -2115,7 +2287,8 @@ namespace JoinGameAfk.View
             _dragHoverInsertAfter = insertAfter;
             _dragHoverTargetIndex = resolvedTargetIndex;
 
-            ShowDropPreview(row, isPick, resolvedTargetIndex, ResolveDropPreviewEffect(row, isPick, resolvedTargetIndex));
+            ShowDropPreview(row, isPick, resolvedTargetIndex, ResolveDropPreviewEffect(dragData, row, isPick, resolvedTargetIndex));
+            ShowMoveOriginPreview(dragData, row, isPick, resolvedTargetIndex);
             RefreshTargetBrushes();
         }
 
@@ -2142,11 +2315,23 @@ namespace JoinGameAfk.View
             }
         }
 
-        private static DropActionKind ResolveDropPreviewEffect(PositionRow row, bool isPick, int targetIndex)
+        private static DropActionKind ResolveDropPreviewEffect(ChampionDragData? champion, PositionRow row, bool isPick, int targetIndex)
         {
+            if (TryResolveSameLaneMoveToEnd(champion, row, isPick, targetIndex, out _))
+                return DropActionKind.MoveAppend;
+
             return targetIndex >= GetChampionCollection(row, isPick).Count
                 ? DropActionKind.Append
                 : DropActionKind.Insert;
+        }
+
+        private void ShowMoveOriginPreview(ChampionDragData? champion, PositionRow row, bool isPick, int targetIndex)
+        {
+            if (!TryResolveSameLaneMoveToEnd(champion, row, isPick, targetIndex, out var sourceItem))
+                return;
+
+            _moveOriginDropChampion = sourceItem;
+            _moveOriginDropChampion.IsMoveOriginDropTarget = true;
         }
 
         private Rect ResolveDropPreviewBounds(PositionRow row, bool isPick, int targetIndex, ItemsControl? itemsControl)
@@ -2252,9 +2437,13 @@ namespace JoinGameAfk.View
             if (_duplicateDropChampion is not null)
                 _duplicateDropChampion.IsDuplicateDropTarget = false;
 
+            if (_moveOriginDropChampion is not null)
+                _moveOriginDropChampion.IsMoveOriginDropTarget = false;
+
             _dragHoverChampion = null;
             _swapDropChampion = null;
             _duplicateDropChampion = null;
+            _moveOriginDropChampion = null;
             _dragHoverRow = null;
             _dragHoverInsertAfter = false;
             _dragHoverTargetIndex = null;
@@ -2362,8 +2551,11 @@ namespace JoinGameAfk.View
             public int ChampionId { get; private init; }
             public string ChampionName { get; private init; } = "";
             public ImageSource? PreviewImageSource { get; private init; }
-            public ChampionSelectionItem? SourceItem { get; private init; }
-            public string PreviewText => ChampionName;
+            public IReadOnlyList<ChampionSelectionItem> SourceItems { get; private init; } = [];
+            public ChampionSelectionItem? SourceItem => SourceItems.Count == 1 ? SourceItems[0] : null;
+            public bool HasSourceItems => SourceItems.Count > 0;
+            public bool IsBatchDeleteOnly => SourceItems.Count > 1;
+            public string PreviewText => IsBatchDeleteOnly ? $"Drag to trash: {SourceItems.Count} selected" : ChampionName;
 
             public static ChampionDragData FromSelection(ChampionSelectionItem champion)
             {
@@ -2372,7 +2564,16 @@ namespace JoinGameAfk.View
                     ChampionId = champion.ChampionId,
                     ChampionName = champion.DisplayText,
                     PreviewImageSource = champion.PortraitImageSource,
-                    SourceItem = champion
+                    SourceItems = [champion]
+                };
+            }
+
+            public static ChampionDragData FromBatchSelection(IReadOnlyList<ChampionSelectionItem> champions)
+            {
+                return new ChampionDragData
+                {
+                    ChampionName = "Selected champions",
+                    SourceItems = champions
                 };
             }
 
@@ -2597,6 +2798,7 @@ namespace JoinGameAfk.View
 
         private bool _isDuplicateDropTarget;
         private bool _isSwapDropTarget;
+        private bool _isMoveOriginDropTarget;
         private bool _isSelected;
         private bool _isDragging;
         private string _displayText = "";
@@ -2659,6 +2861,12 @@ namespace JoinGameAfk.View
             set => SetProperty(ref _isSwapDropTarget, value);
         }
 
+        public bool IsMoveOriginDropTarget
+        {
+            get => _isMoveOriginDropTarget;
+            set => SetProperty(ref _isMoveOriginDropTarget, value);
+        }
+
         public bool IsSelected
         {
             get => _isSelected;
@@ -2676,7 +2884,7 @@ namespace JoinGameAfk.View
             var chipLabel = ChampionChipLabelFormatter.Format(displayText);
             ChipDisplayText = chipLabel.Text;
             ChipDisplayFontSize = chipLabel.FontSize;
-            ToolTipText = $"{chipLabel.ToolTipName}\nDrag to reorder. Press Enter or Space to select. Press Backspace or Delete to remove champions.";
+            ToolTipText = $"{chipLabel.ToolTipName}\nSelect chips for batch delete, drag selected chips to the trash, or press Backspace/Delete to remove selected champions.";
         }
 
         private void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")

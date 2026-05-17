@@ -130,6 +130,31 @@
             </Canvas>
         </Viewbox>
 
+        <!-- Move to end -->
+        <Viewbox>
+            <Viewbox.Style>
+                <Style TargetType="Viewbox" BasedOn="{StaticResource GlyphViewboxStyle}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Kind, RelativeSource={RelativeSource AncestorType={x:Type local:DropActionGlyph}}}"
+                                     Value="{x:Static local:DropActionKind.MoveAppend}">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Viewbox.Style>
+
+            <Canvas Width="24" Height="24">
+                <!-- Move arrow line -->
+                <Path Style="{StaticResource GlyphPathStyle}" Data="M12,3 V14" />
+
+                <!-- Move arrow head -->
+                <Path Style="{StaticResource GlyphPathStyle}" Data="M8.5,10.5 L12,14 L15.5,10.5" />
+
+                <!-- Destination line -->
+                <Path Style="{StaticResource GlyphPathStyle}" Data="M6,19 H18" />
+            </Canvas>
+        </Viewbox>
+
         <!-- Duplicate removal -->
         <Viewbox>
             <Viewbox.Style>

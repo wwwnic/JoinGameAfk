@@ -9,7 +9,8 @@ namespace JoinGameAfk.View.Controls
         Swap,
         Append,
         Insert,
-        DuplicateRemoval
+        DuplicateRemoval,
+        MoveAppend
     }
 
     public partial class DropActionGlyph : UserControl

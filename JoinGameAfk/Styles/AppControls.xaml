@@ -728,8 +728,8 @@
                 <Setter Property="ToolTip" Value="Drag to reorder" />
             </Trigger>
             <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
-                <Setter Property="ToolTip" Value="Selected" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
+                <Setter Property="ToolTip" Value="Selected for deletion" />
             </DataTrigger>
             <DataTrigger Binding="{Binding IsDragging}" Value="True">
                 <Setter Property="Opacity" Value="0.55" />
@@ -745,7 +745,7 @@
                     <Condition Binding="{Binding IsSelected}" Value="True" />
                     <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsMouseOver}" Value="True" />
                 </MultiDataTrigger.Conditions>
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextPaleBrush}" />
             </MultiDataTrigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
                 <Setter Property="ToolTip" Value="Press Enter or Space to select. Press Backspace or Delete to remove champions." />
@@ -755,11 +755,15 @@
                     <Condition Binding="{Binding IsSelected}" Value="True" />
                     <Condition Binding="{Binding RelativeSource={RelativeSource Self}, Path=IsKeyboardFocused}" Value="True" />
                 </MultiDataTrigger.Conditions>
-                <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextPaleBrush}" />
             </MultiDataTrigger>
             <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
                 <Setter Property="ToolTip" Value="This existing champion will be replaced if you drop here." />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsMoveOriginDropTarget}" Value="True">
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
+                <Setter Property="ToolTip" Value="This champion will move from here to the end." />
             </DataTrigger>
         </Style.Triggers>
     </Style>

@@ -6,8 +6,9 @@
       xmlns:viewControls="clr-namespace:JoinGameAfk.View.Controls"
       Background="Transparent"
       AllowDrop="True"
-      PreviewTextInput="Page_PreviewTextInput"
+      Focusable="True"
       PreviewKeyDown="Page_PreviewKeyDown"
+      PreviewMouseLeftButtonDown="Page_PreviewMouseLeftButtonDown"
       PreviewMouseMove="Page_PreviewMouseMove"
       PreviewMouseLeftButtonUp="Page_PreviewMouseLeftButtonUp"
       DragOver="Page_DragOver"
@@ -17,7 +18,7 @@
                TargetType="Border"
                BasedOn="{StaticResource SectionCardStyle}">
             <Style.Triggers>
-                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropHintVisible}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
                 </DataTrigger>
@@ -27,7 +28,7 @@
         <Style x:Key="SearchDeleteOverlayStyle" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropTarget}" Value="True">
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSearchDeleteDropHintVisible}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                 </DataTrigger>
             </Style.Triggers>
@@ -117,7 +118,7 @@
 
         <Style x:Key="ChampionPortraitStateBorderStyle" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="IsHitTestVisible" Value="False" />
@@ -125,12 +126,17 @@
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsSwapDropTarget}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                     <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsMoveOriginDropTarget}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                     <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
                 </DataTrigger>
@@ -147,6 +153,9 @@
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsDuplicateDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsMoveOriginDropTarget}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
                 </DataTrigger>
             </Style.Triggers>
@@ -489,19 +498,19 @@
                                                                             <Border Grid.Row="0"
                                                                                     Panel.ZIndex="10"
                                                                                     Style="{StaticResource ChampionPortraitStateBorderStyle}" />
-                                                                            <Border Grid.Row="0"
-                                                                                    Grid.RowSpan="3"
-                                                                                    Panel.ZIndex="11"
-                                                                                    Style="{StaticResource DuplicateRemovalOverlayStyle}">
-                                                                                <viewControls:DropActionGlyph Width="36"
+                                                                             <Border Grid.Row="0"
+                                                                                     Grid.RowSpan="3"
+                                                                                     Panel.ZIndex="11"
+                                                                                     Style="{StaticResource DuplicateRemovalOverlayStyle}">
+                                                                                 <viewControls:DropActionGlyph Width="36"
                                                                                                                Height="36"
                                                                                                                HorizontalAlignment="Center"
                                                                                                                VerticalAlignment="Center"
-                                                                                                               Foreground="{DynamicResource DangerTextPaleBrush}"
-                                                                                                               Kind="{x:Static viewControls:DropActionKind.DuplicateRemoval}" />
-                                                                            </Border>
-                                                                        </Grid>
-                                                                    </Border>
+                                                                                                                Foreground="{DynamicResource DangerTextPaleBrush}"
+                                                                                                                Kind="{x:Static viewControls:DropActionKind.DuplicateRemoval}" />
+                                                                             </Border>
+                                                                          </Grid>
+                                                                      </Border>
 
                                                                 </Grid>
                                                             </DataTemplate>
@@ -609,19 +618,19 @@
                                                                             <Border Grid.Row="0"
                                                                                     Panel.ZIndex="10"
                                                                                     Style="{StaticResource ChampionPortraitStateBorderStyle}" />
-                                                                            <Border Grid.Row="0"
-                                                                                    Grid.RowSpan="3"
-                                                                                    Panel.ZIndex="11"
-                                                                                    Style="{StaticResource DuplicateRemovalOverlayStyle}">
-                                                                                <viewControls:DropActionGlyph Width="36"
+                                                                             <Border Grid.Row="0"
+                                                                                     Grid.RowSpan="3"
+                                                                                     Panel.ZIndex="11"
+                                                                                     Style="{StaticResource DuplicateRemovalOverlayStyle}">
+                                                                                 <viewControls:DropActionGlyph Width="36"
                                                                                                                Height="36"
                                                                                                                HorizontalAlignment="Center"
                                                                                                                VerticalAlignment="Center"
-                                                                                                               Foreground="{DynamicResource DangerTextPaleBrush}"
-                                                                                                               Kind="{x:Static viewControls:DropActionKind.DuplicateRemoval}" />
-                                                                            </Border>
-                                                                        </Grid>
-                                                                    </Border>
+                                                                                                                Foreground="{DynamicResource DangerTextPaleBrush}"
+                                                                                                                Kind="{x:Static viewControls:DropActionKind.DuplicateRemoval}" />
+                                                                             </Border>
+                                                                          </Grid>
+                                                                      </Border>
 
                                                                 </Grid>
                                                             </DataTemplate>
@@ -717,7 +726,7 @@
 
                         <Button x:Name="DeleteSelectedButton"
                                 Grid.Column="2"
-                                Width="54"
+                                Width="64"
                                 Height="30"
                                 Padding="0"
                                 VerticalAlignment="Center"
@@ -748,8 +757,13 @@
 
                         <Button Grid.Column="4"
                                 Content="?"
-                                Style="{StaticResource InfoIndicatorStyle}"
-                                ToolTip="Click or drag a champion chip into the active pick or ban list. Drop selected chips here to remove them." />
+                                Style="{StaticResource InfoIndicatorStyle}">
+                            <Button.ToolTip>
+                                <TextBlock MaxWidth="260"
+                                           TextWrapping="Wrap"
+                                           Text="Click a chip to select or unselect it. Shift-click selects a range in the same pick or ban list. Ctrl+A selects the active list, or the whole page when no list is active. Double-click a list to add all of its chips to the selection. Drag selected chips to the trash or click the trash button to delete them." />
+                            </Button.ToolTip>
+                        </Button>
                     </Grid>
 
                     <Border Grid.Row="2"
