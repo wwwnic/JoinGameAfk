@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.Plugin", "JoinG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.ChampionTileSeeder", "JoinGameAfk.ChampionTileSeeder\JoinGameAfk.ChampionTileSeeder.csproj", "{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.LogoEditor", "JoinGameAfk.LogoEditor\JoinGameAfk.LogoEditor.csproj", "{ABFF5239-3ED4-8094-EE28-A98329B88CD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,9 @@ Global
 		{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABFF5239-3ED4-8094-EE28-A98329B88CD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABFF5239-3ED4-8094-EE28-A98329B88CD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABFF5239-3ED4-8094-EE28-A98329B88CD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

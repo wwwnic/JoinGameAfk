@@ -1,0 +1,22 @@
+{
+  "Version": 3,
+  "PrimaryColor": "#38BDF8",
+  "SecondaryColor": "#B91C1C",
+  "RidgeColor": "#F8FAFC",
+  "EdgeShadowColor": "#111827",
+  "FacetStrokeWidth": 1,
+  "EdgeShadowStrokeWidth": 0,
+  "FadeStrength": 0.8999999999999999,
+  "PolyhedronScale": 0.5,
+  "StrokeInsetScale": 0,
+  "FacetDetailLevel": 1,
+  "RotationXDegrees": -31.984507042253718,
+  "RotationYDegrees": -180,
+  "RotationZDegrees": -180,
+  "ShowCheckOverlay": true,
+  "CheckScale": 0.7391459074733105,
+  "CheckOffsetX": -2.688821387764051E-17,
+  "CheckOffsetY": 1.968911145233676E-16,
+  "HideFacetLinesAtAllSizes": true,
+  "ShowFacetLines": null
+}

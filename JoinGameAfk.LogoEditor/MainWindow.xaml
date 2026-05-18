@@ -1,0 +1,578 @@
+<Window x:Class="JoinGameAfk.LogoEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="JoinGameAfk Logo Editor"
+        Width="1080"
+        Height="760"
+        MinWidth="980"
+        MinHeight="700"
+        Background="#05070D"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PanelBrush" Color="#0B0E14" />
+        <SolidColorBrush x:Key="PreviewBrush" Color="#111827" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#232836" />
+        <SolidColorBrush x:Key="TextBrush" Color="#F8FAFC" />
+        <SolidColorBrush x:Key="MutedTextBrush" Color="#CBD5E1" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+        </Style>
+
+        <Style x:Key="SectionHeadingText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,14,0,8" />
+        </Style>
+
+        <Style x:Key="FieldLabelText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Background" Value="#111827" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="CaretBrush" Value="{StaticResource TextBrush}" />
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="Background" Value="#111827" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="#334155" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="LogoEditorScrollBarRepeatButtonStyle" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LogoEditorScrollBarThumbStyle" TargetType="Thumb">
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Width="8" Background="Transparent" SnapsToDevicePixels="True">
+                            <Border x:Name="ThumbRail"
+                                    Width="4"
+                                    HorizontalAlignment="Center"
+                                    Background="#334155"
+                                    CornerRadius="2"
+                                    Opacity="0.72" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbRail" Property="Width" Value="6" />
+                                <Setter TargetName="ThumbRail" Property="Background" Value="#60A5FA" />
+                                <Setter TargetName="ThumbRail" Property="Opacity" Value="0.95" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbRail" Property="Width" Value="6" />
+                                <Setter TargetName="ThumbRail" Property="Background" Value="#93C5FD" />
+                                <Setter TargetName="ThumbRail" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LogoEditorVerticalScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="MinWidth" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Width="8" Background="Transparent" SnapsToDevicePixels="True">
+                            <Border x:Name="ScrollRail"
+                                    Width="2"
+                                    Margin="0,3"
+                                    HorizontalAlignment="Center"
+                                    Background="#111827"
+                                    CornerRadius="1"
+                                    Opacity="0.75" />
+
+                            <Track x:Name="PART_Track"
+                                   Margin="0,3"
+                                   IsDirectionReversed="True"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageUpCommand"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Style="{StaticResource LogoEditorScrollBarRepeatButtonStyle}" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource LogoEditorScrollBarThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageDownCommand"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Style="{StaticResource LogoEditorScrollBarRepeatButtonStyle}" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ScrollRail" Property="Background" Value="#334155" />
+                                <Setter TargetName="ScrollRail" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StableVerticalScrollViewerStyle" TargetType="ScrollViewer">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid Background="{TemplateBinding Background}"
+                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                            </Grid.ColumnDefinitions>
+
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                    Grid.Column="0"
+                                                    CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                    CanHorizontallyScroll="False"
+                                                    CanVerticallyScroll="False"
+                                                    Content="{TemplateBinding Content}"
+                                                    ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                                    Margin="{TemplateBinding Padding}"
+                                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+
+                            <ScrollBar x:Name="PART_VerticalScrollBar"
+                                       Grid.Column="1"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       Orientation="Vertical"
+                                       Style="{StaticResource LogoEditorVerticalScrollBarStyle}"
+                                       Value="{Binding VerticalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="350" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0"
+                Background="{StaticResource PreviewBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Margin="0,0,18,0"
+                ClipToBounds="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="184" />
+                </Grid.RowDefinitions>
+
+                <Grid x:Name="PreviewSurface"
+                      Grid.Row="0"
+                      Background="{StaticResource PreviewBrush}">
+                    <Image x:Name="LargePreviewImage"
+                           Width="512"
+                           Height="512"
+                           Stretch="Uniform"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                </Grid>
+
+                <Border x:Name="ThumbnailStrip"
+                        Grid.Row="1"
+                        BorderBrush="{StaticResource BorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Background="{StaticResource PreviewBrush}"
+                        Padding="18,14,18,12">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center">
+                        <StackPanel Margin="0,0,18,0">
+                            <Image x:Name="Preview16Image" Width="16" Height="16" Stretch="Uniform" />
+                            <TextBlock Text="16" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,0">
+                            <Image x:Name="Preview24Image" Width="24" Height="24" Stretch="Uniform" />
+                            <TextBlock Text="24" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,0">
+                            <Image x:Name="Preview32Image" Width="32" Height="32" Stretch="Uniform" />
+                            <TextBlock Text="32" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,0">
+                            <Image x:Name="Preview48Image" Width="48" Height="48" Stretch="Uniform" />
+                            <TextBlock Text="48" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,0">
+                            <Image x:Name="Preview64Image" Width="64" Height="64" Stretch="Uniform" />
+                            <TextBlock Text="64" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel>
+                            <Image x:Name="Preview128Image" Width="128" Height="128" Stretch="Uniform" />
+                            <TextBlock Text="128" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="1"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="18">
+            <ScrollViewer Style="{StaticResource StableVerticalScrollViewerStyle}"
+                          Padding="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="Logo Editor"
+                               FontSize="21"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,2" />
+                    <TextBlock Text="Tune, save, export, and generate app assets."
+                               Foreground="{StaticResource MutedTextBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="12"
+                               Margin="0,0,0,2" />
+
+                    <TextBlock Text="Presets" Style="{StaticResource SectionHeadingText}" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="104" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="PresetComboBox"
+                                  DisplayMemberPath="Name"
+                                  SelectionChanged="PresetComboBox_SelectionChanged" />
+                        <Button Grid.Column="1"
+                                Content="Apply"
+                                Click="ApplyPresetButton_Click"
+                                Margin="8,0,0,0" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Load preset"
+                                Click="LoadPresetButton_Click"
+                                Margin="0,0,4,0" />
+                        <Button Grid.Column="1"
+                                Content="Save preset"
+                                Click="SavePresetButton_Click"
+                                Margin="4,0,0,0" />
+                    </Grid>
+
+                    <TextBlock Text="Preview" Style="{StaticResource SectionHeadingText}" />
+                    <TextBlock Text="Background" Style="{StaticResource FieldLabelText}" />
+                    <ComboBox x:Name="PreviewBackgroundComboBox"
+                              SelectionChanged="PreviewBackgroundComboBox_SelectionChanged"
+                              Margin="0,0,0,2" />
+
+                    <TextBlock Text="Colors" Style="{StaticResource SectionHeadingText}" />
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="42" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Face color" Style="{StaticResource FieldLabelText}" />
+                            <TextBox x:Name="PrimaryColorTextBox"
+                                     TextChanged="SettingChanged"
+                                     LostFocus="ColorTextBox_LostFocus" />
+                        </StackPanel>
+                        <Border x:Name="PrimaryColorSwatch"
+                                Grid.Column="1"
+                                Height="30"
+                                Margin="10,18,0,0"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4" />
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="42" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Fade color" Style="{StaticResource FieldLabelText}" />
+                            <TextBox x:Name="SecondaryColorTextBox"
+                                     TextChanged="SettingChanged"
+                                     LostFocus="ColorTextBox_LostFocus" />
+                        </StackPanel>
+                        <Border x:Name="SecondaryColorSwatch"
+                                Grid.Column="1"
+                                Height="30"
+                                Margin="10,18,0,0"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4" />
+                    </Grid>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="42" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Line color" Style="{StaticResource FieldLabelText}" />
+                            <TextBox x:Name="RidgeColorTextBox"
+                                     TextChanged="SettingChanged"
+                                     LostFocus="ColorTextBox_LostFocus" />
+                        </StackPanel>
+                        <Border x:Name="RidgeColorSwatch"
+                                Grid.Column="1"
+                                Height="30"
+                                Margin="10,18,0,0"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4" />
+                    </Grid>
+
+                    <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="42" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Contrast line" Style="{StaticResource FieldLabelText}" />
+                            <TextBox x:Name="EdgeShadowColorTextBox"
+                                     TextChanged="SettingChanged"
+                                     LostFocus="ColorTextBox_LostFocus" />
+                        </StackPanel>
+                        <Border x:Name="EdgeShadowColorSwatch"
+                                Grid.Column="1"
+                                Height="30"
+                                Margin="10,18,0,0"
+                                BorderBrush="#334155"
+                                BorderThickness="1"
+                                CornerRadius="4" />
+                    </Grid>
+
+                    <TextBlock x:Name="FadeStrengthLabel"
+                               Style="{StaticResource FieldLabelText}"
+                               Margin="0,8,0,0" />
+                    <Slider x:Name="FadeStrengthSlider"
+                            Minimum="0"
+                            Maximum="2"
+                            TickFrequency="0.01"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,2" />
+
+                    <TextBlock Text="Geometry" Style="{StaticResource SectionHeadingText}" />
+
+                    <CheckBox x:Name="HideFacetLinesAtAllSizesCheckBox"
+                              Content="Hide lines at all sizes"
+                              Checked="SettingChanged"
+                              Unchecked="SettingChanged" />
+
+                    <TextBlock x:Name="LineSizeLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="LineSizeSlider"
+                            Minimum="1"
+                            Maximum="14"
+                            TickFrequency="0.1"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="ContrastLineSizeLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="ContrastLineSizeSlider"
+                            Minimum="0"
+                            Maximum="22"
+                            TickFrequency="0.1"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="ShapeScaleLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="ShapeScaleSlider"
+                            Minimum="0.34"
+                            Maximum="0.50"
+                            TickFrequency="0.001"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="StrokeInsetLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="StrokeInsetSlider"
+                            Minimum="0"
+                            Maximum="3"
+                            TickFrequency="0.05"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="FacetDetailLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="FacetDetailSlider"
+                            Minimum="0"
+                            Maximum="1"
+                            TickFrequency="1"
+                            IsSnapToTickEnabled="True"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="RotationXLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="RotationXSlider"
+                            Minimum="-180"
+                            Maximum="180"
+                            TickFrequency="1"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="RotationYLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="RotationYSlider"
+                            Minimum="-180"
+                            Maximum="180"
+                            TickFrequency="1"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="RotationZLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="RotationZSlider"
+                            Minimum="-180"
+                            Maximum="180"
+                            TickFrequency="1"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,2" />
+
+                    <TextBlock Text="Overlay" Style="{StaticResource SectionHeadingText}" />
+
+                    <CheckBox x:Name="CheckOverlayCheckBox"
+                              Content="Green check"
+                              Checked="SettingChanged"
+                              Unchecked="SettingChanged" />
+
+                    <TextBlock x:Name="CheckSizeLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="CheckSizeSlider"
+                            Minimum="0.16"
+                            Maximum="0.95"
+                            TickFrequency="0.01"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="CheckOffsetXLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="CheckOffsetXSlider"
+                            Minimum="-0.35"
+                            Maximum="0.35"
+                            TickFrequency="0.005"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="CheckOffsetYLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="CheckOffsetYSlider"
+                            Minimum="-0.35"
+                            Maximum="0.35"
+                            TickFrequency="0.005"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,2" />
+
+                    <TextBlock Text="Export" Style="{StaticResource SectionHeadingText}" />
+                    <TextBlock Text="ICO frames" Style="{StaticResource FieldLabelText}" />
+                    <UniformGrid Columns="4" Margin="0,4,0,10">
+                        <CheckBox x:Name="IconSize256CheckBox" Content="256" IsChecked="True" />
+                        <CheckBox x:Name="IconSize128CheckBox" Content="128" IsChecked="True" />
+                        <CheckBox x:Name="IconSize64CheckBox" Content="64" IsChecked="True" />
+                        <CheckBox x:Name="IconSize48CheckBox" Content="48" IsChecked="True" />
+                        <CheckBox x:Name="IconSize32CheckBox" Content="32" IsChecked="True" />
+                        <CheckBox x:Name="IconSize24CheckBox" Content="24" IsChecked="True" />
+                        <CheckBox x:Name="IconSize16CheckBox" Content="16" IsChecked="True" />
+                    </UniformGrid>
+
+                    <Button Content="Generate app assets"
+                            Click="GenerateButton_Click"
+                            Background="#2563EB"
+                            BorderBrush="#60A5FA"
+                            Margin="0,0,0,8" />
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Copy SVG"
+                                Click="CopySvgButton_Click"
+                                Margin="0,0,4,0" />
+                        <Button Grid.Column="1"
+                                Content="Export PNG"
+                                Click="ExportPngButton_Click"
+                                Margin="4,0,4,0" />
+                        <Button Grid.Column="2"
+                                Content="Export ICO"
+                                Click="ExportIcoButton_Click"
+                                Margin="4,0,0,0" />
+                    </Grid>
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Content="Reset defaults"
+                                Click="ResetButton_Click"
+                                Margin="0,0,4,0" />
+                        <Button x:Name="OpenOutputFolderButton"
+                                Grid.Column="1"
+                                Content="Open folder"
+                                Click="OpenOutputFolderButton_Click"
+                                IsEnabled="False"
+                                Margin="4,0,0,0" />
+                    </Grid>
+
+                    <TextBlock x:Name="StatusText"
+                               TextWrapping="Wrap"
+                               Foreground="#93C5FD"
+                               FontSize="12" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

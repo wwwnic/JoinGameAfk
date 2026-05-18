@@ -10,7 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Assets\logo.ico" />
+    <Resource Include="Assets\logo.ico" />
+    <None Update="Assets\*.jgalogo" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <Content Update="Assets\*.jgalogo" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
     <None Remove="Assets\champion-chip-label-breaks.json" />
     <EmbeddedResource Include="Assets\champion-chip-label-breaks.json" LogicalName="JoinGameAfk.Assets.champion-chip-label-breaks.json" />
     <None Remove="Assets\champion-tile-cache.json" />
