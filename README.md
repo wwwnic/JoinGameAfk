@@ -15,6 +15,8 @@
 ---
 
 ## Screenshots
+### Logo
+![JoinGameAfk logo](docs/images/joingameafk-logo-128.png)
 
 ### Dashboard
 
