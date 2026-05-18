@@ -125,50 +125,68 @@
         </Style>
 
         <Style x:Key="HeaderBanPanelStyle" TargetType="Border">
-            <Setter Property="MinHeight" Value="68" />
+            <Setter Property="MinHeight" Value="80" />
+            <Setter Property="MaxHeight" Value="144" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
-        <Style x:Key="HeaderBanChipStyle"
-               TargetType="Border"
-               BasedOn="{StaticResource PriorityChampionChipStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
-                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Banned">
-                    <Setter Property="Background" Value="{StaticResource UnavailableBannedSurfaceBrush}" />
-                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBannedAccentBrush}" />
-                    <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                    <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
-                </DataTrigger>
-            </Style.Triggers>
+        <Style x:Key="HeaderBanListFrameStyle" TargetType="Border">
+            <Setter Property="MinHeight" Value="64" />
+            <Setter Property="MaxHeight" Value="128" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
         <Style x:Key="HeaderBanPortraitChipStyle"
                TargetType="Border"
-               BasedOn="{StaticResource HeaderBanChipStyle}">
-            <Setter Property="Padding" Value="4,2,8,2" />
-            <Setter Property="MinHeight" Value="32" />
-        </Style>
+               BasedOn="{StaticResource PlannerPortraitChampionChipStyle}" />
 
         <Style x:Key="HeaderBanPortraitSlotStyle"
                TargetType="Border"
-               BasedOn="{StaticResource ChampionPortraitSlotStyle}">
-            <Setter Property="Width" Value="24" />
-            <Setter Property="Height" Value="24" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="VerticalAlignment" Value="Center" />
+               BasedOn="{StaticResource PlannerChampionPortraitSlotStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Banned">
+                    <Setter Property="Background" Value="{StaticResource UnavailableBannedSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBannedAccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="HeaderBanChampionChipTextStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource PlannerChampionChipTextStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Banned">
+                    <Setter Property="Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="HeaderBanPlaceholderStyle" TargetType="TextBlock">
@@ -186,6 +204,43 @@
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12" />
         </Style>
+
+        <DataTemplate x:Key="HeaderBanChampionChipTemplate">
+            <Border Style="{StaticResource HeaderBanPortraitChipStyle}"
+                    ToolTip="{Binding ToolTipText}">
+                <Grid Width="48"
+                      Height="64"
+                      ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0"
+                            ClipToBounds="True"
+                            Style="{StaticResource HeaderBanPortraitSlotStyle}">
+                        <Grid>
+                            <viewControls:ChampionMysteryGlyph Width="30"
+                                                               Height="30"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource TextSubtleBrush}" />
+                            <Image Source="{Binding PortraitImageSource}"
+                                   Stretch="UniformToFill"
+                                   SnapsToDevicePixels="True" />
+                        </Grid>
+                    </Border>
+
+                    <Viewbox Grid.Row="2"
+                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                        <TextBlock Text="{Binding ChipDisplayText}"
+                                   FontSize="{Binding ChipDisplayFontSize}"
+                                   Style="{StaticResource HeaderBanChampionChipTextStyle}" />
+                    </Viewbox>
+                </Grid>
+            </Border>
+        </DataTemplate>
 
     </Page.Resources>
 
@@ -220,53 +275,27 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="6" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="YOUR BANS"
-                                       Style="{StaticResource DraftPanelHeaderStyle}" />
-
-                            <Grid Grid.Row="2">
-                                <TextBlock x:Name="MyTeamBansPlaceholderText"
-                                           Text="No bans yet."
-                                           Style="{StaticResource HeaderBanPlaceholderStyle}"
-                                           VerticalAlignment="Center" />
-                                <ItemsControl x:Name="MyTeamBansList"
-                                              VerticalAlignment="Top">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource HeaderBanPortraitChipStyle}"
-                                                    ToolTip="{Binding ToolTipText}">
-                                                <DockPanel LastChildFill="True">
-                                                    <Border ClipToBounds="True"
-                                                            Style="{StaticResource HeaderBanPortraitSlotStyle}">
-                                                        <Grid>
-                                                            <viewControls:ChampionMysteryGlyph Width="16"
-                                                                                               Height="16"
-                                                                                               HorizontalAlignment="Center"
-                                                                                               VerticalAlignment="Center"
-                                                                                               Foreground="{DynamicResource TextSubtleBrush}" />
-                                                            <Image Source="{Binding PortraitImageSource}"
-                                                                   Stretch="UniformToFill"
-                                                                   SnapsToDevicePixels="True" />
-                                                        </Grid>
-                                                    </Border>
-                                                    <TextBlock Text="{Binding Name}"
-                                                               MaxWidth="130"
-                                                               Style="{StaticResource ChampionChipTextStyle}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </DockPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Grid>
+                            <Border Grid.Row="0"
+                                    Style="{StaticResource HeaderBanListFrameStyle}">
+                                <Grid ClipToBounds="True">
+                                    <TextBlock x:Name="MyTeamBansPlaceholderText"
+                                               Text="Your team bans"
+                                               Style="{StaticResource HeaderBanPlaceholderStyle}"
+                                               Margin="2,0"
+                                               VerticalAlignment="Center" />
+                                    <ItemsControl x:Name="MyTeamBansList"
+                                                  ItemTemplate="{StaticResource HeaderBanChampionChipTemplate}"
+                                                  VerticalAlignment="Top">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
 
@@ -300,56 +329,29 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="6" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Text="ENEMY BANS"
-                                       Style="{StaticResource DraftPanelHeaderStyle}"
-                                       HorizontalAlignment="Right" />
-
-                            <Grid Grid.Row="2">
-                                <TextBlock x:Name="TheirTeamBansPlaceholderText"
-                                           Text="No bans yet."
-                                           Style="{StaticResource HeaderBanPlaceholderStyle}"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Center" />
-                                <ItemsControl x:Name="TheirTeamBansList"
-                                              HorizontalAlignment="Right"
-                                              VerticalAlignment="Top">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource HeaderBanPortraitChipStyle}"
-                                                    ToolTip="{Binding ToolTipText}">
-                                                <DockPanel LastChildFill="True">
-                                                    <Border ClipToBounds="True"
-                                                            Style="{StaticResource HeaderBanPortraitSlotStyle}">
-                                                        <Grid>
-                                                            <viewControls:ChampionMysteryGlyph Width="16"
-                                                                                               Height="16"
-                                                                                               HorizontalAlignment="Center"
-                                                                                               VerticalAlignment="Center"
-                                                                                               Foreground="{DynamicResource TextSubtleBrush}" />
-                                                            <Image Source="{Binding PortraitImageSource}"
-                                                                   Stretch="UniformToFill"
-                                                                   SnapsToDevicePixels="True" />
-                                                        </Grid>
-                                                    </Border>
-                                                    <TextBlock Text="{Binding Name}"
-                                                               MaxWidth="130"
-                                                               Style="{StaticResource ChampionChipTextStyle}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </DockPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Grid>
+                            <Border Grid.Row="0"
+                                    Style="{StaticResource HeaderBanListFrameStyle}">
+                                <Grid ClipToBounds="True">
+                                    <TextBlock x:Name="TheirTeamBansPlaceholderText"
+                                               Text="Enemy team bans"
+                                               Style="{StaticResource HeaderBanPlaceholderStyle}"
+                                               Margin="2,0"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center" />
+                                    <ItemsControl x:Name="TheirTeamBansList"
+                                                  ItemTemplate="{StaticResource HeaderBanChampionChipTemplate}"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Top">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </Border>
 

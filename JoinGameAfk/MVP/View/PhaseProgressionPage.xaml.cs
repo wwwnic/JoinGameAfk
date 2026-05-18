@@ -111,8 +111,8 @@ namespace JoinGameAfk.View
         {
             status = ApplyPlanBlockerHighlights(status);
 
-            UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "No bans yet.");
-            UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "No bans yet.");
+            UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "Your team bans");
+            UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "Enemy team bans");
             UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
             UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
             UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
