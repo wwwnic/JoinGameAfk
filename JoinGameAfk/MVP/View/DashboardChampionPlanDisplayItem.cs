@@ -26,17 +26,14 @@ namespace JoinGameAfk.View
     internal static class DashboardChampionPlanDisplay
     {
         public static IReadOnlyList<DashboardChampionPlanDisplayItem> CreateList(
-            IEnumerable<DashboardChampionPlanItem> champions,
-            ChampSelectSettings settings)
+            IEnumerable<DashboardChampionPlanItem> champions)
         {
             return champions
-                .Select(champion => CreateItem(champion, settings))
+                .Select(CreateItem)
                 .ToList();
         }
 
-        private static DashboardChampionPlanDisplayItem CreateItem(
-            DashboardChampionPlanItem champion,
-            ChampSelectSettings settings)
+        private static DashboardChampionPlanDisplayItem CreateItem(DashboardChampionPlanItem champion)
         {
             string championName = GetChampionDisplayName(champion.ChampionId, champion.Name);
             ChampionChipLabel chipLabel = ChampionChipLabelFormatter.Format(championName);
@@ -53,20 +50,20 @@ namespace JoinGameAfk.View
                 PlanReferenceText = champion.PlanReferenceText,
                 PlanReferenceReasonKind = champion.PlanReferenceReasonKind,
                 IsOwnAction = champion.IsOwnAction,
-                PortraitImageSource = GetChampionPortrait(champion.ChampionId, championName, settings),
+                PortraitImageSource = GetChampionPortrait(champion.ChampionId, championName),
                 ChipDisplayText = chipLabel.Text,
                 ChipDisplayFontSize = chipLabel.FontSize,
                 ToolTipText = BuildToolTip(chipLabel.ToolTipName, champion.StatusText, champion.PlanReferenceText)
             };
         }
 
-        private static ImageSource? GetChampionPortrait(int championId, string championName, ChampSelectSettings settings)
+        private static ImageSource? GetChampionPortrait(int championId, string championName)
         {
             if (championId > 0)
-                return ChampionTileCatalog.GetSelectedImageSource(championId, settings);
+                return ChampionTileCatalog.GetSelectedImageSource(championId);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id, settings)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id)
                 : null;
         }
 

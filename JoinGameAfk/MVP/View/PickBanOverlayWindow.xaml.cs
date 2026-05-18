@@ -31,6 +31,7 @@ namespace JoinGameAfk.View
             UpdateDashboardStatus(new DashboardStatus());
             _settings.Saved += Settings_Saved;
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
         }
 
@@ -94,10 +95,15 @@ namespace JoinGameAfk.View
             Dispatch(() => RenderDashboardStatus(_lastDashboardStatus));
         }
 
+        private void ChampionImageSelectionStore_SelectionsChanged(object? sender, EventArgs e)
+        {
+            Dispatch(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
         private void RenderDashboardStatus(DashboardStatus status)
         {
-            PickPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.PickChampionPriority, _settings);
-            BanPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.BanChampionPriority, _settings);
+            PickPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.PickChampionPriority);
+            BanPlanList.ItemsSource = DashboardChampionPlanDisplay.CreateList(status.BanChampionPriority);
 
             UpdatePlanPlaceholder(
                 PickPlaceholderText,
@@ -236,6 +242,7 @@ namespace JoinGameAfk.View
             _draftCountdownTimer.Stop();
             _settings.Saved -= Settings_Saved;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
         }
     }

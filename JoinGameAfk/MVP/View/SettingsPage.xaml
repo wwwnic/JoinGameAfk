@@ -1,7 +1,6 @@
 <Page x:Class="JoinGameAfk.View.SettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:viewControls="clr-namespace:JoinGameAfk.View.Controls"
       Background="Transparent">
     <Grid>
     <ScrollViewer x:Name="SettingsScrollViewer"
@@ -847,7 +846,7 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Champion pictures"
                                            Style="{StaticResource FieldLabelStyle}" />
-                                <TextBlock Text="Choose which local Data Dragon champion tile appears in champion priority chips."
+                                <TextBlock Text="Manage the local Data Dragon champion tile cache used by champion priorities."
                                            Style="{StaticResource FieldHintStyle}" />
                                 <TextBlock x:Name="ChampionPictureFolderPathTextBlock"
                                            Foreground="{DynamicResource TextSoftBrush}"
@@ -855,263 +854,24 @@
                                            FontWeight="SemiBold"
                                            TextWrapping="Wrap"
                                            Margin="0,8,0,0" />
-                                <TextBlock x:Name="ChampionPictureStatusTextBlock"
-                                           Foreground="{DynamicResource TextSoftBrush}"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           TextWrapping="Wrap"
-                                           Margin="0,8,0,0" />
                             </StackPanel>
 
-                            <Grid Grid.Column="2"
-                                  Width="570">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="10" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="10" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <ComboBox x:Name="ChampionPictureChampionComboBox"
-                                          Grid.Row="0"
-                                          Grid.Column="0"
-                                          Grid.ColumnSpan="3"
-                                          Width="390"
-                                          MaxDropDownHeight="360"
-                                          SelectionChanged="ChampionPictureChampionComboBox_SelectionChanged"
-                                          Style="{StaticResource AppComboBoxStyle}"
-                                          ToolTip="Champion to configure. Open the list to preview the picture currently applied to each champion.">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid MinWidth="180"
-                                                  Margin="0,1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="42" />
-                                                    <ColumnDefinition Width="10" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <Border Grid.Column="0"
-                                                        Width="38"
-                                                        Height="38"
-                                                        Background="{DynamicResource AppSurfaceRaisedBrush}"
-                                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="4"
-                                                        ClipToBounds="True">
-                                                    <Grid>
-                                                        <viewControls:ChampionMysteryGlyph Width="26"
-                                                                                           Height="26"
-                                                                                           HorizontalAlignment="Center"
-                                                                                           VerticalAlignment="Center"
-                                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
-                                                        <Image Source="{Binding ImageSource}"
-                                                               Stretch="UniformToFill"
-                                                               SnapsToDevicePixels="True" />
-                                                    </Grid>
-                                                </Border>
-
-                                                <StackPanel Grid.Column="2"
-                                                            VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding AppliedPictureText}"
-                                                               FontSize="10"
-                                                               Opacity="0.72"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-
-                                <Button x:Name="ResetChampionPictureButton"
-                                        Grid.Row="0"
-                                        Grid.Column="4"
-                                        Content="Use Default"
-                                        Click="ResetChampionPictureButton_Click"
+                            <WrapPanel Grid.Column="2"
+                                       HorizontalAlignment="Right">
+                                <Button x:Name="OpenChampionPictureFolderButton"
+                                        Content="Open Pictures Folder"
+                                        Click="OpenChampionPictureFolderButton_Click"
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Padding="12,8"
-                                        ToolTip="Remove the custom picture selection for this champion." />
-
-                                <Border Grid.Column="6"
-                                        Grid.RowSpan="3"
-                                        Width="52"
-                                        Height="52"
-                                        Background="{DynamicResource AppSurfaceRaisedBrush}"
-                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        ClipToBounds="True">
-                                    <Grid>
-                                        <viewControls:ChampionMysteryGlyph Width="36"
-                                                                           Height="36"
-                                                                           HorizontalAlignment="Center"
-                                                                           VerticalAlignment="Center"
-                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
-                                        <Image x:Name="ChampionPicturePreviewImage"
-                                               Stretch="UniformToFill"
-                                               SnapsToDevicePixels="True" />
-                                    </Grid>
-                                </Border>
-
-                                <ListBox x:Name="ChampionPictureTileListBox"
-                                         Grid.Row="2"
-                                         Grid.Column="0"
-                                         Grid.ColumnSpan="5"
-                                         MinHeight="104"
-                                         MaxHeight="184"
-                                         Padding="8"
-                                         Background="{DynamicResource AppInputBrush}"
-                                         BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                         BorderThickness="1"
-                                         Foreground="{DynamicResource TextSecondaryBrush}"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                         SelectionChanged="ChampionPictureTileListBox_SelectionChanged"
-                                         SelectionMode="Single"
-                                         KeyboardNavigation.DirectionalNavigation="Contained"
-                                         ToolTip="Available pictures for the selected champion. Use mouse, arrow keys, or space to select a tile.">
-                                    <ListBox.Resources>
-                                        <Style TargetType="ScrollBar"
-                                               BasedOn="{StaticResource SlimVerticalScrollBarStyle}" />
-                                    </ListBox.Resources>
-                                    <ListBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ListBox.ItemsPanel>
-                                    <ListBox.ItemContainerStyle>
-                                        <Style TargetType="ListBoxItem">
-                                            <Setter Property="Width" Value="86" />
-                                            <Setter Property="Height" Value="94" />
-                                            <Setter Property="Margin" Value="0,0,8,8" />
-                                            <Setter Property="Padding" Value="4" />
-                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ListBoxItem">
-                                                        <Border x:Name="TileBorder"
-                                                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
-                                                                CornerRadius="6"
-                                                                Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
-                                                                TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
-                                                            <ContentPresenter HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
-                                                                              VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}" />
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
-                                                                <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                            </Trigger>
-                                                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                                <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
-                                                                <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                            </Trigger>
-                                                            <Trigger Property="IsSelected" Value="True">
-                                                                <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
-                                                                <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
-                                                            </Trigger>
-                                                            <MultiTrigger>
-                                                                <MultiTrigger.Conditions>
-                                                                    <Condition Property="IsSelected" Value="True" />
-                                                                    <Condition Property="IsKeyboardFocusWithin" Value="True" />
-                                                                </MultiTrigger.Conditions>
-                                                                <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
-                                                            </MultiTrigger>
-                                                            <Trigger Property="IsEnabled" Value="False">
-                                                                <Setter TargetName="TileBorder" Property="Opacity" Value="0.55" />
-                                                                <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ListBox.ItemContainerStyle>
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Width="76"
-                                                  ToolTip="{Binding FileName}">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="4" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <Border Grid.Row="0"
-                                                        Width="62"
-                                                        Height="62"
-                                                        HorizontalAlignment="Center"
-                                                        Background="{DynamicResource AppSurfaceRaisedBrush}"
-                                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                                        BorderThickness="1"
-                                                        CornerRadius="4"
-                                                        ClipToBounds="True">
-                                                    <Grid>
-                                                        <viewControls:ChampionMysteryGlyph Width="44"
-                                                                                           Height="44"
-                                                                                           HorizontalAlignment="Center"
-                                                                                           VerticalAlignment="Center"
-                                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
-                                                        <Image Source="{Binding ImageSource}"
-                                                               Stretch="UniformToFill"
-                                                               SnapsToDevicePixels="True" />
-                                                    </Grid>
-                                                </Border>
-
-                                                <TextBlock Grid.Row="2"
-                                                           Text="{Binding ShortDisplayName}"
-                                                           FontSize="10"
-                                                           FontWeight="SemiBold"
-                                                           TextAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-
-                                <WrapPanel Grid.Row="4"
-                                           Grid.Column="0"
-                                           Grid.ColumnSpan="5"
-                                           HorizontalAlignment="Right">
-                                    <Button x:Name="OpenChampionPictureFolderButton"
-                                            Content="Open Pictures Folder"
-                                            Click="OpenChampionPictureFolderButton_Click"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Padding="12,8"
-                                            ToolTip="Open the local folder where champion tile jpg files are stored." />
-                                    <Button x:Name="ReloadChampionPicturesButton"
-                                            Content="Reload Pictures"
-                                            Click="ReloadChampionPicturesButton_Click"
-                                            Style="{StaticResource SecondaryButtonStyle}"
-                                            Padding="12,8"
-                                            Margin="8,0,0,0"
-                                            ToolTip="Rescan the local champion picture folder." />
-                                </WrapPanel>
-                            </Grid>
+                                        ToolTip="Open the local folder where champion tile jpg files are stored." />
+                                <Button x:Name="ReloadChampionPicturesButton"
+                                        Content="Reload Pictures"
+                                        Click="ReloadChampionPicturesButton_Click"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,8"
+                                        Margin="8,0,0,0"
+                                        ToolTip="Rescan the local champion picture folder." />
+                            </WrapPanel>
                         </Grid>
                     </Border>
                 </StackPanel>

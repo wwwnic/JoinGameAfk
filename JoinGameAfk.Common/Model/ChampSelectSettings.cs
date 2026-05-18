@@ -145,8 +145,6 @@ namespace JoinGameAfk.Model
             { Position.Support, new PositionPreference() },
         };
 
-        public Dictionary<int, string> ChampionImageFileNames { get; set; } = [];
-
         public PositionPreference GetPreference(Position position)
         {
             position = NormalizePreferencePosition(position);
@@ -279,13 +277,6 @@ namespace JoinGameAfk.Model
 
             if (settings.ChampSelectEventFallbackPollIntervalMs <= 0)
                 settings.ChampSelectEventFallbackPollIntervalMs = new ChampSelectSettings().ChampSelectEventFallbackPollIntervalMs;
-
-            settings.ChampionImageFileNames = settings.ChampionImageFileNames
-                .Where(entry => entry.Key > 0 && !string.IsNullOrWhiteSpace(entry.Value))
-                .ToDictionary(
-                    entry => entry.Key,
-                    entry => Path.GetFileName(entry.Value.Trim()),
-                    EqualityComparer<int>.Default);
 
             return settings;
         }

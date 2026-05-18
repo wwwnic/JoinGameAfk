@@ -36,6 +36,7 @@ namespace JoinGameAfk.View
             Unloaded += PhaseProgressionPage_Unloaded;
             _settings.Saved += Settings_Saved;
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
         }
 
@@ -44,6 +45,7 @@ namespace JoinGameAfk.View
             _draftCountdownTimer.Stop();
             _settings.Saved -= Settings_Saved;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
         }
 
@@ -58,6 +60,11 @@ namespace JoinGameAfk.View
         }
 
         private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
+        }
+
+        private void ChampionImageSelectionStore_SelectionsChanged(object? sender, EventArgs e)
         {
             Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
         }
@@ -371,7 +378,7 @@ namespace JoinGameAfk.View
 
         private void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)
         {
-            itemsControl.ItemsSource = DashboardChampionPlanDisplay.CreateList(champions, _settings);
+            itemsControl.ItemsSource = DashboardChampionPlanDisplay.CreateList(champions);
 
             bool hasChampions = champions.Count > 0;
             placeholderText.Visibility = hasChampions ? Visibility.Collapsed : Visibility.Visible;
@@ -405,10 +412,10 @@ namespace JoinGameAfk.View
         private ImageSource? GetChampionPortrait(int championId, string championName)
         {
             if (championId > 0)
-                return ChampionTileCatalog.GetSelectedImageSource(championId, _settings);
+                return ChampionTileCatalog.GetSelectedImageSource(championId);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id, _settings)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id)
                 : null;
         }
 

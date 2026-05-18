@@ -29,7 +29,6 @@ namespace JoinGameAfk.View
         private readonly Action<string>? _logErrorMessage;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
-        private readonly Dictionary<int, string> _pendingChampionImageFileNames;
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
         private NumericInputRule _championHoverDelayRule = null!;
@@ -38,7 +37,6 @@ namespace JoinGameAfk.View
         private NumericInputRule _champSelectPollIntervalRule = null!;
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
-        private bool _isUpdatingChampionPictureControls;
         private bool _isApplyingSettingsToControls;
 
         public SettingsPage(
@@ -53,7 +51,6 @@ namespace JoinGameAfk.View
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
             _notificationSoundPlayer = new NotificationSoundPlayer(ShowValidationMessage);
-            _pendingChampionImageFileNames = new Dictionary<int, string>(_settings.ChampionImageFileNames);
             _savedMessageTimer = new DispatcherTimer
             {
                 Interval = SavedMessageDuration
@@ -74,7 +71,6 @@ namespace JoinGameAfk.View
             Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
             LoadReadyCheckSoundOptions();
-            LoadChampionPictureOptions();
             ApplySettingsToControls();
             AttachNumericInputValidation();
             UpdateAutomationInputStates();
@@ -212,8 +208,7 @@ namespace JoinGameAfk.View
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? CreateNumericSnapshot(EventFallbackPollIntervalBox) : string.Empty,
                 GetSelectedThemeKey(),
-                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true,
-                CreateChampionImageSelectionsSignature(_pendingChampionImageFileNames));
+                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true);
         }
 
         private SettingsPageSnapshot CaptureSavedSettingsSnapshot()
@@ -249,8 +244,7 @@ namespace JoinGameAfk.View
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? _settings.ChampSelectEventFallbackPollIntervalMs.ToString() : string.Empty,
                 AppThemeManager.NormalizeThemeKey(_settings.ThemeKey),
-                _settings.AutoUpdateChampionCatalogOnStartup,
-                CreateChampionImageSelectionsSignature(_settings.ChampionImageFileNames));
+                _settings.AutoUpdateChampionCatalogOnStartup);
         }
 
         private static string CreateNumericSnapshot(TextBox textBox)
@@ -258,15 +252,6 @@ namespace JoinGameAfk.View
             return int.TryParse(textBox.Text, out int value)
                 ? value.ToString()
                 : $"invalid:{textBox.Text}";
-        }
-
-        private static string CreateChampionImageSelectionsSignature(IReadOnlyDictionary<int, string> selections)
-        {
-            return string.Join(
-                "|",
-                NormalizeChampionImageSelections(new Dictionary<int, string>(selections))
-                    .OrderBy(entry => entry.Key)
-                    .Select(entry => $"{entry.Key}:{entry.Value.ToUpperInvariant()}"));
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -296,7 +281,6 @@ namespace JoinGameAfk.View
             _settings.ChampSelectEventFallbackPollIntervalMs = input.ChampSelectEventFallbackPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
             _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
-            _settings.ChampionImageFileNames = NormalizeChampionImageSelections(_pendingChampionImageFileNames);
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
@@ -909,7 +893,6 @@ namespace JoinGameAfk.View
             Dispatcher.InvokeAsync(() =>
             {
                 RefreshChampionCatalogSyncStatus();
-                LoadChampionPictureOptions();
             });
         }
 
@@ -918,7 +901,6 @@ namespace JoinGameAfk.View
             Dispatcher.InvokeAsync(() =>
             {
                 RefreshChampionPictureCacheStatus();
-                LoadChampionPictureOptions();
             });
         }
 
@@ -938,68 +920,6 @@ namespace JoinGameAfk.View
         private void LoadReadyCheckSoundOptions()
         {
             ReadyCheckSoundComboBox.ItemsSource = NotificationSoundPlayer.ReadyCheckSoundOptions;
-        }
-
-        private void LoadChampionPictureOptions()
-        {
-            int? selectedChampionId = GetSelectedChampionPictureChampion()?.Id;
-            var champions = ChampionCatalog.All
-                .OrderBy(champion => champion.Name)
-                .ToList();
-            var championOptions = champions
-                .Select(CreateChampionPictureChampionOption)
-                .ToList();
-
-            _isUpdatingChampionPictureControls = true;
-            try
-            {
-                ChampionPictureChampionComboBox.ItemsSource = championOptions;
-                ChampionPictureChampionComboBox.SelectedItem = selectedChampionId is int championId
-                    ? championOptions.FirstOrDefault(option => option.Champion.Id == championId) ?? championOptions.FirstOrDefault()
-                    : championOptions.FirstOrDefault();
-            }
-            finally
-            {
-                _isUpdatingChampionPictureControls = false;
-            }
-
-            RefreshChampionPictureTileOptions();
-        }
-
-        private void ChampionPictureChampionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_isUpdatingChampionPictureControls)
-                return;
-
-            RefreshChampionPictureTileOptions();
-        }
-
-        private void ChampionPictureTileListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_isUpdatingChampionPictureControls)
-                return;
-
-            if (GetSelectedChampionPictureChampion() is not ChampionInfo champion
-                || ChampionPictureTileListBox.SelectedItem is not ChampionTileOption selectedOption)
-            {
-                return;
-            }
-
-            _pendingChampionImageFileNames[champion.Id] = selectedOption.FileName;
-            RefreshChampionPicturePreview(champion, selectedOption);
-            RefreshChampionPictureChampionOptions(champion.Id);
-            RefreshDirtyState();
-        }
-
-        private void ResetChampionPictureButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (GetSelectedChampionPictureChampion() is not ChampionInfo champion)
-                return;
-
-            _pendingChampionImageFileNames.Remove(champion.Id);
-            RefreshChampionPictureTileOptions();
-            RefreshChampionPictureChampionOptions(champion.Id);
-            RefreshDirtyState();
         }
 
         private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
@@ -1023,7 +943,6 @@ namespace JoinGameAfk.View
         {
             AppStorage.EnsureChampionTileDirectoryExists();
             ChampionTileCatalog.Reload();
-            LoadChampionPictureOptions();
             RefreshChampionPictureCacheStatus();
             ShowStatusMessage($"Champion pictures reloaded from local storage ({ChampionTileCatalog.GetTileFileCount()} files).", "AccentGreenTextBrush", Brushes.ForestGreen);
         }
@@ -1076,7 +995,6 @@ namespace JoinGameAfk.View
                 });
 
                 var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(progress);
-                LoadChampionPictureOptions();
                 RefreshChampionPictureCacheStatus(result);
                 ChampionPictureDownloadStatusLabel.Foreground = result.ArchiveDeleted
                     ? TryFindResource("AccentGreenTextBrush") as Brush ?? Brushes.ForestGreen
@@ -1136,128 +1054,6 @@ namespace JoinGameAfk.View
             return $"{ex.GetType().Name}: {ex.Message}";
         }
 
-        private void RefreshChampionPictureTileOptions()
-        {
-            ChampionInfo? champion = GetSelectedChampionPictureChampion();
-            List<ChampionTileOption> options = champion is null
-                ? []
-                : ChampionTileCatalog.GetOptions(champion).ToList();
-
-            _isUpdatingChampionPictureControls = true;
-            try
-            {
-                ChampionPictureTileListBox.ItemsSource = options;
-                ChampionPictureTileListBox.IsEnabled = options.Count > 0;
-                ResetChampionPictureButton.IsEnabled = champion is not null
-                    && _pendingChampionImageFileNames.ContainsKey(champion.Id);
-
-                ChampionTileOption? selectedOption = champion is null
-                    ? null
-                    : GetSelectedChampionPictureOption(champion, options);
-
-                ChampionPictureTileListBox.SelectedItem = selectedOption;
-                if (selectedOption is not null)
-                    ChampionPictureTileListBox.ScrollIntoView(selectedOption);
-
-                RefreshChampionPicturePreview(champion, selectedOption);
-            }
-            finally
-            {
-                _isUpdatingChampionPictureControls = false;
-            }
-        }
-
-        private void RefreshChampionPictureChampionOptions(int selectedChampionId)
-        {
-            var championOptions = ChampionCatalog.All
-                .OrderBy(champion => champion.Name)
-                .Select(CreateChampionPictureChampionOption)
-                .ToList();
-
-            _isUpdatingChampionPictureControls = true;
-            try
-            {
-                ChampionPictureChampionComboBox.ItemsSource = championOptions;
-                ChampionPictureChampionComboBox.SelectedItem =
-                    championOptions.FirstOrDefault(option => option.Champion.Id == selectedChampionId)
-                    ?? championOptions.FirstOrDefault();
-            }
-            finally
-            {
-                _isUpdatingChampionPictureControls = false;
-            }
-        }
-
-        private ChampionPictureChampionOption CreateChampionPictureChampionOption(ChampionInfo champion)
-        {
-            ChampionTileOption? selectedOption = GetSelectedChampionPictureOption(champion);
-            return new ChampionPictureChampionOption(champion, selectedOption?.FileName);
-        }
-
-        private ChampionInfo? GetSelectedChampionPictureChampion()
-        {
-            return ChampionPictureChampionComboBox.SelectedItem switch
-            {
-                ChampionPictureChampionOption option => option.Champion,
-                ChampionInfo champion => champion,
-                _ => null
-            };
-        }
-
-        private ChampionTileOption? GetSelectedChampionPictureOption(
-            ChampionInfo champion,
-            IReadOnlyList<ChampionTileOption>? options = null)
-        {
-            options ??= ChampionTileCatalog.GetOptions(champion);
-            if (options.Count == 0)
-                return null;
-
-            if (_pendingChampionImageFileNames.TryGetValue(champion.Id, out string? selectedFileName))
-            {
-                var pendingOption = options.FirstOrDefault(option =>
-                    string.Equals(option.FileName, selectedFileName, StringComparison.OrdinalIgnoreCase));
-                if (pendingOption is not null)
-                    return pendingOption;
-            }
-
-            return ChampionTileCatalog.GetSelectedOption(champion, new ChampSelectSettings
-            {
-                ChampionImageFileNames = []
-            });
-        }
-
-        private void RefreshChampionPicturePreview(ChampionInfo? champion, ChampionTileOption? selectedOption)
-        {
-            ChampionPicturePreviewImage.Source = selectedOption?.ImageSource;
-            bool hasOverride = champion is not null && _pendingChampionImageFileNames.ContainsKey(champion.Id);
-            ResetChampionPictureButton.IsEnabled = hasOverride;
-
-            if (champion is null)
-            {
-                ChampionPictureStatusTextBlock.Text = "No champion selected.";
-                return;
-            }
-
-            if (selectedOption is null)
-            {
-                ChampionPictureStatusTextBlock.Text = $"No local pictures found for {champion.Name}. Add Data Dragon tile jpgs to the folder below, then reload.";
-                return;
-            }
-
-            ChampionPictureStatusTextBlock.Text = hasOverride
-                ? $"Selected {selectedOption.FileName} for {champion.Name}. Save settings to keep it."
-                : $"Using default {selectedOption.FileName} for {champion.Name}.";
-        }
-
-        private static Dictionary<int, string> NormalizeChampionImageSelections(Dictionary<int, string> selections)
-        {
-            return selections
-                .Where(entry => entry.Key > 0 && !string.IsNullOrWhiteSpace(entry.Value))
-                .ToDictionary(
-                    entry => entry.Key,
-                    entry => Path.GetFileName(entry.Value.Trim()));
-        }
-
         private void SelectReadyCheckSound(string? soundKey)
         {
             string normalizedSoundKey = NotificationSoundPlayer.NormalizeReadyCheckSoundKey(soundKey);
@@ -1295,19 +1091,6 @@ namespace JoinGameAfk.View
             return !string.Equals(GetSelectedThemeKey(), AppThemeManager.CurrentThemeKey, StringComparison.OrdinalIgnoreCase);
         }
 
-        private sealed class ChampionPictureChampionOption(ChampionInfo champion, string? fileName)
-        {
-            public ChampionInfo Champion { get; } = champion;
-
-            public string Name => Champion.Name;
-
-            public string AppliedPictureText => string.IsNullOrWhiteSpace(fileName)
-                ? "No local picture"
-                : fileName;
-
-            public ImageSource? ImageSource => ChampionTileCatalog.GetImageSource(fileName);
-        }
-
         private readonly record struct SettingsInputValues(
             int ReadyCheckAcceptDelaySeconds,
             int PickLockDelaySeconds,
@@ -1339,7 +1122,6 @@ namespace JoinGameAfk.View
             bool ChampSelectEventFallbackPollingEnabled,
             string ChampSelectEventFallbackPollIntervalMs,
             string ThemeKey,
-            bool AutoUpdateChampionCatalogOnStartup,
-            string ChampionImageSelections);
+            bool AutoUpdateChampionCatalogOnStartup);
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -64,7 +65,10 @@ namespace JoinGameAfk.View
         private int? _dragHoverTargetIndex;
         private bool _isPreferenceSavePending;
         private DispatcherOperation? _pendingPreferenceSaveOperation;
-        private string _championImageSelectionSignature;
+        private ChampionInfo? _selectedChampionPictureChampion;
+        private string? _originalChampionPictureFileName;
+        private string? _pendingChampionPictureFileName;
+        private bool _isUpdatingChampionPicturePicker;
 
         public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
             nameof(IsChampionSelectLockActive),
@@ -138,11 +142,23 @@ namespace JoinGameAfk.View
             private set => SetValue(IsSearchDeleteDropHintVisibleProperty, value);
         }
 
+        public static readonly DependencyProperty IsChampionPictureEditModeProperty = DependencyProperty.Register(
+            nameof(IsChampionPictureEditMode),
+            typeof(bool),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata(false));
+
+        public bool IsChampionPictureEditMode
+        {
+            get => (bool)GetValue(IsChampionPictureEditModeProperty);
+            private set => SetValue(IsChampionPictureEditModeProperty, value);
+        }
+
         public ChampionPrioritiesPage(ChampSelectSettings settings)
         {
             InitializeComponent();
             _settings = settings;
-            _championImageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
+            ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
             RefreshThemeBrushes();
             Unloaded += ChampionPrioritiesPage_Unloaded;
             AppThemeManager.ThemeChanged += RefreshTheme;
@@ -202,8 +218,8 @@ namespace JoinGameAfk.View
             }
 
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
-            _settings.Saved += Settings_Saved;
         }
 
         public void SetChampionSelectActive(bool isActive)
@@ -224,6 +240,7 @@ namespace JoinGameAfk.View
                     IsSearchDeleteDropTarget = false;
                     IsSearchDeleteDropHintVisible = false;
                     ClearPendingChampionSelection();
+                    SetChampionPictureEditMode(false);
                 }
 
                 IsChampionSelectLockActive = isActive;
@@ -240,8 +257,8 @@ namespace JoinGameAfk.View
             FlushPendingPreferenceSave();
             AppThemeManager.ThemeChanged -= RefreshTheme;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
+            ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
-            _settings.Saved -= Settings_Saved;
         }
 
         private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
@@ -249,17 +266,12 @@ namespace JoinGameAfk.View
             Dispatcher.InvokeAsync(RefreshChampionCatalogView);
         }
 
-        private void Settings_Saved()
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
         {
-            string imageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
-            if (string.Equals(imageSelectionSignature, _championImageSelectionSignature, StringComparison.Ordinal))
-                return;
-
-            _championImageSelectionSignature = imageSelectionSignature;
             Dispatcher.InvokeAsync(RefreshChampionImages);
         }
 
-        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        private void ChampionImageSelectionStore_SelectionsChanged(object? sender, EventArgs e)
         {
             Dispatcher.InvokeAsync(RefreshChampionImages);
         }
@@ -277,14 +289,14 @@ namespace JoinGameAfk.View
 
         private void RefreshChampionImages()
         {
-            _championImageSelectionSignature = CreateChampionImageSelectionSignature(_settings.ChampionImageFileNames);
             foreach (var champion in _rows.SelectMany(row => row.PickChampions.Concat(row.BanChampions)))
             {
-                champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(champion.ChampionId, _settings);
+                champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(champion.ChampionId);
             }
 
             _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
             ChampionReferenceList.ItemsSource = _filteredChampionReferences;
+            RefreshChampionPicturePicker();
         }
 
         private void RefreshConfiguredChampionDisplayText()
@@ -302,6 +314,12 @@ namespace JoinGameAfk.View
         private void ChampionSearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateChampionFilter();
+            QueueChampionSearchScrollCorrection();
+        }
+
+        private void ChampionSearchBox_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            QueueChampionSearchScrollCorrection();
         }
 
         private void ChampionSearchBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -343,6 +361,53 @@ namespace JoinGameAfk.View
             e.Handled = true;
         }
 
+        private void QueueChampionSearchScrollCorrection()
+        {
+            Dispatcher.InvokeAsync(CorrectChampionSearchScrollOffset, DispatcherPriority.Loaded);
+        }
+
+        private void CorrectChampionSearchScrollOffset()
+        {
+            if (!ChampionSearchBox.IsLoaded)
+                return;
+
+            if (ChampionSearchBox.Template.FindName("PART_ContentHost", ChampionSearchBox) is not ScrollViewer contentHost)
+                return;
+
+            double availableTextWidth = Math.Max(
+                0,
+                ChampionSearchBox.ActualWidth
+                    - ChampionSearchBox.Padding.Left
+                    - ChampionSearchBox.Padding.Right
+                    - ChampionSearchBox.BorderThickness.Left
+                    - ChampionSearchBox.BorderThickness.Right);
+
+            if (string.IsNullOrEmpty(ChampionSearchBox.Text)
+                || MeasureChampionSearchTextWidth() <= availableTextWidth)
+            {
+                contentHost.ScrollToHorizontalOffset(0);
+            }
+        }
+
+        private double MeasureChampionSearchTextWidth()
+        {
+            var typeface = new Typeface(
+                ChampionSearchBox.FontFamily,
+                ChampionSearchBox.FontStyle,
+                ChampionSearchBox.FontWeight,
+                ChampionSearchBox.FontStretch);
+
+            return new FormattedText(
+                ChampionSearchBox.Text,
+                CultureInfo.CurrentUICulture,
+                ChampionSearchBox.FlowDirection,
+                typeface,
+                ChampionSearchBox.FontSize,
+                ChampionSearchBox.Foreground,
+                VisualTreeHelper.GetDpi(ChampionSearchBox).PixelsPerDip)
+                .WidthIncludingTrailingWhitespace;
+        }
+
         private void DeleteSelectedButton_Click(object sender, RoutedEventArgs e)
         {
             if (!IsPriorityEditingEnabled)
@@ -378,6 +443,20 @@ namespace JoinGameAfk.View
 
         private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
+            {
+                CloseChampionPicturePicker();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Escape && IsChampionPictureEditMode)
+            {
+                SetChampionPictureEditMode(false);
+                e.Handled = true;
+                return;
+            }
+
             if (_isChampionDragActive && e.Key == Key.Escape)
             {
                 FinishChampionDrag(drop: false);
@@ -435,6 +514,14 @@ namespace JoinGameAfk.View
                 return;
 
             var champion = championReference.Champion;
+            if (IsChampionPictureEditMode)
+            {
+                _draggedReferenceChampion = null;
+                OpenChampionPicturePicker(champion);
+                e.Handled = true;
+                return;
+            }
+
             TryAddChampionToActiveTarget(champion);
             _draggedReferenceChampion = null;
         }
@@ -443,6 +530,12 @@ namespace JoinGameAfk.View
         {
             if (!IsPriorityEditingEnabled)
                 return;
+
+            if (IsChampionPictureEditMode)
+            {
+                _draggedReferenceChampion = null;
+                return;
+            }
 
             if ((sender as FrameworkElement)?.DataContext is not ChampionReferenceItem championReference)
                 return;
@@ -457,6 +550,9 @@ namespace JoinGameAfk.View
             if (!IsPriorityEditingEnabled)
                 return;
 
+            if (IsChampionPictureEditMode)
+                return;
+
             if (_isChampionDragActive)
                 return;
 
@@ -469,9 +565,116 @@ namespace JoinGameAfk.View
 
             var champion = _draggedReferenceChampion;
             _suppressReferenceChampionClick = true;
-            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromReference(champion, _settings), currentPosition);
+            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromReference(champion), currentPosition);
 
             e.Handled = true;
+        }
+
+        private void ToggleChampionPictureEditModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!IsPriorityEditingEnabled)
+                return;
+
+            SetChampionPictureEditMode(!IsChampionPictureEditMode);
+            e.Handled = true;
+        }
+
+        private void SetChampionPictureEditMode(bool isEnabled)
+        {
+            if (IsChampionPictureEditMode == isEnabled)
+                return;
+
+            if (!isEnabled)
+                CloseChampionPicturePicker();
+
+            IsChampionPictureEditMode = isEnabled;
+            _draggedReferenceChampion = null;
+            _suppressReferenceChampionClick = false;
+            _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
+            ChampionReferenceList.ItemsSource = _filteredChampionReferences;
+        }
+
+        private void OpenChampionPicturePicker(ChampionInfo champion)
+        {
+            _selectedChampionPictureChampion = champion;
+            _originalChampionPictureFileName = ChampionImageSelectionStore.GetSelection(champion.Id);
+            _pendingChampionPictureFileName = _originalChampionPictureFileName;
+
+            var chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
+            ChampionPicturePickerPreviewNameTextBlock.Text = chipLabel.Text;
+            ChampionPicturePickerPreviewNameTextBlock.FontSize = chipLabel.FontSize;
+            ChampionPicturePickerTitleTextBlock.Text = champion.Name;
+            ChampionPicturePickerOverlay.Visibility = Visibility.Visible;
+            RefreshChampionPicturePicker();
+            ChampionPicturePickerTileListBox.Focus();
+        }
+
+        private void CloseChampionPicturePicker()
+        {
+            ChampionInfo? champion = _selectedChampionPictureChampion;
+            string? pendingFileName = _pendingChampionPictureFileName;
+            string? originalFileName = _originalChampionPictureFileName;
+
+            _selectedChampionPictureChampion = null;
+            _pendingChampionPictureFileName = null;
+            _originalChampionPictureFileName = null;
+            ChampionPicturePickerOverlay.Visibility = Visibility.Collapsed;
+            ChampionPicturePickerTileListBox.ItemsSource = null;
+            ChampionPicturePickerStatusTextBlock.Text = string.Empty;
+            ChampionPicturePickerPreviewImage.Source = null;
+            ChampionPicturePickerPreviewNameTextBlock.Text = string.Empty;
+
+            if (champion is not null && !IsSameChampionPictureFileName(pendingFileName, originalFileName))
+                QueueChampionPictureSelectionSave(champion, pendingFileName);
+        }
+
+        private void ChampionPicturePickerCloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            CloseChampionPicturePicker();
+            e.Handled = true;
+        }
+
+        private void ChampionPicturePickerUseDefaultButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedChampionPictureChampion is not ChampionInfo champion)
+                return;
+
+            _pendingChampionPictureFileName = null;
+            var options = ChampionTileCatalog.GetOptions(champion).ToList();
+            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion);
+            SelectChampionPicturePickerOption(defaultOption, scrollIntoView: true);
+            UpdateChampionPicturePickerPreview(champion, defaultOption, options.Count);
+            e.Handled = true;
+        }
+
+        private void ChampionPicturePickerTileListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isUpdatingChampionPicturePicker)
+                return;
+
+            if (_selectedChampionPictureChampion is not ChampionInfo champion
+                || ChampionPicturePickerTileListBox.SelectedItem is not ChampionTileOption selectedOption)
+            {
+                return;
+            }
+
+            _pendingChampionPictureFileName = IsDefaultChampionPictureOption(champion, selectedOption)
+                ? null
+                : selectedOption.FileName;
+
+            UpdateChampionPicturePickerPreview(
+                champion,
+                selectedOption,
+                ChampionPicturePickerTileListBox.Items.Count);
+        }
+
+        private void ChampionPicturePickerOverlay_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (ReferenceEquals(e.OriginalSource, ChampionPicturePickerOverlay))
+            {
+                CloseChampionPicturePicker();
+                e.Handled = true;
+            }
         }
 
         private void ChampionTarget_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -609,8 +812,120 @@ namespace JoinGameAfk.View
         private List<ChampionReferenceItem> CreateChampionReferenceItems(IEnumerable<ChampionInfo> champions)
         {
             return champions
-                .Select(champion => new ChampionReferenceItem(champion, _settings))
+                .Select(champion => new ChampionReferenceItem(champion, IsChampionPictureEditMode))
                 .ToList();
+        }
+
+        private void RefreshChampionPicturePicker()
+        {
+            if (_selectedChampionPictureChampion is not ChampionInfo champion
+                || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
+            {
+                return;
+            }
+
+            var options = ChampionTileCatalog.GetOptions(champion).ToList();
+            ChampionTileOption? selectedOption = GetPendingChampionPictureOption(champion, options);
+
+            _isUpdatingChampionPicturePicker = true;
+            try
+            {
+                ChampionPicturePickerTileListBox.ItemsSource = options;
+                ChampionPicturePickerTileListBox.IsEnabled = options.Count > 0;
+                SelectChampionPicturePickerOption(selectedOption, scrollIntoView: true);
+            }
+            finally
+            {
+                _isUpdatingChampionPicturePicker = false;
+            }
+
+            UpdateChampionPicturePickerPreview(champion, selectedOption, options.Count);
+        }
+
+        private ChampionTileOption? GetPendingChampionPictureOption(
+            ChampionInfo champion,
+            IReadOnlyList<ChampionTileOption> options)
+        {
+            if (options.Count == 0)
+                return null;
+
+            if (!string.IsNullOrWhiteSpace(_pendingChampionPictureFileName))
+            {
+                var pendingOption = options.FirstOrDefault(option =>
+                    string.Equals(option.FileName, _pendingChampionPictureFileName, StringComparison.OrdinalIgnoreCase));
+
+                if (pendingOption is not null)
+                    return pendingOption;
+            }
+
+            return ChampionTileCatalog.GetDefaultOption(champion);
+        }
+
+        private void SelectChampionPicturePickerOption(ChampionTileOption? selectedOption, bool scrollIntoView)
+        {
+            _isUpdatingChampionPicturePicker = true;
+            try
+            {
+                ChampionPicturePickerTileListBox.SelectedItem = selectedOption;
+                if (scrollIntoView && selectedOption is not null)
+                    ChampionPicturePickerTileListBox.ScrollIntoView(selectedOption);
+            }
+            finally
+            {
+                _isUpdatingChampionPicturePicker = false;
+            }
+        }
+
+        private void UpdateChampionPicturePickerPreview(
+            ChampionInfo champion,
+            ChampionTileOption? selectedOption,
+            int optionCount)
+        {
+            bool hasPendingCustomSelection = !string.IsNullOrWhiteSpace(_pendingChampionPictureFileName);
+            ChampionPicturePickerPreviewImage.Source = selectedOption?.ImageSource;
+            ChampionPicturePickerUseDefaultButton.IsEnabled = hasPendingCustomSelection;
+
+            if (optionCount == 0)
+            {
+                ChampionPicturePickerStatusTextBlock.Text = $"No local pictures found for {champion.Name}. Use Settings to download or reload champion pictures.";
+                return;
+            }
+
+            ChampionPicturePickerStatusTextBlock.Text = selectedOption is null
+                ? $"No picture selected for {champion.Name}."
+                : hasPendingCustomSelection
+                    ? $"Selected {selectedOption.FileName} for {champion.Name}."
+                    : $"Using default {selectedOption.FileName} for {champion.Name}.";
+        }
+
+        private static bool IsDefaultChampionPictureOption(ChampionInfo champion, ChampionTileOption selectedOption)
+        {
+            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion);
+            return defaultOption is not null
+                && string.Equals(defaultOption.FileName, selectedOption.FileName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSameChampionPictureFileName(string? first, string? second)
+        {
+            return string.Equals(
+                string.IsNullOrWhiteSpace(first) ? null : first,
+                string.IsNullOrWhiteSpace(second) ? null : second,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void SaveChampionPictureSelection(ChampionInfo champion, string? fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                ChampionImageSelectionStore.ClearSelection(champion.Id);
+            else
+                ChampionImageSelectionStore.SetSelection(champion.Id, fileName);
+        }
+
+        private void QueueChampionPictureSelectionSave(ChampionInfo champion, string? fileName)
+        {
+            Dispatcher.InvokeAsync(
+                () => SaveChampionPictureSelection(champion, fileName),
+                DispatcherPriority.ContextIdle);
         }
 
         private bool MatchesActiveRoleFilter(ChampionInfo champion)
@@ -1583,7 +1898,7 @@ namespace JoinGameAfk.View
             {
                 ChampionId = championId,
                 DisplayText = ChampionCatalog.FormatWithName(championId),
-                PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(championId, _settings),
+                PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(championId),
                 Row = row,
                 IsPick = isPick
             };
@@ -2522,16 +2837,6 @@ namespace JoinGameAfk.View
             _settings.Save();
         }
 
-        private static string CreateChampionImageSelectionSignature(IReadOnlyDictionary<int, string> selections)
-        {
-            return string.Join(
-                "|",
-                selections
-                    .Where(entry => entry.Key > 0 && !string.IsNullOrWhiteSpace(entry.Value))
-                    .OrderBy(entry => entry.Key)
-                    .Select(entry => $"{entry.Key}:{Path.GetFileName(entry.Value.Trim()).ToUpperInvariant()}"));
-        }
-
         private static void UpdateRowTextFromCollection(PositionRow row, bool isPick)
         {
             string text = string.Join(", ", GetChampionCollection(row, isPick).Select(champion => champion.DisplayText));
@@ -2577,13 +2882,13 @@ namespace JoinGameAfk.View
                 };
             }
 
-            public static ChampionDragData FromReference(ChampionInfo champion, ChampSelectSettings settings)
+            public static ChampionDragData FromReference(ChampionInfo champion)
             {
                 return new ChampionDragData
                 {
                     ChampionId = champion.Id,
                     ChampionName = champion.Name,
-                    PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion, settings)?.ImageSource
+                    PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource
                 };
             }
 
@@ -2611,11 +2916,14 @@ namespace JoinGameAfk.View
     {
         private readonly ChampionChipLabel _chipLabel;
 
-        public ChampionReferenceItem(ChampionInfo champion, ChampSelectSettings settings)
+        public ChampionReferenceItem(ChampionInfo champion, bool isPictureEditMode)
         {
             Champion = champion;
             _chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
-            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion, settings)?.ImageSource;
+            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource;
+            ToolTipText = isPictureEditMode
+                ? $"{_chipLabel.ToolTipName}\nClick to change this champion picture."
+                : $"{_chipLabel.ToolTipName}\nClick to add to the selected list, or drag into a pick/ban list.";
         }
 
         public ChampionInfo Champion { get; }
@@ -2623,7 +2931,7 @@ namespace JoinGameAfk.View
         public ImageSource? PortraitImageSource { get; }
         public string ChipDisplayText => _chipLabel.Text;
         public double ChipDisplayFontSize => _chipLabel.FontSize;
-        public string ToolTipText => $"{_chipLabel.ToolTipName}\nClick to add to the selected list, or drag into a pick/ban list.";
+        public string ToolTipText { get; }
     }
 
     internal sealed record ChampionChipLabel(string Text, double FontSize, string ToolTipName);

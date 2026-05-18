@@ -230,13 +230,27 @@ namespace JoinGameAfk.Services
             TileCatalogChanged?.Invoke(null, EventArgs.Empty);
         }
 
-        public static ChampionTileOption? GetSelectedOption(ChampionInfo champion, ChampSelectSettings settings)
+        public static ChampionTileOption? GetDefaultOption(ChampionInfo champion)
         {
             var options = GetOptions(champion);
             if (options.Count == 0)
                 return null;
 
-            if (settings.ChampionImageFileNames.TryGetValue(champion.Id, out string? selectedFileName)
+            return options.FirstOrDefault(option => IsDefaultTile(option.FileName)) ?? options[0];
+        }
+
+        public static ChampionTileOption? GetSelectedOption(ChampionInfo champion)
+        {
+            return GetSelectedOption(champion, ChampionImageSelectionStore.Selections);
+        }
+
+        public static ChampionTileOption? GetSelectedOption(ChampionInfo champion, IReadOnlyDictionary<int, string> selections)
+        {
+            var options = GetOptions(champion);
+            if (options.Count == 0)
+                return null;
+
+            if (selections.TryGetValue(champion.Id, out string? selectedFileName)
                 && TryGetSafeFileName(selectedFileName, out selectedFileName))
             {
                 var selectedOption = options.FirstOrDefault(option =>
@@ -246,13 +260,13 @@ namespace JoinGameAfk.Services
                     return selectedOption;
             }
 
-            return options.FirstOrDefault(option => IsDefaultTile(option.FileName)) ?? options[0];
+            return GetDefaultOption(champion);
         }
 
-        public static ImageSource? GetSelectedImageSource(int championId, ChampSelectSettings settings)
+        public static ImageSource? GetSelectedImageSource(int championId)
         {
             return ChampionCatalog.TryGetById(championId, out var champion)
-                ? GetSelectedOption(champion!, settings)?.ImageSource
+                ? GetSelectedOption(champion!)?.ImageSource
                 : null;
         }
 

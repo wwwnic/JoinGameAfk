@@ -116,6 +116,12 @@
             <Setter Property="LineHeight" Value="9.5" />
         </Style>
 
+        <Style x:Key="ChampionPicturePickerPreviewNameStyle"
+               TargetType="TextBlock"
+               BasedOn="{StaticResource ReferenceChampionTextStyle}">
+            <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+        </Style>
+
         <Style x:Key="ChampionPortraitStateBorderStyle" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed" />
             <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
@@ -690,6 +696,8 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="6" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
                         <Grid Grid.Column="0">
@@ -724,8 +732,44 @@
                             </Button>
                         </Grid>
 
-                        <Button x:Name="DeleteSelectedButton"
+                        <Button x:Name="ToggleChampionPictureEditModeButton"
                                 Grid.Column="2"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Edit champion pictures"
+                                Click="ToggleChampionPictureEditModeButton_Click"
+                                IsEnabled="{Binding ElementName=RootPage, Path=IsPriorityEditingEnabled}"
+                                ToolTip="Edit champion pictures">
+                            <Button.Style>
+                                <Style TargetType="Button"
+                                       BasedOn="{StaticResource SecondaryButtonStyle}">
+                                    <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsChampionPictureEditMode}" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                            <Path Width="14"
+                                  Height="14"
+                                  Stretch="Uniform"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="M4,16 L4,20 L8,20 L18.5,9.5 L14.5,5.5 L4,16 M13.5,6.5 L17.5,10.5" />
+                        </Button>
+
+                        <Button x:Name="DeleteSelectedButton"
+                                Grid.Column="4"
                                 Width="64"
                                 Height="30"
                                 Padding="0"
@@ -755,7 +799,7 @@
                             </StackPanel>
                         </Button>
 
-                        <Button Grid.Column="4"
+                        <Button Grid.Column="6"
                                 Content="?"
                                 Style="{StaticResource InfoIndicatorStyle}">
                             <Button.ToolTip>
@@ -838,8 +882,17 @@
                                                 ToolTip="{Binding ToolTipText}"
                                                 IsEnabled="{Binding IsPriorityEditingEnabled, RelativeSource={RelativeSource AncestorType={x:Type Page}}}"
                                                 PreviewMouseLeftButtonDown="ChampionReferenceButton_PreviewMouseLeftButtonDown"
-                                                PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove"
-                                                Style="{StaticResource ChampionReferenceButtonStyle}">
+                                                PreviewMouseMove="ChampionReferenceButton_PreviewMouseMove">
+                                            <Button.Style>
+                                                <Style TargetType="Button"
+                                                       BasedOn="{StaticResource ChampionReferenceButtonStyle}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsChampionPictureEditMode, RelativeSource={RelativeSource AncestorType={x:Type Page}}}" Value="True">
+                                                            <Setter Property="Cursor" Value="Hand" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
                                             <Grid Width="48">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
@@ -859,6 +912,37 @@
                                                         <Image Source="{Binding PortraitImageSource}"
                                                                Stretch="UniformToFill"
                                                                SnapsToDevicePixels="True" />
+                                                        <Border Width="18"
+                                                                Height="18"
+                                                                Margin="0,2,2,0"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Background="{DynamicResource AccentBlueBrush}"
+                                                                BorderBrush="{DynamicResource AccentBluePaleBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="9">
+                                                            <Border.Style>
+                                                                <Style TargetType="Border">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsChampionPictureEditMode, RelativeSource={RelativeSource AncestorType={x:Type Page}}}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Border.Style>
+                                                            <Path Width="9"
+                                                                  Height="9"
+                                                                  HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"
+                                                                  Stretch="Uniform"
+                                                                  Stroke="{DynamicResource TextInverseBrush}"
+                                                                  StrokeThickness="2"
+                                                                  StrokeStartLineCap="Round"
+                                                                  StrokeEndLineCap="Round"
+                                                                  StrokeLineJoin="Round"
+                                                                  Data="M4,16 L4,20 L8,20 L18.5,9.5 L14.5,5.5 L4,16 M13.5,6.5 L17.5,10.5" />
+                                                        </Border>
                                                     </Grid>
                                                 </Border>
 
@@ -898,6 +982,269 @@
                         </Viewbox>
                     </Border>
                 </Grid>
+            </Border>
+
+            <Border x:Name="ChampionPicturePickerOverlay"
+                    Grid.ColumnSpan="3"
+                    Panel.ZIndex="30"
+                    Background="#80000000"
+                    Visibility="Collapsed"
+                    MouseDown="ChampionPicturePickerOverlay_MouseDown">
+                <Border Width="640"
+                        MaxHeight="620"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource AppSurfaceBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="12"
+                        Padding="16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="10" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Champion picture"
+                                           Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock x:Name="ChampionPicturePickerTitleTextBlock"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <Button Grid.Column="2"
+                                    Width="30"
+                                    Height="30"
+                                    Padding="0"
+                                    Click="ChampionPicturePickerCloseButton_Click"
+                                    Style="{StaticResource SearchClearButtonStyle}"
+                                    ToolTip="Close champion picture picker"
+                                    AutomationProperties.Name="Close champion picture picker">
+                                <Path Width="11"
+                                      Height="11"
+                                      Stretch="Uniform"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      Data="M6,6 L18,18 M18,6 L6,18" />
+                            </Button>
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="64" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid Grid.Column="0"
+                                  Width="48"
+                                  Height="64"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="0" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0"
+                                        ClipToBounds="True"
+                                        Style="{StaticResource ChampionPortraitSlotStyle}">
+                                    <Grid>
+                                        <viewControls:ChampionMysteryGlyph Width="30"
+                                                                           Height="30"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"
+                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
+                                        <Image x:Name="ChampionPicturePickerPreviewImage"
+                                               Stretch="UniformToFill"
+                                               SnapsToDevicePixels="True" />
+                                    </Grid>
+                                </Border>
+
+                                <Viewbox Grid.Row="2"
+                                         Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                    <TextBlock x:Name="ChampionPicturePickerPreviewNameTextBlock"
+                                               Style="{StaticResource ChampionPicturePickerPreviewNameStyle}" />
+                                </Viewbox>
+                            </Grid>
+
+                            <TextBlock x:Name="ChampionPicturePickerStatusTextBlock"
+                                       Grid.Column="2"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSoftBrush}"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap" />
+
+                            <Button x:Name="ChampionPicturePickerUseDefaultButton"
+                                    Grid.Column="4"
+                                    Content="Use Default"
+                                    Click="ChampionPicturePickerUseDefaultButton_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Padding="12,8"
+                                    VerticalAlignment="Center"
+                                    ToolTip="Remove the custom picture selection for this champion." />
+                        </Grid>
+
+                        <ListBox x:Name="ChampionPicturePickerTileListBox"
+                                 Grid.Row="4"
+                                 MinHeight="170"
+                                 MaxHeight="330"
+                                 Padding="8"
+                                 Background="{DynamicResource AppInputBrush}"
+                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                 BorderThickness="1"
+                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 SelectionChanged="ChampionPicturePickerTileListBox_SelectionChanged"
+                                 SelectionMode="Single"
+                                 KeyboardNavigation.DirectionalNavigation="Contained"
+                                 ToolTip="Available pictures for the selected champion.">
+                            <ListBox.Resources>
+                                <Style TargetType="ScrollBar"
+                                       BasedOn="{StaticResource SlimVerticalScrollBarStyle}" />
+                            </ListBox.Resources>
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Width" Value="86" />
+                                    <Setter Property="Height" Value="94" />
+                                    <Setter Property="Margin" Value="0,0,8,8" />
+                                    <Setter Property="Padding" Value="4" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+                                    <Setter Property="BorderThickness" Value="2" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="TileBorder"
+                                                        Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                                        BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                                        BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
+                                                        CornerRadius="6"
+                                                        Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                                        TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
+                                                    <ContentPresenter HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                      VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter TargetName="TileBorder" Property="Opacity" Value="0.55" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Width="76"
+                                          ToolTip="{Binding FileName}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="4" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Border Grid.Row="0"
+                                                Width="62"
+                                                Height="62"
+                                                HorizontalAlignment="Center"
+                                                Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                ClipToBounds="True">
+                                            <Grid>
+                                                <viewControls:ChampionMysteryGlyph Width="44"
+                                                                                   Height="44"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"
+                                                                                   Foreground="{DynamicResource TextSubtleBrush}" />
+                                                <Image Source="{Binding ImageSource}"
+                                                       Stretch="UniformToFill"
+                                                       SnapsToDevicePixels="True" />
+                                            </Grid>
+                                        </Border>
+
+                                        <TextBlock Grid.Row="2"
+                                                   Text="{Binding ShortDisplayName}"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold"
+                                                   TextAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Border Grid.Row="6"
+                                Background="{DynamicResource AppInputBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,8">
+                            <StackPanel>
+                                <TextBlock Text="Legal notice"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="JoinGameAfk is a free, non-commercial fan project. Champion pictures are Riot Games-owned assets provided through Riot Data Dragon. Riot Games does not endorse or sponsor this project."
+                                           Foreground="{DynamicResource TextSubtleBrush}"
+                                           FontSize="10.5"
+                                           LineHeight="14"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                    </Grid>
+                </Border>
             </Border>
 
             <Popup x:Name="DragPreviewPopup"

@@ -4,9 +4,11 @@ namespace JoinGameAfk.Constant
     {
         public const int SettingsFileVersion = 1;
         public const int ChampionFileVersion = 2;
+        public const int ChampionImageSelectionFileVersion = 1;
 
         public const string SettingsFileName = "configuration.json";
         public const string ChampionFileName = "champions.json";
+        public const string ChampionImageSelectionFileName = "champion-image-selections.json";
         public const string ChampionChipLabelBreaksFileName = "champion-chip-label-breaks.json";
         public const string ChampionTileDirectoryName = "ChampionTiles";
         public const string ChampionTileArchiveDirectoryName = "ChampionTileArchives";
@@ -19,6 +21,8 @@ namespace JoinGameAfk.Constant
         public static string SettingsFilePath => Path.Combine(DirectoryPath, SettingsFileName);
 
         public static string ChampionFilePath => Path.Combine(DirectoryPath, ChampionFileName);
+
+        public static string ChampionImageSelectionFilePath => Path.Combine(DirectoryPath, ChampionImageSelectionFileName);
 
         public static string ChampionChipLabelBreaksFilePath => Path.Combine(DirectoryPath, ChampionChipLabelBreaksFileName);
 
