@@ -144,6 +144,25 @@
             <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
         </Style>
 
+        <Style x:Key="ChampionPictureEditBadgeStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="Margin" Value="0,2,2,0" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBluePaleBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsChampionPictureEditMode, RelativeSource={RelativeSource AncestorType={x:Type Page}}}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="ChampionPortraitStateBorderStyle" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed" />
             <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
@@ -513,6 +532,19 @@
                                                                                     <Image Source="{Binding PortraitImageSource}"
                                                                                            Stretch="UniformToFill"
                                                                                            SnapsToDevicePixels="True" />
+                                                                                    <Border Style="{StaticResource ChampionPictureEditBadgeStyle}">
+                                                                                        <Path Width="9"
+                                                                                              Height="9"
+                                                                                              HorizontalAlignment="Center"
+                                                                                              VerticalAlignment="Center"
+                                                                                              Stretch="Uniform"
+                                                                                              Stroke="{DynamicResource TextInverseBrush}"
+                                                                                              StrokeThickness="2"
+                                                                                              StrokeStartLineCap="Round"
+                                                                                              StrokeEndLineCap="Round"
+                                                                                              StrokeLineJoin="Round"
+                                                                                              Data="M4,16 L4,20 L8,20 L18.5,9.5 L14.5,5.5 L4,16 M13.5,6.5 L17.5,10.5" />
+                                                                                    </Border>
                                                                                 </Grid>
                                                                             </Border>
 
@@ -633,6 +665,19 @@
                                                                                     <Image Source="{Binding PortraitImageSource}"
                                                                                            Stretch="UniformToFill"
                                                                                            SnapsToDevicePixels="True" />
+                                                                                    <Border Style="{StaticResource ChampionPictureEditBadgeStyle}">
+                                                                                        <Path Width="9"
+                                                                                              Height="9"
+                                                                                              HorizontalAlignment="Center"
+                                                                                              VerticalAlignment="Center"
+                                                                                              Stretch="Uniform"
+                                                                                              Stroke="{DynamicResource TextInverseBrush}"
+                                                                                              StrokeThickness="2"
+                                                                                              StrokeStartLineCap="Round"
+                                                                                              StrokeEndLineCap="Round"
+                                                                                              StrokeLineJoin="Round"
+                                                                                              Data="M4,16 L4,20 L8,20 L18.5,9.5 L14.5,5.5 L4,16 M13.5,6.5 L17.5,10.5" />
+                                                                                    </Border>
                                                                                 </Grid>
                                                                             </Border>
 
@@ -840,7 +885,7 @@
 
                                             <TextBlock Text="Champion pictures"
                                                        Style="{StaticResource ChampionHelpTooltipSectionStyle}" />
-                                            <TextBlock Text="- Use the pencil to edit champion picture choices, then click a champion tile."
+                                            <TextBlock Text="- Use the pencil to edit champion picture choices, then click a champion tile in either panel."
                                                        Style="{StaticResource ChampionHelpTooltipLineStyle}" />
                                         </StackPanel>
                                     </Button.ToolTip>

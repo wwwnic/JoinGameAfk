@@ -531,14 +531,17 @@ namespace JoinGameAfk.View
             if (!IsPriorityEditingEnabled)
                 return;
 
+            if ((sender as FrameworkElement)?.DataContext is not ChampionReferenceItem championReference)
+                return;
+
             if (IsChampionPictureEditMode)
             {
                 _draggedReferenceChampion = null;
+                _suppressReferenceChampionClick = false;
+                OpenChampionPicturePicker(championReference.Champion);
+                e.Handled = true;
                 return;
             }
-
-            if ((sender as FrameworkElement)?.DataContext is not ChampionReferenceItem championReference)
-                return;
 
             _suppressReferenceChampionClick = false;
             _draggedReferenceChampion = championReference.Champion;
@@ -607,6 +610,15 @@ namespace JoinGameAfk.View
             ChampionPicturePickerOverlay.Visibility = Visibility.Visible;
             RefreshChampionPicturePicker();
             ChampionPicturePickerTileListBox.Focus();
+        }
+
+        private void OpenChampionPicturePicker(ChampionSelectionItem champion)
+        {
+            ChampionInfo championInfo = ChampionCatalog.TryGetById(champion.ChampionId, out var catalogChampion)
+                ? catalogChampion!
+                : new ChampionInfo(champion.ChampionId, champion.DisplayText);
+
+            OpenChampionPicturePicker(championInfo);
         }
 
         private void CloseChampionPicturePicker()
@@ -1315,6 +1327,15 @@ namespace JoinGameAfk.View
 
             if ((sender as FrameworkElement)?.DataContext is not ChampionSelectionItem champion)
                 return;
+
+            if (IsChampionPictureEditMode)
+            {
+                ClearPendingChampionSelection();
+                _draggedChampion = null;
+                OpenChampionPicturePicker(champion);
+                e.Handled = true;
+                return;
+            }
 
             if (e.ClickCount >= 2)
             {
