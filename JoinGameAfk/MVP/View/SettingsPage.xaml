@@ -683,6 +683,145 @@
                                       ToolTip="When disabled, startup leaves the mini overlay closed." />
                         </Grid>
                     </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Overlay size"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Scale the mini overlay window."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <Grid Grid.Column="2"
+                                  Width="230">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="52" />
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="OverlayScaleSlider"
+                                        Grid.Column="0"
+                                        Minimum="80"
+                                        Maximum="140"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        VerticalAlignment="Center" />
+                                <TextBlock x:Name="OverlayScaleValueText"
+                                           Grid.Column="1"
+                                           Text="100%"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Overlay opacity"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Adjust the mini overlay panel opacity."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <Grid Grid.Column="2"
+                                  Width="230">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="52" />
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="OverlayOpacitySlider"
+                                        Grid.Column="0"
+                                        Minimum="55"
+                                        Maximum="100"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        VerticalAlignment="Center" />
+                                <TextBlock x:Name="OverlayOpacityValueText"
+                                           Grid.Column="1"
+                                           Text="94%"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Stay on top"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Restore the overlay pin state when it opens."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="OverlayTopmostCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Visible sections"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Choose which mini overlay sections are shown."
+                                           Style="{StaticResource FieldHintStyle}" />
+                            </StackPanel>
+
+                            <UniformGrid Grid.Column="2"
+                                         Columns="2"
+                                         MinWidth="230">
+                                <CheckBox x:Name="OverlayShowPhaseSummaryCheckBox"
+                                          Content="Phase"
+                                          Style="{StaticResource AppCheckBoxStyle}"
+                                          Margin="0,0,14,8" />
+                                <CheckBox x:Name="OverlayShowTimersCheckBox"
+                                          Content="Timers"
+                                          Style="{StaticResource AppCheckBoxStyle}"
+                                          Margin="0,0,0,8" />
+                                <CheckBox x:Name="OverlayShowPickPlanCheckBox"
+                                          Content="Pick plan"
+                                          Style="{StaticResource AppCheckBoxStyle}"
+                                          Margin="0,0,14,0" />
+                                <CheckBox x:Name="OverlayShowBanPlanCheckBox"
+                                          Content="Ban plan"
+                                          Style="{StaticResource AppCheckBoxStyle}" />
+                            </UniformGrid>
+                        </Grid>
+                    </Border>
                 </StackPanel>
             </Border>
 

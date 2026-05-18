@@ -45,8 +45,8 @@ namespace JoinGameAfk.View
             Action<string>? logMessage = null,
             Action<string>? logErrorMessage = null)
         {
-            InitializeComponent();
             _settings = settings;
+            InitializeComponent();
             _reloadUiForTheme = reloadUiForTheme;
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
@@ -68,6 +68,7 @@ namespace JoinGameAfk.View
             RefreshChampionPictureCacheStatus();
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
+            _settings.Saved += Settings_Saved;
             Unloaded += SettingsPage_Unloaded;
             LoadThemeOptions();
             LoadReadyCheckSoundOptions();
@@ -101,6 +102,11 @@ namespace JoinGameAfk.View
                 AutoShowPickBanOverlayCheckBox,
                 AutoClosePickBanOverlayCheckBox,
                 OpenPickBanOverlayOnStartupCheckBox,
+                OverlayTopmostCheckBox,
+                OverlayShowPhaseSummaryCheckBox,
+                OverlayShowTimersCheckBox,
+                OverlayShowPickPlanCheckBox,
+                OverlayShowBanPlanCheckBox,
                 AutoHoverChampionCheckBox,
                 AutoLockSelectionCheckBox,
                 UseLiveEventsCheckBox,
@@ -124,6 +130,9 @@ namespace JoinGameAfk.View
             BanLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             ChampSelectPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
             EventFallbackPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
+
+            OverlayScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
+            OverlayOpacitySlider.ValueChanged += OverlaySlider_ValueChanged;
         }
 
         private void DirtyTrackedControl_Changed(object sender, RoutedEventArgs e)
@@ -138,6 +147,25 @@ namespace JoinGameAfk.View
 
         private void DirtyTrackedControl_TextChanged(object sender, TextChangedEventArgs e)
         {
+            RefreshDirtyState();
+        }
+
+        private void Settings_Saved()
+        {
+            Dispatcher.TryInvoke(() =>
+            {
+                if (DirtySettingsBar.Visibility == Visibility.Visible)
+                    return;
+
+                ApplySettingsToControls();
+                UpdateAutomationInputStates();
+                RefreshDirtyState();
+            });
+        }
+
+        private void OverlaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            RefreshOverlaySliderValueText();
             RefreshDirtyState();
         }
 
@@ -185,6 +213,7 @@ namespace JoinGameAfk.View
             bool autoLockSelectionEnabled = championSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             bool useLiveEvents = UseLiveEventsCheckBox.IsChecked == true;
             bool eventFallbackPollingEnabled = EventFallbackPollingCheckBox.IsChecked == true;
+            var overlaySections = CaptureCurrentOverlaySectionSnapshot();
 
             return new SettingsPageSnapshot(
                 StartWatcherOnStartupCheckBox.IsChecked == true,
@@ -197,6 +226,13 @@ namespace JoinGameAfk.View
                 AutoShowPickBanOverlayCheckBox.IsChecked == true,
                 AutoClosePickBanOverlayCheckBox.IsChecked == true,
                 OpenPickBanOverlayOnStartupCheckBox.IsChecked == true,
+                GetOverlayScalePercent(),
+                GetOverlayOpacityPercent(),
+                OverlayTopmostCheckBox.IsChecked == true,
+                overlaySections.ShowPhaseSummary,
+                overlaySections.ShowTimers,
+                overlaySections.ShowPickPlan,
+                overlaySections.ShowBanPlan,
                 autoHoverChampionEnabled,
                 autoLockSelectionEnabled,
                 autoLockSelectionEnabled ? CreateNumericSnapshot(PickLockDelayBox) : string.Empty,
@@ -233,6 +269,13 @@ namespace JoinGameAfk.View
                 _settings.AutoShowPickBanOverlayEnabled,
                 _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled,
                 _settings.PickBanOverlayOpenOnStartup,
+                ChampSelectSettings.NormalizePickBanOverlayScalePercent(_settings.PickBanOverlayScalePercent),
+                ChampSelectSettings.NormalizePickBanOverlayOpacityPercent(_settings.PickBanOverlayOpacityPercent),
+                _settings.PickBanOverlayTopmostEnabled,
+                _settings.PickBanOverlayShowPhaseSummary,
+                _settings.PickBanOverlayShowTimers,
+                _settings.PickBanOverlayShowPickPlan,
+                _settings.PickBanOverlayShowBanPlan,
                 autoHoverChampionEnabled,
                 autoLockSelectionEnabled,
                 autoLockSelectionEnabled ? _settings.PickLockDelaySeconds.ToString() : string.Empty,
@@ -269,6 +312,16 @@ namespace JoinGameAfk.View
             _settings.AutoShowPickBanOverlayEnabled = AutoShowPickBanOverlayCheckBox.IsChecked == true;
             _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled = AutoClosePickBanOverlayCheckBox.IsChecked == true;
             _settings.PickBanOverlayOpenOnStartup = OpenPickBanOverlayOnStartupCheckBox.IsChecked == true;
+            EnsureOverlayControlsHaveVisibleSection();
+            var overlaySections = CaptureCurrentOverlaySectionSnapshot();
+            _settings.PickBanOverlayScalePercent = GetOverlayScalePercent();
+            _settings.PickBanOverlayOpacityPercent = GetOverlayOpacityPercent();
+            _settings.PickBanOverlayTopmostEnabled = OverlayTopmostCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowPhaseSummary = overlaySections.ShowPhaseSummary;
+            _settings.PickBanOverlayShowTimers = overlaySections.ShowTimers;
+            _settings.PickBanOverlayShowPickPlan = overlaySections.ShowPickPlan;
+            _settings.PickBanOverlayShowBanPlan = overlaySections.ShowBanPlan;
+            _settings.NormalizePickBanOverlayOptions();
             _settings.AutoHoverChampionEnabled = _settings.ChampionSelectAutomationEnabled && AutoHoverChampionCheckBox.IsChecked == true;
             _settings.AutoLockSelectionEnabled = _settings.ChampionSelectAutomationEnabled && AutoLockSelectionCheckBox.IsChecked == true;
             _settings.PickLockDelaySeconds = input.PickLockDelaySeconds;
@@ -298,7 +351,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default startup, automation, sound, timing, performance, and theme settings?\n\nChampion priorities are kept.",
+                "Restore default startup, automation, sound, timing, overlay, performance, and theme settings?\n\nChampion priorities are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -343,6 +396,14 @@ namespace JoinGameAfk.View
                 AutoShowPickBanOverlayCheckBox.IsChecked = _settings.AutoShowPickBanOverlayEnabled;
                 AutoClosePickBanOverlayCheckBox.IsChecked = _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled;
                 OpenPickBanOverlayOnStartupCheckBox.IsChecked = _settings.PickBanOverlayOpenOnStartup;
+                OverlayScaleSlider.Value = ChampSelectSettings.NormalizePickBanOverlayScalePercent(_settings.PickBanOverlayScalePercent);
+                OverlayOpacitySlider.Value = ChampSelectSettings.NormalizePickBanOverlayOpacityPercent(_settings.PickBanOverlayOpacityPercent);
+                OverlayTopmostCheckBox.IsChecked = _settings.PickBanOverlayTopmostEnabled;
+                OverlayShowPhaseSummaryCheckBox.IsChecked = _settings.PickBanOverlayShowPhaseSummary;
+                OverlayShowTimersCheckBox.IsChecked = _settings.PickBanOverlayShowTimers;
+                OverlayShowPickPlanCheckBox.IsChecked = _settings.PickBanOverlayShowPickPlan;
+                OverlayShowBanPlanCheckBox.IsChecked = _settings.PickBanOverlayShowBanPlan;
+                RefreshOverlaySliderValueText();
                 AutoHoverChampionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoHoverChampionEnabled;
                 AutoLockSelectionCheckBox.IsChecked = championSelectAutomationEnabled && _settings.AutoLockSelectionEnabled;
                 PickLockDelayBox.Text = _settings.PickLockDelaySeconds.ToString();
@@ -906,6 +967,7 @@ namespace JoinGameAfk.View
 
         private void SettingsPage_Unloaded(object sender, RoutedEventArgs e)
         {
+            _settings.Saved -= Settings_Saved;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
             Unloaded -= SettingsPage_Unloaded;
@@ -1070,6 +1132,51 @@ namespace JoinGameAfk.View
             return NotificationSoundPlayer.DefaultReadyCheckSoundKey;
         }
 
+        private int GetOverlayScalePercent()
+        {
+            return ChampSelectSettings.NormalizePickBanOverlayScalePercent((int)Math.Round(OverlayScaleSlider.Value));
+        }
+
+        private int GetOverlayOpacityPercent()
+        {
+            return ChampSelectSettings.NormalizePickBanOverlayOpacityPercent((int)Math.Round(OverlayOpacitySlider.Value));
+        }
+
+        private OverlaySectionSnapshot CaptureCurrentOverlaySectionSnapshot()
+        {
+            var snapshot = new OverlaySectionSnapshot(
+                OverlayShowPhaseSummaryCheckBox.IsChecked == true,
+                OverlayShowTimersCheckBox.IsChecked == true,
+                OverlayShowPickPlanCheckBox.IsChecked == true,
+                OverlayShowBanPlanCheckBox.IsChecked == true);
+
+            return snapshot.HasVisibleSection
+                ? snapshot
+                : snapshot with { ShowPhaseSummary = true };
+        }
+
+        private void EnsureOverlayControlsHaveVisibleSection()
+        {
+            if (OverlayShowPhaseSummaryCheckBox.IsChecked == true
+                || OverlayShowTimersCheckBox.IsChecked == true
+                || OverlayShowPickPlanCheckBox.IsChecked == true
+                || OverlayShowBanPlanCheckBox.IsChecked == true)
+            {
+                return;
+            }
+
+            OverlayShowPhaseSummaryCheckBox.IsChecked = true;
+        }
+
+        private void RefreshOverlaySliderValueText()
+        {
+            if (OverlayScaleValueText is null || OverlayOpacityValueText is null)
+                return;
+
+            OverlayScaleValueText.Text = $"{GetOverlayScalePercent()}%";
+            OverlayOpacityValueText.Text = $"{GetOverlayOpacityPercent()}%";
+        }
+
         private void SelectTheme(string? themeKey)
         {
             string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey);
@@ -1111,6 +1218,13 @@ namespace JoinGameAfk.View
             bool AutoShowPickBanOverlayEnabled,
             bool PickBanOverlayAutoCloseAfterChampSelectEnabled,
             bool PickBanOverlayOpenOnStartup,
+            int PickBanOverlayScalePercent,
+            int PickBanOverlayOpacityPercent,
+            bool PickBanOverlayTopmostEnabled,
+            bool PickBanOverlayShowPhaseSummary,
+            bool PickBanOverlayShowTimers,
+            bool PickBanOverlayShowPickPlan,
+            bool PickBanOverlayShowBanPlan,
             bool AutoHoverChampionEnabled,
             bool AutoLockSelectionEnabled,
             string PickLockDelaySeconds,
@@ -1123,5 +1237,17 @@ namespace JoinGameAfk.View
             string ChampSelectEventFallbackPollIntervalMs,
             string ThemeKey,
             bool AutoUpdateChampionCatalogOnStartup);
+
+        private readonly record struct OverlaySectionSnapshot(
+            bool ShowPhaseSummary,
+            bool ShowTimers,
+            bool ShowPickPlan,
+            bool ShowBanPlan)
+        {
+            public bool HasVisibleSection => ShowPhaseSummary
+                || ShowTimers
+                || ShowPickPlan
+                || ShowBanPlan;
+        }
     }
 }

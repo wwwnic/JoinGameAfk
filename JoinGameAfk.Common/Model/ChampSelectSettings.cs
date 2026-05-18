@@ -12,6 +12,13 @@ namespace JoinGameAfk.Model
 
     public class ChampSelectSettings
     {
+        public const int MinPickBanOverlayScalePercent = 80;
+        public const int MaxPickBanOverlayScalePercent = 140;
+        public const int DefaultPickBanOverlayScalePercent = 100;
+        public const int MinPickBanOverlayOpacityPercent = 55;
+        public const int MaxPickBanOverlayOpacityPercent = 100;
+        public const int DefaultPickBanOverlayOpacityPercent = 94;
+
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
         /// <summary>
@@ -79,6 +86,26 @@ namespace JoinGameAfk.Model
         /// Last user-selected pick/ban overlay top position in WPF device-independent pixels.
         /// </summary>
         public double? PickBanOverlayTop { get; set; }
+
+        /// <summary>
+        /// Overlay visual scale percentage.
+        /// </summary>
+        public int PickBanOverlayScalePercent { get; set; } = DefaultPickBanOverlayScalePercent;
+
+        /// <summary>
+        /// Overlay panel opacity percentage.
+        /// </summary>
+        public int PickBanOverlayOpacityPercent { get; set; } = DefaultPickBanOverlayOpacityPercent;
+
+        /// <summary>
+        /// Whether the pick/ban overlay should stay above other windows.
+        /// </summary>
+        public bool PickBanOverlayTopmostEnabled { get; set; } = true;
+
+        public bool PickBanOverlayShowPhaseSummary { get; set; } = true;
+        public bool PickBanOverlayShowTimers { get; set; } = true;
+        public bool PickBanOverlayShowPickPlan { get; set; } = true;
+        public bool PickBanOverlayShowBanPlan { get; set; } = true;
 
         /// <summary>
         /// Whether the app should automatically hover configured champions during pick or ban.
@@ -227,6 +254,13 @@ namespace JoinGameAfk.Model
             AutoShowPickBanOverlayEnabled = defaults.AutoShowPickBanOverlayEnabled;
             PickBanOverlayOpenOnStartup = defaults.PickBanOverlayOpenOnStartup;
             PickBanOverlayAutoCloseAfterChampSelectEnabled = defaults.PickBanOverlayAutoCloseAfterChampSelectEnabled;
+            PickBanOverlayScalePercent = defaults.PickBanOverlayScalePercent;
+            PickBanOverlayOpacityPercent = defaults.PickBanOverlayOpacityPercent;
+            PickBanOverlayTopmostEnabled = defaults.PickBanOverlayTopmostEnabled;
+            PickBanOverlayShowPhaseSummary = defaults.PickBanOverlayShowPhaseSummary;
+            PickBanOverlayShowTimers = defaults.PickBanOverlayShowTimers;
+            PickBanOverlayShowPickPlan = defaults.PickBanOverlayShowPickPlan;
+            PickBanOverlayShowBanPlan = defaults.PickBanOverlayShowBanPlan;
             AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
             ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
             PlanningHoverDelaySeconds = defaults.PlanningHoverDelaySeconds;
@@ -278,7 +312,45 @@ namespace JoinGameAfk.Model
             if (settings.ChampSelectEventFallbackPollIntervalMs <= 0)
                 settings.ChampSelectEventFallbackPollIntervalMs = new ChampSelectSettings().ChampSelectEventFallbackPollIntervalMs;
 
+            settings.NormalizePickBanOverlayOptions();
+
             return settings;
+        }
+
+        public void NormalizePickBanOverlayOptions()
+        {
+            PickBanOverlayScalePercent = NormalizePickBanOverlayScalePercent(PickBanOverlayScalePercent);
+            PickBanOverlayOpacityPercent = NormalizePickBanOverlayOpacityPercent(PickBanOverlayOpacityPercent);
+            EnsurePickBanOverlayHasVisibleSection();
+        }
+
+        public void EnsurePickBanOverlayHasVisibleSection()
+        {
+            if (PickBanOverlayShowPhaseSummary
+                || PickBanOverlayShowTimers
+                || PickBanOverlayShowPickPlan
+                || PickBanOverlayShowBanPlan)
+            {
+                return;
+            }
+
+            PickBanOverlayShowPhaseSummary = true;
+        }
+
+        public static int NormalizePickBanOverlayScalePercent(int scalePercent)
+        {
+            return Math.Clamp(
+                scalePercent <= 0 ? DefaultPickBanOverlayScalePercent : scalePercent,
+                MinPickBanOverlayScalePercent,
+                MaxPickBanOverlayScalePercent);
+        }
+
+        public static int NormalizePickBanOverlayOpacityPercent(int opacityPercent)
+        {
+            return Math.Clamp(
+                opacityPercent <= 0 ? DefaultPickBanOverlayOpacityPercent : opacityPercent,
+                MinPickBanOverlayOpacityPercent,
+                MaxPickBanOverlayOpacityPercent);
         }
     }
 }

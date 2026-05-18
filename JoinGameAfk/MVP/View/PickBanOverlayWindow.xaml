@@ -5,8 +5,8 @@
         Title="Pick/Ban Overlay"
         Width="360"
         Height="435"
-        MinWidth="300"
-        MinHeight="260"
+        MinWidth="252"
+        MinHeight="132"
         WindowStartupLocation="Manual"
         WindowStyle="None"
         ResizeMode="NoResize"
@@ -43,13 +43,6 @@
             <Setter Property="SnapsToDevicePixels" Value="True" />
         </Style>
 
-        <Style x:Key="OverlayHeaderTextStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-            <Setter Property="TextWrapping" Value="NoWrap" />
-        </Style>
-
         <Style x:Key="OverlayPlaceholderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
@@ -57,393 +50,514 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-    </Window.Resources>
 
-    <Border x:Name="OverlayPanel"
-            Background="{DynamicResource AppSurfaceBrush}"
-            BorderBrush="{DynamicResource AccentBlueBrush}"
-            BorderThickness="1"
-            CornerRadius="10"
-            Opacity="0.94"
-            SnapsToDevicePixels="True">
-        <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+        <Style x:Key="OverlaySettingsButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SecondaryButtonStyle}">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
 
-            <Border Grid.Row="0"
-                    Background="{DynamicResource AppSurfaceRaisedBrush}"
-                    BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                    BorderThickness="0,0,0,1"
-                    CornerRadius="10,10,0,0"
-                    Padding="10,8">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+        <Style x:Key="OverlaySettingsCheckBoxStyle"
+               TargetType="CheckBox"
+               BasedOn="{StaticResource AppCheckBoxStyle}">
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
 
-                    <Grid Grid.Column="0"
-                          Background="Transparent"
-                          MouseLeftButtonDown="DragHandle_MouseLeftButtonDown">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
+        <Style x:Key="OverlaySettingsLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Margin" Value="0,10,0,4" />
+        </Style>
 
-                        <controls:PhaseStatusIndicator x:Name="OverlayPhaseIndicator"
-                                                       Grid.Column="0"
-                                                       VerticalAlignment="Center" />
+        <DataTemplate x:Key="OverlayChampionChipTemplate">
+            <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
+                    ToolTip="{Binding ToolTipText}">
+                <Grid Width="48"
+                      Height="64"
+                      ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Column="2"
-                                    VerticalAlignment="Center">
-                            <TextBlock Text="Pick/Ban Overlay"
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}" />
-                            <TextBlock x:Name="StatusText"
-                                       Text="Stopped"
-                                       Margin="0,1,0,0"
-                                       FontSize="11"
-                                       FontWeight="SemiBold"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                    </Grid>
+                    <Border Grid.Row="0"
+                            ClipToBounds="True"
+                            Style="{StaticResource PlannerChampionPortraitSlotStyle}">
+                        <Grid>
+                            <controls:ChampionMysteryGlyph Width="30"
+                                                            Height="30"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource TextSubtleBrush}" />
+                            <Image Source="{Binding PortraitImageSource}"
+                                   Stretch="UniformToFill"
+                                   SnapsToDevicePixels="True" />
+                        </Grid>
+                    </Border>
 
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal">
-                        <Button x:Name="TopmostButton"
-                                ToolTip="Unpin overlay from top"
-                                AutomationProperties.Name="Unpin overlay from top"
-                                Click="TopmostButton_Click"
-                                Style="{StaticResource OverlayTitleButtonStyle}">
-                            <Path x:Name="TopmostIcon"
-                                  Width="13"
-                                  Height="13"
-                                  Data="M12,3 L17,8 L14,8 L14,14 L10,14 L10,8 L7,8 Z M8,19 H16"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round"
-                                  Stretch="Uniform" />
-                        </Button>
-                        <Button ToolTip="Close overlay"
-                                AutomationProperties.Name="Close pick ban overlay"
-                                Click="CloseButton_Click"
-                                Style="{StaticResource OverlayCloseButtonStyle}">
-                            <Path Width="12"
-                                  Height="12"
-                                  Data="M6,6 L18,18 M18,6 L6,18"
-                                  Stretch="Uniform"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="2"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round" />
-                        </Button>
-                    </StackPanel>
+                    <Viewbox Grid.Row="2"
+                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                        <TextBlock Text="{Binding ChipDisplayText}"
+                                   FontSize="{Binding ChipDisplayFontSize}"
+                                   Style="{StaticResource PlannerChampionChipTextStyle}" />
+                    </Viewbox>
+
+                    <Border Grid.Row="0"
+                            Panel.ZIndex="10"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Margin="0,2,2,0"
+                            Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
+                            ToolTip="{Binding StatusText}">
+                        <TextBlock Text="?"
+                                   Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
+                    </Border>
                 </Grid>
             </Border>
+        </DataTemplate>
+    </Window.Resources>
 
-            <ScrollViewer Grid.Row="1"
-                          Style="{StaticResource StableVerticalScrollViewerStyle}">
-                <StackPanel Margin="12">
+    <Grid>
+        <Border x:Name="OverlayPanel"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AccentBlueBrush}"
+                BorderThickness="1"
+                CornerRadius="10"
+                Opacity="0.94"
+                SnapsToDevicePixels="True">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0"
+                        Background="{DynamicResource AppSurfaceRaisedBrush}"
+                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        CornerRadius="10,10,0,0"
+                        Padding="10,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="74" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="74" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0"
-                                    VerticalAlignment="Center">
-                            <TextBlock x:Name="PhaseText"
-                                       Text="Idle"
-                                       FontSize="18"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource TextPrimaryBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock x:Name="PositionText"
-                                       Text="No role"
-                                       Margin="0,2,0,0"
+                        <Grid Grid.Column="0"
+                              Background="Transparent"
+                              MouseLeftButtonDown="DragHandle_MouseLeftButtonDown">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <controls:PhaseStatusIndicator x:Name="OverlayPhaseIndicator"
+                                                           Grid.Column="0"
+                                                           VerticalAlignment="Center" />
+
+                            <StackPanel Grid.Column="2"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Pick/Ban Overlay"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock x:Name="StatusText"
+                                           Text="Stopped"
+                                           Margin="0,1,0,0"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal">
+                            <Button ToolTip="Open or minimize main app"
+                                    AutomationProperties.Name="Open or minimize main app"
+                                    Click="OpenMainAppButton_Click"
+                                    Style="{StaticResource OverlayTitleButtonStyle}">
+                                <Path Data="M4,4 H13 V13 H4 Z M8,8 H17 V17 H8 Z"
+                                      Width="14"
+                                      Height="14"
+                                      Stretch="Uniform"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.8"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round" />
+                            </Button>
+                            <Button x:Name="SettingsButton"
+                                    ToolTip="Expand overlay options"
+                                    AutomationProperties.Name="Expand overlay options"
+                                    Click="SettingsButton_Click"
+                                    Style="{StaticResource OverlayTitleButtonStyle}">
+                                <TextBlock Text="..."
+                                           Margin="0,-4,0,0"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Button>
+                            <Button ToolTip="Close overlay"
+                                    AutomationProperties.Name="Close pick ban overlay"
+                                    Click="CloseButton_Click"
+                                    Style="{StaticResource OverlayCloseButtonStyle}">
+                                <Path Width="12"
+                                      Height="12"
+                                      Data="M6,6 L18,18 M18,6 L6,18"
+                                      Stretch="Uniform"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <ScrollViewer x:Name="OverlayScrollViewer"
+                              Grid.Row="1"
+                              Style="{StaticResource StableVerticalScrollViewerStyle}">
+                    <StackPanel x:Name="ContentPanel"
+                                Margin="12">
+                        <Grid x:Name="PhaseTimerSection">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="74" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="74" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel x:Name="PhaseSummaryPanel"
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="PhaseText"
+                                           Text="Idle"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="PositionText"
+                                           Text="No role"
+                                           Margin="0,2,0,0"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+
+                            <Border x:Name="PhaseTimerCard"
+                                    Grid.Column="2"
+                                    Background="{DynamicResource AppSurfaceInsetBrush}"
+                                    BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="6"
+                                    MinHeight="56">
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                    <TextBlock x:Name="TimerText"
+                                               Text="--"
+                                               FontSize="24"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource AccentBlueSoftBrush}"
+                                               HorizontalAlignment="Center"
+                                               LineHeight="25"
+                                               LineStackingStrategy="BlockLineHeight" />
+                                    <TextBlock Text="sec"
+                                               Margin="0,2,0,0"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="LockTimerCard"
+                                    Grid.Column="4"
+                                    Background="{DynamicResource AppSurfaceInsetBrush}"
+                                    BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="6"
+                                    MinHeight="56">
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                    <TextBlock x:Name="LockTimerText"
+                                               Text="--"
+                                               FontSize="24"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource DangerTextBrush}"
+                                               HorizontalAlignment="Center"
+                                               LineHeight="25"
+                                               LineStackingStrategy="BlockLineHeight" />
+                                    <TextBlock x:Name="LockTimerLabel"
+                                               Text="lock"
+                                               Margin="0,2,0,0"
+                                               FontSize="9"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <Border x:Name="PickPlanSection"
+                                Style="{StaticResource OverlaySectionStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="4"
+                                            Height="24"
+                                            Background="{DynamicResource AccentBlueBrush}"
+                                            CornerRadius="2" />
+                                    <TextBlock Grid.Column="2"
+                                               Text="Pick plan"
+                                               Style="{StaticResource CardTitleStyle}"
+                                               FontSize="14"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="PickLockText"
+                                               Grid.Column="3"
+                                               Text="Lock timing unavailable."
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap"
+                                               MaxWidth="116"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Border Grid.Row="2"
+                                        Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                        Margin="0,6,0,6">
+                                    <Grid>
+                                        <TextBlock x:Name="PickPlaceholderText"
+                                                   Text="Waiting for champion select."
+                                                   Style="{StaticResource OverlayPlaceholderStyle}" />
+                                        <ItemsControl x:Name="PickPlanList"
+                                                      ItemTemplate="{StaticResource OverlayChampionChipTemplate}"
+                                                      VerticalAlignment="Top">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <Border x:Name="BanPlanSection"
+                                Style="{StaticResource OverlaySectionStyle}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0"
+                                            Width="4"
+                                            Height="24"
+                                            Background="{DynamicResource DangerAccentBrush}"
+                                            CornerRadius="2" />
+                                    <TextBlock Grid.Column="2"
+                                               Text="Ban plan"
+                                               Style="{StaticResource CardTitleStyle}"
+                                               FontSize="14"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock x:Name="BanLockText"
+                                               Grid.Column="3"
+                                               Text="Lock timing unavailable."
+                                               FontSize="10"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               TextAlignment="Right"
+                                               TextWrapping="Wrap"
+                                               MaxWidth="116"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Border Grid.Row="2"
+                                        Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                        Margin="0,6,0,6">
+                                    <Grid>
+                                        <TextBlock x:Name="BanPlaceholderText"
+                                                   Text="Waiting for champion select."
+                                                   Style="{StaticResource OverlayPlaceholderStyle}" />
+                                        <ItemsControl x:Name="BanPlanList"
+                                                      ItemTemplate="{StaticResource OverlayChampionChipTemplate}"
+                                                      VerticalAlignment="Top">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <Popup x:Name="SettingsPopup"
+               PlacementTarget="{Binding ElementName=OverlayPanel}"
+               Placement="Right"
+               HorizontalOffset="8"
+               VerticalOffset="0"
+               AllowsTransparency="True"
+               StaysOpen="False">
+            <Border Width="332"
+                    Background="{DynamicResource AppSurfaceBrush}"
+                    BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="12"
+                    SnapsToDevicePixels="True">
+                <ScrollViewer MaxHeight="560"
+                              Style="{StaticResource StableVerticalScrollViewerStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Overlay options"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+
+                        <TextBlock Text="Show sections"
+                                   Style="{StaticResource OverlaySettingsLabelStyle}" />
+                        <UniformGrid Columns="2">
+                            <CheckBox x:Name="ShowPhaseSummaryCheckBox"
+                                      Content="Phase"
+                                      Checked="OverlayOptionCheckBox_Changed"
+                                      Unchecked="OverlayOptionCheckBox_Changed"
+                                      Style="{StaticResource OverlaySettingsCheckBoxStyle}" />
+                            <CheckBox x:Name="ShowTimersCheckBox"
+                                      Content="Timers"
+                                      Checked="OverlayOptionCheckBox_Changed"
+                                      Unchecked="OverlayOptionCheckBox_Changed"
+                                      Style="{StaticResource OverlaySettingsCheckBoxStyle}" />
+                            <CheckBox x:Name="ShowPickPlanCheckBox"
+                                      Content="Pick plan"
+                                      Checked="OverlayOptionCheckBox_Changed"
+                                      Unchecked="OverlayOptionCheckBox_Changed"
+                                      Style="{StaticResource OverlaySettingsCheckBoxStyle}" />
+                            <CheckBox x:Name="ShowBanPlanCheckBox"
+                                      Content="Ban plan"
+                                      Checked="OverlayOptionCheckBox_Changed"
+                                      Unchecked="OverlayOptionCheckBox_Changed"
+                                      Style="{StaticResource OverlaySettingsCheckBoxStyle}" />
+                        </UniformGrid>
+
+                        <TextBlock Text="Window"
+                                   Style="{StaticResource OverlaySettingsLabelStyle}" />
+                        <CheckBox x:Name="TopmostCheckBox"
+                                  Content="Stay on top"
+                                  Checked="OverlayOptionCheckBox_Changed"
+                                  Unchecked="OverlayOptionCheckBox_Changed"
+                                  Style="{StaticResource OverlaySettingsCheckBoxStyle}" />
+
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="68" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="44" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Size"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextSoftBrush}"
+                                       VerticalAlignment="Center" />
+                            <Slider x:Name="ScaleSlider"
+                                    Grid.Column="1"
+                                    Minimum="80"
+                                    Maximum="140"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    VerticalAlignment="Center" />
+                            <TextBlock x:Name="ScaleValueText"
+                                       Grid.Column="2"
+                                       Text="100%"
                                        FontSize="12"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextMutedBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-
-                        <Border Grid.Column="2"
-                                Background="{DynamicResource AppSurfaceInsetBrush}"
-                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="6"
-                                MinHeight="56">
-                            <StackPanel HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <TextBlock x:Name="TimerText"
-                                           Text="--"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentBlueSoftBrush}"
-                                           HorizontalAlignment="Center"
-                                           LineHeight="25"
-                                           LineStackingStrategy="BlockLineHeight" />
-                                <TextBlock Text="sec"
-                                           Margin="0,2,0,0"
-                                           FontSize="9"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="4"
-                                Background="{DynamicResource AppSurfaceInsetBrush}"
-                                BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="6"
-                                MinHeight="56">
-                            <StackPanel HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <TextBlock x:Name="LockTimerText"
-                                           Text="--"
-                                           FontSize="24"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource DangerTextBrush}"
-                                           HorizontalAlignment="Center"
-                                           LineHeight="25"
-                                           LineStackingStrategy="BlockLineHeight" />
-                                <TextBlock x:Name="LockTimerLabel"
-                                           Text="lock"
-                                           Margin="0,2,0,0"
-                                           FontSize="9"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           HorizontalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <Border Style="{StaticResource OverlaySectionStyle}">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <Grid Grid.Row="0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Height="24"
-                                        Background="{DynamicResource AccentBlueBrush}"
-                                        CornerRadius="2" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Pick plan"
-                                           Style="{StaticResource CardTitleStyle}"
-                                           FontSize="14"
-                                           VerticalAlignment="Center" />
-                                <TextBlock x:Name="PickLockText"
-                                           Grid.Column="3"
-                                           Text="Lock timing unavailable."
-                                           FontSize="10"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextAlignment="Right"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="116"
-                                           VerticalAlignment="Center" />
-                            </Grid>
-
-                            <Border Grid.Row="2"
-                                    Style="{StaticResource PlannerChampionChipListFrameStyle}"
-                                    Margin="0,6,0,6">
-                                <Grid>
-                                    <TextBlock x:Name="PickPlaceholderText"
-                                               Text="Waiting for champion select."
-                                               Style="{StaticResource OverlayPlaceholderStyle}" />
-                                    <ItemsControl x:Name="PickPlanList"
-                                                  VerticalAlignment="Top">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
-                                                        ToolTip="{Binding ToolTipText}">
-                                                    <Grid Width="48"
-                                                          Height="64"
-                                                          ClipToBounds="True">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="0" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-
-                                                        <Border Grid.Row="0"
-                                                                ClipToBounds="True"
-                                                                Style="{StaticResource PlannerChampionPortraitSlotStyle}">
-                                                            <Grid>
-                                                                <controls:ChampionMysteryGlyph Width="30"
-                                                                                                Height="30"
-                                                                                                HorizontalAlignment="Center"
-                                                                                                VerticalAlignment="Center"
-                                                                                                Foreground="{DynamicResource TextSubtleBrush}" />
-                                                                <Image Source="{Binding PortraitImageSource}"
-                                                                       Stretch="UniformToFill"
-                                                                       SnapsToDevicePixels="True" />
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <Viewbox Grid.Row="2"
-                                                                 Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                            <TextBlock Text="{Binding ChipDisplayText}"
-                                                                       FontSize="{Binding ChipDisplayFontSize}"
-                                                                       Style="{StaticResource PlannerChampionChipTextStyle}" />
-                                                        </Viewbox>
-
-                                                        <Border Grid.Row="0"
-                                                                Panel.ZIndex="10"
-                                                                HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top"
-                                                                Margin="0,2,2,0"
-                                                                Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
-                                                                ToolTip="{Binding StatusText}">
-                                                            <TextBlock Text="?"
-                                                                       Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
-                                                        </Border>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-                            </Border>
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center" />
                         </Grid>
-                    </Border>
 
-                    <Border Style="{StaticResource OverlaySectionStyle}">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <Grid Grid.Row="0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Border Grid.Column="0"
-                                        Width="4"
-                                        Height="24"
-                                        Background="{DynamicResource DangerAccentBrush}"
-                                        CornerRadius="2" />
-                                <TextBlock Grid.Column="2"
-                                           Text="Ban plan"
-                                           Style="{StaticResource CardTitleStyle}"
-                                           FontSize="14"
-                                           VerticalAlignment="Center" />
-                                <TextBlock x:Name="BanLockText"
-                                           Grid.Column="3"
-                                           Text="Lock timing unavailable."
-                                           FontSize="10"
-                                           FontWeight="Bold"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextAlignment="Right"
-                                           TextWrapping="Wrap"
-                                           MaxWidth="116"
-                                           VerticalAlignment="Center" />
-                            </Grid>
-
-                            <Border Grid.Row="2"
-                                    Style="{StaticResource PlannerChampionChipListFrameStyle}"
-                                    Margin="0,6,0,6">
-                                <Grid>
-                                    <TextBlock x:Name="BanPlaceholderText"
-                                               Text="Waiting for champion select."
-                                               Style="{StaticResource OverlayPlaceholderStyle}" />
-                                    <ItemsControl x:Name="BanPlanList"
-                                                  VerticalAlignment="Top">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
-                                                        ToolTip="{Binding ToolTipText}">
-                                                    <Grid Width="48"
-                                                          Height="64"
-                                                          ClipToBounds="True">
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto" />
-                                                            <RowDefinition Height="0" />
-                                                            <RowDefinition Height="Auto" />
-                                                        </Grid.RowDefinitions>
-
-                                                        <Border Grid.Row="0"
-                                                                ClipToBounds="True"
-                                                                Style="{StaticResource PlannerChampionPortraitSlotStyle}">
-                                                            <Grid>
-                                                                <controls:ChampionMysteryGlyph Width="30"
-                                                                                                Height="30"
-                                                                                                HorizontalAlignment="Center"
-                                                                                                VerticalAlignment="Center"
-                                                                                                Foreground="{DynamicResource TextSubtleBrush}" />
-                                                                <Image Source="{Binding PortraitImageSource}"
-                                                                       Stretch="UniformToFill"
-                                                                       SnapsToDevicePixels="True" />
-                                                            </Grid>
-                                                        </Border>
-
-                                                        <Viewbox Grid.Row="2"
-                                                                 Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                            <TextBlock Text="{Binding ChipDisplayText}"
-                                                                       FontSize="{Binding ChipDisplayFontSize}"
-                                                                       Style="{StaticResource PlannerChampionChipTextStyle}" />
-                                                        </Viewbox>
-
-                                                        <Border Grid.Row="0"
-                                                                Panel.ZIndex="10"
-                                                                HorizontalAlignment="Right"
-                                                                VerticalAlignment="Top"
-                                                                Margin="0,2,2,0"
-                                                                Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
-                                                                ToolTip="{Binding StatusText}">
-                                                            <TextBlock Text="?"
-                                                                       Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
-                                                        </Border>
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-                            </Border>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="68" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="44" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Opacity"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextSoftBrush}"
+                                       VerticalAlignment="Center" />
+                            <Slider x:Name="OpacitySlider"
+                                    Grid.Column="1"
+                                    Minimum="55"
+                                    Maximum="100"
+                                    TickFrequency="1"
+                                    IsSnapToTickEnabled="True"
+                                    VerticalAlignment="Center" />
+                            <TextBlock x:Name="OpacityValueText"
+                                       Grid.Column="2"
+                                       Text="94%"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextAlignment="Right"
+                                       VerticalAlignment="Center" />
                         </Grid>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
-    </Border>
+
+                        <Button x:Name="ResetOverlayViewButton"
+                                Content="Reset View"
+                                Click="ResetOverlayViewButton_Click"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Padding="12,8"
+                                Margin="0,14,0,0"
+                                HorizontalAlignment="Left"
+                                ToolTip="Restore the default full overlay view." />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Popup>
+    </Grid>
 </Window>

@@ -192,8 +192,14 @@ namespace JoinGameAfk.View
 
         private void PickBanOverlayButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_pickBanOverlayWindow?.IsVisible == true
+                && _pickBanOverlayWindow.WindowState != WindowState.Minimized)
+            {
+                _pickBanOverlayWindow.WindowState = WindowState.Minimized;
+                return;
+            }
+
             ShowPickBanOverlay(autoOpened: false);
-            WindowState = WindowState.Minimized;
         }
 
         public void ShowPickBanOverlayOnStartup()
@@ -512,6 +518,7 @@ namespace JoinGameAfk.View
             if (_pickBanOverlayWindow is null)
             {
                 _pickBanOverlayWindow = new PickBanOverlayWindow(_settings);
+                _pickBanOverlayWindow.ToggleMainAppRequested += ToggleMainWindowFromOverlay;
                 _pickBanOverlayWindow.PositionChangedByUser += PickBanOverlayWindow_PositionChangedByUser;
                 _pickBanOverlayWindow.Closed += (_, _) =>
                 {
@@ -542,12 +549,33 @@ namespace JoinGameAfk.View
             if (!_pickBanOverlayWindow.IsVisible)
                 _pickBanOverlayWindow.Show();
 
+            if (_pickBanOverlayWindow.WindowState == WindowState.Minimized)
+                _pickBanOverlayWindow.WindowState = WindowState.Normal;
+
             TrackPickBanOverlayVisibleDuringChampSelect();
 
             if (shouldLogAutoOpen)
                 LogAutoOverlay($"Pick/ban overlay auto-opened {autoOpenReason}.");
 
             _pickBanOverlayWindow.Activate();
+        }
+
+        private void ToggleMainWindowFromOverlay()
+        {
+            if (IsVisible && WindowState != WindowState.Minimized)
+            {
+                WindowState = WindowState.Minimized;
+                return;
+            }
+
+            if (!IsVisible)
+                Show();
+
+            if (WindowState == WindowState.Minimized)
+                WindowState = WindowState.Normal;
+
+            Activate();
+            Focus();
         }
 
         private void SynchronizeAutoPickBanOverlay()
