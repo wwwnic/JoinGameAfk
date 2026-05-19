@@ -18,6 +18,9 @@ namespace JoinGameAfk.Model
         public const int MinPickBanOverlayOpacityPercent = 55;
         public const int MaxPickBanOverlayOpacityPercent = 100;
         public const int DefaultPickBanOverlayOpacityPercent = 94;
+        public const int MinReadyCheckSoundVolumePercent = 0;
+        public const int MaxReadyCheckSoundVolumePercent = 100;
+        public const int DefaultReadyCheckSoundVolumePercent = 100;
 
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
@@ -45,6 +48,11 @@ namespace JoinGameAfk.Model
         /// Sound cue used when a ready check popup is detected.
         /// </summary>
         public string ReadyCheckSoundNotificationKey { get; set; } = "metallic-lock";
+
+        /// <summary>
+        /// Volume percentage used for ready check sound notifications and previews.
+        /// </summary>
+        public int? ReadyCheckSoundNotificationVolumePercent { get; set; } = DefaultReadyCheckSoundVolumePercent;
 
         /// <summary>
         /// Number of seconds to wait before automatically accepting a ready check.
@@ -248,6 +256,7 @@ namespace JoinGameAfk.Model
             AutoReadyCheckEnabled = defaults.AutoReadyCheckEnabled;
             ReadyCheckSoundNotificationEnabled = defaults.ReadyCheckSoundNotificationEnabled;
             ReadyCheckSoundNotificationKey = defaults.ReadyCheckSoundNotificationKey;
+            ReadyCheckSoundNotificationVolumePercent = defaults.ReadyCheckSoundNotificationVolumePercent;
             ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
             PickLockDelaySeconds = defaults.PickLockDelaySeconds;
             ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
@@ -309,6 +318,8 @@ namespace JoinGameAfk.Model
             if (string.IsNullOrWhiteSpace(settings.ReadyCheckSoundNotificationKey))
                 settings.ReadyCheckSoundNotificationKey = new ChampSelectSettings().ReadyCheckSoundNotificationKey;
 
+            settings.ReadyCheckSoundNotificationVolumePercent = NormalizeReadyCheckSoundVolumePercent(settings.ReadyCheckSoundNotificationVolumePercent);
+
             if (settings.ChampSelectEventFallbackPollIntervalMs <= 0)
                 settings.ChampSelectEventFallbackPollIntervalMs = new ChampSelectSettings().ChampSelectEventFallbackPollIntervalMs;
 
@@ -351,6 +362,17 @@ namespace JoinGameAfk.Model
                 opacityPercent <= 0 ? DefaultPickBanOverlayOpacityPercent : opacityPercent,
                 MinPickBanOverlayOpacityPercent,
                 MaxPickBanOverlayOpacityPercent);
+        }
+
+        public static int NormalizeReadyCheckSoundVolumePercent(int? volumePercent)
+        {
+            if (volumePercent is null)
+                return DefaultReadyCheckSoundVolumePercent;
+
+            return Math.Clamp(
+                volumePercent.Value < MinReadyCheckSoundVolumePercent ? DefaultReadyCheckSoundVolumePercent : volumePercent.Value,
+                MinReadyCheckSoundVolumePercent,
+                MaxReadyCheckSoundVolumePercent);
         }
     }
 }

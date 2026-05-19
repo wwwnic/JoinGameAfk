@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -21,14 +22,21 @@ namespace JoinGameAfk.View
         private static readonly Thickness DirtyAndStatusSettingsScrollPadding = new(0, 0, 0, 174);
         private static readonly Thickness FloatingStatusBottomMargin = new(0, 0, 18, 16);
         private static readonly Thickness FloatingStatusAboveDirtyMargin = new(0, 0, 18, 98);
+        private const int CollapsedPickerRows = 2;
+        private const double ThemePickerTileOuterWidth = 192;
+        private const double ThemePickerTileOuterHeight = 84;
+        private const double SoundPickerTileOuterWidth = 184;
+        private const double SoundPickerTileOuterHeight = 50;
 
         private readonly ChampSelectSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
-        private readonly Action<ChampSelectSettings>? _reloadUiForTheme;
+        private readonly Action<ChampSelectSettings, string?, bool, bool>? _reloadUiForTheme;
         private readonly Action<string>? _logMessage;
         private readonly Action<string>? _logErrorMessage;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
+        private readonly List<ThemePickerOption> _themeOptions = [];
+        private readonly List<SoundPickerOption> _readyCheckSoundOptions = [];
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
         private NumericInputRule _championHoverDelayRule = null!;
@@ -38,18 +46,31 @@ namespace JoinGameAfk.View
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
         private bool _isApplyingSettingsToControls;
+        private bool _isThemePickerExpanded;
+        private bool _isReadyCheckSoundPickerExpanded;
+        private string? _pendingInitialThemeSelectionKey;
+        private string _selectedThemeKey = AppThemeManager.DefaultThemeKey;
+        private string _selectedReadyCheckSoundKey = NotificationSoundPlayer.DefaultReadyCheckSoundKey;
 
         public SettingsPage(
             ChampSelectSettings settings,
-            Action<ChampSelectSettings>? reloadUiForTheme = null,
+            Action<ChampSelectSettings, string?, bool, bool>? reloadUiForTheme = null,
             Action<string>? logMessage = null,
-            Action<string>? logErrorMessage = null)
+            Action<string>? logErrorMessage = null,
+            string? selectedThemeKey = null,
+            bool themePickerExpanded = false,
+            bool readyCheckSoundPickerExpanded = false)
         {
             _settings = settings;
             InitializeComponent();
             _reloadUiForTheme = reloadUiForTheme;
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
+            _isThemePickerExpanded = themePickerExpanded;
+            _isReadyCheckSoundPickerExpanded = readyCheckSoundPickerExpanded;
+            _pendingInitialThemeSelectionKey = string.IsNullOrWhiteSpace(selectedThemeKey)
+                ? null
+                : AppThemeManager.NormalizeThemeKey(selectedThemeKey);
             _notificationSoundPlayer = new NotificationSoundPlayer(ShowValidationMessage);
             _savedMessageTimer = new DispatcherTimer
             {
@@ -120,9 +141,6 @@ namespace JoinGameAfk.View
                 checkBox.Unchecked += DirtyTrackedControl_Changed;
             }
 
-            ThemeComboBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
-            ReadyCheckSoundComboBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
-
             ReadyCheckAcceptDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             PickLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             ChampionHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
@@ -131,16 +149,12 @@ namespace JoinGameAfk.View
             ChampSelectPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
             EventFallbackPollIntervalBox.TextChanged += DirtyTrackedControl_TextChanged;
 
+            ReadyCheckSoundVolumeSlider.ValueChanged += ReadyCheckSoundVolumeSlider_ValueChanged;
             OverlayScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
             OverlayOpacitySlider.ValueChanged += OverlaySlider_ValueChanged;
         }
 
         private void DirtyTrackedControl_Changed(object sender, RoutedEventArgs e)
-        {
-            RefreshDirtyState();
-        }
-
-        private void DirtyTrackedControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             RefreshDirtyState();
         }
@@ -163,9 +177,24 @@ namespace JoinGameAfk.View
             });
         }
 
+        private void RefreshThemeDrivenControls()
+        {
+            UpdateAutomationInputStates();
+            RefreshChampionCatalogSyncStatus();
+            RefreshChampionPictureCacheStatus();
+            InvalidateVisual();
+        }
+
         private void OverlaySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             RefreshOverlaySliderValueText();
+            RefreshDirtyState();
+        }
+
+        private void ReadyCheckSoundVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            RefreshReadyCheckSoundVolumeValueText();
+            NotificationSoundPlayer.SetActivePlayerVolume(GetReadyCheckSoundVolumePercent());
             RefreshDirtyState();
         }
 
@@ -221,6 +250,7 @@ namespace JoinGameAfk.View
                 autoReadyCheckEnabled,
                 readyCheckSoundNotificationEnabled,
                 GetSelectedReadyCheckSoundKey(),
+                readyCheckSoundNotificationEnabled ? GetReadyCheckSoundVolumePercent() : ChampSelectSettings.DefaultReadyCheckSoundVolumePercent,
                 autoReadyCheckEnabled ? CreateNumericSnapshot(ReadyCheckAcceptDelayBox) : string.Empty,
                 championSelectAutomationEnabled,
                 AutoShowPickBanOverlayCheckBox.IsChecked == true,
@@ -264,6 +294,9 @@ namespace JoinGameAfk.View
                 autoReadyCheckEnabled,
                 readyCheckSoundNotificationEnabled,
                 NotificationSoundPlayer.NormalizeReadyCheckSoundKey(_settings.ReadyCheckSoundNotificationKey),
+                readyCheckSoundNotificationEnabled
+                    ? ChampSelectSettings.NormalizeReadyCheckSoundVolumePercent(_settings.ReadyCheckSoundNotificationVolumePercent)
+                    : ChampSelectSettings.DefaultReadyCheckSoundVolumePercent,
                 autoReadyCheckEnabled ? _settings.ReadyCheckAcceptDelaySeconds.ToString() : string.Empty,
                 championSelectAutomationEnabled,
                 _settings.AutoShowPickBanOverlayEnabled,
@@ -307,6 +340,7 @@ namespace JoinGameAfk.View
             _settings.AutoReadyCheckEnabled = _settings.InQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
             _settings.ReadyCheckSoundNotificationEnabled = _settings.InQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             _settings.ReadyCheckSoundNotificationKey = GetSelectedReadyCheckSoundKey();
+            _settings.ReadyCheckSoundNotificationVolumePercent = GetReadyCheckSoundVolumePercent();
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
             _settings.ChampionSelectAutomationEnabled = ChampionSelectAutomationCheckBox.IsChecked == true;
             _settings.AutoShowPickBanOverlayEnabled = AutoShowPickBanOverlayCheckBox.IsChecked == true;
@@ -340,7 +374,7 @@ namespace JoinGameAfk.View
             RefreshDirtyState();
             if (shouldReloadTheme && _reloadUiForTheme is not null)
             {
-                _reloadUiForTheme(_settings);
+                _reloadUiForTheme(_settings, GetSelectedThemeKey(), _isThemePickerExpanded, _isReadyCheckSoundPickerExpanded);
                 return;
             }
 
@@ -361,6 +395,8 @@ namespace JoinGameAfk.View
                 return;
 
             _settings.ResetConfigurableOptionsToDefaults();
+            _isThemePickerExpanded = false;
+            _isReadyCheckSoundPickerExpanded = false;
             ApplySettingsToControls();
             UpdateAutomationInputStates();
 
@@ -370,7 +406,7 @@ namespace JoinGameAfk.View
             RefreshDirtyState();
             if (shouldReloadTheme && _reloadUiForTheme is not null)
             {
-                _reloadUiForTheme(_settings);
+                _reloadUiForTheme(_settings, GetSelectedThemeKey(), _isThemePickerExpanded, _isReadyCheckSoundPickerExpanded);
                 return;
             }
 
@@ -391,6 +427,8 @@ namespace JoinGameAfk.View
                 AutoReadyCheckCheckBox.IsChecked = inQueueAutomationEnabled && _settings.AutoReadyCheckEnabled;
                 ReadyCheckSoundNotificationCheckBox.IsChecked = inQueueAutomationEnabled && _settings.ReadyCheckSoundNotificationEnabled;
                 SelectReadyCheckSound(_settings.ReadyCheckSoundNotificationKey);
+                ReadyCheckSoundVolumeSlider.Value = ChampSelectSettings.NormalizeReadyCheckSoundVolumePercent(_settings.ReadyCheckSoundNotificationVolumePercent);
+                RefreshReadyCheckSoundVolumeValueText();
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
                 ChampionSelectAutomationCheckBox.IsChecked = championSelectAutomationEnabled;
                 AutoShowPickBanOverlayCheckBox.IsChecked = _settings.AutoShowPickBanOverlayEnabled;
@@ -414,8 +452,12 @@ namespace JoinGameAfk.View
                 UseLiveEventsCheckBox.IsChecked = _settings.UseChampSelectEventStream;
                 EventFallbackPollingCheckBox.IsChecked = _settings.ChampSelectEventFallbackPollingEnabled;
                 EventFallbackPollIntervalBox.Text = _settings.ChampSelectEventFallbackPollIntervalMs.ToString();
-                SelectTheme(_settings.ThemeKey);
+                string themeKeyToSelect = _pendingInitialThemeSelectionKey ?? _settings.ThemeKey;
+                _pendingInitialThemeSelectionKey = null;
+                SelectTheme(themeKeyToSelect);
                 AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = _settings.AutoUpdateChampionCatalogOnStartup;
+                UpdateThemePickerExpansionState();
+                UpdateReadyCheckSoundPickerExpansionState();
             }
             finally
             {
@@ -552,8 +594,8 @@ namespace JoinGameAfk.View
             InQueueAutomationOptionsPanel.IsEnabled = inQueueAutomationEnabled;
             AutoReadyCheckCheckBox.IsEnabled = inQueueAutomationEnabled;
             ReadyCheckSoundNotificationCheckBox.IsEnabled = inQueueAutomationEnabled;
-            ReadyCheckSoundComboBox.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
-            ReadyCheckSoundPreviewButton.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
+            ReadyCheckSoundPickerPanel.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
+            ReadyCheckSoundVolumeSlider.IsEnabled = inQueueAutomationEnabled && ReadyCheckSoundNotificationCheckBox.IsChecked == true;
             ReadyCheckAcceptDelayBox.IsEnabled = autoReadyCheckEnabled;
             ChampionSelectAutomationOptionsPanel.IsEnabled = championSelectAutomationEnabled;
             ChampionHoverDelayBox.IsEnabled = autoHoverChampionEnabled;
@@ -629,11 +671,6 @@ namespace JoinGameAfk.View
             {
                 _isUpdatingAutomationControls = false;
             }
-        }
-
-        private void PreviewReadyCheckSoundButton_Click(object sender, RoutedEventArgs e)
-        {
-            _notificationSoundPlayer.PreviewReadyCheckDetectedCue(GetSelectedReadyCheckSoundKey());
         }
 
         private bool TryReadSettingsInput(out SettingsInputValues input)
@@ -975,13 +1012,118 @@ namespace JoinGameAfk.View
 
         private void LoadThemeOptions()
         {
-            ThemeComboBox.ItemsSource = AppThemeManager.Themes;
+            _themeOptions.Clear();
+            _themeOptions.AddRange(AppThemeManager.Themes.Select(CreateThemePickerOption));
+            ThemePickerItemsControl.ItemsSource = _themeOptions;
             SelectTheme(AppThemeManager.CurrentThemeKey);
+            UpdateThemePickerExpansionState();
         }
 
         private void LoadReadyCheckSoundOptions()
         {
-            ReadyCheckSoundComboBox.ItemsSource = NotificationSoundPlayer.ReadyCheckSoundOptions;
+            _readyCheckSoundOptions.Clear();
+            _readyCheckSoundOptions.AddRange(NotificationSoundPlayer.ReadyCheckSoundOptions.Select(option =>
+                new SoundPickerOption(option.Key, option.DisplayName)));
+            ReadyCheckSoundPickerItemsControl.ItemsSource = _readyCheckSoundOptions;
+            UpdateReadyCheckSoundPickerExpansionState();
+        }
+
+        private void ThemeOptionButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: ThemePickerOption option })
+                return;
+
+            SelectTheme(option.Key);
+            RefreshDirtyState();
+            PreviewTheme(option.Key);
+        }
+
+        private void PreviewTheme(string themeKey)
+        {
+            string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey);
+            if (_reloadUiForTheme is not null)
+            {
+                _reloadUiForTheme(_settings, normalizedThemeKey, _isThemePickerExpanded, _isReadyCheckSoundPickerExpanded);
+                return;
+            }
+
+            AppThemeManager.ApplyTheme(normalizedThemeKey);
+            RefreshThemeDrivenControls();
+        }
+
+        private void ReadyCheckSoundOptionButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: SoundPickerOption option })
+                return;
+
+            SelectReadyCheckSound(option.Key);
+            _notificationSoundPlayer.PreviewReadyCheckDetectedCue(GetSelectedReadyCheckSoundKey(), GetReadyCheckSoundVolumePercent());
+            RefreshDirtyState();
+        }
+
+        private void ThemePickerExpandButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isThemePickerExpanded = !_isThemePickerExpanded;
+            UpdateThemePickerExpansionState();
+        }
+
+        private void ReadyCheckSoundPickerExpandButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isReadyCheckSoundPickerExpanded = !_isReadyCheckSoundPickerExpanded;
+            UpdateReadyCheckSoundPickerExpansionState();
+        }
+
+        private void ThemePickerViewport_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateThemePickerExpansionState();
+        }
+
+        private void ReadyCheckSoundPickerViewport_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateReadyCheckSoundPickerExpansionState();
+        }
+
+        private void UpdateThemePickerExpansionState()
+        {
+            UpdatePickerExpansionState(
+                ThemePickerViewport,
+                ThemePickerExpandButton,
+                _themeOptions.Count,
+                ThemePickerTileOuterWidth,
+                ThemePickerTileOuterHeight,
+                _isThemePickerExpanded);
+        }
+
+        private void UpdateReadyCheckSoundPickerExpansionState()
+        {
+            UpdatePickerExpansionState(
+                ReadyCheckSoundPickerViewport,
+                ReadyCheckSoundPickerExpandButton,
+                _readyCheckSoundOptions.Count,
+                SoundPickerTileOuterWidth,
+                SoundPickerTileOuterHeight,
+                _isReadyCheckSoundPickerExpanded);
+        }
+
+        private static void UpdatePickerExpansionState(
+            FrameworkElement viewport,
+            Button expandButton,
+            int itemCount,
+            double itemOuterWidth,
+            double itemOuterHeight,
+            bool isExpanded)
+        {
+            double availableWidth = viewport.ActualWidth;
+            int itemsPerRow = availableWidth > 0
+                ? Math.Max(1, (int)Math.Floor(availableWidth / itemOuterWidth))
+                : 1;
+
+            bool needsExpansion = itemCount > itemsPerRow * CollapsedPickerRows;
+            expandButton.Visibility = needsExpansion ? Visibility.Visible : Visibility.Collapsed;
+            expandButton.Content = isExpanded ? "Show fewer" : "Show all";
+            viewport.MaxHeight = needsExpansion && !isExpanded
+                ? itemOuterHeight * CollapsedPickerRows
+                : double.PositiveInfinity;
         }
 
         private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
@@ -1116,20 +1258,77 @@ namespace JoinGameAfk.View
             return $"{ex.GetType().Name}: {ex.Message}";
         }
 
+        private static ThemePickerOption CreateThemePickerOption(AppThemeDefinition theme)
+        {
+            var dictionary = CreateThemePreviewDictionary(theme);
+
+            return new ThemePickerOption(
+                theme.Key,
+                theme.DisplayName,
+                GetThemePreviewBrush(dictionary, "AppBackgroundBrush", Brushes.Black),
+                GetThemePreviewBrush(dictionary, "AppSurfaceBrush", Brushes.DimGray),
+                GetThemePreviewBrush(dictionary, "AppBorderBrush", Brushes.SlateGray),
+                GetThemePreviewBrush(dictionary, "AppInputBrush", Brushes.DarkSlateGray),
+                GetThemePreviewBrush(dictionary, "AccentBlueActionBrush", Brushes.DodgerBlue),
+                GetThemePreviewBrush(dictionary, "TextInverseBrush", Brushes.White),
+                GetThemePreviewBrush(dictionary, "TextPrimaryBrush", Brushes.WhiteSmoke),
+                GetThemePreviewBrush(dictionary, "TextMutedBrush", Brushes.SlateGray));
+        }
+
+        private static ResourceDictionary? CreateThemePreviewDictionary(AppThemeDefinition theme)
+        {
+            try
+            {
+                string assemblyName = typeof(AppThemeManager).Assembly.GetName().Name ?? "JoinGameAfk";
+                return new ResourceDictionary
+                {
+                    Source = new Uri($"/{assemblyName};component/{theme.Source}", UriKind.Relative)
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Brush GetThemePreviewBrush(ResourceDictionary? dictionary, string key, Brush fallback)
+        {
+            Brush brush = dictionary?[key] as Brush ?? fallback;
+            var clone = brush.CloneCurrentValue();
+            if (clone.CanFreeze)
+                clone.Freeze();
+
+            return clone;
+        }
+
         private void SelectReadyCheckSound(string? soundKey)
         {
             string normalizedSoundKey = NotificationSoundPlayer.NormalizeReadyCheckSoundKey(soundKey);
-            ReadyCheckSoundComboBox.SelectedItem = NotificationSoundPlayer.ReadyCheckSoundOptions.FirstOrDefault(option =>
-                string.Equals(option.Key, normalizedSoundKey, StringComparison.Ordinal))
-                ?? NotificationSoundPlayer.ReadyCheckSoundOptions[0];
+            _selectedReadyCheckSoundKey = normalizedSoundKey;
+
+            foreach (var option in _readyCheckSoundOptions)
+                option.IsSelected = string.Equals(option.Key, normalizedSoundKey, StringComparison.Ordinal);
+
+            SelectedReadyCheckSoundTextBlock.Text = _readyCheckSoundOptions.FirstOrDefault(option => option.IsSelected)?.DisplayName
+                ?? NotificationSoundPlayer.ReadyCheckSoundOptions[0].DisplayName;
         }
 
         private string GetSelectedReadyCheckSoundKey()
         {
-            if (ReadyCheckSoundComboBox.SelectedItem is NotificationSoundOption selectedOption)
-                return NotificationSoundPlayer.NormalizeReadyCheckSoundKey(selectedOption.Key);
+            return NotificationSoundPlayer.NormalizeReadyCheckSoundKey(_selectedReadyCheckSoundKey);
+        }
 
-            return NotificationSoundPlayer.DefaultReadyCheckSoundKey;
+        private int GetReadyCheckSoundVolumePercent()
+        {
+            return ChampSelectSettings.NormalizeReadyCheckSoundVolumePercent((int)Math.Round(ReadyCheckSoundVolumeSlider.Value));
+        }
+
+        private void RefreshReadyCheckSoundVolumeValueText()
+        {
+            if (ReadyCheckSoundVolumeValueText is null)
+                return;
+
+            ReadyCheckSoundVolumeValueText.Text = $"{GetReadyCheckSoundVolumePercent()}%";
         }
 
         private int GetOverlayScalePercent()
@@ -1180,22 +1379,107 @@ namespace JoinGameAfk.View
         private void SelectTheme(string? themeKey)
         {
             string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey);
-            ThemeComboBox.SelectedItem = AppThemeManager.Themes.FirstOrDefault(theme =>
-                string.Equals(theme.Key, normalizedThemeKey, StringComparison.OrdinalIgnoreCase))
-                ?? AppThemeManager.Themes[0];
+            _selectedThemeKey = normalizedThemeKey;
+
+            foreach (var option in _themeOptions)
+                option.IsSelected = string.Equals(option.Key, normalizedThemeKey, StringComparison.OrdinalIgnoreCase);
+
+            SelectedThemeTextBlock.Text = _themeOptions.FirstOrDefault(option => option.IsSelected)?.DisplayName
+                ?? AppThemeManager.Themes[0].DisplayName;
         }
 
         private string GetSelectedThemeKey()
         {
-            if (ThemeComboBox.SelectedItem is AppThemeDefinition selectedTheme)
-                return AppThemeManager.NormalizeThemeKey(selectedTheme.Key);
-
-            return AppThemeManager.NormalizeThemeKey(ThemeComboBox.SelectedValue as string);
+            return AppThemeManager.NormalizeThemeKey(_selectedThemeKey);
         }
 
         private bool SelectedThemeRequiresReload()
         {
             return !string.Equals(GetSelectedThemeKey(), AppThemeManager.CurrentThemeKey, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class ThemePickerOption : INotifyPropertyChanged
+        {
+            private bool _isSelected;
+
+            public ThemePickerOption(
+                string key,
+                string displayName,
+                Brush backgroundBrush,
+                Brush surfaceBrush,
+                Brush borderBrush,
+                Brush inputBrush,
+                Brush buttonBrush,
+                Brush buttonTextBrush,
+                Brush textBrush,
+                Brush mutedTextBrush)
+            {
+                Key = key;
+                DisplayName = displayName;
+                BackgroundBrush = backgroundBrush;
+                SurfaceBrush = surfaceBrush;
+                BorderBrush = borderBrush;
+                InputBrush = inputBrush;
+                ButtonBrush = buttonBrush;
+                ButtonTextBrush = buttonTextBrush;
+                TextBrush = textBrush;
+                MutedTextBrush = mutedTextBrush;
+            }
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
+            public string Key { get; }
+            public string DisplayName { get; }
+            public Brush BackgroundBrush { get; }
+            public Brush SurfaceBrush { get; }
+            public Brush BorderBrush { get; }
+            public Brush InputBrush { get; }
+            public Brush ButtonBrush { get; }
+            public Brush ButtonTextBrush { get; }
+            public Brush TextBrush { get; }
+            public Brush MutedTextBrush { get; }
+
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    if (_isSelected == value)
+                        return;
+
+                    _isSelected = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+                }
+            }
+        }
+
+        private sealed class SoundPickerOption : INotifyPropertyChanged
+        {
+            private bool _isSelected;
+
+            public SoundPickerOption(string key, string displayName)
+            {
+                Key = key;
+                DisplayName = displayName;
+            }
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
+            public string Key { get; }
+            public string DisplayName { get; }
+
+            public bool IsSelected
+            {
+                get => _isSelected;
+                set
+                {
+                    if (_isSelected == value)
+                        return;
+
+                    _isSelected = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+                }
+            }
         }
 
         private readonly record struct SettingsInputValues(
@@ -1213,6 +1497,7 @@ namespace JoinGameAfk.View
             bool AutoReadyCheckEnabled,
             bool ReadyCheckSoundNotificationEnabled,
             string ReadyCheckSoundNotificationKey,
+            int ReadyCheckSoundNotificationVolumePercent,
             string ReadyCheckAcceptDelaySeconds,
             bool ChampionSelectAutomationEnabled,
             bool AutoShowPickBanOverlayEnabled,

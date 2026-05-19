@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
@@ -15,6 +16,7 @@ namespace JoinGameAfk
         private PhaseProgressionPage? fDashboardPage;
         private LogsPage? fLogsPage;
         private PhaseController? fPhaseController;
+        private static readonly Duration ThemePreviewTransitionDuration = new(TimeSpan.FromMilliseconds(140));
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -76,7 +78,12 @@ namespace JoinGameAfk
             fPhaseController = null;
         }
 
-        private MainWindow CreateMainWindow(ChampSelectSettings champSelectSettings, int activeTabIndex = 0)
+        private MainWindow CreateMainWindow(
+            ChampSelectSettings champSelectSettings,
+            int activeTabIndex = 0,
+            string? selectedThemeKey = null,
+            bool themePickerExpanded = false,
+            bool readyCheckSoundPickerExpanded = false)
         {
             fDashboardPage = new PhaseProgressionPage(champSelectSettings);
             var logsPage = new LogsPage();
@@ -86,7 +93,14 @@ namespace JoinGameAfk
             fPhaseController = new PhaseController(fDashboardPage, logsPage, champSelectSettings);
 
             var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
-            var settingsPage = new SettingsPage(champSelectSettings, ReloadUiForTheme, logsPage.WriteLine, logsPage.WriteErrorLine);
+            var settingsPage = new SettingsPage(
+                champSelectSettings,
+                ReloadUiForTheme,
+                logsPage.WriteLine,
+                logsPage.WriteErrorLine,
+                selectedThemeKey,
+                themePickerExpanded,
+                readyCheckSoundPickerExpanded);
 
             var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings);
             mainWindow.SetController(fPhaseController);
@@ -232,7 +246,11 @@ namespace JoinGameAfk
             return $"{ex.GetType().Name}: {ex.Message}";
         }
 
-        private void ReloadUiForTheme(ChampSelectSettings champSelectSettings)
+        private void ReloadUiForTheme(
+            ChampSelectSettings champSelectSettings,
+            string? themeKey,
+            bool themePickerExpanded,
+            bool readyCheckSoundPickerExpanded)
         {
             try
             {
@@ -242,26 +260,58 @@ namespace JoinGameAfk
 
                 fPhaseController?.Stop();
 
-                champSelectSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(champSelectSettings.ThemeKey);
-                AppThemeManager.ApplyTheme(champSelectSettings.ThemeKey);
+                string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey ?? champSelectSettings.ThemeKey);
+                AppThemeManager.ApplyTheme(normalizedThemeKey);
 
-                var newWindow = CreateMainWindow(champSelectSettings, activeTabIndex);
+                var newWindow = CreateMainWindow(
+                    champSelectSettings,
+                    activeTabIndex,
+                    normalizedThemeKey,
+                    themePickerExpanded,
+                    readyCheckSoundPickerExpanded);
                 if (previousWindow is not null)
                     CopyWindowPlacement(previousWindow, newWindow);
 
                 fMainWindow = newWindow;
                 MainWindow = newWindow;
-                newWindow.Show();
-
-                previousWindow?.Close();
-
-                if (restartWatcher)
-                    fPhaseController?.Start();
+                ShowThemedWindow(newWindow, previousWindow, restartWatcher);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "Theme Reload Failed", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void ShowThemedWindow(MainWindow newWindow, Window? previousWindow, bool restartWatcher)
+        {
+            if (previousWindow is null)
+            {
+                newWindow.Show();
+                if (restartWatcher)
+                    fPhaseController?.Start();
+                return;
+            }
+
+            newWindow.Opacity = 0;
+            newWindow.Show();
+            newWindow.Activate();
+
+            var fadeIn = new DoubleAnimation(0, 1, ThemePreviewTransitionDuration)
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+
+            fadeIn.Completed += (_, _) =>
+            {
+                newWindow.BeginAnimation(Window.OpacityProperty, null);
+                newWindow.Opacity = 1;
+                previousWindow.Close();
+
+                if (restartWatcher)
+                    fPhaseController?.Start();
+            };
+
+            newWindow.BeginAnimation(Window.OpacityProperty, fadeIn);
         }
 
         private static void CopyWindowPlacement(Window source, Window target)

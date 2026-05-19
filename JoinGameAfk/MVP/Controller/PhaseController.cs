@@ -269,7 +269,9 @@ namespace JoinGameAfk.MVP.Controller
                         {
                             Log($"Phase changed: {_lastObservedPhase} -> {phase}");
                             if (ShouldPlayReadyCheckDetectedCue(phase))
-                                _notificationSoundPlayer.PlayReadyCheckDetectedCue(_champSelectSettings.ReadyCheckSoundNotificationKey);
+                                _notificationSoundPlayer.PlayReadyCheckDetectedCue(
+                                    _champSelectSettings.ReadyCheckSoundNotificationKey,
+                                    ChampSelectSettings.NormalizeReadyCheckSoundVolumePercent(_champSelectSettings.ReadyCheckSoundNotificationVolumePercent));
 
                             _lastObservedPhase = phase;
                             _lastHandledPhase = ClientPhase.Unknown;

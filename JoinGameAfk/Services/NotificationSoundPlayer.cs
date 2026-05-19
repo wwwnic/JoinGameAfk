@@ -1,6 +1,7 @@
 using System.IO;
 using System.Media;
 using System.Windows;
+using System.Windows.Media;
 
 namespace JoinGameAfk.Services
 {
@@ -27,9 +28,11 @@ namespace JoinGameAfk.Services
             new("assistant-beacon", "Assistant Beacon", "AssistantBeacon.wav"),
         ];
 
-        private static readonly object SoundPlayerCacheLock = new();
+        private static readonly object ActivePlayersLock = new();
+        private static readonly object SoundFileCacheLock = new();
 
-        private static readonly Dictionary<string, SoundPlayer> SoundPlayerCache = new(StringComparer.Ordinal);
+        private static readonly List<MediaPlayer> ActivePlayers = [];
+        private static readonly Dictionary<string, string> SoundFileCache = new(StringComparer.Ordinal);
 
         private static readonly IReadOnlyDictionary<string, string> LegacyReadyCheckSoundKeys =
             new Dictionary<string, string>(StringComparer.Ordinal)
@@ -47,14 +50,34 @@ namespace JoinGameAfk.Services
             _log = log;
         }
 
-        public void PlayReadyCheckDetectedCue(string? soundKey)
+        public void PlayReadyCheckDetectedCue(string? soundKey, int volumePercent)
         {
-            PlaySound(soundKey, "Ready check sound notification");
+            PlaySound(soundKey, volumePercent, "Ready check sound notification");
         }
 
-        public void PreviewReadyCheckDetectedCue(string? soundKey)
+        public void PreviewReadyCheckDetectedCue(string? soundKey, int volumePercent)
         {
-            PlaySound(soundKey, "Ready check sound preview");
+            PlaySound(soundKey, volumePercent, "Ready check sound preview");
+        }
+
+        public static int NormalizeVolumePercent(int? volumePercent)
+        {
+            return Math.Clamp(volumePercent ?? 100, 0, 100);
+        }
+
+        public static double GetVolumeLevel(int? volumePercent)
+        {
+            return NormalizeVolumePercent(volumePercent) / 100d;
+        }
+
+        public static void SetActivePlayerVolume(int? volumePercent)
+        {
+            double volume = GetVolumeLevel(volumePercent);
+            lock (ActivePlayersLock)
+            {
+                foreach (var player in ActivePlayers)
+                    player.Volume = volume;
+            }
         }
 
         public static string NormalizeReadyCheckSoundKey(string? soundKey)
@@ -71,11 +94,12 @@ namespace JoinGameAfk.Services
                 : DefaultReadyCheckSoundKey;
         }
 
-        private void PlaySound(string? soundKey, string context)
+        private void PlaySound(string? soundKey, int volumePercent, string context)
         {
             try
             {
                 var option = GetReadyCheckSoundOption(soundKey);
+                int normalizedVolumePercent = NormalizeVolumePercent(volumePercent);
                 var dispatcher = Application.Current?.Dispatcher;
                 if (dispatcher is null)
                 {
@@ -85,9 +109,9 @@ namespace JoinGameAfk.Services
                 }
 
                 if (dispatcher.CheckAccess())
-                    PlayResourceSound(option, context);
+                    PlayResourceSound(option, normalizedVolumePercent, context);
                 else
-                    dispatcher.BeginInvoke(() => PlayResourceSound(option, context));
+                    dispatcher.BeginInvoke(() => PlayResourceSound(option, normalizedVolumePercent, context));
             }
             catch (Exception ex)
             {
@@ -102,18 +126,35 @@ namespace JoinGameAfk.Services
             return ReadyCheckSoundOptions.First(option => string.Equals(option.Key, normalizedKey, StringComparison.Ordinal));
         }
 
-        private void PlayResourceSound(NotificationSoundOption option, string context)
+        private void PlayResourceSound(NotificationSoundOption option, int volumePercent, string context)
         {
             try
             {
-                SoundPlayer? player = GetSoundPlayer(option);
-                if (player is null)
+                var player = new MediaPlayer
                 {
+                    Volume = GetVolumeLevel(volumePercent)
+                };
+                player.MediaEnded += (_, _) => RemoveActivePlayer(player);
+                player.MediaFailed += (_, e) =>
+                {
+                    RemoveActivePlayer(player);
+                    SystemSounds.Exclamation.Play();
+                    _log?.Invoke($"{context} could not play {option.FileName}: {e.ErrorException.Message}");
+                };
+
+                lock (ActivePlayersLock)
+                    ActivePlayers.Add(player);
+
+                string? soundFilePath = GetSoundFilePath(option);
+                if (soundFilePath is null)
+                {
+                    RemoveActivePlayer(player);
                     SystemSounds.Exclamation.Play();
                     _log?.Invoke($"{context} resource was not found: {option.ResourceUri}");
                     return;
                 }
 
+                player.Open(new Uri(soundFilePath, UriKind.Absolute));
                 player.Play();
             }
             catch (Exception ex)
@@ -123,27 +164,42 @@ namespace JoinGameAfk.Services
             }
         }
 
-        private static SoundPlayer? GetSoundPlayer(NotificationSoundOption option)
+        private static void RemoveActivePlayer(MediaPlayer player)
         {
-            lock (SoundPlayerCacheLock)
+            lock (ActivePlayersLock)
             {
-                if (SoundPlayerCache.TryGetValue(option.Key, out var cachedPlayer))
-                    return cachedPlayer;
+                ActivePlayers.Remove(player);
+            }
+
+            player.Close();
+        }
+
+        private static string? GetSoundFilePath(NotificationSoundOption option)
+        {
+            lock (SoundFileCacheLock)
+            {
+                if (SoundFileCache.TryGetValue(option.Key, out string? cachedFilePath)
+                    && File.Exists(cachedFilePath))
+                {
+                    return cachedFilePath;
+                }
 
                 var resourceInfo = Application.GetResourceStream(option.ResourceUri);
                 if (resourceInfo is null)
                     return null;
 
-                using var resourceStream = resourceInfo.Stream;
-                var playerStream = new MemoryStream();
-                resourceStream.CopyTo(playerStream);
-                playerStream.Position = 0;
+                string soundDirectoryPath = Path.Combine(Path.GetTempPath(), "JoinGameAfk", "Sounds");
+                Directory.CreateDirectory(soundDirectoryPath);
+                string soundFilePath = Path.Combine(soundDirectoryPath, option.FileName);
 
-                var player = new SoundPlayer(playerStream);
-                player.Load();
+                using (var resourceStream = resourceInfo.Stream)
+                using (var fileStream = File.Create(soundFilePath))
+                {
+                    resourceStream.CopyTo(fileStream);
+                }
 
-                SoundPlayerCache[option.Key] = player;
-                return player;
+                SoundFileCache[option.Key] = soundFilePath;
+                return soundFilePath;
             }
         }
     }
