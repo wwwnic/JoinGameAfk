@@ -10,9 +10,25 @@ namespace JoinGameAfk.LogoEditor;
 public static class PolyhedronLogoRenderer
 {
     public const int CanvasSize = 512;
+    public const int GitHubBannerWidth = 1280;
+    public const int GitHubBannerHeight = 640;
+
     public static readonly int[] DefaultIconSizes = [256, 128, 64, 48, 32, 24, 16];
 
     private const int MinimumFacetLineSize = 256;
+    private const double GitHubBannerPreviewScale = 2;
+
+    private static readonly BannerSizePreview HeroBannerSizePreview = new(256, 1168, 720, 0.98, 626);
+
+    private static readonly BannerSizePreview[] GitHubBannerSizePreviews =
+    [
+        new(16, 44, 462, 0.82),
+        new(24, 112, 468, 0.82),
+        new(32, 200, 476, 0.82),
+        new(48, 328, 490),
+        new(64, 500, 506),
+        new(128, 724, 580, 0.9)
+    ];
 
     private static readonly PolyhedronModel SimpleModel = CreateSubdividedIcosahedron(0);
     private static readonly PolyhedronModel DetailedModel = CreateSubdividedIcosahedron(1);
@@ -158,6 +174,168 @@ public static class PolyhedronLogoRenderer
 
         WritePng(path, RenderBitmap(size, settings));
     }
+
+    public static BitmapSource RenderGitHubBannerBitmap(LogoSettings settings)
+    {
+        var visual = new DrawingVisual();
+        using (DrawingContext drawingContext = visual.RenderOpen())
+            DrawGitHubBanner(drawingContext, settings);
+
+        var bitmap = new RenderTargetBitmap(GitHubBannerWidth, GitHubBannerHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    public static void WriteGitHubBanner(string path, LogoSettings settings)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+            Directory.CreateDirectory(directory);
+
+        WritePng(path, RenderGitHubBannerBitmap(settings));
+    }
+
+    public static string GetDefaultGitHubBannerPath()
+    {
+        DirectoryInfo root = FindRepoRoot();
+        return Path.Combine(root.FullName, "docs", "images", "joingameafk-github-banner.png");
+    }
+
+    private static void DrawGitHubBanner(DrawingContext drawingContext, LogoSettings sourceSettings)
+    {
+        LogoSettings bannerSettings = sourceSettings.Clone();
+        bannerSettings.EdgeShadowStrokeWidth = Math.Min(bannerSettings.EdgeShadowStrokeWidth, 5);
+        bannerSettings.StrokeInsetScale = Math.Max(bannerSettings.StrokeInsetScale, 1.7);
+
+        DrawGitHubBannerBackground(drawingContext);
+
+        Color bottomLabelColor = Color.FromRgb(0xE2, 0xE8, 0xF0);
+
+        DrawBannerSizePreview(drawingContext, bannerSettings, HeroBannerSizePreview, bottomLabelColor);
+
+        drawingContext.PushClip(new RectangleGeometry(new Rect(0, GitHubBannerHeight / 2, GitHubBannerWidth, GitHubBannerHeight / 2)));
+
+        try
+        {
+            foreach (BannerSizePreview preview in GitHubBannerSizePreviews)
+                DrawBannerSizePreview(drawingContext, bannerSettings, preview, bottomLabelColor);
+
+            DrawBannerText(drawingContext);
+        }
+        finally
+        {
+            drawingContext.Pop();
+        }
+    }
+
+    private static void DrawGitHubBannerBackground(DrawingContext drawingContext)
+    {
+        var bottomBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 1)
+        };
+        bottomBrush.GradientStops.Add(new GradientStop(Color.FromRgb(0x10, 0x18, 0x27), 0));
+        bottomBrush.GradientStops.Add(new GradientStop(Color.FromRgb(0x0F, 0x17, 0x2A), 0.62));
+        bottomBrush.GradientStops.Add(new GradientStop(Color.FromRgb(0x08, 0x11, 0x1F), 1));
+        bottomBrush.Freeze();
+        drawingContext.DrawRectangle(bottomBrush, null, new Rect(0, GitHubBannerHeight / 2, GitHubBannerWidth, GitHubBannerHeight / 2));
+
+        drawingContext.DrawRectangle(new SolidColorBrush(Color.FromRgb(0x02, 0x06, 0x17)), null, new Rect(0, 320, GitHubBannerWidth, 2));
+        drawingContext.DrawRectangle(new SolidColorBrush(WithAlpha(Color.FromRgb(0x60, 0xA5, 0xFA), 50)), null, new Rect(0, 322, GitHubBannerWidth, 1));
+
+        DrawBannerCurve(drawingContext, 542, Color.FromRgb(0x60, 0xA5, 0xFA), 22);
+        DrawBannerCurve(drawingContext, 574, Color.FromRgb(0xF8, 0xFA, 0xFC), 12);
+    }
+
+    private static void DrawBannerCurve(DrawingContext drawingContext, double y, Color color, byte alpha)
+    {
+        var figure = new PathFigure { StartPoint = new Point(0, y), IsClosed = false, IsFilled = false };
+        figure.Segments.Add(new BezierSegment(
+            new Point(210, y - 62),
+            new Point(382, y + 3),
+            new Point(608, y - 54),
+            true));
+        figure.Segments.Add(new BezierSegment(
+            new Point(832, y - 110),
+            new Point(995, y - 103),
+            new Point(GitHubBannerWidth, y - 166),
+            true));
+
+        drawingContext.DrawGeometry(
+            null,
+            new Pen(new SolidColorBrush(WithAlpha(color, alpha)), 2),
+            new PathGeometry([figure]));
+    }
+
+    private static void DrawBannerSizePreview(DrawingContext drawingContext, LogoSettings settings, BannerSizePreview preview, Color labelColor)
+    {
+        int displaySize = (int)Math.Round(preview.LogicalSize * GitHubBannerPreviewScale);
+        double left = preview.CenterX - displaySize / 2.0;
+        double top = preview.BottomY - displaySize;
+
+        DrawBannerLogo(drawingContext, settings, displaySize, left, top, preview.Opacity);
+        DrawCenteredBannerLabel(
+            drawingContext,
+            preview.LogicalSize.ToString(CultureInfo.InvariantCulture),
+            preview.CenterX,
+            preview.LabelBaselineY ?? preview.BottomY + 16,
+            labelColor,
+            0.86,
+            18);
+    }
+
+    private static void DrawBannerLogo(DrawingContext drawingContext, LogoSettings settings, int displaySize, double left, double top, double opacity)
+    {
+        int renderSize = Math.Max(MinimumFacetLineSize, displaySize);
+        BitmapSource source = RenderBitmap(renderSize, settings);
+
+        drawingContext.PushOpacity(opacity);
+        drawingContext.DrawImage(source, new Rect(left, top, displaySize, displaySize));
+        drawingContext.Pop();
+    }
+
+    private static void DrawCenteredBannerLabel(DrawingContext drawingContext, string text, double centerX, double baselineY, Color color, double opacity, double fontSize)
+    {
+        var shadowBrush = new SolidColorBrush(WithAlpha(Color.FromRgb(0x02, 0x06, 0x17), 176));
+        shadowBrush.Freeze();
+        var brush = new SolidColorBrush(WithAlpha(color, (byte)Math.Round(opacity * 255)));
+        brush.Freeze();
+        FormattedText shadowText = CreateFormattedText(text, fontSize, FontWeights.Medium, shadowBrush);
+        FormattedText formattedText = CreateFormattedText(text, fontSize, FontWeights.Medium, brush);
+        var origin = new Point(centerX - formattedText.WidthIncludingTrailingWhitespace / 2, baselineY - fontSize);
+
+        drawingContext.DrawText(shadowText, new Point(origin.X + 1, origin.Y + 1));
+        drawingContext.DrawText(
+            formattedText,
+            origin);
+    }
+
+    private static void DrawBannerText(DrawingContext drawingContext)
+    {
+        var titleBrush = new SolidColorBrush(Color.FromRgb(0xF8, 0xFA, 0xFC));
+        titleBrush.Freeze();
+        var subtitleBrush = new SolidColorBrush(Color.FromRgb(0x93, 0xC5, 0xFD));
+        subtitleBrush.Freeze();
+
+        drawingContext.DrawText(
+            CreateFormattedText("JoinGameAfk", 42, FontWeights.Bold, titleBrush),
+            new Point(44, 530));
+        drawingContext.DrawText(
+            CreateFormattedText("Logo Editor size preview", 19, FontWeights.Medium, subtitleBrush),
+            new Point(47, 576));
+    }
+
+    private static FormattedText CreateFormattedText(string text, double fontSize, FontWeight fontWeight, Brush brush) =>
+        new(
+            text,
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, fontWeight, FontStretches.Normal),
+            fontSize,
+            brush,
+            1);
 
     private static void DrawLogo(DrawingContext drawingContext, int size, LogoSettings settings)
     {
@@ -524,6 +702,8 @@ public static class PolyhedronLogoRenderer
     private sealed record ProjectedFace(Point[] Points, double Depth, double Brightness, double ShadeMix);
 
     private sealed record SvgFace(string Path, Color FillColor, double FillOpacity, double StrokeOpacity);
+
+    private readonly record struct BannerSizePreview(int LogicalSize, double CenterX, double BottomY, double Opacity = 0.88, double? LabelBaselineY = null);
 
     private readonly record struct EdgeKey
     {

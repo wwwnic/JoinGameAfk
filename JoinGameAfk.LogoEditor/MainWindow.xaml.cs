@@ -39,7 +39,7 @@ public partial class MainWindow : Window
     private readonly IReadOnlyList<LogoPreset> _presets = CreateLogoPresets();
     private readonly IReadOnlyList<PreviewBackgroundOption> _previewBackgroundOptions = CreatePreviewBackgroundOptions();
     private bool _isLoading;
-    private LogoExportResult? _lastExportResult;
+    private string? _lastOutputFolder;
 
     public MainWindow()
     {
@@ -222,7 +222,7 @@ public partial class MainWindow : Window
             WritePresetFile(presetPath, settings);
             result = result with { PresetPath = presetPath };
 
-            _lastExportResult = result;
+            _lastOutputFolder = Path.GetDirectoryName(result.SvgPath);
             OpenOutputFolderButton.IsEnabled = true;
             StatusText.Text = $"Generated app assets:\n{result.SvgPath}\n{result.IcoPath}\n{result.PresetPath}\n{result.PreviewPath}\nICO frames: {FormatIconSizes(iconSizes)}";
         }
@@ -319,6 +319,36 @@ public partial class MainWindow : Window
         }
     }
 
+    private void PreviewGitHubBannerButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryReadSettings(out LogoSettings? settings))
+            return;
+
+        try
+        {
+            var previewWindow = new GitHubBannerPreviewWindow(settings, PolyhedronLogoRenderer.GetDefaultGitHubBannerPath())
+            {
+                Owner = this
+            };
+
+            previewWindow.ShowDialog();
+
+            if (string.IsNullOrWhiteSpace(previewWindow.SavedPath))
+            {
+                StatusText.Text = "GitHub banner preview closed.";
+                return;
+            }
+
+            _lastOutputFolder = Path.GetDirectoryName(previewWindow.SavedPath);
+            OpenOutputFolderButton.IsEnabled = !string.IsNullOrWhiteSpace(_lastOutputFolder);
+            StatusText.Text = $"Saved GitHub banner:\n{previewWindow.SavedPath}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"GitHub banner preview failed: {ex.Message}";
+        }
+    }
+
     private int[] GetSelectedIconSizes()
     {
         var selectedSizes = new List<int>();
@@ -343,14 +373,13 @@ public partial class MainWindow : Window
 
     private void OpenOutputFolderButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_lastExportResult is null)
+        if (string.IsNullOrWhiteSpace(_lastOutputFolder))
         {
-            StatusText.Text = "Generate app assets before opening the output folder.";
+            StatusText.Text = "Generate or export before opening the output folder.";
             return;
         }
 
-        string? outputFolder = Path.GetDirectoryName(_lastExportResult.SvgPath);
-        if (string.IsNullOrWhiteSpace(outputFolder) || !Directory.Exists(outputFolder))
+        if (!Directory.Exists(_lastOutputFolder))
         {
             StatusText.Text = "The output folder no longer exists.";
             return;
@@ -360,7 +389,7 @@ public partial class MainWindow : Window
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = outputFolder,
+                FileName = _lastOutputFolder,
                 UseShellExecute = true
             });
         }
