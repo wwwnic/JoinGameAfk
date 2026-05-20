@@ -11,16 +11,21 @@ namespace JoinGameAfk.Theme
         public static IReadOnlyList<AppThemeDefinition> Themes { get; } =
         [
             new AppThemeDefinition(DefaultThemeKey, "Draft Desk", "Styles/Themes/DraftDesk.xaml"),
-            new AppThemeDefinition("midnight-rift", "Midnight Rift", "Styles/Themes/MidnightRift.xaml"),
-            new AppThemeDefinition("sakura-bloom", "Sakura Bloom", "Styles/Themes/SakuraBloom.xaml"),
-            new AppThemeDefinition("lavender-mint", "Lavender Mint", "Styles/Themes/LavenderMint.xaml"),
-            new AppThemeDefinition("peach-sorbet", "Peach Sorbet", "Styles/Themes/PeachSorbet.xaml"),
-            new AppThemeDefinition("celestial-candy", "Celestial Candy", "Styles/Themes/CelestialCandy.xaml"),
-            new AppThemeDefinition("rose-noir", "Rose Noir", "Styles/Themes/RoseNoir.xaml"),
-            new AppThemeDefinition("rift-light", "Rift Light", "Styles/Themes/RiftLight.xaml"),
-            new AppThemeDefinition("neon-circuit", "Neon Circuit", "Styles/Themes/NeonCircuit.xaml"),
             new AppThemeDefinition("color-safe-light", "Color Safe Light", "Styles/Themes/ColorSafeLight.xaml"),
-            new AppThemeDefinition("color-safe-dark", "Color Safe Dark", "Styles/Themes/ColorSafeDark.xaml")
+            new AppThemeDefinition("color-safe-dark", "Color Safe Dark", "Styles/Themes/ColorSafeDark.xaml"),
+            new AppThemeDefinition("blood-forge", "Blood Forge", "Styles/Themes/BloodForge.xaml"),
+            new AppThemeDefinition("celestial-candy", "Celestial Candy", "Styles/Themes/CelestialCandy.xaml"),
+            new AppThemeDefinition("cloud-light", "Cloud Light", "Styles/Themes/CloudLight.xaml"),
+            new AppThemeDefinition("command-deck", "Command Deck", "Styles/Themes/CommandDeck.xaml"),
+            new AppThemeDefinition("harbor-fog", "Harbor Fog", "Styles/Themes/HarborFog.xaml"),
+            new AppThemeDefinition("iron-ember", "Iron Ember", "Styles/Themes/IronEmber.xaml"),
+            new AppThemeDefinition("ivory-standard", "Ivory Standard", "Styles/Themes/IvoryStandard.xaml"),
+            new AppThemeDefinition("lavender-mint", "Lavender Mint", "Styles/Themes/LavenderMint.xaml"),
+            new AppThemeDefinition("midnight-current", "Midnight Current", "Styles/Themes/MidnightCurrent.xaml"),
+            new AppThemeDefinition("neon-circuit", "Neon Circuit", "Styles/Themes/NeonCircuit.xaml"),
+            new AppThemeDefinition("peach-sorbet", "Peach Sorbet", "Styles/Themes/PeachSorbet.xaml"),
+            new AppThemeDefinition("rose-noir", "Rose Noir", "Styles/Themes/RoseNoir.xaml"),
+            new AppThemeDefinition("sakura-bloom", "Sakura Bloom", "Styles/Themes/SakuraBloom.xaml")
         ];
 
         public static event Action? ThemeChanged;
