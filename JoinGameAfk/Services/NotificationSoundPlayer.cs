@@ -12,11 +12,12 @@ namespace JoinGameAfk.Services
 
     internal sealed class NotificationSoundPlayer
     {
-        public const string DefaultReadyCheckSoundKey = "metallic-lock";
+        public const string DefaultSoundKey = "metallic-lock";
+        public const string DefaultReadyCheckSoundKey = DefaultSoundKey;
 
-        public static IReadOnlyList<NotificationSoundOption> ReadyCheckSoundOptions { get; } =
+        public static IReadOnlyList<NotificationSoundOption> SoundOptions { get; } =
         [
-            new(DefaultReadyCheckSoundKey, "Metallic Lock", "MetalicLock.wav"),
+            new(DefaultSoundKey, "Metallic Lock", "MetalicLock.wav"),
             new("numeric", "Accept Action", "Numeric.wav"),
             new("default-rising", "Rising Ready Cue", "ReadyCheckAlert.wav"),
             new("sword", "Sword Guard", "Sword.wav"),
@@ -28,13 +29,15 @@ namespace JoinGameAfk.Services
             new("assistant-beacon", "Assistant Beacon", "AssistantBeacon.wav"),
         ];
 
+        public static IReadOnlyList<NotificationSoundOption> ReadyCheckSoundOptions => SoundOptions;
+
         private static readonly object ActivePlayersLock = new();
         private static readonly object SoundFileCacheLock = new();
 
         private static readonly List<MediaPlayer> ActivePlayers = [];
         private static readonly Dictionary<string, string> SoundFileCache = new(StringComparer.Ordinal);
 
-        private static readonly IReadOnlyDictionary<string, string> LegacyReadyCheckSoundKeys =
+        private static readonly IReadOnlyDictionary<string, string> LegacySoundKeys =
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["accept-action-v2"] = "numeric",
@@ -52,12 +55,22 @@ namespace JoinGameAfk.Services
 
         public void PlayReadyCheckDetectedCue(string? soundKey, int volumePercent)
         {
-            PlaySound(soundKey, volumePercent, "Ready check sound notification");
+            PlayAlert(soundKey, volumePercent, "Ready check sound notification");
         }
 
         public void PreviewReadyCheckDetectedCue(string? soundKey, int volumePercent)
         {
-            PlaySound(soundKey, volumePercent, "Ready check sound preview");
+            PreviewAlert(soundKey, volumePercent, "Ready check sound preview");
+        }
+
+        public void PlayAlert(string? soundKey, int volumePercent, string context)
+        {
+            PlaySound(soundKey, volumePercent, context);
+        }
+
+        public void PreviewAlert(string? soundKey, int volumePercent, string context)
+        {
+            PlaySound(soundKey, volumePercent, context);
         }
 
         public static int NormalizeVolumePercent(int? volumePercent)
@@ -82,23 +95,28 @@ namespace JoinGameAfk.Services
 
         public static string NormalizeReadyCheckSoundKey(string? soundKey)
         {
+            return NormalizeSoundKey(soundKey);
+        }
+
+        public static string NormalizeSoundKey(string? soundKey)
+        {
             if (string.IsNullOrWhiteSpace(soundKey))
-                return DefaultReadyCheckSoundKey;
+                return DefaultSoundKey;
 
             string normalizedSoundKey = soundKey.Trim();
-            if (LegacyReadyCheckSoundKeys.TryGetValue(normalizedSoundKey, out string? migratedSoundKey))
+            if (LegacySoundKeys.TryGetValue(normalizedSoundKey, out string? migratedSoundKey))
                 normalizedSoundKey = migratedSoundKey;
 
-            return ReadyCheckSoundOptions.Any(option => string.Equals(option.Key, normalizedSoundKey, StringComparison.Ordinal))
+            return SoundOptions.Any(option => string.Equals(option.Key, normalizedSoundKey, StringComparison.Ordinal))
                 ? normalizedSoundKey
-                : DefaultReadyCheckSoundKey;
+                : DefaultSoundKey;
         }
 
         private void PlaySound(string? soundKey, int volumePercent, string context)
         {
             try
             {
-                var option = GetReadyCheckSoundOption(soundKey);
+                var option = GetSoundOption(soundKey);
                 int normalizedVolumePercent = NormalizeVolumePercent(volumePercent);
                 var dispatcher = Application.Current?.Dispatcher;
                 if (dispatcher is null)
@@ -122,8 +140,13 @@ namespace JoinGameAfk.Services
 
         private static NotificationSoundOption GetReadyCheckSoundOption(string? soundKey)
         {
-            string normalizedKey = NormalizeReadyCheckSoundKey(soundKey);
-            return ReadyCheckSoundOptions.First(option => string.Equals(option.Key, normalizedKey, StringComparison.Ordinal));
+            return GetSoundOption(soundKey);
+        }
+
+        private static NotificationSoundOption GetSoundOption(string? soundKey)
+        {
+            string normalizedKey = NormalizeSoundKey(soundKey);
+            return SoundOptions.First(option => string.Equals(option.Key, normalizedKey, StringComparison.Ordinal));
         }
 
         private void PlayResourceSound(NotificationSoundOption option, int volumePercent, string context)

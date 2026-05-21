@@ -19,6 +19,7 @@ public class ChampSelect : IPhaseHandler
         DateTime ObservedAtUtc);
 
     private sealed record ScheduledLockState(
+        string SessionId,
         int ActionId,
         int ChampionId,
         int LockDelaySeconds,
@@ -35,6 +36,7 @@ public class ChampSelect : IPhaseHandler
     private readonly LeagueChampionOwnershipService _ownershipService;
     private readonly Action<string>? _log;
     private readonly Action? _requestRefresh;
+    private readonly Action<string, string>? _playSoundAlert;
     private string? _lastSessionId;
     private bool _hasPicked;
     private bool _hasBanned;
@@ -63,6 +65,7 @@ public class ChampSelect : IPhaseHandler
     private int _banRetryStateActionId;
     private readonly HashSet<int> _failedPickChampionIds = [];
     private readonly HashSet<int> _failedBanChampionIds = [];
+    private readonly HashSet<string> _playedSoundAlertKeys = [];
     private ScheduledLockState? _scheduledPickLock;
     private ScheduledLockState? _scheduledBanLock;
     private CancellationTokenSource? _scheduledHoverWake;
@@ -74,13 +77,14 @@ public class ChampSelect : IPhaseHandler
 
     public DashboardStatus LastDashboardStatus { get; private set; } = new();
 
-    public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null, Action? requestRefresh = null)
+    public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null, Action? requestRefresh = null, Action<string, string>? playSoundAlert = null)
     {
         _http = http;
         _settings = settings;
         _ownershipService = new LeagueChampionOwnershipService(http, log);
         _log = log;
         _requestRefresh = requestRefresh;
+        _playSoundAlert = playSoundAlert;
     }
 
     public async Task HandleAsync(CancellationToken cancellationToken)
@@ -127,6 +131,7 @@ public class ChampSelect : IPhaseHandler
         var root = doc.RootElement;
 
         string? sessionId = GetSessionId(root);
+        string soundAlertSessionId = sessionId ?? "champ-select-session";
         if (!string.Equals(_lastSessionId, sessionId, StringComparison.Ordinal))
         {
             Reset();
@@ -189,6 +194,9 @@ public class ChampSelect : IPhaseHandler
                     if (isInProgress && localPlayerActiveActionType is null)
                         localPlayerActiveActionType = type;
 
+                    if (isInProgress)
+                        TryPlayActionStartedSoundAlert(soundAlertSessionId, actionId, type);
+
                     if (type == "pick" && localPickActionId == 0)
                         localPickActionId = actionId;
 
@@ -197,11 +205,11 @@ public class ChampSelect : IPhaseHandler
 
                     if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                     {
-                        await HandlePickActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
+                        await HandlePickActionAsync(soundAlertSessionId, root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
                     }
                     else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                     {
-                        await HandleBanActionAsync(root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
+                        await HandleBanActionAsync(soundAlertSessionId, root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedBanIds, cancellationToken);
                     }
                 }
             }
@@ -639,6 +647,7 @@ public class ChampSelect : IPhaseHandler
         _banRetryStateActionId = 0;
         _failedPickChampionIds.Clear();
         _failedBanChampionIds.Clear();
+        _playedSoundAlertKeys.Clear();
         CancelScheduledPickLock();
         CancelScheduledBanLock();
         CancelScheduledHoverWake();
@@ -661,7 +670,7 @@ public class ChampSelect : IPhaseHandler
             Log($"Position changed: {previousPosition} -> {assignedPosition}. Refreshing champion plan.");
     }
 
-    private async Task HandlePickActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
+    private async Task HandlePickActionAsync(string sessionId, JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
         bool canHoverPickNow = CanHoverPickNow(champSelectPhase, isInProgress);
@@ -787,7 +796,7 @@ public class ChampSelect : IPhaseHandler
         DateTime pickLockAtUtc = timeLeftObservedAtUtc.AddMilliseconds(millisecondsUntilPickLock);
         if (millisecondsUntilPickLock > 0 && pickLockAtUtc > DateTime.UtcNow)
         {
-            ScheduleLock(actionId, championIdToLock, pickLockDelaySeconds, pickLockAtUtc, isPickAction: true, cancellationToken);
+            ScheduleLock(sessionId, actionId, championIdToLock, pickLockDelaySeconds, pickLockAtUtc, isPickAction: true, cancellationToken);
             LogStatus(ref _lastPickStatusMessage, $"Pick hovered {FormatChampion(championIdToLock)}. Scheduled lock at <= {pickLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
@@ -795,6 +804,7 @@ public class ChampSelect : IPhaseHandler
         try
         {
             CancelScheduledPickLock();
+            TryPlayLockSoonSoundAlert(sessionId, actionId, championIdToLock, isPickAction: true);
             LogStatus(ref _lastPickStatusMessage, $"Pick lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
             await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasPicked = true;
@@ -817,7 +827,7 @@ public class ChampSelect : IPhaseHandler
         }
     }
 
-    private async Task HandleBanActionAsync(JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
+    private async Task HandleBanActionAsync(string sessionId, JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: false);
 
@@ -914,7 +924,7 @@ public class ChampSelect : IPhaseHandler
         DateTime banLockAtUtc = timeLeftObservedAtUtc.AddMilliseconds(millisecondsUntilBanLock);
         if (millisecondsUntilBanLock > 0 && banLockAtUtc > DateTime.UtcNow)
         {
-            ScheduleLock(actionId, championIdToLock, banLockDelaySeconds, banLockAtUtc, isPickAction: false, cancellationToken);
+            ScheduleLock(sessionId, actionId, championIdToLock, banLockDelaySeconds, banLockAtUtc, isPickAction: false, cancellationToken);
             LogStatus(ref _lastBanStatusMessage, $"Ban hovered {FormatChampion(championIdToLock)}. Scheduled lock at <= {banLockDelaySeconds}s. Current time left: {FormatTimeLeft(timeLeftMs)}.");
             return;
         }
@@ -938,6 +948,7 @@ public class ChampSelect : IPhaseHandler
         try
         {
             CancelScheduledBanLock();
+            TryPlayLockSoonSoundAlert(sessionId, actionId, championIdToLock, isPickAction: false);
             LogStatus(ref _lastBanStatusMessage, $"Ban lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
             await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
             _hasBanned = true;
@@ -967,10 +978,11 @@ public class ChampSelect : IPhaseHandler
             && (!hasAppHoveredChampion || currentChampionId != appHoveredChampionId);
     }
 
-    private void ScheduleLock(int actionId, int championId, int lockDelaySeconds, DateTime lockAtUtc, bool isPickAction, CancellationToken cancellationToken)
+    private void ScheduleLock(string sessionId, int actionId, int championId, int lockDelaySeconds, DateTime lockAtUtc, bool isPickAction, CancellationToken cancellationToken)
     {
         ScheduledLockState? currentSchedule = isPickAction ? _scheduledPickLock : _scheduledBanLock;
         if (currentSchedule is not null
+            && string.Equals(currentSchedule.SessionId, sessionId, StringComparison.Ordinal)
             && currentSchedule.ActionId == actionId
             && currentSchedule.ChampionId == championId
             && currentSchedule.LockDelaySeconds == lockDelaySeconds
@@ -986,12 +998,13 @@ public class ChampSelect : IPhaseHandler
             CancelScheduledBanLock();
 
         var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var scheduledLock = new ScheduledLockState(actionId, championId, lockDelaySeconds, lockAtUtc, linkedCts);
+        var scheduledLock = new ScheduledLockState(sessionId, actionId, championId, lockDelaySeconds, lockAtUtc, linkedCts);
         if (isPickAction)
             _scheduledPickLock = scheduledLock;
         else
             _scheduledBanLock = scheduledLock;
 
+        ScheduleLockSoonSoundAlert(scheduledLock, isPickAction);
         _ = RunScheduledLockAsync(scheduledLock, isPickAction);
     }
 
@@ -1025,6 +1038,7 @@ public class ChampSelect : IPhaseHandler
     private async Task CompleteScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction, CancellationToken cancellationToken)
     {
         string actionLabel = isPickAction ? "Pick" : "Ban";
+        TryPlayLockSoonSoundAlert(scheduledLock.SessionId, scheduledLock.ActionId, scheduledLock.ChampionId, isPickAction);
         Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}.");
         await _http.CompleteActionAsync(scheduledLock.ActionId, scheduledLock.ChampionId, cancellationToken);
 
@@ -1034,6 +1048,90 @@ public class ChampSelect : IPhaseHandler
             _hasBanned = true;
 
         Log($"{actionLabel} locked successfully. Champion={FormatChampion(scheduledLock.ChampionId)}, actionId={scheduledLock.ActionId}.");
+    }
+
+    private void TryPlayActionStartedSoundAlert(string sessionId, int actionId, string actionType)
+    {
+        string? alertId = actionType switch
+        {
+            "pick" => SoundAlertIds.PickActionStart,
+            "ban" => SoundAlertIds.BanActionStart,
+            _ => null
+        };
+
+        if (alertId is null)
+            return;
+
+        TryPlaySoundAlertOnce(alertId, $"{sessionId}:{alertId}:{actionId}", $"{FormatActionType(actionType)} action sound alert");
+    }
+
+    private static string FormatActionType(string actionType)
+    {
+        return actionType switch
+        {
+            "pick" => "Pick",
+            "ban" => "Ban",
+            _ => "Champion select"
+        };
+    }
+
+    private void ScheduleLockSoonSoundAlert(ScheduledLockState scheduledLock, bool isPickAction)
+    {
+        string alertId = isPickAction ? SoundAlertIds.PickLockSoon : SoundAlertIds.BanLockSoon;
+        if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
+            return;
+
+        int thresholdSeconds = _settings.GetSoundAlertThresholdSeconds(alertId) ?? SoundAlertDefaults.DefaultLockSoonThresholdSeconds;
+        DateTime alertAtUtc = scheduledLock.LockAtUtc.AddSeconds(-thresholdSeconds);
+        if (alertAtUtc <= DateTime.UtcNow)
+        {
+            TryPlayLockSoonSoundAlert(scheduledLock.SessionId, scheduledLock.ActionId, scheduledLock.ChampionId, isPickAction);
+            return;
+        }
+
+        _ = RunScheduledLockSoonSoundAlertAsync(scheduledLock, isPickAction, alertAtUtc);
+    }
+
+    private async Task RunScheduledLockSoonSoundAlertAsync(ScheduledLockState scheduledLock, bool isPickAction, DateTime alertAtUtc)
+    {
+        CancellationToken cancellationToken = scheduledLock.CancellationTokenSource.Token;
+        try
+        {
+            TimeSpan delay = alertAtUtc - DateTime.UtcNow;
+            if (delay > TimeSpan.Zero)
+                await Task.Delay(delay, cancellationToken);
+
+            TryPlayLockSoonSoundAlert(scheduledLock.SessionId, scheduledLock.ActionId, scheduledLock.ChampionId, isPickAction);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            string actionLabel = isPickAction ? "Pick" : "Ban";
+            Log($"{actionLabel} lock sound alert failed for {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}: {ex.Message}");
+        }
+    }
+
+    private void TryPlayLockSoonSoundAlert(string sessionId, int actionId, int championId, bool isPickAction)
+    {
+        string alertId = isPickAction ? SoundAlertIds.PickLockSoon : SoundAlertIds.BanLockSoon;
+        string actionLabel = isPickAction ? "Pick" : "Ban";
+        TryPlaySoundAlertOnce(
+            alertId,
+            $"{sessionId}:{alertId}:{actionId}:{championId}",
+            $"{actionLabel} auto-lock sound alert");
+    }
+
+    private void TryPlaySoundAlertOnce(string alertId, string dedupeKey, string context)
+    {
+        if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
+            return;
+
+        if (!_playedSoundAlertKeys.Add(dedupeKey))
+            return;
+
+        _playSoundAlert(alertId, context);
     }
 
     private void CancelScheduledPickLock()

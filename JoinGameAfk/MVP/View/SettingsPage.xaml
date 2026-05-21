@@ -84,29 +84,64 @@
             </Setter>
         </Style>
 
-        <Style x:Key="SoundPickerTileButtonStyle"
-               TargetType="Button"
-               BasedOn="{StaticResource ThemePickerTileButtonStyle}">
-            <Setter Property="Width" Value="176" />
-            <Setter Property="Height" Value="42" />
-            <Setter Property="Padding" Value="11,8" />
-        </Style>
     </Page.Resources>
 
     <Grid>
-    <ScrollViewer x:Name="SettingsScrollViewer"
-                  Style="{StaticResource StableVerticalScrollViewerStyle}">
-        <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{DynamicResource AppSurfaceBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="12"
+                Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="Settings"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="General app behavior and alert sound design live in separate settings sections."
+                               Style="{StaticResource FieldHintStyle}"
+                               Margin="0,3,18,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <Button x:Name="GeneralSettingsSectionButton"
+                            Content="General"
+                            Click="GeneralSettingsSectionButton_Click"
+                            Style="{StaticResource TabButtonStyle}"
+                            MinWidth="92"
+                            AutomationProperties.Name="General settings section" />
+                    <Button x:Name="SoundSettingsSectionButton"
+                            Content="Sounds"
+                            Click="SoundSettingsSectionButton_Click"
+                            Style="{StaticResource TabButtonStyle}"
+                            MinWidth="92"
+                            AutomationProperties.Name="Sound settings section" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid x:Name="GeneralSettingsPanel"
+              Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -115,8 +150,7 @@
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
-                    Padding="18,16"
-                    Margin="0,0,0,12">
+                    Padding="18,16">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -124,9 +158,9 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Settings"
+                        <TextBlock Text="General"
                                    Style="{StaticResource PageTitleStyle}" />
-                        <TextBlock Text="Tune startup behavior, automation timing, sounds, locking behavior, and app storage."
+                        <TextBlock Text="Tune startup behavior, automation timing, locking behavior, and app storage."
                                    Style="{StaticResource PageDescriptionStyle}"
                                    Margin="0,4,24,0" />
                     </StackPanel>
@@ -142,7 +176,7 @@
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Padding="18,10"
                                     HorizontalAlignment="Right"
-                                    ToolTip="Restore startup, automation, sound, timing, performance, and theme defaults without changing champion priorities." />
+                                    ToolTip="Restore startup, automation, timing, performance, and theme defaults without changing champion priorities." />
 
                             <Button x:Name="SaveButton"
                                     Content="Save Settings"
@@ -153,10 +187,27 @@
                                     Margin="10,0,0,0"
                                     HorizontalAlignment="Right" />
                         </StackPanel>
-
                     </StackPanel>
                 </Grid>
             </Border>
+
+    <ScrollViewer x:Name="SettingsScrollViewer"
+                  Grid.Row="2"
+                  Style="{StaticResource StableVerticalScrollViewerStyle}">
+        <Grid Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
             <Border Grid.Row="1"
                     Style="{StaticResource SectionCardStyle}"
@@ -448,152 +499,6 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0">
-                                <StackPanel Orientation="Horizontal"
-                                            VerticalAlignment="Center">
-                                    <TextBlock Text="Play sound when ready check appears"
-                                               Style="{StaticResource FieldLabelStyle}" />
-                                    <Button Style="{StaticResource InfoIndicatorStyle}"
-                                            Content="?"
-                                            Margin="8,0,0,0"
-                                            VerticalAlignment="Center"
-                                            ToolTip="Plays a short cue as soon as the ready check popup is detected." />
-                                </StackPanel>
-                                <TextBlock Text="A cue plays when the accept popup appears, before any configured auto-accept delay."
-                                           Style="{StaticResource FieldHintStyle}"
-                                           Margin="0,3,0,0" />
-                            </StackPanel>
-
-                            <CheckBox x:Name="ReadyCheckSoundNotificationCheckBox"
-                                      Grid.Column="2"
-                                      Style="{StaticResource AppCheckBoxStyle}"
-                                      VerticalAlignment="Center"
-                                      Checked="AutomationCheckBox_StateChanged"
-                                      Unchecked="AutomationCheckBox_StateChanged"
-                                      ToolTip="When enabled, the app plays a short sound when a ready check popup appears." />
-                        </Grid>
-                    </Border>
-
-                    <Border Style="{StaticResource SettingRowStyle}">
-                        <StackPanel x:Name="ReadyCheckSoundPickerPanel">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="14" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0">
-                                    <StackPanel Orientation="Horizontal"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Ready check sound"
-                                                   Style="{StaticResource FieldLabelStyle}" />
-                                        <Button Style="{StaticResource InfoIndicatorStyle}"
-                                                Content="?"
-                                                Margin="8,0,0,0"
-                                                VerticalAlignment="Center"
-                                                ToolTip="Choose the cue that plays when a ready check popup appears." />
-                                    </StackPanel>
-                                    <TextBlock Text="Click a sound to select and preview it before saving."
-                                               Style="{StaticResource FieldHintStyle}"
-                                               Margin="0,3,0,0" />
-                                </StackPanel>
-
-                                <TextBlock x:Name="SelectedReadyCheckSoundTextBlock"
-                                           Grid.Column="2"
-                                           Style="{StaticResource PickerSelectedTextStyle}" />
-                            </Grid>
-
-                            <Grid Margin="0,10,0,0"
-                                  Width="300"
-                                  HorizontalAlignment="Left">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="10" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="52" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0"
-                                           Text="Volume"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextSoftBrush}"
-                                           VerticalAlignment="Center" />
-                                <Slider x:Name="ReadyCheckSoundVolumeSlider"
-                                        Grid.Column="2"
-                                        Minimum="0"
-                                        Maximum="100"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"
-                                        VerticalAlignment="Center"
-                                        ToolTip="Ready check sound volume." />
-                                <TextBlock x:Name="ReadyCheckSoundVolumeValueText"
-                                           Grid.Column="3"
-                                           Text="100%"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextMutedBrush}"
-                                           TextAlignment="Right"
-                                           VerticalAlignment="Center" />
-                            </Grid>
-
-                            <Border x:Name="ReadyCheckSoundPickerViewport"
-                                    ClipToBounds="True"
-                                    Margin="0,12,0,0"
-                                    SizeChanged="ReadyCheckSoundPickerViewport_SizeChanged">
-                                <ItemsControl x:Name="ReadyCheckSoundPickerItemsControl">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button Click="ReadyCheckSoundOptionButton_Click"
-                                                    Style="{StaticResource SoundPickerTileButtonStyle}"
-                                                    ToolTip="{Binding DisplayName}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="8" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-
-                                                    <Path Grid.Column="0"
-                                                          Width="10"
-                                                          Height="12"
-                                                          Data="M0,0 L10,6 L0,12 Z"
-                                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                                          Stretch="Uniform"
-                                                          VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="2"
-                                                               Text="{Binding DisplayName}"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               VerticalAlignment="Center" />
-                                                </Grid>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
-
-                            <Button x:Name="ReadyCheckSoundPickerExpandButton"
-                                    Click="ReadyCheckSoundPickerExpandButton_Click"
-                                    Style="{StaticResource PickerExpandButtonStyle}"
-                                    Visibility="Collapsed" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource SettingRowStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="14" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Auto accept delay"
                                                Style="{StaticResource FieldLabelStyle}" />
@@ -616,7 +521,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="4"
+            <Border Grid.Row="5"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -858,7 +763,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="5"
+            <Border Grid.Row="6"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1105,7 +1010,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="6"
+            <Border Grid.Row="7"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1296,7 +1201,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="7"
+            <Border Grid.Row="8"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1324,7 +1229,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="8"
+            <Border Grid.Row="9"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1459,7 +1364,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="9"
+            <Border Grid.Row="10"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1497,64 +1402,49 @@
         </Grid>
     </ScrollViewer>
 
-    <Border x:Name="DirtySettingsBar"
-            Panel.ZIndex="1"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Bottom"
-            Margin="0,0,18,16"
-            Background="{DynamicResource AppSurfaceBrush}"
-            BorderBrush="{DynamicResource AccentGreenBrush}"
-            BorderThickness="1"
-            CornerRadius="10"
-            Height="76"
-            Padding="14,10"
-            Visibility="Collapsed">
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="14" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Row="3">
+                <Border x:Name="FloatingSettingsStatusBar"
+                        HorizontalAlignment="Stretch"
+                        Background="{DynamicResource AppSurfaceBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Height="54"
+                        Padding="14,8"
+                        Margin="0,12,0,0"
+                        Visibility="Collapsed">
+                    <TextBlock x:Name="FloatingSettingsStatusText"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                </Border>
 
-            <StackPanel Grid.Column="0"
-                        VerticalAlignment="Center">
-                <TextBlock Text="Unsaved settings changes"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Text="Save to keep the current settings."
-                           Style="{StaticResource FieldHintStyle}" />
+                <Border x:Name="DirtySettingsBar"
+                        HorizontalAlignment="Stretch"
+                        Background="{DynamicResource AppSurfaceBrush}"
+                        BorderBrush="{DynamicResource AccentGreenBrush}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Height="48"
+                        Padding="14,8"
+                        Margin="0,12,0,0"
+                        Visibility="Collapsed">
+                    <TextBlock Text="Unsaved settings changes. Use Save Settings above to keep them."
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                </Border>
             </StackPanel>
-
-            <Button x:Name="FloatingSaveButton"
-                    Grid.Column="2"
-                    Content="Save Settings"
-                    Click="SaveButton_Click"
-                    Background="{DynamicResource AccentGreenBrush}"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Padding="24,10"
-                    VerticalAlignment="Center"
-                    AutomationProperties.Name="Save dirty settings" />
         </Grid>
-    </Border>
 
-    <Border x:Name="FloatingSettingsStatusBar"
-            Panel.ZIndex="2"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Bottom"
-            Margin="0,0,18,16"
-            Background="{DynamicResource AppSurfaceBrush}"
-            BorderBrush="{DynamicResource AppBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="10"
-            Height="76"
-            Padding="14,10"
-            Visibility="Collapsed">
-        <TextBlock x:Name="FloatingSettingsStatusText"
-                   FontSize="13"
-                   FontWeight="SemiBold"
-                   TextWrapping="Wrap"
-                   VerticalAlignment="Center" />
-    </Border>
+        <Frame x:Name="SoundSettingsFrame"
+               Grid.Row="1"
+               NavigationUIVisibility="Hidden"
+               Background="Transparent"
+               BorderThickness="0"
+               Visibility="Collapsed" />
     </Grid>
 </Page>

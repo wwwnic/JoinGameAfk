@@ -2,7 +2,7 @@ namespace JoinGameAfk.Constant
 {
     public static class AppStorage
     {
-        public const int SettingsFileVersion = 1;
+        public const int SettingsFileVersion = 2;
         public const int ChampionFileVersion = 2;
         public const int ChampionImageSelectionFileVersion = 1;
 

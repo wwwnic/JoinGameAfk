@@ -82,8 +82,7 @@ namespace JoinGameAfk
             ChampSelectSettings champSelectSettings,
             int activeTabIndex = 0,
             string? selectedThemeKey = null,
-            bool themePickerExpanded = false,
-            bool readyCheckSoundPickerExpanded = false)
+            bool themePickerExpanded = false)
         {
             fDashboardPage = new PhaseProgressionPage(champSelectSettings);
             var logsPage = new LogsPage();
@@ -99,8 +98,7 @@ namespace JoinGameAfk
                 logsPage.WriteLine,
                 logsPage.WriteErrorLine,
                 selectedThemeKey,
-                themePickerExpanded,
-                readyCheckSoundPickerExpanded);
+                themePickerExpanded);
 
             var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings);
             mainWindow.SetController(fPhaseController);
@@ -249,8 +247,7 @@ namespace JoinGameAfk
         private void ReloadUiForTheme(
             ChampSelectSettings champSelectSettings,
             string? themeKey,
-            bool themePickerExpanded,
-            bool readyCheckSoundPickerExpanded)
+            bool themePickerExpanded)
         {
             try
             {
@@ -267,8 +264,7 @@ namespace JoinGameAfk
                     champSelectSettings,
                     activeTabIndex,
                     normalizedThemeKey,
-                    themePickerExpanded,
-                    readyCheckSoundPickerExpanded);
+                    themePickerExpanded);
                 if (previousWindow is not null)
                     CopyWindowPlacement(previousWindow, newWindow);
 

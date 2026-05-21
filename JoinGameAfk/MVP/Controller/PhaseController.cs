@@ -268,10 +268,7 @@ namespace JoinGameAfk.MVP.Controller
                         if (phase != _lastObservedPhase)
                         {
                             Log($"Phase changed: {_lastObservedPhase} -> {phase}");
-                            if (ShouldPlayReadyCheckDetectedCue(phase))
-                                _notificationSoundPlayer.PlayReadyCheckDetectedCue(
-                                    _champSelectSettings.ReadyCheckSoundNotificationKey,
-                                    ChampSelectSettings.NormalizeReadyCheckSoundVolumePercent(_champSelectSettings.ReadyCheckSoundNotificationVolumePercent));
+                            PlayPhaseSoundAlert(phase);
 
                             _lastObservedPhase = phase;
                             _lastHandledPhase = ClientPhase.Unknown;
@@ -795,7 +792,7 @@ namespace JoinGameAfk.MVP.Controller
         {
             _phaseHandlers.Clear();
             _phaseHandlers.Add(new ReadyCheck(http, _champSelectSettings, Log));
-            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent));
+            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent, PlaySoundAlert));
         }
 
         private void Log(string message)
@@ -929,11 +926,31 @@ namespace JoinGameAfk.MVP.Controller
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
-        private bool ShouldPlayReadyCheckDetectedCue(ClientPhase phase)
+        private void PlayPhaseSoundAlert(ClientPhase phase)
         {
-            return phase == ClientPhase.ReadyCheck
-                && _champSelectSettings.InQueueAutomationEnabled
-                && _champSelectSettings.ReadyCheckSoundNotificationEnabled;
+            string? alertId = phase switch
+            {
+                ClientPhase.ReadyCheck => SoundAlertIds.ReadyCheck,
+                ClientPhase.ChampSelect => SoundAlertIds.ChampSelectStart,
+                ClientPhase.Planning => SoundAlertIds.PlanningStart,
+                _ => null
+            };
+
+            if (alertId is null)
+                return;
+
+            PlaySoundAlert(alertId, $"Phase {phase} sound alert");
+        }
+
+        private void PlaySoundAlert(string alertId, string context)
+        {
+            if (!_champSelectSettings.IsSoundAlertActive(alertId))
+                return;
+
+            _notificationSoundPlayer.PlayAlert(
+                _champSelectSettings.GetSoundAlertSoundKey(alertId),
+                ChampSelectSettings.NormalizeSoundAlertVolumePercent(_champSelectSettings.SoundAlertVolumePercent),
+                context);
         }
 
         private static string? GetActionMessage(ClientPhase phase)
