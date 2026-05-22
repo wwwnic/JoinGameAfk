@@ -161,6 +161,24 @@ namespace JoinGameAfk.View
                 SelectSoundAlertOption(selectedOption);
         }
 
+        private void SoundAlertSoundCell_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (IsInsideButton(e.OriginalSource as DependencyObject)
+                || sender is not FrameworkElement { DataContext: SoundAlertOption option }
+                || !option.IsEnabled)
+            {
+                return;
+            }
+
+            SelectSoundAlertOption(option);
+            _notificationSoundPlayer.PreviewAlert(
+                option.SoundKey,
+                GetEffectiveSoundAlertVolumePercent(option),
+                $"{option.DisplayName} sound preview",
+                GetSoundAlertPlaybackDurationSecondsOrNull(option));
+            e.Handled = true;
+        }
+
         private void SoundPickerChoiceButton_Click(object sender, RoutedEventArgs e)
         {
             if (_activeSoundPickerOption is null
@@ -189,6 +207,19 @@ namespace JoinGameAfk.View
             SyncSoundAlertsEnabledFromRows();
             RefreshDirtyState();
             e.Handled = true;
+        }
+
+        private static bool IsInsideButton(DependencyObject? source)
+        {
+            while (source is not null)
+            {
+                if (source is Button)
+                    return true;
+
+                source = VisualTreeHelper.GetParent(source);
+            }
+
+            return false;
         }
 
         private void SoundPickerSearchBox_TextChanged(object sender, TextChangedEventArgs e)

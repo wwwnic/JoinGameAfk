@@ -550,7 +550,10 @@
                                                                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                                                                 BorderThickness="1"
                                                                                 CornerRadius="7"
+                                                                                Cursor="Hand"
+                                                                                MouseLeftButtonUp="SoundAlertSoundCell_MouseLeftButtonUp"
                                                                                 Padding="10,8"
+                                                                                ToolTip="Preview this sound."
                                                                                 VerticalAlignment="Center">
                                                                             <Grid>
                                                                                 <Grid.ColumnDefinitions>

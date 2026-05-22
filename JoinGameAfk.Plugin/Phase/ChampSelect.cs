@@ -705,12 +705,15 @@ public class ChampSelect : IPhaseHandler
             if (IsManualSelectionOverride(currentChampionId, _hasHoveredPick, _hoveredPickChampionId, _manualPickSelectionOverride))
             {
                 _manualPickSelectionOverride = true;
+                TryPlayManualSelectionOverrideSoundAlert(sessionId, actionId, currentChampionId, isPickAction: true);
                 LogStatus(ref _lastPickStatusMessage, $"Pick selection changed manually to {FormatChampion(currentChampionId)}. Falling back to last-second auto-lock for your current selection.");
             }
 
             _hasHoveredPick = true;
             _hoveredPickChampionId = currentChampionId;
         }
+
+        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
 
         if (!_hasHoveredPick && !_manualPickSelectionOverride && !_settings.AutoHoverChampionEnabled)
         {
@@ -735,6 +738,7 @@ public class ChampSelect : IPhaseHandler
             {
                 LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
                 await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: hoverActionLabel, cancellationToken);
+                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
             }
             else
             {
@@ -776,6 +780,7 @@ public class ChampSelect : IPhaseHandler
                 _pickHoverReadyAtUtc = DateTime.UtcNow;
             }
 
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
             return;
         }
 
@@ -826,6 +831,7 @@ public class ChampSelect : IPhaseHandler
             _pendingPickHoverActionId = actionId;
             _pendingPickHoverPhase = champSelectPhase;
             _pickHoverReadyAtUtc = DateTime.UtcNow;
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
         }
     }
 
@@ -855,12 +861,15 @@ public class ChampSelect : IPhaseHandler
             if (IsManualSelectionOverride(currentChampionId, _hasHoveredBan, _hoveredBanChampionId, _manualBanSelectionOverride))
             {
                 _manualBanSelectionOverride = true;
+                TryPlayManualSelectionOverrideSoundAlert(sessionId, actionId, currentChampionId, isPickAction: false);
                 LogStatus(ref _lastBanStatusMessage, $"Ban selection changed manually to {FormatChampion(currentChampionId)}. Falling back to last-second auto-lock for your current selection.");
             }
 
             _hasHoveredBan = true;
             _hoveredBanChampionId = currentChampionId;
         }
+
+        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
 
         if (!_hasHoveredBan && !_manualBanSelectionOverride && !_settings.AutoHoverChampionEnabled && !IsPlanningPhase(champSelectPhase))
         {
@@ -875,6 +884,7 @@ public class ChampSelect : IPhaseHandler
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
                 await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
+                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
             }
             else
             {
@@ -944,6 +954,7 @@ public class ChampSelect : IPhaseHandler
                 _banHoverReadyAtUtc = DateTime.UtcNow;
             }
 
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
             return;
         }
 
@@ -970,6 +981,7 @@ public class ChampSelect : IPhaseHandler
             _pendingBanHoverActionId = actionId;
             _pendingBanHoverPhase = champSelectPhase;
             _banHoverReadyAtUtc = DateTime.UtcNow;
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
         }
     }
 
@@ -1067,6 +1079,61 @@ public class ChampSelect : IPhaseHandler
             return;
 
         TryPlaySoundAlertOnce(alertId, $"{sessionId}:{alertId}:{actionId}", $"{FormatActionType(actionType)} action sound alert");
+    }
+
+    private void TryPlayManualSelectionOverrideSoundAlert(string sessionId, int actionId, int championId, bool isPickAction)
+    {
+        TryPlaySoundAlertOnce(
+            SoundAlertIds.ManualSelectionOverride,
+            $"{sessionId}:{SoundAlertIds.ManualSelectionOverride}:{actionId}:{championId}",
+            $"{GetActionLabel(isPickAction)} manual selection override sound alert");
+    }
+
+    private void TryPlayAllOptionsUnavailableSoundAlert(
+        string sessionId,
+        int actionId,
+        JsonElement root,
+        int localPlayerCellId,
+        IReadOnlyCollection<int> preferredChampionIds,
+        IReadOnlySet<int> excludedChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        bool manualSelectionOverride,
+        bool isPickAction)
+    {
+        if (manualSelectionOverride || preferredChampionIds.Count == 0)
+            return;
+
+        if (HasAvailableConfiguredChampion(root, localPlayerCellId, actionId, preferredChampionIds, excludedChampionIds, ownershipSnapshot, isPickAction))
+            return;
+
+        TryPlaySoundAlertOnce(
+            SoundAlertIds.AllOptionsUnavailable,
+            $"{sessionId}:{SoundAlertIds.AllOptionsUnavailable}:{actionId}:{GetActionLabel(isPickAction)}",
+            $"{GetActionLabel(isPickAction)} configured options unavailable sound alert");
+    }
+
+    private static bool HasAvailableConfiguredChampion(
+        JsonElement root,
+        int localPlayerCellId,
+        int actionId,
+        IReadOnlyCollection<int> championIds,
+        IReadOnlySet<int> excludedChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        bool isPickAction)
+    {
+        foreach (int championId in championIds)
+        {
+            if (championId <= 0 || excludedChampionIds.Contains(championId))
+                continue;
+
+            string? unavailableStatus = isPickAction
+                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, ownershipSnapshot)
+                : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: true);
+            if (unavailableStatus is null)
+                return true;
+        }
+
+        return false;
     }
 
     private static string FormatActionType(string actionType)

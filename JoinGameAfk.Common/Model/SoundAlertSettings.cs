@@ -33,9 +33,11 @@ namespace JoinGameAfk.Model
     {
         public const string ReadyCheck = "ready-check";
         public const string ChampSelectStart = "champ-select-start";
-        public const string PlanningStart = "planning-start";
+        public const string ChampSelectEnded = "champ-select-ended";
         public const string BanActionStart = "ban-action-start";
         public const string PickActionStart = "pick-action-start";
+        public const string ManualSelectionOverride = "manual-selection-override";
+        public const string AllOptionsUnavailable = "all-options-unavailable";
         public const string PickLockCountdown = "pick-lock-countdown";
         public const string BanLockCountdown = "ban-lock-countdown";
         public const string PickLockSoon = "pick-lock-soon";
@@ -60,7 +62,7 @@ namespace JoinGameAfk.Model
                 "Queue",
                 "Ready check appears",
                 "Plays as soon as the ready check popup is detected.",
-                "assistant-beacon",
+                "soft-digital-timbre",
                 EnabledInMinimal: true),
             new(
                 SoundAlertIds.ChampSelectStart,
@@ -70,12 +72,12 @@ namespace JoinGameAfk.Model
                 "draft-surge",
                 EnabledInMinimal: false),
             new(
-                SoundAlertIds.PlanningStart,
+                SoundAlertIds.ChampSelectEnded,
                 "Phase changes",
-                "Planning starts",
-                "Plays when the draft planning phase starts.",
-                "celestial-sweep",
-                EnabledInMinimal: false),
+                "Champion select dodged",
+                "Plays when champion select returns to lobby, matchmaking, or ready check instead of game.",
+                "loud-building-notify",
+                EnabledInMinimal: true),
             new(
                 SoundAlertIds.BanActionStart,
                 "Champion select",
@@ -90,6 +92,20 @@ namespace JoinGameAfk.Model
                 "Plays when your active pick action begins.",
                 "action-pulse",
                 EnabledInMinimal: false),
+            new(
+                SoundAlertIds.ManualSelectionOverride,
+                "Champion select",
+                "Manual selection override detected",
+                "Plays when you manually change the app-hovered pick or ban and auto-lock follows your current selection.",
+                "short-digital-alert",
+                EnabledInMinimal: true),
+            new(
+                SoundAlertIds.AllOptionsUnavailable,
+                "Champion select",
+                "All configured pick/ban options unavailable",
+                "Plays when every configured champion for your active pick or ban is blocked, failed, or not owned.",
+                "dopamine-notify",
+                EnabledInMinimal: true),
             new(
                 SoundAlertIds.PickLockCountdown,
                 "Champion select",

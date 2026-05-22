@@ -60,6 +60,7 @@ namespace JoinGameAfk.MVP.Controller
         private int _eventStreamRetryAttempt;
         private DateTime _nextEventStreamRetryAtUtc;
         private bool _hasReceivedPhaseResponse;
+        private bool _hasPendingChampSelectExitSound;
         private bool _isWaitingForClient;
         private bool _isShutdownRequested;
         private bool _disposed;
@@ -90,6 +91,7 @@ namespace JoinGameAfk.MVP.Controller
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _isClientConnected = false;
+            _hasPendingChampSelectExitSound = false;
             ResetEventStreamState();
             _isWaitingForClient = false;
             ResetLcuEventSignal();
@@ -135,6 +137,7 @@ namespace JoinGameAfk.MVP.Controller
             _eventStream?.Dispose();
             SignalLcuEvent();
             ResetEventStreamState();
+            _hasPendingChampSelectExitSound = false;
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
             if (!updateUi || _isShutdownRequested)
@@ -268,7 +271,7 @@ namespace JoinGameAfk.MVP.Controller
                         if (phase != _lastObservedPhase)
                         {
                             Log($"Phase changed: {_lastObservedPhase} -> {phase}");
-                            PlayPhaseSoundAlert(phase);
+                            PlayPhaseSoundAlert(_lastObservedPhase, phase);
 
                             _lastObservedPhase = phase;
                             _lastHandledPhase = ClientPhase.Unknown;
@@ -362,6 +365,7 @@ namespace JoinGameAfk.MVP.Controller
             _isWaitingForClient = false;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
+            _hasPendingChampSelectExitSound = false;
             fPhaseProgressionPage.SetClientConnection(false);
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
@@ -926,13 +930,14 @@ namespace JoinGameAfk.MVP.Controller
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
-        private void PlayPhaseSoundAlert(ClientPhase phase)
+        private void PlayPhaseSoundAlert(ClientPhase previousPhase, ClientPhase phase)
         {
+            TryPlayChampSelectDodgeSoundAlert(previousPhase, phase);
+
             string? alertId = phase switch
             {
                 ClientPhase.ReadyCheck => SoundAlertIds.ReadyCheck,
                 ClientPhase.ChampSelect => SoundAlertIds.ChampSelectStart,
-                ClientPhase.Planning => SoundAlertIds.PlanningStart,
                 _ => null
             };
 
@@ -940,6 +945,34 @@ namespace JoinGameAfk.MVP.Controller
                 return;
 
             PlaySoundAlert(alertId, $"Phase {phase} sound alert");
+        }
+
+        private void TryPlayChampSelectDodgeSoundAlert(ClientPhase previousPhase, ClientPhase phase)
+        {
+            if (_hasPendingChampSelectExitSound && phase != ClientPhase.Unknown)
+            {
+                if (IsChampSelectDodgeReturnPhase(phase))
+                    PlaySoundAlert(SoundAlertIds.ChampSelectEnded, "Champion select dodge sound alert");
+
+                _hasPendingChampSelectExitSound = false;
+            }
+
+            if (!IsChampSelectFlow(previousPhase) || IsChampSelectFlow(phase))
+                return;
+
+            if (phase == ClientPhase.Unknown)
+            {
+                _hasPendingChampSelectExitSound = true;
+                return;
+            }
+
+            if (IsChampSelectDodgeReturnPhase(phase))
+                PlaySoundAlert(SoundAlertIds.ChampSelectEnded, "Champion select dodge sound alert");
+        }
+
+        private static bool IsChampSelectDodgeReturnPhase(ClientPhase phase)
+        {
+            return phase is ClientPhase.Lobby or ClientPhase.Matchmaking or ClientPhase.ReadyCheck;
         }
 
         private void PlaySoundAlert(string alertId, string context)
