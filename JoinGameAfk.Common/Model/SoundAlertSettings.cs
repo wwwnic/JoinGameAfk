@@ -51,6 +51,9 @@ namespace JoinGameAfk.Model
         public const string DefaultSoundKey = "metallic-lock";
         public const string DefaultLockCountdownSoundKey = "clock-slow";
         public const string DefaultLockSoonSoundKey = "clock-fast";
+        public const string AssistantBeaconSoundKey = "assistant-beacon";
+        public const string DraftSurgeSoundKey = "draft-surge";
+        public const string SoftDigitalTimbreSoundKey = "soft-digital-timbre";
         public const int DefaultLockCountdownThresholdSeconds = 6;
         public const int DefaultLockSoonThresholdSeconds = 2;
         public const int DefaultLoopPlaybackDurationSeconds = 5;
@@ -62,15 +65,15 @@ namespace JoinGameAfk.Model
                 "Queue",
                 "Ready check appears",
                 "Plays as soon as the ready check popup is detected.",
-                "soft-digital-timbre",
+                AssistantBeaconSoundKey,
                 EnabledInMinimal: true),
             new(
                 SoundAlertIds.ChampSelectStart,
                 "Phase changes",
                 "Champion select starts",
                 "Plays when the League Client enters champion select.",
-                "draft-surge",
-                EnabledInMinimal: false),
+                SoftDigitalTimbreSoundKey,
+                EnabledInMinimal: true),
             new(
                 SoundAlertIds.ChampSelectEnded,
                 "Phase changes",
