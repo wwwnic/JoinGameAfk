@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.3.0" />
     <ProjectReference Include="..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
     <ProjectReference Include="..\JoinGameAfk.Plugin\JoinGameAfk.Plugin.csproj" />
   </ItemGroup>

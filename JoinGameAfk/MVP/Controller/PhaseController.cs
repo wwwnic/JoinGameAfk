@@ -792,7 +792,7 @@ namespace JoinGameAfk.MVP.Controller
         {
             _phaseHandlers.Clear();
             _phaseHandlers.Add(new ReadyCheck(http, _champSelectSettings, Log));
-            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent, PlaySoundAlert));
+            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent, HandleSoundAlertPlayback));
         }
 
         private void Log(string message)
@@ -944,13 +944,55 @@ namespace JoinGameAfk.MVP.Controller
 
         private void PlaySoundAlert(string alertId, string context)
         {
+            PlaySoundAlert(alertId, context, playbackDurationSecondsOverride: null, channelKey: null);
+        }
+
+        private void HandleSoundAlertPlayback(SoundAlertPlaybackRequest request)
+        {
+            switch (request.Command)
+            {
+                case SoundAlertPlaybackCommand.StopChannel:
+                    _notificationSoundPlayer.StopChannel(request.ChannelKey);
+                    return;
+                case SoundAlertPlaybackCommand.PreloadAlert:
+                    PreloadSoundAlert(request.AlertId, request.Context);
+                    return;
+                case SoundAlertPlaybackCommand.PlayAlert:
+                    if (request.AlertId is not null)
+                    {
+                        PlaySoundAlert(
+                            request.AlertId,
+                            request.Context,
+                            request.PlaybackDurationSeconds,
+                            request.ChannelKey);
+                    }
+
+                    return;
+            }
+        }
+
+        private void PreloadSoundAlert(string? alertId, string context)
+        {
+            if (alertId is null || !_champSelectSettings.IsSoundAlertActive(alertId))
+                return;
+
+            _notificationSoundPlayer.PreloadAlert(
+                _champSelectSettings.GetSoundAlertSoundKey(alertId),
+                context);
+        }
+
+        private void PlaySoundAlert(string alertId, string context, int? playbackDurationSecondsOverride, string? channelKey)
+        {
             if (!_champSelectSettings.IsSoundAlertActive(alertId))
                 return;
 
             _notificationSoundPlayer.PlayAlert(
                 _champSelectSettings.GetSoundAlertSoundKey(alertId),
-                ChampSelectSettings.NormalizeSoundAlertVolumePercent(_champSelectSettings.SoundAlertVolumePercent),
-                context);
+                _champSelectSettings.GetSoundAlertEffectiveVolumePercent(alertId),
+                context,
+                new NotificationSoundPlaybackOptions(
+                    playbackDurationSecondsOverride ?? _champSelectSettings.GetSoundAlertPlaybackDurationSeconds(alertId),
+                    channelKey));
         }
 
         private static string? GetActionMessage(ClientPhase phase)

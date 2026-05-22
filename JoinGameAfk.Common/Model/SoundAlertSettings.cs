@@ -16,6 +16,7 @@ namespace JoinGameAfk.Model
         public string SoundKey { get; set; } = SoundAlertDefaults.DefaultSoundKey;
         public int? VolumePercent { get; set; } = ChampSelectSettings.DefaultSoundAlertVolumePercent;
         public int? ThresholdSeconds { get; set; }
+        public int? PlaybackDurationSeconds { get; set; }
     }
 
     public sealed record SoundAlertDefinition(
@@ -25,7 +26,8 @@ namespace JoinGameAfk.Model
         string Description,
         string DefaultSoundKey,
         bool EnabledInMinimal,
-        int? DefaultThresholdSeconds = null);
+        int? DefaultThresholdSeconds = null,
+        int? DefaultPlaybackDurationSeconds = null);
 
     public static class SoundAlertIds
     {
@@ -34,14 +36,22 @@ namespace JoinGameAfk.Model
         public const string PlanningStart = "planning-start";
         public const string BanActionStart = "ban-action-start";
         public const string PickActionStart = "pick-action-start";
+        public const string PickLockCountdown = "pick-lock-countdown";
+        public const string BanLockCountdown = "ban-lock-countdown";
         public const string PickLockSoon = "pick-lock-soon";
         public const string BanLockSoon = "ban-lock-soon";
+        public const string PickLockComplete = "pick-lock-complete";
+        public const string BanLockComplete = "ban-lock-complete";
     }
 
     public static class SoundAlertDefaults
     {
         public const string DefaultSoundKey = "metallic-lock";
-        public const int DefaultLockSoonThresholdSeconds = 3;
+        public const string DefaultLockCountdownSoundKey = "clock-slow";
+        public const string DefaultLockSoonSoundKey = "clock-fast";
+        public const int DefaultLockCountdownThresholdSeconds = 6;
+        public const int DefaultLockSoonThresholdSeconds = 2;
+        public const int DefaultLoopPlaybackDurationSeconds = 5;
 
         public static IReadOnlyList<SoundAlertDefinition> Definitions { get; } =
         [
@@ -50,7 +60,7 @@ namespace JoinGameAfk.Model
                 "Queue",
                 "Ready check appears",
                 "Plays as soon as the ready check popup is detected.",
-                DefaultSoundKey,
+                "assistant-beacon",
                 EnabledInMinimal: true),
             new(
                 SoundAlertIds.ChampSelectStart,
@@ -81,21 +91,51 @@ namespace JoinGameAfk.Model
                 "action-pulse",
                 EnabledInMinimal: false),
             new(
+                SoundAlertIds.PickLockCountdown,
+                "Champion select",
+                "Pick auto-lock countdown starts",
+                "Plays Clock Slow before the final auto-lock countdown cue.",
+                DefaultLockCountdownSoundKey,
+                EnabledInMinimal: true,
+                DefaultLockCountdownThresholdSeconds),
+            new(
                 SoundAlertIds.PickLockSoon,
                 "Champion select",
-                "Pick auto-lock is close",
-                "Plays before the app auto-locks your pick.",
-                "lock-in-impact",
-                EnabledInMinimal: false,
+                "Pick auto-lock final countdown",
+                "Plays Clock Fast until the pick auto-locks.",
+                DefaultLockSoonSoundKey,
+                EnabledInMinimal: true,
                 DefaultLockSoonThresholdSeconds),
+            new(
+                SoundAlertIds.PickLockComplete,
+                "Champion select",
+                "Pick auto-lock locks champion",
+                "Plays when the app successfully locks your pick.",
+                DefaultSoundKey,
+                EnabledInMinimal: true),
+            new(
+                SoundAlertIds.BanLockCountdown,
+                "Champion select",
+                "Ban auto-lock countdown starts",
+                "Plays Clock Slow before the final auto-lock countdown cue.",
+                DefaultLockCountdownSoundKey,
+                EnabledInMinimal: false,
+                DefaultLockCountdownThresholdSeconds),
             new(
                 SoundAlertIds.BanLockSoon,
                 "Champion select",
-                "Ban auto-lock is close",
-                "Plays before the app auto-locks your ban.",
-                "lock-in-impact",
+                "Ban auto-lock final countdown",
+                "Plays Clock Fast until the ban auto-locks.",
+                DefaultLockSoonSoundKey,
                 EnabledInMinimal: false,
                 DefaultLockSoonThresholdSeconds),
+            new(
+                SoundAlertIds.BanLockComplete,
+                "Champion select",
+                "Ban auto-lock locks champion",
+                "Plays when the app successfully locks your ban.",
+                "lock-in-impact",
+                EnabledInMinimal: false),
         ];
 
         public static IReadOnlyList<string> AlertIds { get; } =
@@ -133,7 +173,8 @@ namespace JoinGameAfk.Model
                 Enabled = definition.EnabledInMinimal,
                 SoundKey = definition.DefaultSoundKey,
                 VolumePercent = ChampSelectSettings.DefaultSoundAlertVolumePercent,
-                ThresholdSeconds = definition.DefaultThresholdSeconds
+                ThresholdSeconds = definition.DefaultThresholdSeconds,
+                PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds
             };
         }
     }

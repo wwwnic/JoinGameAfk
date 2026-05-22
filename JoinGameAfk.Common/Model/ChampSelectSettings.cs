@@ -20,12 +20,14 @@ namespace JoinGameAfk.Model
         public const int DefaultPickBanOverlayOpacityPercent = 94;
         public const int MinReadyCheckSoundVolumePercent = 0;
         public const int MaxReadyCheckSoundVolumePercent = 100;
-        public const int DefaultReadyCheckSoundVolumePercent = 100;
+        public const int DefaultReadyCheckSoundVolumePercent = 50;
         public const int MinSoundAlertVolumePercent = 0;
         public const int MaxSoundAlertVolumePercent = 100;
-        public const int DefaultSoundAlertVolumePercent = 100;
+        public const int DefaultSoundAlertVolumePercent = 50;
         public const int MinSoundAlertThresholdSeconds = 0;
         public const int MaxSoundAlertThresholdSeconds = 30;
+        public const int MinSoundAlertPlaybackDurationSeconds = 1;
+        public const int MaxSoundAlertPlaybackDurationSeconds = 30;
 
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
@@ -52,7 +54,7 @@ namespace JoinGameAfk.Model
         /// <summary>
         /// Sound cue used when a ready check popup is detected.
         /// </summary>
-        public string ReadyCheckSoundNotificationKey { get; set; } = "metallic-lock";
+        public string ReadyCheckSoundNotificationKey { get; set; } = "assistant-beacon";
 
         /// <summary>
         /// Volume percentage used for ready check sound notifications and previews.
@@ -292,7 +294,20 @@ namespace JoinGameAfk.Model
             if (definition.DefaultThresholdSeconds is null)
                 return null;
 
-            return NormalizeSoundAlertThresholdSeconds(GetSoundAlertSetting(alertId).ThresholdSeconds);
+            return NormalizeSoundAlertThresholdSeconds(GetSoundAlertSetting(alertId).ThresholdSeconds, definition.DefaultThresholdSeconds.Value);
+        }
+
+        public int? GetSoundAlertPlaybackDurationSeconds(string alertId)
+        {
+            var definition = SoundAlertDefaults.GetDefinition(alertId);
+            if (definition.DefaultPlaybackDurationSeconds is null)
+                return null;
+
+            var setting = GetSoundAlertSetting(alertId);
+            if (setting.PlaybackDurationSeconds is null)
+                return definition.DefaultPlaybackDurationSeconds;
+
+            return NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds);
         }
 
         public int GetSoundAlertEffectiveVolumePercent(string alertId)
@@ -375,12 +390,32 @@ namespace JoinGameAfk.Model
                 if (File.Exists(AppStorage.SettingsFilePath))
                 {
                     var json = File.ReadAllText(AppStorage.SettingsFilePath);
-                    return NormalizeVersion(JsonSerializer.Deserialize<ChampSelectSettings>(json) ?? new ChampSelectSettings());
+                    var settings = JsonSerializer.Deserialize<ChampSelectSettings>(json);
+                    return settings is null
+                        ? ResetSettingsFile()
+                        : NormalizeVersion(settings);
                 }
             }
-            catch { }
+            catch
+            {
+                return ResetSettingsFile();
+            }
 
             return new ChampSelectSettings();
+        }
+
+        private static ChampSelectSettings ResetSettingsFile()
+        {
+            var defaults = new ChampSelectSettings();
+            try
+            {
+                defaults.Save();
+            }
+            catch
+            {
+            }
+
+            return defaults;
         }
 
         private static ChampSelectSettings NormalizeVersion(ChampSelectSettings settings)
@@ -396,8 +431,8 @@ namespace JoinGameAfk.Model
 
             if (storedVersion < 2)
                 settings.MigrateLegacySoundAlertSettings();
-            else
-                settings.NormalizeSoundAlertOptions();
+
+            settings.NormalizeSoundAlertOptions();
 
             settings.Version = AppStorage.SettingsFileVersion;
 
@@ -441,7 +476,10 @@ namespace JoinGameAfk.Model
                 normalizedAlert.VolumePercent = NormalizeSoundAlertVolumePercent(currentAlert.VolumePercent);
                 normalizedAlert.ThresholdSeconds = definition.DefaultThresholdSeconds is null
                     ? null
-                    : NormalizeSoundAlertThresholdSeconds(currentAlert.ThresholdSeconds);
+                    : NormalizeSoundAlertThresholdSeconds(currentAlert.ThresholdSeconds, definition.DefaultThresholdSeconds.Value);
+                normalizedAlert.PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds is null
+                    ? null
+                    : NormalizeSoundAlertPlaybackDurationSeconds(currentAlert.PlaybackDurationSeconds ?? definition.DefaultPlaybackDurationSeconds);
             }
 
             SoundAlerts = normalizedAlerts;
@@ -517,13 +555,40 @@ namespace JoinGameAfk.Model
 
         public static int NormalizeSoundAlertThresholdSeconds(int? thresholdSeconds)
         {
-            if (thresholdSeconds is null)
-                return SoundAlertDefaults.DefaultLockSoonThresholdSeconds;
+            return NormalizeSoundAlertThresholdSeconds(thresholdSeconds, SoundAlertDefaults.DefaultLockSoonThresholdSeconds);
+        }
 
+        public static int NormalizeSoundAlertThresholdSeconds(int? thresholdSeconds, int defaultThresholdSeconds)
+        {
+            if (thresholdSeconds is null)
+                return NormalizeSoundAlertThresholdFallbackSeconds(defaultThresholdSeconds);
+
+            int fallbackThresholdSeconds = NormalizeSoundAlertThresholdFallbackSeconds(defaultThresholdSeconds);
             return Math.Clamp(
-                thresholdSeconds.Value < MinSoundAlertThresholdSeconds ? SoundAlertDefaults.DefaultLockSoonThresholdSeconds : thresholdSeconds.Value,
+                thresholdSeconds.Value < MinSoundAlertThresholdSeconds ? fallbackThresholdSeconds : thresholdSeconds.Value,
                 MinSoundAlertThresholdSeconds,
                 MaxSoundAlertThresholdSeconds);
+        }
+
+        private static int NormalizeSoundAlertThresholdFallbackSeconds(int thresholdSeconds)
+        {
+            return Math.Clamp(
+                thresholdSeconds,
+                MinSoundAlertThresholdSeconds,
+                MaxSoundAlertThresholdSeconds);
+        }
+
+        public static int NormalizeSoundAlertPlaybackDurationSeconds(int? playbackDurationSeconds)
+        {
+            if (playbackDurationSeconds is null)
+                return SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds;
+
+            return Math.Clamp(
+                playbackDurationSeconds.Value < MinSoundAlertPlaybackDurationSeconds
+                    ? SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds
+                    : playbackDurationSeconds.Value,
+                MinSoundAlertPlaybackDurationSeconds,
+                MaxSoundAlertPlaybackDurationSeconds);
         }
     }
 }

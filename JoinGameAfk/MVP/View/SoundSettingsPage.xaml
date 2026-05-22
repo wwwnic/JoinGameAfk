@@ -289,7 +289,7 @@
               Grid.Row="2"
               ClipToBounds="True">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="7*" MinWidth="420" />
+                        <ColumnDefinition Width="7*" MinWidth="520" />
                         <ColumnDefinition Width="8" />
                         <ColumnDefinition Width="300" MinWidth="260" />
                     </Grid.ColumnDefinitions>
@@ -497,7 +497,7 @@
                                     <ColumnDefinition Width="12" />
                                     <ColumnDefinition Width="202" />
                                     <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="86" />
+                                    <ColumnDefinition Width="76" />
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Grid.Column="0"
@@ -532,7 +532,7 @@
                                                                             <ColumnDefinition Width="12" />
                                                                             <ColumnDefinition Width="202" />
                                                                             <ColumnDefinition Width="12" />
-                                                                            <ColumnDefinition Width="86" />
+                                                                            <ColumnDefinition Width="76" />
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <StackPanel Grid.Column="0"
@@ -615,7 +615,7 @@
                                                                                  Text="{Binding ThresholdText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                                  TextChanged="SoundAlertThresholdBox_TextChanged"
                                                                                  Style="{StaticResource InputTextBoxStyle}"
-                                                                                 Width="86"
+                                                                                 Width="76"
                                                                                  VerticalAlignment="Center"
                                                                                  Visibility="{Binding HasThreshold, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                                  ToolTip="Seconds before the app auto-locks this action." />

@@ -169,10 +169,12 @@ namespace JoinGameAfk.View
 
             _activeSoundPickerOption.IsEnabled = true;
             _activeSoundPickerOption.SoundKey = soundChoice.Key;
+            RefreshLockCountdownDescriptions();
             _notificationSoundPlayer.PreviewAlert(
                 soundChoice.Key,
                 GetEffectiveSoundAlertVolumePercent(_activeSoundPickerOption),
-                $"{_activeSoundPickerOption.DisplayName} sound preview");
+                $"{_activeSoundPickerOption.DisplayName} sound preview",
+                GetSoundAlertPlaybackDurationSecondsOrNull(_activeSoundPickerOption));
             RefreshSoundPickerChoices();
             RefreshDirtyState();
         }
@@ -255,12 +257,19 @@ namespace JoinGameAfk.View
         private void SoundAlertThresholdBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             ValidateSoundAlertThresholdBox(sender as TextBox);
+            RefreshLockCountdownDescriptions();
             RefreshDirtyState();
         }
 
         private void SoundAlertVolumeBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             ValidateSoundAlertVolumeBox(sender as TextBox);
+            RefreshDirtyState();
+        }
+
+        private void SoundAlertPlaybackDurationBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ValidateSoundAlertPlaybackDurationBox(sender as TextBox);
             RefreshDirtyState();
         }
 
@@ -369,10 +378,50 @@ namespace JoinGameAfk.View
                 option.SoundKey = NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
                 option.VolumeText = ChampSelectSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
                 option.ThresholdText = option.HasThreshold
-                    ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds).ToString()
+                    ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, option.DefaultThresholdSeconds).ToString()
                     : string.Empty;
+                option.PlaybackDurationText = option.HasPlaybackDuration
+                    ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
+                    : SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds.ToString();
                 option.RefreshSelectedSound();
             }
+
+            RefreshLockCountdownDescriptions();
+        }
+
+        private void RefreshLockCountdownDescriptions()
+        {
+            RefreshLockCountdownDescriptions(
+                SoundAlertIds.PickLockCountdown,
+                SoundAlertIds.PickLockSoon);
+            RefreshLockCountdownDescriptions(
+                SoundAlertIds.BanLockCountdown,
+                SoundAlertIds.BanLockSoon);
+        }
+
+        private void RefreshLockCountdownDescriptions(string countdownAlertId, string closeAlertId)
+        {
+            var countdownOption = FindSoundAlertOption(countdownAlertId);
+            var closeOption = FindSoundAlertOption(closeAlertId);
+            if (countdownOption is null || closeOption is null)
+                return;
+
+            int countdownSeconds = ParseSoundAlertThresholdOrDefault(countdownOption);
+            int closeSeconds = ParseSoundAlertThresholdOrDefault(closeOption);
+            countdownOption.Description = countdownSeconds > closeSeconds
+                ? $"Plays {countdownOption.SelectedSoundDisplayName} from {FormatLeadSeconds(countdownSeconds)} to {FormatLeadSeconds(closeSeconds)} before auto-lock. Replaced by the next countdown cue if enabled."
+                : $"Plays {countdownOption.SelectedSoundDisplayName} from {FormatLeadSeconds(countdownSeconds)} until auto-lock when the next countdown cue is off.";
+            closeOption.Description = $"Plays {closeOption.SelectedSoundDisplayName} from {FormatLeadSeconds(closeSeconds)} until auto-lock.";
+        }
+
+        private SoundAlertOption? FindSoundAlertOption(string alertId)
+        {
+            return GetSoundAlertOptions().FirstOrDefault(option => string.Equals(option.AlertId, alertId, StringComparison.Ordinal));
+        }
+
+        private static string FormatLeadSeconds(int seconds)
+        {
+            return $"{Math.Max(0, seconds)}s";
         }
 
         private Dictionary<string, SoundAlertSetting> CaptureSoundAlertSettings()
@@ -385,7 +434,10 @@ namespace JoinGameAfk.View
                     SoundKey = NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey),
                     VolumePercent = ChampSelectSettings.NormalizeSoundAlertVolumePercent(ParseSoundAlertVolumeOrDefault(option)),
                     ThresholdSeconds = option.HasThreshold
-                        ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(ParseSoundAlertThresholdOrDefault(option))
+                        ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(ParseSoundAlertThresholdOrDefault(option), option.DefaultThresholdSeconds)
+                        : null,
+                    PlaybackDurationSeconds = option.HasPlaybackDuration
+                        ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(ParseSoundAlertPlaybackDurationOrDefault(option))
                         : null
                 },
                 StringComparer.Ordinal);
@@ -406,8 +458,12 @@ namespace JoinGameAfk.View
                 string volume = ChampSelectSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
                 string threshold = definition.DefaultThresholdSeconds is null
                     ? string.Empty
-                    : ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds).ToString();
-                return $"{definition.Id}:{setting.Enabled}:{soundKey}:{volume}:{threshold}";
+                    : ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, definition.DefaultThresholdSeconds.Value).ToString();
+                string playbackDuration = definition.DefaultPlaybackDurationSeconds is not null
+                    && NotificationSoundPlayer.IsLoopableSoundKey(soundKey)
+                    ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
+                    : string.Empty;
+                return $"{definition.Id}:{setting.Enabled}:{soundKey}:{volume}:{threshold}:{playbackDuration}";
             }));
         }
 
@@ -417,7 +473,10 @@ namespace JoinGameAfk.View
             string threshold = option.HasThreshold
                 ? CreateNumericSnapshotText(option.ThresholdText)
                 : string.Empty;
-            return $"{option.AlertId}:{option.IsEnabled}:{NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey)}:{volume}:{threshold}";
+            string playbackDuration = option.HasPlaybackDuration
+                ? CreateNumericSnapshotText(option.PlaybackDurationText)
+                : string.Empty;
+            return $"{option.AlertId}:{option.IsEnabled}:{NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey)}:{volume}:{threshold}:{playbackDuration}";
         }
 
         private bool TryValidateSoundAlertSettings()
@@ -443,6 +502,15 @@ namespace JoinGameAfk.View
                 return false;
             }
 
+            foreach (var option in GetSoundAlertOptions().Where(option => option.HasPlaybackDuration))
+            {
+                if (TryParseSoundAlertPlaybackDuration(option.PlaybackDurationText, out _))
+                    continue;
+
+                ShowValidationMessage($"{option.DisplayName} play time must be a whole number between {ChampSelectSettings.MinSoundAlertPlaybackDurationSeconds} and {ChampSelectSettings.MaxSoundAlertPlaybackDurationSeconds}.");
+                return false;
+            }
+
             return true;
         }
 
@@ -464,6 +532,17 @@ namespace JoinGameAfk.View
 
             bool isValid = textBox.DataContext is not SoundAlertOption option
                 || TryParseSoundAlertVolume(option.VolumeText, out _);
+            InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
+        }
+
+        private void ValidateSoundAlertPlaybackDurationBox(TextBox? textBox)
+        {
+            if (textBox is null)
+                return;
+
+            bool isValid = textBox.DataContext is not SoundAlertOption option
+                || !option.HasPlaybackDuration
+                || TryParseSoundAlertPlaybackDuration(option.PlaybackDurationText, out _);
             InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
         }
 
@@ -494,7 +573,7 @@ namespace JoinGameAfk.View
         {
             return TryParseSoundAlertThreshold(option.ThresholdText, out int threshold)
                 ? threshold
-                : SoundAlertDefaults.DefaultLockSoonThresholdSeconds;
+                : option.DefaultThresholdSeconds;
         }
 
         private static bool TryParseSoundAlertThreshold(string? text, out int threshold)
@@ -510,6 +589,36 @@ namespace JoinGameAfk.View
             }
 
             threshold = value;
+            return true;
+        }
+
+        private static int? GetSoundAlertPlaybackDurationSecondsOrNull(SoundAlertOption option)
+        {
+            return option.HasPlaybackDuration
+                ? ParseSoundAlertPlaybackDurationOrDefault(option)
+                : null;
+        }
+
+        private static int ParseSoundAlertPlaybackDurationOrDefault(SoundAlertOption option)
+        {
+            return TryParseSoundAlertPlaybackDuration(option.PlaybackDurationText, out int duration)
+                ? duration
+                : SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds;
+        }
+
+        private static bool TryParseSoundAlertPlaybackDuration(string? text, out int playbackDuration)
+        {
+            playbackDuration = 0;
+            if (!int.TryParse(text, out int value))
+                return false;
+
+            if (value < ChampSelectSettings.MinSoundAlertPlaybackDurationSeconds
+                || value > ChampSelectSettings.MaxSoundAlertPlaybackDurationSeconds)
+            {
+                return false;
+            }
+
+            playbackDuration = value;
             return true;
         }
 
@@ -565,22 +674,29 @@ namespace JoinGameAfk.View
         {
             private bool _isEnabled;
             private bool _isSelected;
+            private readonly bool _supportsPlaybackDuration;
             private string _soundKey;
+            private string _description;
             private string _selectedSoundDisplayName = string.Empty;
+            private bool _hasPlaybackDuration;
             private string _volumeText;
             private string _thresholdText;
+            private string _playbackDurationText;
 
             public SoundAlertOption(SoundAlertDefinition definition, IReadOnlyList<NotificationSoundOption> soundOptions)
             {
                 AlertId = definition.Id;
                 DisplayName = definition.DisplayName;
-                Description = definition.Description;
+                _description = definition.Description;
                 HasThreshold = definition.DefaultThresholdSeconds is not null;
-                SoundChoices = soundOptions.Select(option => new SoundChoiceOption(option.Key, option.DisplayName)).ToList();
+                DefaultThresholdSeconds = definition.DefaultThresholdSeconds ?? SoundAlertDefaults.DefaultLockSoonThresholdSeconds;
+                _supportsPlaybackDuration = definition.DefaultPlaybackDurationSeconds is not null;
+                SoundChoices = soundOptions.Select(option => new SoundChoiceOption(option.Key, option.DisplayName, option.IsLoopable)).ToList();
                 _isEnabled = definition.EnabledInMinimal;
                 _soundKey = NotificationSoundPlayer.NormalizeSoundKey(definition.DefaultSoundKey);
                 _volumeText = ChampSelectSettings.DefaultSoundAlertVolumePercent.ToString();
                 _thresholdText = definition.DefaultThresholdSeconds?.ToString() ?? string.Empty;
+                _playbackDurationText = (definition.DefaultPlaybackDurationSeconds ?? SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds).ToString();
                 RefreshSelectedSound();
             }
 
@@ -588,8 +704,33 @@ namespace JoinGameAfk.View
 
             public string AlertId { get; }
             public string DisplayName { get; }
-            public string Description { get; }
+            public string Description
+            {
+                get => _description;
+                set
+                {
+                    if (string.Equals(_description, value, StringComparison.Ordinal))
+                        return;
+
+                    _description = value;
+                    OnPropertyChanged(nameof(Description));
+                }
+            }
             public bool HasThreshold { get; }
+            public int DefaultThresholdSeconds { get; }
+            public bool HasPlaybackDuration
+            {
+                get => _hasPlaybackDuration;
+                private set
+                {
+                    if (_hasPlaybackDuration == value)
+                        return;
+
+                    _hasPlaybackDuration = value;
+                    OnPropertyChanged(nameof(HasPlaybackDuration));
+                }
+            }
+
             public IReadOnlyList<SoundChoiceOption> SoundChoices { get; }
 
             public bool IsSelected
@@ -672,6 +813,19 @@ namespace JoinGameAfk.View
                 }
             }
 
+            public string PlaybackDurationText
+            {
+                get => _playbackDurationText;
+                set
+                {
+                    if (string.Equals(_playbackDurationText, value, StringComparison.Ordinal))
+                        return;
+
+                    _playbackDurationText = value;
+                    OnPropertyChanged(nameof(PlaybackDurationText));
+                }
+            }
+
             public void RefreshSelectedSound()
             {
                 SoundChoiceOption? selectedChoice = null;
@@ -686,6 +840,9 @@ namespace JoinGameAfk.View
                 SelectedSoundDisplayName = selectedChoice?.DisplayName
                     ?? SoundChoices.FirstOrDefault()?.DisplayName
                     ?? "Default";
+                HasPlaybackDuration = _supportsPlaybackDuration && selectedChoice?.IsLoopable == true;
+                if (HasPlaybackDuration && string.IsNullOrWhiteSpace(PlaybackDurationText))
+                    PlaybackDurationText = SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds.ToString();
             }
 
             private void OnPropertyChanged(string propertyName)
@@ -698,16 +855,18 @@ namespace JoinGameAfk.View
         {
             private bool _isSelected;
 
-            public SoundChoiceOption(string key, string displayName)
+            public SoundChoiceOption(string key, string displayName, bool isLoopable)
             {
                 Key = key;
                 DisplayName = displayName;
+                IsLoopable = isLoopable;
             }
 
             public event PropertyChangedEventHandler? PropertyChanged;
 
             public string Key { get; }
             public string DisplayName { get; }
+            public bool IsLoopable { get; }
 
             public bool IsSelected
             {
