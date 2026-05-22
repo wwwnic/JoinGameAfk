@@ -270,6 +270,9 @@ namespace JoinGameAfk.MVP.Controller
 
                         if (phase != _lastObservedPhase)
                         {
+                            if (_lastObservedPhase == ClientPhase.ReadyCheck && phase != ClientPhase.ReadyCheck)
+                                _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
+
                             Log($"Phase changed: {_lastObservedPhase} -> {phase}");
                             PlayPhaseSoundAlert(_lastObservedPhase, phase);
 
@@ -353,6 +356,7 @@ namespace JoinGameAfk.MVP.Controller
             if (!string.IsNullOrWhiteSpace(logMessage))
                 Log(logMessage);
 
+            _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
             _eventStream?.Dispose();
             _eventStream = null;
             _eventStreamTask = null;
