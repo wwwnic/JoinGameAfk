@@ -35,6 +35,8 @@ public sealed class LogoSettings
 
     public bool HideFacetLinesAtAllSizes { get; set; }
 
+    public bool SurfaceFacetLinesOnly { get; set; }
+
     public double RotationXDegrees { get; set; } = DefaultRotationXDegrees;
 
     public double RotationYDegrees { get; set; } = DefaultRotationYDegrees;
@@ -66,6 +68,7 @@ public sealed class LogoSettings
             StrokeInsetScale = StrokeInsetScale,
             FacetDetailLevel = FacetDetailLevel,
             HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes,
+            SurfaceFacetLinesOnly = SurfaceFacetLinesOnly,
             RotationXDegrees = RotationXDegrees,
             RotationYDegrees = RotationYDegrees,
             RotationZDegrees = RotationZDegrees,

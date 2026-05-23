@@ -77,6 +77,7 @@ public partial class MainWindow : Window
         StrokeInsetSlider.Value = settings.StrokeInsetScale;
         FacetDetailSlider.Value = settings.FacetDetailLevel;
         HideFacetLinesAtAllSizesCheckBox.IsChecked = settings.HideFacetLinesAtAllSizes;
+        SurfaceFacetLinesOnlyCheckBox.IsChecked = settings.SurfaceFacetLinesOnly;
         RotationXSlider.Value = settings.RotationXDegrees;
         RotationYSlider.Value = settings.RotationYDegrees;
         RotationZSlider.Value = settings.RotationZDegrees;
@@ -408,12 +409,13 @@ public partial class MainWindow : Window
         UpdateSwatches(settings);
 
         LargePreviewImage.Source = PolyhedronLogoRenderer.RenderBitmap(PolyhedronLogoRenderer.CanvasSize, settings);
-        Preview16Image.Source = PolyhedronLogoRenderer.RenderBitmap(16, settings);
-        Preview24Image.Source = PolyhedronLogoRenderer.RenderBitmap(24, settings);
-        Preview32Image.Source = PolyhedronLogoRenderer.RenderBitmap(32, settings);
-        Preview48Image.Source = PolyhedronLogoRenderer.RenderBitmap(48, settings);
-        Preview64Image.Source = PolyhedronLogoRenderer.RenderBitmap(64, settings);
-        Preview128Image.Source = PolyhedronLogoRenderer.RenderBitmap(128, settings);
+        Preview16Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(16, settings);
+        Preview24Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(24, settings);
+        Preview32Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(32, settings);
+        Preview48Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(48, settings);
+        Preview64Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(64, settings);
+        Preview128Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(128, settings);
+        Preview256Image.Source = PolyhedronLogoRenderer.RenderIconBitmap(256, settings);
 
         StatusText.Text = status ?? "Live preview only. Generate app assets writes logo.svg and logo.ico.";
     }
@@ -435,6 +437,7 @@ public partial class MainWindow : Window
         }
 
         bool hideFacetLinesAtAllSizes = HideFacetLinesAtAllSizesCheckBox.IsChecked == true;
+        bool surfaceFacetLinesOnly = SurfaceFacetLinesOnlyCheckBox.IsChecked == true;
 
         settings = new LogoSettings
         {
@@ -449,6 +452,7 @@ public partial class MainWindow : Window
             StrokeInsetScale = StrokeInsetSlider.Value,
             FacetDetailLevel = FacetDetailSlider.Value,
             HideFacetLinesAtAllSizes = hideFacetLinesAtAllSizes,
+            SurfaceFacetLinesOnly = surfaceFacetLinesOnly,
             RotationXDegrees = RotationXSlider.Value,
             RotationYDegrees = RotationYSlider.Value,
             RotationZDegrees = RotationZSlider.Value,
@@ -506,6 +510,7 @@ public partial class MainWindow : Window
         LineSizeSlider.IsEnabled = isEnabled;
         ContrastLineSizeSlider.IsEnabled = isEnabled;
         StrokeInsetSlider.IsEnabled = isEnabled;
+        SurfaceFacetLinesOnlyCheckBox.IsEnabled = isEnabled;
     }
 
     private void UpdateCheckOverlayControls(bool isEnabled)
@@ -590,7 +595,8 @@ public partial class MainWindow : Window
         double CheckScale,
         double CheckOffsetX,
         double CheckOffsetY,
-        bool HideFacetLinesAtAllSizes = false)
+        bool HideFacetLinesAtAllSizes = false,
+        bool SurfaceFacetLinesOnly = false)
     {
         public LogoSettings ToSettings()
         {
@@ -612,6 +618,7 @@ public partial class MainWindow : Window
                 StrokeInsetScale = StrokeInsetScale,
                 FacetDetailLevel = FacetDetailLevel,
                 HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes,
+                SurfaceFacetLinesOnly = SurfaceFacetLinesOnly,
                 RotationXDegrees = RotationXDegrees,
                 RotationYDegrees = RotationYDegrees,
                 RotationZDegrees = RotationZDegrees,
@@ -645,11 +652,12 @@ public partial class MainWindow : Window
         double? CheckOffsetX,
         double? CheckOffsetY,
         bool? HideFacetLinesAtAllSizes = null,
-        bool? ShowFacetLines = null)
+        bool? ShowFacetLines = null,
+        bool? SurfaceFacetLinesOnly = null)
     {
         public static LogoPresetFile FromSettings(LogoSettings settings) =>
             new(
-                3,
+                4,
                 LogoSettings.ToHex(settings.PrimaryColor),
                 LogoSettings.ToHex(settings.SecondaryColor),
                 LogoSettings.ToHex(settings.RidgeColor),
@@ -667,7 +675,9 @@ public partial class MainWindow : Window
                 settings.CheckScale,
                 settings.CheckOffsetX,
                 settings.CheckOffsetY,
-                settings.HideFacetLinesAtAllSizes);
+                settings.HideFacetLinesAtAllSizes,
+                null,
+                settings.SurfaceFacetLinesOnly);
 
         public LogoSettings ToSettings()
         {
@@ -696,6 +706,7 @@ public partial class MainWindow : Window
                 StrokeInsetScale = ClampFinite(StrokeInsetScale ?? 1, MinimumStrokeInsetScale, MaximumStrokeInsetScale),
                 FacetDetailLevel = ClampFinite(FacetDetailLevel ?? 1, MinimumFacetDetailLevel, MaximumFacetDetailLevel),
                 HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes ?? !(ShowFacetLines ?? true),
+                SurfaceFacetLinesOnly = SurfaceFacetLinesOnly ?? false,
                 RotationXDegrees = ClampFinite(RotationXDegrees ?? LogoSettings.DefaultRotationXDegrees, MinimumRotationDegrees, MaximumRotationDegrees),
                 RotationYDegrees = ClampFinite(RotationYDegrees ?? LogoSettings.DefaultRotationYDegrees, MinimumRotationDegrees, MaximumRotationDegrees),
                 RotationZDegrees = ClampFinite(RotationZDegrees ?? LogoSettings.DefaultRotationZDegrees, MinimumRotationDegrees, MaximumRotationDegrees),

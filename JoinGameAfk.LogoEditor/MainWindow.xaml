@@ -263,6 +263,10 @@
                             <Image x:Name="Preview128Image" Width="128" Height="128" Stretch="Uniform" />
                             <TextBlock Text="128" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
                         </StackPanel>
+                        <StackPanel Margin="18,0,0,0">
+                            <Image x:Name="Preview256Image" Width="128" Height="128" Stretch="Uniform" />
+                            <TextBlock Text="256" FontSize="11" Margin="0,6,0,0" HorizontalAlignment="Center" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -417,6 +421,11 @@
 
                     <CheckBox x:Name="HideFacetLinesAtAllSizesCheckBox"
                               Content="Hide lines at all sizes"
+                              Checked="SettingChanged"
+                              Unchecked="SettingChanged" />
+
+                    <CheckBox x:Name="SurfaceFacetLinesOnlyCheckBox"
+                              Content="Surface lines only"
                               Checked="SettingChanged"
                               Unchecked="SettingChanged" />
 

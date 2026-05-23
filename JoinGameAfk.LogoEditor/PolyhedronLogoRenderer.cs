@@ -17,6 +17,7 @@ public static class PolyhedronLogoRenderer
 
     private const int MinimumFacetLineSize = 256;
     private const double GitHubBannerPreviewScale = 2;
+    private const double CameraDistance = 3.2;
 
     private static readonly BannerSizePreview HeroBannerSizePreview = new(256, 1168, 720, 0.98, 626);
 
@@ -45,6 +46,15 @@ public static class PolyhedronLogoRenderer
         return bitmap;
     }
 
+    public static BitmapSource RenderIconBitmap(int size, LogoSettings settings)
+    {
+        int renderSize = Math.Max(MinimumFacetLineSize, size);
+        BitmapSource source = RenderBitmap(renderSize, settings);
+        return renderSize == size
+            ? source
+            : ResizeBitmap(source, size);
+    }
+
     public static string CreateSvg(LogoSettings settings)
     {
         bool drawFacetLines = ShouldDrawFacetLines(settings, CanvasSize);
@@ -57,7 +67,7 @@ public static class PolyhedronLogoRenderer
                 string points = string.Join(" ", face.Points.Select((point, index) =>
                     FormattableString.Invariant($"{(index == 0 ? "M" : "L")}{point.X:0.0} {point.Y:0.0}")));
 
-                return new SvgFace($"{points} Z", color, fillOpacity, strokeOpacity);
+                return new SvgFace($"{points} Z", color, fillOpacity, strokeOpacity, face.IsSurfaceFacing);
             })
             .ToList();
 
@@ -67,7 +77,7 @@ public static class PolyhedronLogoRenderer
 
         foreach (SvgFace face in facePaths)
         {
-            string strokeAttributes = drawFacetLines && settings.EdgeShadowStrokeWidth > 0
+            string strokeAttributes = drawFacetLines && ShouldDrawFacetLine(settings, face.IsSurfaceFacing) && settings.EdgeShadowStrokeWidth > 0
                 ? FormattableString.Invariant($" stroke=\"{LogoSettings.ToHex(settings.EdgeShadowColor)}\" stroke-opacity=\".36\" stroke-width=\"{settings.EdgeShadowStrokeWidth:0.###}\"")
                 : string.Empty;
             builder.AppendLine(FormattableString.Invariant(
@@ -80,7 +90,7 @@ public static class PolyhedronLogoRenderer
         {
             builder.AppendLine("""  <g fill="none" stroke-linejoin="round">""");
 
-            foreach (SvgFace face in facePaths)
+            foreach (SvgFace face in facePaths.Where(face => ShouldDrawFacetLine(settings, face.IsSurfaceFacing)))
             {
                 builder.AppendLine(FormattableString.Invariant(
                     $"""    <path d="{face.Path}" stroke="{LogoSettings.ToHex(settings.RidgeColor)}" stroke-opacity="{face.StrokeOpacity:0.000}" stroke-width="{settings.FacetStrokeWidth:0.###}"/>"""));
@@ -122,7 +132,7 @@ public static class PolyhedronLogoRenderer
 
         int[] sizes = NormalizeIconSizes(iconSizes);
         List<byte[]> pngFrames = sizes
-            .Select(size => EncodePng(RenderBitmap(size, settings)))
+            .Select(size => EncodePng(RenderIconBitmap(size, settings)))
             .ToList();
 
         using var stream = File.Create(path);
@@ -346,7 +356,7 @@ public static class PolyhedronLogoRenderer
         {
             Color faceColor = ScaleBrightness(Blend(settings.PrimaryColor, settings.SecondaryColor, GetFadeMix(settings, face.ShadeMix)), face.Brightness);
             var fill = new SolidColorBrush(WithAlpha(faceColor, (byte)Math.Round(232 + face.Brightness * 23)));
-            Pen? edgePen = !drawFacetLines || settings.EdgeShadowStrokeWidth <= 0
+            Pen? edgePen = !drawFacetLines || !ShouldDrawFacetLine(settings, face.IsSurfaceFacing) || settings.EdgeShadowStrokeWidth <= 0
                 ? null
                 : new Pen(new SolidColorBrush(WithAlpha(settings.EdgeShadowColor, 92)), Math.Max(1, settings.EdgeShadowStrokeWidth * size / CanvasSize));
             drawingContext.DrawGeometry(fill, edgePen, CreateFaceGeometry(face.Points));
@@ -354,7 +364,7 @@ public static class PolyhedronLogoRenderer
 
         if (drawFacetLines)
         {
-            foreach (ProjectedFace face in faces)
+            foreach (ProjectedFace face in faces.Where(face => ShouldDrawFacetLine(settings, face.IsSurfaceFacing)))
             {
                 var ridgePen = new Pen(
                     new SolidColorBrush(WithAlpha(settings.RidgeColor, (byte)Math.Round(212 + face.Brightness * 36))),
@@ -471,18 +481,19 @@ public static class PolyhedronLogoRenderer
         Vector3 c = vertices[face[2]];
         Vector3 normal = Vector3.Normalize(Vector3.Cross(b - a, c - a));
         double facing = Math.Max(0, normal.Z);
+        Vector3 center = (a + b + c) / 3;
+        bool isSurfaceFacing = Vector3.Dot(normal, Vector3.Normalize(new Vector3(0, 0, CameraDistance) - center)) > 0;
         double brightness = Math.Clamp(0.36 + facing * 0.58, 0.28, 1);
         double shadeMix = Math.Clamp((normal.X + 1) * 0.42 + facing * 0.18, 0.1, 0.9);
         double depth = face.Average(index => vertices[index].Z);
         Point[] points = face.Select(index => Project(vertices[index], size, settings)).ToArray();
 
-        return new ProjectedFace(points, depth, brightness, shadeMix);
+        return new ProjectedFace(points, depth, brightness, shadeMix, isSurfaceFacing);
     }
 
     private static Point Project(Vector3 point, double size, LogoSettings settings)
     {
-        const double cameraDistance = 3.2;
-        double perspective = cameraDistance / (cameraDistance - point.Z);
+        double perspective = CameraDistance / (CameraDistance - point.Z);
         double scale = size * GetCenterlineScale(settings, size);
 
         return new Point(
@@ -502,6 +513,9 @@ public static class PolyhedronLogoRenderer
 
     private static bool ShouldDrawFacetLines(LogoSettings settings, double size) =>
         !settings.HideFacetLinesAtAllSizes && size >= MinimumFacetLineSize;
+
+    private static bool ShouldDrawFacetLine(LogoSettings settings, bool isSurfaceFacing) =>
+        !settings.SurfaceFacetLinesOnly || isSurfaceFacing;
 
     private static double GetFadeMix(LogoSettings settings, double shadeMix) =>
         Math.Clamp(shadeMix * Math.Clamp(settings.FadeStrength, 0, 2), 0, 1);
@@ -683,6 +697,19 @@ public static class PolyhedronLogoRenderer
         return stream.ToArray();
     }
 
+    private static BitmapSource ResizeBitmap(BitmapSource source, int size)
+    {
+        var visual = new DrawingVisual();
+        RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
+        using (DrawingContext drawingContext = visual.RenderOpen())
+            drawingContext.DrawImage(source, new Rect(0, 0, size, size));
+
+        var bitmap = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
     private static DirectoryInfo FindRepoRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -699,9 +726,9 @@ public static class PolyhedronLogoRenderer
 
     private sealed record PolyhedronModel(Vector3[] Vertices, int[][] Faces);
 
-    private sealed record ProjectedFace(Point[] Points, double Depth, double Brightness, double ShadeMix);
+    private sealed record ProjectedFace(Point[] Points, double Depth, double Brightness, double ShadeMix, bool IsSurfaceFacing);
 
-    private sealed record SvgFace(string Path, Color FillColor, double FillOpacity, double StrokeOpacity);
+    private sealed record SvgFace(string Path, Color FillColor, double FillOpacity, double StrokeOpacity, bool IsSurfaceFacing);
 
     private readonly record struct BannerSizePreview(int LogicalSize, double CenterX, double BottomY, double Opacity = 0.88, double? LabelBaselineY = null);
 
@@ -739,6 +766,9 @@ public static class PolyhedronLogoRenderer
                 left.Y * right.Z - left.Z * right.Y,
                 left.Z * right.X - left.X * right.Z,
                 left.X * right.Y - left.Y * right.X);
+
+        public static double Dot(Vector3 left, Vector3 right) =>
+            left.X * right.X + left.Y * right.Y + left.Z * right.Z;
 
         public static Vector3 Normalize(Vector3 vector)
         {
