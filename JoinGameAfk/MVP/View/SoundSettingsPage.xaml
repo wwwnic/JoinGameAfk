@@ -1,9 +1,15 @@
 <Page x:Class="JoinGameAfk.View.SoundSettingsPage"
+      x:Name="RootPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      Background="Transparent">
+      Background="Transparent"
+      AllowDrop="True"
+      PreviewMouseMove="Page_PreviewMouseMove"
+      PreviewMouseLeftButtonUp="Page_PreviewMouseLeftButtonUp"
+      PreviewMouseWheel="Page_PreviewMouseWheel">
     <Page.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Geometry x:Key="SoundInfiniteIconGeometry">M17.27,16.73a4.67,4.67,0,0,1-3.34-1.39L12,13.41l-1.93,1.93a4.72,4.72,0,0,1-6.69,0h0a4.73,4.73,0,1,1,6.69-6.68L12,10.59l1.93-1.93a4.73,4.73,0,0,1,6.69,6.68h0A4.71,4.71,0,0,1,17.27,16.73ZM13.41,12l1.93,1.93a2.8,2.8,0,0,0,3.86,0h0a2.73,2.73,0,0,0,0-3.86,2.8,2.8,0,0,0-3.86,0ZM6.73,9.27A2.73,2.73,0,0,0,4.8,13.93h0a2.8,2.8,0,0,0,3.86,0L10.59,12,8.66,10.07A2.74,2.74,0,0,0,6.73,9.27Z</Geometry>
 
         <Style x:Key="SoundWorkspacePanelStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
@@ -11,6 +17,26 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="9" />
+        </Style>
+
+        <Style x:Key="SoundClearDropPanelStyle"
+               TargetType="Border"
+               BasedOn="{StaticResource SoundWorkspacePanelStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSoundClearDropTarget}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SoundClearDropOverlayStyle" TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ElementName=RootPage, Path=IsSoundClearDropTarget}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="SoundLabRailStyle" TargetType="Border">
@@ -96,6 +122,52 @@
             </Setter>
         </Style>
 
+        <Style x:Key="SoundInfiniteToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ToolTip" Value="Loop this countdown cue until it is replaced or the action locks." />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ButtonBorder"
+                                Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#94A3B8}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.45" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.72" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SoundBoardHeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="Bold" />
@@ -118,14 +190,18 @@
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="Margin" Value="0,0,0,8" />
             <Setter Property="MinHeight" Value="74" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Cursor" Value="Arrow" />
             <Style.Triggers>
-                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                </DataTrigger>
                 <DataTrigger Binding="{Binding IsEnabled}" Value="False">
                     <Setter Property="Opacity" Value="0.62" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSoundDropTarget}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource TargetDropHoverBackgroundBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource TargetDropHoverBrush}" />
+                    <Setter Property="Opacity" Value="1" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSoundDragging}" Value="True">
+                    <Setter Property="Opacity" Value="0.78" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -139,7 +215,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Cursor" Value="SizeAll" />
+            <Setter Property="Focusable" Value="False" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Stretch" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -166,23 +243,20 @@
                                     Opacity="0" />
                         </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                            </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="KeyboardFocusRing" Property="Opacity" Value="1" />
                                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                             </Trigger>
-                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                            <DataTrigger Binding="{Binding IsLastPreviewed}" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                             </DataTrigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.76" />
-                            </Trigger>
+                            <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource TargetDropHoverBackgroundBrush}" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource TargetDropHoverBrush}" />
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.72" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </DataTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.55" />
                                 <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
@@ -296,8 +370,9 @@
 
                     <Border x:Name="SoundPickerPanel"
                             Grid.Column="2"
+                            AllowDrop="True"
                             Padding="16"
-                            Style="{StaticResource SoundWorkspacePanelStyle}">
+                            Style="{StaticResource SoundClearDropPanelStyle}">
                         <Grid ClipToBounds="True">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -405,7 +480,8 @@
                                     CornerRadius="8"
                                     Padding="8">
                                 <Grid>
-                                    <ScrollViewer Style="{StaticResource StableVerticalScrollViewerStyle}">
+                                    <ScrollViewer x:Name="SoundPickerScrollViewer"
+                                                  Style="{StaticResource StableVerticalScrollViewerStyle}">
                                         <ItemsControl x:Name="SoundPickerItemsControl">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -414,7 +490,9 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Button Click="SoundPickerChoiceButton_Click"
+                                                    <Button PreviewMouseLeftButtonDown="SoundPickerChoiceButton_PreviewMouseLeftButtonDown"
+                                                            PreviewMouseMove="SoundPickerChoiceButton_PreviewMouseMove"
+                                                            PreviewMouseLeftButtonUp="SoundPickerChoiceButton_PreviewMouseLeftButtonUp"
                                                             Style="{StaticResource SoundLibraryChoiceButtonStyle}"
                                                             ToolTip="{Binding DisplayName}">
                                                         <Grid>
@@ -425,21 +503,61 @@
                                                             </Grid.ColumnDefinitions>
 
                                                             <Border Grid.Column="0"
-                                                                    Width="24"
-                                                                    Height="24"
-                                                                    Background="{DynamicResource AppSurfaceRaisedBrush}"
-                                                                    BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                                    Width="22"
+                                                                    Height="22"
                                                                     BorderThickness="1"
-                                                                    CornerRadius="12"
+                                                                    CornerRadius="11"
                                                                     VerticalAlignment="Center">
-                                                                <Path Width="9"
-                                                                      Height="11"
-                                                                      Margin="2,0,0,0"
-                                                                      HorizontalAlignment="Center"
-                                                                      VerticalAlignment="Center"
-                                                                      Data="M0,0 L9,5.5 L0,11 Z"
-                                                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                                                      Stretch="Uniform" />
+                                                                <Border.Style>
+                                                                    <Style TargetType="Border">
+                                                                        <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsLoopable}" Value="True">
+                                                                                <Setter Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                                                                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Border.Style>
+                                                                <Grid>
+                                                                    <Path Width="9"
+                                                                          Height="11"
+                                                                          Margin="2,0,0,0"
+                                                                          HorizontalAlignment="Center"
+                                                                          VerticalAlignment="Center"
+                                                                          Data="M0,0 L9,5.5 L0,11 Z"
+                                                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                                          Stretch="Uniform">
+                                                                        <Path.Style>
+                                                                            <Style TargetType="Path">
+                                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsLoopable}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Path.Style>
+                                                                    </Path>
+                                                                    <Path Width="15"
+                                                                          Height="15"
+                                                                          Data="{StaticResource SoundInfiniteIconGeometry}"
+                                                                          Fill="{DynamicResource TextInverseBrush}"
+                                                                          Stretch="Uniform"
+                                                                          ToolTip="Designed for infinite playback.">
+                                                                        <Path.Style>
+                                                                            <Style TargetType="Path">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsLoopable}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Path.Style>
+                                                                    </Path>
+                                                                </Grid>
                                                             </Border>
 
                                                             <TextBlock Grid.Column="2"
@@ -473,6 +591,28 @@
                                                    VerticalAlignment="Center" />
                                     </Border>
                                 </Grid>
+                            </Border>
+
+                            <Border Grid.RowSpan="3"
+                                    Style="{StaticResource SoundClearDropOverlayStyle}"
+                                    Background="{DynamicResource DangerOverlayBrush}"
+                                    BorderBrush="{DynamicResource DangerAccentBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    IsHitTestVisible="False">
+                                <Viewbox Width="42"
+                                         Height="42"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center">
+                                    <Canvas Width="24" Height="24">
+                                        <Path Stroke="{DynamicResource DangerTextPaleBrush}"
+                                              StrokeThickness="2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Data="M3,6 L5,6 M5,6 L21,6 M19,6 L21,6 M8,6 L8,4 L16,4 L16,6 M6,6 L7,21 L17,21 L18,6 M10,11 L10,17 M14,11 L14,17" />
+                                    </Canvas>
+                                </Viewbox>
                             </Border>
                         </Grid>
                     </Border>
@@ -511,7 +651,8 @@
                                            Style="{StaticResource SoundBoardHeaderTextStyle}" />
                             </Grid>
 
-                            <ScrollViewer Grid.Row="2"
+                            <ScrollViewer x:Name="SoundAlertListScrollViewer"
+                                          Grid.Row="2"
                                           Style="{StaticResource StableVerticalScrollViewerStyle}">
                                 <StackPanel x:Name="SoundAlertCustomPanel">
                                     <ItemsControl x:Name="SoundAlertGroupItemsControl">
@@ -524,8 +665,11 @@
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border Style="{StaticResource SoundCueRowStyle}"
-                                                                        PreviewMouseLeftButtonDown="SoundAlertRow_PreviewMouseLeftButtonDown"
-                                                                        ToolTip="Click to edit this cue in the Sound Lab.">
+                                                                        AllowDrop="True"
+                                                                        DragOver="SoundAlertRow_DragOver"
+                                                                        DragLeave="SoundAlertRow_DragLeave"
+                                                                        Drop="SoundAlertRow_Drop"
+                                                                        ToolTip="Drop a sound here.">
                                                                     <Grid>
                                                                         <Grid.ColumnDefinitions>
                                                                             <ColumnDefinition Width="*" />
@@ -550,17 +694,30 @@
                                                                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
                                                                                 BorderThickness="1"
                                                                                 CornerRadius="7"
-                                                                                Cursor="Hand"
-                                                                                MouseLeftButtonUp="SoundAlertSoundCell_MouseLeftButtonUp"
+                                                                                PreviewMouseLeftButtonDown="SoundAlertSoundCell_PreviewMouseLeftButtonDown"
+                                                                                PreviewMouseMove="SoundAlertSoundCell_PreviewMouseMove"
+                                                                                PreviewMouseLeftButtonUp="SoundAlertSoundCell_PreviewMouseLeftButtonUp"
                                                                                 Padding="10,8"
-                                                                                ToolTip="Preview this sound."
+                                                                                ToolTip="Click to preview. Drag this sound."
                                                                                 VerticalAlignment="Center">
+                                                                            <Border.Style>
+                                                                                <Style TargetType="Border">
+                                                                                    <Setter Property="Cursor" Value="SizeAll" />
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                                            <Setter Property="Cursor" Value="Arrow" />
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </Border.Style>
                                                                             <Grid>
                                                                                 <Grid.ColumnDefinitions>
                                                                                     <ColumnDefinition Width="Auto" />
                                                                                     <ColumnDefinition Width="8" />
                                                                                     <ColumnDefinition Width="*" />
                                                                                     <ColumnDefinition Width="6" />
+                                                                                    <ColumnDefinition Width="Auto" />
+                                                                                    <ColumnDefinition Width="4" />
                                                                                     <ColumnDefinition Width="Auto" />
                                                                                 </Grid.ColumnDefinitions>
 
@@ -598,7 +755,20 @@
                                                                                         </Style>
                                                                                     </TextBlock.Style>
                                                                                 </TextBlock>
-                                                                                <Button Grid.Column="4"
+                                                                                <ToggleButton Grid.Column="4"
+                                                                                              IsChecked="{Binding IsInfinitePlaybackEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                                              Checked="SoundAlertInfiniteToggle_Changed"
+                                                                                              Unchecked="SoundAlertInfiniteToggle_Changed"
+                                                                                              AutomationProperties.Name="Loop playback"
+                                                                                              Style="{StaticResource SoundInfiniteToggleStyle}"
+                                                                                              Visibility="{Binding CanShowInfinitePlaybackToggle, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                                    <Path Width="16"
+                                                                                          Height="16"
+                                                                                          Data="{StaticResource SoundInfiniteIconGeometry}"
+                                                                                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
+                                                                                          Stretch="Uniform" />
+                                                                                </ToggleButton>
+                                                                                <Button Grid.Column="6"
                                                                                         Click="ClearSoundAlertButton_Click"
                                                                                         Style="{StaticResource SoundCueClearButtonStyle}"
                                                                                         Visibility="{Binding IsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -673,5 +843,48 @@
                            VerticalAlignment="Center" />
             </Border>
         </StackPanel>
+
+        <Popup x:Name="SoundDragPreviewPopup"
+               Grid.RowSpan="4"
+               Placement="RelativePoint"
+               PlacementTarget="{Binding ElementName=RootPage}"
+               AllowsTransparency="True"
+               IsHitTestVisible="False"
+               PopupAnimation="None"
+               StaysOpen="True">
+            <Border Background="{DynamicResource AppInputFocusBrush}"
+                    BorderBrush="{DynamicResource TargetDropHoverBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="7,6"
+                    Opacity="0.95">
+                <StackPanel Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Border Width="24"
+                            Height="24"
+                            Margin="0,0,8,0"
+                            Background="{DynamicResource AppSurfaceRaisedBrush}"
+                            BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="12">
+                        <Path Width="9"
+                              Height="11"
+                              Margin="2,0,0,0"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Data="M0,0 L9,5.5 L0,11 Z"
+                              Fill="{DynamicResource TextSecondaryBrush}"
+                              Stretch="Uniform" />
+                    </Border>
+                    <TextBlock x:Name="SoundDragPreviewText"
+                               MaxWidth="180"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </Page>

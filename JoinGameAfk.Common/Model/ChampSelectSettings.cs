@@ -310,6 +310,16 @@ namespace JoinGameAfk.Model
             return NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds);
         }
 
+        public bool IsSoundAlertInfinitePlaybackEnabled(string alertId)
+        {
+            var definition = SoundAlertDefaults.GetDefinition(alertId);
+            if (!definition.SupportsInfinitePlayback)
+                return false;
+
+            return GetSoundAlertSetting(alertId).InfinitePlaybackEnabled
+                ?? definition.DefaultInfinitePlaybackEnabled;
+        }
+
         public int GetSoundAlertEffectiveVolumePercent(string alertId)
         {
             return GetEffectiveSoundAlertVolumePercent(
@@ -480,6 +490,9 @@ namespace JoinGameAfk.Model
                 normalizedAlert.PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds is null
                     ? null
                     : NormalizeSoundAlertPlaybackDurationSeconds(currentAlert.PlaybackDurationSeconds ?? definition.DefaultPlaybackDurationSeconds);
+                normalizedAlert.InfinitePlaybackEnabled = definition.SupportsInfinitePlayback
+                    ? currentAlert.InfinitePlaybackEnabled ?? definition.DefaultInfinitePlaybackEnabled
+                    : null;
             }
 
             SoundAlerts = normalizedAlerts;

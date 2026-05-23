@@ -1264,11 +1264,15 @@ public class ChampSelect : IPhaseHandler
         if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
             return;
 
+        bool repeatPlayback = _settings.IsSoundAlertInfinitePlaybackEnabled(alertId);
+        if (!repeatPlayback)
+            StopLockSoundChannel(scheduledLock, isPickAction);
+
         _playSoundAlert(SoundAlertPlaybackRequest.PlayAlert(
             alertId,
             $"{GetActionLabel(isPickAction)} auto-lock countdown sound alert",
-            GetLockSoundChannelKey(scheduledLock, isPickAction),
-            playbackDurationSeconds));
+            repeatPlayback ? GetLockSoundChannelKey(scheduledLock, isPickAction) : null,
+            repeatPlayback ? playbackDurationSeconds : null));
     }
 
     private void TryPreloadSoundAlert(string alertId, string context)

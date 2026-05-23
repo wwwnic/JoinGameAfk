@@ -94,6 +94,11 @@ namespace JoinGameAfk.Services
             PlaySound(soundKey, volumePercent, context, new NotificationSoundPlaybackOptions(playbackDurationSeconds));
         }
 
+        public void PreviewAlert(string? soundKey, int volumePercent, string context, NotificationSoundPlaybackOptions options)
+        {
+            PlaySound(soundKey, volumePercent, context, options);
+        }
+
         public void PreloadAlert(string? soundKey, string context)
         {
             try

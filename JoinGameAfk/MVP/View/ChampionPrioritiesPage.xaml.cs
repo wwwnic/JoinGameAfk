@@ -1603,7 +1603,7 @@ namespace JoinGameAfk.View
                 IsSearchDeleteDropTarget = false;
                 IsSearchDeleteDropHintVisible = false;
                 ClearInsertionIndicator();
-                HideDragPreview();
+                HideDragPreview(clearContent: false);
                 e.Effects = DragDropEffects.None;
                 e.Handled = true;
             }
@@ -2105,7 +2105,7 @@ namespace JoinGameAfk.View
             if (!IsPointInsideElement(this, pagePosition))
             {
                 ClearInsertionIndicator();
-                HideDragPreview();
+                HideDragPreview(clearContent: false);
                 return false;
             }
 
@@ -2175,11 +2175,15 @@ namespace JoinGameAfk.View
                 DragPreviewPopup.IsOpen = true;
         }
 
-        private void HideDragPreview()
+        private void HideDragPreview(bool clearContent = true)
         {
             DragPreviewPopup.IsOpen = false;
+            if (!clearContent)
+                return;
+
             DragPreviewImage.Source = null;
             DragPreviewImageFrame.Visibility = Visibility.Collapsed;
+            DragPreviewText.Text = string.Empty;
         }
 
         private void ClearDragState()

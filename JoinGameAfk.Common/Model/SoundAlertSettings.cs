@@ -17,6 +17,7 @@ namespace JoinGameAfk.Model
         public int? VolumePercent { get; set; } = ChampSelectSettings.DefaultSoundAlertVolumePercent;
         public int? ThresholdSeconds { get; set; }
         public int? PlaybackDurationSeconds { get; set; }
+        public bool? InfinitePlaybackEnabled { get; set; }
     }
 
     public sealed record SoundAlertDefinition(
@@ -27,7 +28,9 @@ namespace JoinGameAfk.Model
         string DefaultSoundKey,
         bool EnabledInMinimal,
         int? DefaultThresholdSeconds = null,
-        int? DefaultPlaybackDurationSeconds = null);
+        int? DefaultPlaybackDurationSeconds = null,
+        bool SupportsInfinitePlayback = false,
+        bool DefaultInfinitePlaybackEnabled = false);
 
     public static class SoundAlertIds
     {
@@ -116,7 +119,9 @@ namespace JoinGameAfk.Model
                 "Plays Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
                 EnabledInMinimal: true,
-                DefaultLockCountdownThresholdSeconds),
+                DefaultLockCountdownThresholdSeconds,
+                SupportsInfinitePlayback: true,
+                DefaultInfinitePlaybackEnabled: true),
             new(
                 SoundAlertIds.PickLockSoon,
                 "Champion select",
@@ -124,7 +129,9 @@ namespace JoinGameAfk.Model
                 "Plays Clock Fast until the pick auto-locks.",
                 DefaultLockSoonSoundKey,
                 EnabledInMinimal: true,
-                DefaultLockSoonThresholdSeconds),
+                DefaultLockSoonThresholdSeconds,
+                SupportsInfinitePlayback: true,
+                DefaultInfinitePlaybackEnabled: true),
             new(
                 SoundAlertIds.PickLockComplete,
                 "Champion select",
@@ -139,7 +146,9 @@ namespace JoinGameAfk.Model
                 "Plays Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
                 EnabledInMinimal: false,
-                DefaultLockCountdownThresholdSeconds),
+                DefaultLockCountdownThresholdSeconds,
+                SupportsInfinitePlayback: true,
+                DefaultInfinitePlaybackEnabled: true),
             new(
                 SoundAlertIds.BanLockSoon,
                 "Champion select",
@@ -147,7 +156,9 @@ namespace JoinGameAfk.Model
                 "Plays Clock Fast until the ban auto-locks.",
                 DefaultLockSoonSoundKey,
                 EnabledInMinimal: false,
-                DefaultLockSoonThresholdSeconds),
+                DefaultLockSoonThresholdSeconds,
+                SupportsInfinitePlayback: true,
+                DefaultInfinitePlaybackEnabled: true),
             new(
                 SoundAlertIds.BanLockComplete,
                 "Champion select",
@@ -193,7 +204,10 @@ namespace JoinGameAfk.Model
                 SoundKey = definition.DefaultSoundKey,
                 VolumePercent = ChampSelectSettings.DefaultSoundAlertVolumePercent,
                 ThresholdSeconds = definition.DefaultThresholdSeconds,
-                PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds
+                PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds,
+                InfinitePlaybackEnabled = definition.SupportsInfinitePlayback
+                    ? definition.DefaultInfinitePlaybackEnabled
+                    : null
             };
         }
     }
