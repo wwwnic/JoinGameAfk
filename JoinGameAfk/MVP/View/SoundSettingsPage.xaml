@@ -348,6 +348,15 @@
                                     Padding="18,10"
                                     ToolTip="Restore default sound alert mode, volume, sounds, and warning timing." />
 
+                            <Button x:Name="CancelSoundChangesButton"
+                                    Content="Cancel Changes"
+                                    Click="CancelSoundChangesButton_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Padding="18,10"
+                                    Margin="10,0,0,0"
+                                    IsEnabled="False"
+                                    ToolTip="Discard unsaved sound changes and return to the saved values." />
+
                             <Button x:Name="SaveButton"
                                     Content="Save Sounds"
                                     Click="SaveButton_Click"
@@ -835,7 +844,7 @@
                     Padding="14,8"
                     Margin="0,12,0,0"
                     Visibility="Collapsed">
-                <TextBlock Text="Unsaved sound changes. Use Save Sounds above to keep them."
+                <TextBlock Text="Unsaved sound changes. Use Save Sounds or Cancel Changes above."
                            FontSize="13"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}"

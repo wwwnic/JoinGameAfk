@@ -213,6 +213,7 @@ namespace JoinGameAfk.View
 
             bool hasDirtySettings = CaptureCurrentSettingsSnapshot() != CaptureSavedSettingsSnapshot();
             DirtySettingsBar.Visibility = hasDirtySettings ? Visibility.Visible : Visibility.Collapsed;
+            CancelSettingsChangesButton.IsEnabled = hasDirtySettings;
             if (hasDirtySettings)
             {
                 _savedMessageTimer.Stop();
@@ -385,6 +386,45 @@ namespace JoinGameAfk.View
             }
 
             ShowDefaultsRestoredMessage();
+        }
+
+        private void CancelSettingsChangesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmCancelSettingsChanges())
+                return;
+
+            bool shouldReloadTheme = SavedThemeRequiresReload();
+
+            ApplySettingsToControls();
+            UpdateAutomationInputStates();
+            RefreshDirtyState();
+
+            if (shouldReloadTheme && _reloadUiForTheme is not null)
+            {
+                _reloadUiForTheme(_settings, _settings.ThemeKey, _isThemePickerExpanded);
+                return;
+            }
+
+            if (shouldReloadTheme)
+            {
+                AppThemeManager.ApplyTheme(_settings.ThemeKey);
+                RefreshThemeDrivenControls();
+            }
+
+            ShowChangesCanceledMessage();
+        }
+
+        private bool ConfirmCancelSettingsChanges()
+        {
+            var result = MessageBox.Show(
+                Window.GetWindow(this),
+                "Discard unsaved general settings changes and return to the last saved settings?",
+                "Cancel Settings Changes",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+
+            return result == MessageBoxResult.OK;
         }
 
         private void ApplySettingsToControls()
@@ -729,6 +769,11 @@ namespace JoinGameAfk.View
         private void ShowDefaultsRestoredMessage()
         {
             ShowStatusMessage("Default settings restored.", "AccentGreenTextBrush", Brushes.ForestGreen);
+        }
+
+        private void ShowChangesCanceledMessage()
+        {
+            ShowStatusMessage("Settings changes canceled.", "TextSoftBrush", Brushes.SlateGray);
         }
 
         private void ShowValidationMessage(string message)
@@ -1288,6 +1333,14 @@ namespace JoinGameAfk.View
         private bool SelectedThemeRequiresReload()
         {
             return !string.Equals(GetSelectedThemeKey(), AppThemeManager.CurrentThemeKey, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool SavedThemeRequiresReload()
+        {
+            return !string.Equals(
+                AppThemeManager.NormalizeThemeKey(_settings.ThemeKey),
+                AppThemeManager.CurrentThemeKey,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed class ThemePickerOption : INotifyPropertyChanged

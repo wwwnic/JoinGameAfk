@@ -169,6 +169,39 @@ namespace JoinGameAfk.View
             ShowDefaultsRestoredMessage();
         }
 
+        private void CancelSoundChangesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ConfirmCancelSoundChanges())
+                return;
+
+            if (_isSoundDragActive)
+                FinishSoundDrag(drop: false);
+
+            ClearPendingSoundDrag();
+            ClearSoundDropTarget();
+            IsSoundClearDropTarget = false;
+            _notificationSoundPlayer.StopChannel(SoundStudioPreviewChannelKey);
+            ClearLastPreviewedSoundChoice();
+
+            ApplySettingsToControls();
+            NotificationSoundPlayer.SetActivePlayerVolume(GetSoundAlertVolumePercent());
+            RefreshDirtyState();
+            ShowChangesCanceledMessage();
+        }
+
+        private bool ConfirmCancelSoundChanges()
+        {
+            var result = MessageBox.Show(
+                Window.GetWindow(this),
+                "Discard unsaved sound changes and return to the last saved sound settings?",
+                "Cancel Sound Changes",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Warning,
+                MessageBoxResult.Cancel);
+
+            return result == MessageBoxResult.OK;
+        }
+
         private void SoundAlertVolumeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             RefreshSoundAlertVolumeValueText();
@@ -659,6 +692,15 @@ namespace JoinGameAfk.View
                 _lastPreviewedSoundChoice.IsLastPreviewed = true;
         }
 
+        private void ClearLastPreviewedSoundChoice()
+        {
+            if (_lastPreviewedSoundChoice is null)
+                return;
+
+            _lastPreviewedSoundChoice.IsLastPreviewed = false;
+            _lastPreviewedSoundChoice = null;
+        }
+
         private void ClearPendingSoundDrag()
         {
             _pendingSoundDragChoice = null;
@@ -769,6 +811,7 @@ namespace JoinGameAfk.View
 
             bool hasDirtySettings = CaptureCurrentSoundSettingsSnapshot() != CaptureSavedSoundSettingsSnapshot();
             DirtySoundBar.Visibility = hasDirtySettings ? Visibility.Visible : Visibility.Collapsed;
+            CancelSoundChangesButton.IsEnabled = hasDirtySettings;
             if (hasDirtySettings)
             {
                 _savedMessageTimer.Stop();
@@ -1195,6 +1238,11 @@ namespace JoinGameAfk.View
         private void ShowDefaultsRestoredMessage()
         {
             ShowStatusMessage("Default sounds restored.", "AccentGreenTextBrush", Brushes.ForestGreen);
+        }
+
+        private void ShowChangesCanceledMessage()
+        {
+            ShowStatusMessage("Sound changes canceled.", "TextSoftBrush", Brushes.SlateGray);
         }
 
         private void ShowValidationMessage(string message)

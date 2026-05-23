@@ -178,6 +178,16 @@
                                     HorizontalAlignment="Right"
                                     ToolTip="Restore startup, automation, timing, performance, and theme defaults without changing champion priorities." />
 
+                            <Button x:Name="CancelSettingsChangesButton"
+                                    Content="Cancel Changes"
+                                    Click="CancelSettingsChangesButton_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Padding="18,10"
+                                    Margin="10,0,0,0"
+                                    HorizontalAlignment="Right"
+                                    IsEnabled="False"
+                                    ToolTip="Discard unsaved general settings changes and return to the saved values." />
+
                             <Button x:Name="SaveButton"
                                     Content="Save Settings"
                                     Click="SaveButton_Click"
@@ -1430,7 +1440,7 @@
                         Padding="14,8"
                         Margin="0,12,0,0"
                         Visibility="Collapsed">
-                    <TextBlock Text="Unsaved settings changes. Use Save Settings above to keep them."
+                    <TextBlock Text="Unsaved settings changes. Use Save Settings or Cancel Changes above."
                                FontSize="13"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource TextPrimaryBrush}"
