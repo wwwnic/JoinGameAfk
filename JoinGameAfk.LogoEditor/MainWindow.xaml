@@ -453,6 +453,22 @@
                             ValueChanged="SettingChanged"
                             Margin="0,0,0,12" />
 
+                    <TextBlock x:Name="ShapeOffsetXLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="ShapeOffsetXSlider"
+                            Minimum="-0.35"
+                            Maximum="0.35"
+                            TickFrequency="0.005"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
+                    <TextBlock x:Name="ShapeOffsetYLabel" Style="{StaticResource FieldLabelText}" />
+                    <Slider x:Name="ShapeOffsetYSlider"
+                            Minimum="-0.35"
+                            Maximum="0.35"
+                            TickFrequency="0.005"
+                            ValueChanged="SettingChanged"
+                            Margin="0,0,0,12" />
+
                     <TextBlock x:Name="StrokeInsetLabel" Style="{StaticResource FieldLabelText}" />
                     <Slider x:Name="StrokeInsetSlider"
                             Minimum="0"
@@ -498,6 +514,11 @@
 
                     <CheckBox x:Name="CheckOverlayCheckBox"
                               Content="Green check"
+                              Checked="SettingChanged"
+                              Unchecked="SettingChanged" />
+
+                    <CheckBox x:Name="CheckContrastBorderCheckBox"
+                              Content="Check contrast border"
                               Checked="SettingChanged"
                               Unchecked="SettingChanged" />
 

@@ -10,6 +10,7 @@ namespace JoinGameAfk.LogoEditor;
 public static class PolyhedronLogoRenderer
 {
     public const int CanvasSize = 512;
+    public const int DefaultSvgSize = 128;
     public const int GitHubBannerWidth = 1280;
     public const int GitHubBannerHeight = 640;
 
@@ -72,7 +73,7 @@ public static class PolyhedronLogoRenderer
             .ToList();
 
         var builder = new StringBuilder();
-        builder.AppendLine("""<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">""");
+        builder.AppendLine(FormattableString.Invariant($"""<svg width="{DefaultSvgSize}" height="{DefaultSvgSize}" viewBox="0 0 {CanvasSize} {CanvasSize}" fill="none" xmlns="http://www.w3.org/2000/svg">"""));
         builder.AppendLine("""  <g stroke-linejoin="round">""");
 
         foreach (SvgFace face in facePaths)
@@ -386,8 +387,12 @@ public static class PolyhedronLogoRenderer
         double strokeWidth = GetCheckStrokeWidth(CanvasSize, settings);
 
         builder.AppendLine("""  <g fill="none" stroke-linecap="round" stroke-linejoin="round">""");
-        builder.AppendLine(FormattableString.Invariant(
-            $"""    <path d="{path}" stroke="{LogoSettings.ToHex(settings.EdgeShadowColor)}" stroke-opacity=".64" stroke-width="{shadowWidth:0.###}"/>"""));
+        if (settings.ShowCheckContrastBorder)
+        {
+            builder.AppendLine(FormattableString.Invariant(
+                $"""    <path d="{path}" stroke="{LogoSettings.ToHex(settings.EdgeShadowColor)}" stroke-opacity=".64" stroke-width="{shadowWidth:0.###}"/>"""));
+        }
+
         builder.AppendLine(FormattableString.Invariant(
             $"""    <path d="{path}" stroke="{LogoSettings.ToHex(settings.CheckColor)}" stroke-width="{strokeWidth:0.###}"/>"""));
         builder.AppendLine("  </g>");
@@ -399,7 +404,9 @@ public static class PolyhedronLogoRenderer
             return;
 
         Geometry geometry = CreateCheckGeometry(size, settings);
-        drawingContext.DrawGeometry(null, CreateRoundPen(WithAlpha(settings.EdgeShadowColor, 164), GetCheckShadowStrokeWidth(size, settings)), geometry);
+        if (settings.ShowCheckContrastBorder)
+            drawingContext.DrawGeometry(null, CreateRoundPen(WithAlpha(settings.EdgeShadowColor, 164), GetCheckShadowStrokeWidth(size, settings)), geometry);
+
         drawingContext.DrawGeometry(null, CreateRoundPen(settings.CheckColor, GetCheckStrokeWidth(size, settings)), geometry);
     }
 
@@ -495,10 +502,12 @@ public static class PolyhedronLogoRenderer
     {
         double perspective = CameraDistance / (CameraDistance - point.Z);
         double scale = size * GetCenterlineScale(settings, size);
+        double offsetX = Math.Clamp(settings.PolyhedronOffsetX, -0.35, 0.35) * size;
+        double offsetY = Math.Clamp(settings.PolyhedronOffsetY, -0.35, 0.35) * size;
 
         return new Point(
-            size / 2 + point.X * scale * perspective,
-            size / 2 - point.Y * scale * perspective);
+            size / 2 + offsetX + point.X * scale * perspective,
+            size / 2 + offsetY - point.Y * scale * perspective);
     }
 
     private static double GetCenterlineScale(LogoSettings settings, double size)

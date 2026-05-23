@@ -23,6 +23,10 @@ public sealed class LogoSettings
 
     public double PolyhedronScale { get; set; } = 0.445;
 
+    public double PolyhedronOffsetX { get; set; }
+
+    public double PolyhedronOffsetY { get; set; }
+
     public double FacetStrokeWidth { get; set; } = 6;
 
     public double EdgeShadowStrokeWidth { get; set; } = 10;
@@ -45,6 +49,8 @@ public sealed class LogoSettings
 
     public bool ShowCheckOverlay { get; set; }
 
+    public bool ShowCheckContrastBorder { get; set; } = true;
+
     public double CheckScale { get; set; } = 0.44;
 
     public double CheckOffsetX { get; set; }
@@ -62,6 +68,8 @@ public sealed class LogoSettings
             EdgeShadowColor = EdgeShadowColor,
             CheckColor = CheckColor,
             PolyhedronScale = PolyhedronScale,
+            PolyhedronOffsetX = PolyhedronOffsetX,
+            PolyhedronOffsetY = PolyhedronOffsetY,
             FacetStrokeWidth = FacetStrokeWidth,
             EdgeShadowStrokeWidth = EdgeShadowStrokeWidth,
             FadeStrength = FadeStrength,
@@ -73,6 +81,7 @@ public sealed class LogoSettings
             RotationYDegrees = RotationYDegrees,
             RotationZDegrees = RotationZDegrees,
             ShowCheckOverlay = ShowCheckOverlay,
+            ShowCheckContrastBorder = ShowCheckContrastBorder,
             CheckScale = CheckScale,
             CheckOffsetX = CheckOffsetX,
             CheckOffsetY = CheckOffsetY

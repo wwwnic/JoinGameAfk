@@ -21,6 +21,8 @@ public partial class MainWindow : Window
     private const double MaximumFadeStrength = 2;
     private const double MinimumPolyhedronScale = 0.34;
     private const double MaximumPolyhedronScale = 0.50;
+    private const double MinimumPolyhedronOffset = -0.35;
+    private const double MaximumPolyhedronOffset = 0.35;
     private const double MinimumStrokeInsetScale = 0;
     private const double MaximumStrokeInsetScale = 3;
     private const double MinimumFacetDetailLevel = 0;
@@ -74,6 +76,8 @@ public partial class MainWindow : Window
         ContrastLineSizeSlider.Value = settings.EdgeShadowStrokeWidth;
         FadeStrengthSlider.Value = settings.FadeStrength;
         ShapeScaleSlider.Value = settings.PolyhedronScale;
+        ShapeOffsetXSlider.Value = settings.PolyhedronOffsetX;
+        ShapeOffsetYSlider.Value = settings.PolyhedronOffsetY;
         StrokeInsetSlider.Value = settings.StrokeInsetScale;
         FacetDetailSlider.Value = settings.FacetDetailLevel;
         HideFacetLinesAtAllSizesCheckBox.IsChecked = settings.HideFacetLinesAtAllSizes;
@@ -82,6 +86,7 @@ public partial class MainWindow : Window
         RotationYSlider.Value = settings.RotationYDegrees;
         RotationZSlider.Value = settings.RotationZDegrees;
         CheckOverlayCheckBox.IsChecked = settings.ShowCheckOverlay;
+        CheckContrastBorderCheckBox.IsChecked = settings.ShowCheckContrastBorder;
         CheckSizeSlider.Value = settings.CheckScale;
         CheckOffsetXSlider.Value = settings.CheckOffsetX;
         CheckOffsetYSlider.Value = settings.CheckOffsetY;
@@ -449,6 +454,8 @@ public partial class MainWindow : Window
             EdgeShadowStrokeWidth = ContrastLineSizeSlider.Value,
             FadeStrength = FadeStrengthSlider.Value,
             PolyhedronScale = ShapeScaleSlider.Value,
+            PolyhedronOffsetX = ShapeOffsetXSlider.Value,
+            PolyhedronOffsetY = ShapeOffsetYSlider.Value,
             StrokeInsetScale = StrokeInsetSlider.Value,
             FacetDetailLevel = FacetDetailSlider.Value,
             HideFacetLinesAtAllSizes = hideFacetLinesAtAllSizes,
@@ -457,6 +464,7 @@ public partial class MainWindow : Window
             RotationYDegrees = RotationYSlider.Value,
             RotationZDegrees = RotationZSlider.Value,
             ShowCheckOverlay = CheckOverlayCheckBox.IsChecked == true,
+            ShowCheckContrastBorder = CheckContrastBorderCheckBox.IsChecked == true,
             CheckScale = CheckSizeSlider.Value,
             CheckOffsetX = CheckOffsetXSlider.Value,
             CheckOffsetY = CheckOffsetYSlider.Value
@@ -489,6 +497,8 @@ public partial class MainWindow : Window
             : "Contrast thickness: hidden";
         FadeStrengthLabel.Text = $"Fade strength: {settings.FadeStrength:0.00}x";
         ShapeScaleLabel.Text = $"Logo size: {settings.PolyhedronScale:0.000}";
+        ShapeOffsetXLabel.Text = $"Shape horizontal: {settings.PolyhedronOffsetX:+0.000;-0.000;0.000}";
+        ShapeOffsetYLabel.Text = $"Shape vertical: {settings.PolyhedronOffsetY:+0.000;-0.000;0.000}";
         StrokeInsetLabel.Text = showFacetLinesAtLargeSizes
             ? $"Line inset: {settings.StrokeInsetScale:0.00}x"
             : "Line inset: hidden";
@@ -515,6 +525,7 @@ public partial class MainWindow : Window
 
     private void UpdateCheckOverlayControls(bool isEnabled)
     {
+        CheckContrastBorderCheckBox.IsEnabled = isEnabled;
         CheckSizeSlider.IsEnabled = isEnabled;
         CheckOffsetXSlider.IsEnabled = isEnabled;
         CheckOffsetYSlider.IsEnabled = isEnabled;
@@ -596,7 +607,10 @@ public partial class MainWindow : Window
         double CheckOffsetX,
         double CheckOffsetY,
         bool HideFacetLinesAtAllSizes = false,
-        bool SurfaceFacetLinesOnly = false)
+        bool SurfaceFacetLinesOnly = false,
+        bool ShowCheckContrastBorder = true,
+        double PolyhedronOffsetX = 0,
+        double PolyhedronOffsetY = 0)
     {
         public LogoSettings ToSettings()
         {
@@ -615,6 +629,8 @@ public partial class MainWindow : Window
                 EdgeShadowStrokeWidth = EdgeShadowStrokeWidth,
                 FadeStrength = FadeStrength,
                 PolyhedronScale = PolyhedronScale,
+                PolyhedronOffsetX = PolyhedronOffsetX,
+                PolyhedronOffsetY = PolyhedronOffsetY,
                 StrokeInsetScale = StrokeInsetScale,
                 FacetDetailLevel = FacetDetailLevel,
                 HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes,
@@ -623,6 +639,7 @@ public partial class MainWindow : Window
                 RotationYDegrees = RotationYDegrees,
                 RotationZDegrees = RotationZDegrees,
                 ShowCheckOverlay = ShowCheckOverlay,
+                ShowCheckContrastBorder = ShowCheckContrastBorder,
                 CheckScale = CheckScale,
                 CheckOffsetX = CheckOffsetX,
                 CheckOffsetY = CheckOffsetY
@@ -653,11 +670,14 @@ public partial class MainWindow : Window
         double? CheckOffsetY,
         bool? HideFacetLinesAtAllSizes = null,
         bool? ShowFacetLines = null,
-        bool? SurfaceFacetLinesOnly = null)
+        bool? SurfaceFacetLinesOnly = null,
+        bool? ShowCheckContrastBorder = null,
+        double? PolyhedronOffsetX = null,
+        double? PolyhedronOffsetY = null)
     {
         public static LogoPresetFile FromSettings(LogoSettings settings) =>
             new(
-                4,
+                6,
                 LogoSettings.ToHex(settings.PrimaryColor),
                 LogoSettings.ToHex(settings.SecondaryColor),
                 LogoSettings.ToHex(settings.RidgeColor),
@@ -677,7 +697,10 @@ public partial class MainWindow : Window
                 settings.CheckOffsetY,
                 settings.HideFacetLinesAtAllSizes,
                 null,
-                settings.SurfaceFacetLinesOnly);
+                settings.SurfaceFacetLinesOnly,
+                settings.ShowCheckContrastBorder,
+                settings.PolyhedronOffsetX,
+                settings.PolyhedronOffsetY);
 
         public LogoSettings ToSettings()
         {
@@ -703,6 +726,8 @@ public partial class MainWindow : Window
                 EdgeShadowStrokeWidth = ClampFinite(EdgeShadowStrokeWidth, MinimumContrastLineSize, MaximumContrastLineSize),
                 FadeStrength = ClampFinite(FadeStrength ?? 1, MinimumFadeStrength, MaximumFadeStrength),
                 PolyhedronScale = ClampFinite(PolyhedronScale, MinimumPolyhedronScale, MaximumPolyhedronScale),
+                PolyhedronOffsetX = ClampFinite(PolyhedronOffsetX ?? 0, MinimumPolyhedronOffset, MaximumPolyhedronOffset),
+                PolyhedronOffsetY = ClampFinite(PolyhedronOffsetY ?? 0, MinimumPolyhedronOffset, MaximumPolyhedronOffset),
                 StrokeInsetScale = ClampFinite(StrokeInsetScale ?? 1, MinimumStrokeInsetScale, MaximumStrokeInsetScale),
                 FacetDetailLevel = ClampFinite(FacetDetailLevel ?? 1, MinimumFacetDetailLevel, MaximumFacetDetailLevel),
                 HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes ?? !(ShowFacetLines ?? true),
@@ -711,6 +736,7 @@ public partial class MainWindow : Window
                 RotationYDegrees = ClampFinite(RotationYDegrees ?? LogoSettings.DefaultRotationYDegrees, MinimumRotationDegrees, MaximumRotationDegrees),
                 RotationZDegrees = ClampFinite(RotationZDegrees ?? LogoSettings.DefaultRotationZDegrees, MinimumRotationDegrees, MaximumRotationDegrees),
                 ShowCheckOverlay = ShowCheckOverlay ?? false,
+                ShowCheckContrastBorder = ShowCheckContrastBorder ?? true,
                 CheckScale = ClampFinite(CheckScale ?? 0.44, MinimumCheckScale, MaximumCheckScale),
                 CheckOffsetX = ClampFinite(CheckOffsetX ?? 0, MinimumCheckOffset, MaximumCheckOffset),
                 CheckOffsetY = ClampFinite(CheckOffsetY ?? 0, MinimumCheckOffset, MaximumCheckOffset)
