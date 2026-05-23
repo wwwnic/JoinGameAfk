@@ -192,6 +192,11 @@ namespace JoinGameAfk.Model
         /// </summary>
         public bool AutoUpdateChampionCatalogOnStartup { get; set; }
 
+        /// <summary>
+        /// Whether the champion picture picker should warn before downloading all images for one champion.
+        /// </summary>
+        public bool ShowChampionPictureDownloadWarning { get; set; } = true;
+
         public Dictionary<Position, PositionPreference> Preferences { get; set; } = new()
         {
             { Position.Default, new PositionPreference() },
@@ -368,6 +373,7 @@ namespace JoinGameAfk.Model
             ChampSelectEventFallbackPollIntervalMs = defaults.ChampSelectEventFallbackPollIntervalMs;
             ThemeKey = defaults.ThemeKey;
             AutoUpdateChampionCatalogOnStartup = defaults.AutoUpdateChampionCatalogOnStartup;
+            ShowChampionPictureDownloadWarning = defaults.ShowChampionPictureDownloadWarning;
         }
 
         public void ResetSoundAlertOptionsToDefaults()

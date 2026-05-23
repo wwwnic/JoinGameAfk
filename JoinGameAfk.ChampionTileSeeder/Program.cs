@@ -15,16 +15,23 @@ try
     string archiveDirectoryPath = Path.GetFullPath(arguments.GetValue("--archive-directory")
         ?? Path.Combine(Path.GetTempPath(), "JoinGameAfkChampionTileArchives"));
     string? dataDragonVersion = arguments.GetValue("--version");
+    int? maxTileIndex = arguments.GetOptionalNonNegativeInt32("--max-tile-index");
+    bool keepArchive = arguments.HasFlag("--keep-archive");
 
     var installOptions = new ChampionTileArchiveInstallOptions(
         tileDirectoryPath,
         archiveDirectoryPath,
-        cacheFilePath);
+        cacheFilePath,
+        maxTileIndex,
+        DeleteArchiveAfterExtraction: !keepArchive);
 
     Console.WriteLine("Generating bundled champion tile seed cache.");
     Console.WriteLine($"Tile directory: {tileDirectoryPath}");
     Console.WriteLine($"Cache metadata: {cacheFilePath}");
     Console.WriteLine($"Archive directory: {archiveDirectoryPath}");
+    if (maxTileIndex is int maximumTileIndex)
+        Console.WriteLine($"Maximum bundled tile index: {maximumTileIndex}");
+    Console.WriteLine($"Keep archive after extraction: {keepArchive}");
 
     var progress = new ConsoleArchiveProgress();
     ChampionTileArchiveInstallResult result = string.IsNullOrWhiteSpace(dataDragonVersion)
@@ -50,13 +57,15 @@ static void PrintUsage()
     Console.WriteLine(
         """
         Usage:
-          dotnet run --project JoinGameAfk.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>]
+          dotnet run --project JoinGameAfk.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>] [--max-tile-index <number>] [--keep-archive]
 
         Options:
           --tile-directory      Directory where extracted champion tile JPGs are written.
           --cache-file          Cache metadata JSON path. Defaults to champion-tile-cache.json next to the tile directory.
           --archive-directory   Temporary Data Dragon archive directory. Defaults to the OS temp folder.
           --version             Data Dragon version to install. Defaults to the latest version.
+          --max-tile-index      Highest champion tile index to extract. Defaults to all tiles.
+          --keep-archive        Leave the downloaded Data Dragon archive in place after extraction.
         """);
 }
 
@@ -100,10 +109,12 @@ file sealed class ConsoleArchiveProgress : IProgress<ChampionTileArchiveProgress
 file sealed class CommandLineArguments
 {
     private readonly Dictionary<string, string> _values;
+    private readonly HashSet<string> _flags;
 
-    private CommandLineArguments(Dictionary<string, string> values, bool showHelp)
+    private CommandLineArguments(Dictionary<string, string> values, HashSet<string> flags, bool showHelp)
     {
         _values = values;
+        _flags = flags;
         ShowHelp = showHelp;
     }
 
@@ -112,6 +123,7 @@ file sealed class CommandLineArguments
     public static CommandLineArguments Parse(string[] args)
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var flags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         bool showHelp = false;
 
         for (int index = 0; index < args.Length; index++)
@@ -127,13 +139,19 @@ file sealed class CommandLineArguments
             if (!name.StartsWith("--", StringComparison.Ordinal))
                 throw new ArgumentException($"Unexpected argument '{name}'.");
 
+            if (string.Equals(name, "--keep-archive", StringComparison.OrdinalIgnoreCase))
+            {
+                flags.Add(name);
+                continue;
+            }
+
             if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
                 throw new ArgumentException($"Missing value for argument '{name}'.");
 
             values[name] = args[++index];
         }
 
-        return new CommandLineArguments(values, showHelp);
+        return new CommandLineArguments(values, flags, showHelp);
     }
 
     public string? GetValue(string name)
@@ -143,8 +161,25 @@ file sealed class CommandLineArguments
             : null;
     }
 
+    public bool HasFlag(string name)
+    {
+        return _flags.Contains(name);
+    }
+
     public string GetRequired(string name)
     {
         return GetValue(name) ?? throw new ArgumentException($"Missing required argument '{name}'.");
+    }
+
+    public int? GetOptionalNonNegativeInt32(string name)
+    {
+        string? value = GetValue(name);
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (!int.TryParse(value, out int number) || number < 0)
+            throw new ArgumentException($"Argument '{name}' must be a non-negative integer.");
+
+        return number;
     }
 }

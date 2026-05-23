@@ -69,6 +69,7 @@ namespace JoinGameAfk.View
         private string? _originalChampionPictureFileName;
         private string? _pendingChampionPictureFileName;
         private bool _isUpdatingChampionPicturePicker;
+        private bool _isChampionPictureDownloadInProgress;
 
         public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
             nameof(IsChampionSelectLockActive),
@@ -608,6 +609,7 @@ namespace JoinGameAfk.View
             ChampionPicturePickerPreviewNameTextBlock.FontSize = chipLabel.FontSize;
             ChampionPicturePickerTitleTextBlock.Text = champion.Name;
             ChampionPicturePickerOverlay.Visibility = Visibility.Visible;
+            ClearChampionPicturePickerDownloadStatus();
             RefreshChampionPicturePicker();
             ChampionPicturePickerTileListBox.Focus();
         }
@@ -633,6 +635,7 @@ namespace JoinGameAfk.View
             ChampionPicturePickerOverlay.Visibility = Visibility.Collapsed;
             ChampionPicturePickerTileListBox.ItemsSource = null;
             ChampionPicturePickerStatusTextBlock.Text = string.Empty;
+            ClearChampionPicturePickerDownloadStatus();
             ChampionPicturePickerPreviewImage.Source = null;
             ChampionPicturePickerPreviewNameTextBlock.Text = string.Empty;
 
@@ -648,15 +651,121 @@ namespace JoinGameAfk.View
 
         private void ChampionPicturePickerUseDefaultButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_isChampionPictureDownloadInProgress)
+                return;
+
             if (_selectedChampionPictureChampion is not ChampionInfo champion)
                 return;
 
             _pendingChampionPictureFileName = null;
+            ClearChampionPicturePickerDownloadStatus();
             var options = ChampionTileCatalog.GetOptions(champion).ToList();
             ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion);
             SelectChampionPicturePickerOption(defaultOption, scrollIntoView: true);
             UpdateChampionPicturePickerPreview(champion, defaultOption, options.Count);
             e.Handled = true;
+        }
+
+        private async void ChampionPicturePickerDownloadAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            e.Handled = true;
+
+            if (_isChampionPictureDownloadInProgress
+                || _selectedChampionPictureChampion is not ChampionInfo champion)
+            {
+                return;
+            }
+
+            if (!ConfirmChampionPictureDownload(champion))
+            {
+                SetChampionPicturePickerDownloadStatus(
+                    $"Picture download canceled for {champion.Name}.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+                return;
+            }
+
+            int requestedChampionId = champion.Id;
+            _isChampionPictureDownloadInProgress = true;
+            SetChampionPicturePickerDownloadControlsEnabled(false);
+            SetChampionPicturePickerDownloadStatus(
+                $"Preparing {champion.Name} picture download...",
+                "TextSoftBrush",
+                Brushes.SlateGray);
+
+            try
+            {
+                var progress = new Progress<ChampionTileDownloadProgress>(snapshot =>
+                {
+                    if (_selectedChampionPictureChampion?.Id != requestedChampionId
+                        || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
+                    {
+                        return;
+                    }
+
+                    if (snapshot.Message.StartsWith("Unable to download ", StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    SetChampionPicturePickerDownloadStatus(
+                        snapshot.Message,
+                        snapshot.Message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase)
+                            ? "DangerTextBrush"
+                            : "TextSoftBrush",
+                        snapshot.Message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase)
+                            ? Brushes.IndianRed
+                            : Brushes.SlateGray);
+                });
+
+                var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(champion, progress);
+                if (_selectedChampionPictureChampion?.Id != requestedChampionId
+                    || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
+                {
+                    return;
+                }
+
+                RefreshChampionImages();
+                string statusMessage = CreateChampionPictureDownloadStatusMessage(result);
+                bool isCompleteSuccess = result.FailedTileCount == 0;
+                SetChampionPicturePickerDownloadStatus(
+                    statusMessage,
+                    isCompleteSuccess ? "AccentGreenTextBrush" : "TextSoftBrush",
+                    isCompleteSuccess ? Brushes.ForestGreen : Brushes.SlateGray);
+            }
+            catch (Exception ex)
+            {
+                if (_selectedChampionPictureChampion?.Id == requestedChampionId
+                    && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
+                {
+                    SetChampionPicturePickerDownloadStatus(
+                        $"Unable to download {champion.Name} pictures. Existing local pictures were kept. {ex.Message}",
+                        "DangerTextBrush",
+                        Brushes.IndianRed);
+                }
+            }
+            finally
+            {
+                _isChampionPictureDownloadInProgress = false;
+                if (_selectedChampionPictureChampion?.Id == requestedChampionId
+                    && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
+                {
+                    SetChampionPicturePickerDownloadControlsEnabled(true);
+                    RefreshChampionPicturePickerActionStates();
+                }
+            }
+        }
+
+        private static string CreateChampionPictureDownloadStatusMessage(ChampionTileDownloadResult result)
+        {
+            if (result.FailedTileCount == 0 && result.DownloadedTileCount == 0)
+                return $"{result.ChampionName} pictures are already up to date. {result.UnchangedTileCount} local pictures checked.";
+
+            if (result.FailedTileCount == 0)
+                return $"Downloaded {result.DownloadedTileCount} {result.ChampionName} pictures; {result.UnchangedTileCount} already up to date.";
+
+            if (result.DownloadedTileCount == 0)
+                return $"{result.ChampionName} pictures were already present where available. Checked {result.UnchangedTileCount} existing pictures; {result.FailedTileCount} Riot tile request(s) did not return an image.";
+
+            return $"Downloaded {result.DownloadedTileCount} {result.ChampionName} pictures; {result.UnchangedTileCount} already up to date; {result.FailedTileCount} Riot tile request(s) did not return an image.";
         }
 
         private void ChampionPicturePickerTileListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -673,6 +782,7 @@ namespace JoinGameAfk.View
             _pendingChampionPictureFileName = IsDefaultChampionPictureOption(champion, selectedOption)
                 ? null
                 : selectedOption.FileName;
+            ClearChampionPicturePickerDownloadStatus();
 
             UpdateChampionPicturePickerPreview(
                 champion,
@@ -843,7 +953,7 @@ namespace JoinGameAfk.View
             try
             {
                 ChampionPicturePickerTileListBox.ItemsSource = options;
-                ChampionPicturePickerTileListBox.IsEnabled = options.Count > 0;
+                ChampionPicturePickerTileListBox.IsEnabled = !_isChampionPictureDownloadInProgress && options.Count > 0;
                 SelectChampionPicturePickerOption(selectedOption, scrollIntoView: true);
             }
             finally
@@ -895,19 +1005,84 @@ namespace JoinGameAfk.View
         {
             bool hasPendingCustomSelection = !string.IsNullOrWhiteSpace(_pendingChampionPictureFileName);
             ChampionPicturePickerPreviewImage.Source = selectedOption?.ImageSource;
-            ChampionPicturePickerUseDefaultButton.IsEnabled = hasPendingCustomSelection;
+            ChampionPicturePickerUseDefaultButton.IsEnabled = !_isChampionPictureDownloadInProgress && hasPendingCustomSelection;
+            ChampionPicturePickerDownloadAllButton.IsEnabled = !_isChampionPictureDownloadInProgress;
 
             if (optionCount == 0)
             {
-                ChampionPicturePickerStatusTextBlock.Text = $"No local pictures found for {champion.Name}. Use Settings to download or reload champion pictures.";
+                SetChampionPicturePickerStatus(
+                    $"No local pictures found for {champion.Name}. Use Settings to download or reload champion pictures.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
                 return;
             }
 
-            ChampionPicturePickerStatusTextBlock.Text = selectedOption is null
-                ? $"No picture selected for {champion.Name}."
-                : hasPendingCustomSelection
-                    ? $"Selected {selectedOption.FileName} for {champion.Name}."
-                    : $"Using default {selectedOption.FileName} for {champion.Name}.";
+            SetChampionPicturePickerStatus(
+                selectedOption is null
+                    ? $"No picture selected for {champion.Name}."
+                    : hasPendingCustomSelection
+                        ? $"Selected {selectedOption.FileName} for {champion.Name}."
+                        : $"Using default {selectedOption.FileName} for {champion.Name}.",
+                "TextSoftBrush",
+                Brushes.SlateGray);
+        }
+
+        private void RefreshChampionPicturePickerActionStates()
+        {
+            bool hasPendingCustomSelection = !string.IsNullOrWhiteSpace(_pendingChampionPictureFileName);
+            ChampionPicturePickerDownloadAllButton.IsEnabled = !_isChampionPictureDownloadInProgress
+                && _selectedChampionPictureChampion is not null;
+            ChampionPicturePickerUseDefaultButton.IsEnabled = !_isChampionPictureDownloadInProgress
+                && hasPendingCustomSelection;
+            ChampionPicturePickerTileListBox.IsEnabled = !_isChampionPictureDownloadInProgress
+                && ChampionPicturePickerTileListBox.Items.Count > 0;
+        }
+
+        private void SetChampionPicturePickerDownloadControlsEnabled(bool enabled)
+        {
+            ChampionPicturePickerDownloadAllButton.IsEnabled = enabled;
+            ChampionPicturePickerUseDefaultButton.IsEnabled = enabled;
+            ChampionPicturePickerTileListBox.IsEnabled = enabled && ChampionPicturePickerTileListBox.Items.Count > 0;
+        }
+
+        private void SetChampionPicturePickerStatus(string message, string brushResourceKey, Brush fallbackBrush)
+        {
+            ChampionPicturePickerStatusTextBlock.Text = message;
+            ChampionPicturePickerStatusTextBlock.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+        }
+
+        private void SetChampionPicturePickerDownloadStatus(string message, string brushResourceKey, Brush fallbackBrush)
+        {
+            ChampionPicturePickerDownloadStatusTextBlock.Text = message;
+            ChampionPicturePickerDownloadStatusTextBlock.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
+            ChampionPicturePickerDownloadStatusTextBlock.Visibility = string.IsNullOrWhiteSpace(message)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
+        private void ClearChampionPicturePickerDownloadStatus()
+        {
+            SetChampionPicturePickerDownloadStatus(string.Empty, "TextSoftBrush", Brushes.SlateGray);
+        }
+
+        private bool ConfirmChampionPictureDownload(ChampionInfo champion)
+        {
+            if (!_settings.ShowChampionPictureDownloadWarning)
+                return true;
+
+            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            bool confirmed = dialog.ShowDialog() == true;
+            if (confirmed && dialog.DontShowAgain)
+            {
+                _settings.ShowChampionPictureDownloadWarning = false;
+                _settings.Save();
+            }
+
+            return confirmed;
         }
 
         private static bool IsDefaultChampionPictureOption(ChampionInfo champion, ChampionTileOption selectedOption)

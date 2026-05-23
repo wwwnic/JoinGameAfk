@@ -48,7 +48,9 @@ namespace JoinGameAfk.Services
     public sealed record ChampionTileArchiveInstallOptions(
         string TileDirectoryPath,
         string ArchiveDirectoryPath,
-        string CacheFilePath)
+        string CacheFilePath,
+        int? MaxTileIndex = null,
+        bool DeleteArchiveAfterExtraction = true)
     {
         public static ChampionTileArchiveInstallOptions Default => new(
             AppStorage.ChampionTileDirectoryPath,
@@ -156,6 +158,9 @@ namespace JoinGameAfk.Services
             IProgress<ChampionTileArchiveProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
+            if (options.MaxTileIndex is < 0)
+                throw new ArgumentOutOfRangeException(nameof(options), "Maximum champion tile index must be zero or greater.");
+
             Directory.CreateDirectory(options.TileDirectoryPath);
             Directory.CreateDirectory(options.ArchiveDirectoryPath);
             ReportArchiveCleanup(DeleteDownloadedArchives(options.ArchiveDirectoryPath), progress);
@@ -176,7 +181,11 @@ namespace JoinGameAfk.Services
             Exception? archiveDeleteException = null;
             try
             {
-                extractionResult = ExtractChampionTilesFromTarGz(archiveFilePath, options.TileDirectoryPath, cancellationToken);
+                extractionResult = ExtractChampionTilesFromTarGz(
+                    archiveFilePath,
+                    options.TileDirectoryPath,
+                    options.MaxTileIndex,
+                    cancellationToken);
                 if (extractionResult.CheckedTileCount == 0)
                     throw new InvalidOperationException("No champion tile jpg files were found in the Riot Data Dragon archive.");
 
@@ -187,18 +196,29 @@ namespace JoinGameAfk.Services
             }
             finally
             {
-                progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Removing Data Dragon archive after extraction..."));
-                archiveDeleted = TryDeleteFile(archiveFilePath, out archiveDeleteException);
-                if (archiveDeleted)
+                if (options.DeleteArchiveAfterExtraction)
                 {
-                    progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Data Dragon archive removed after extraction."));
+                    progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Removing Data Dragon archive after extraction..."));
+                    archiveDeleted = TryDeleteFile(archiveFilePath, out archiveDeleteException);
+                    if (archiveDeleted)
+                    {
+                        progress?.Report(new ChampionTileArchiveProgress(archiveSizeBytes, archiveSizeBytes, "Data Dragon archive removed after extraction."));
+                    }
+                    else
+                    {
+                        progress?.Report(new ChampionTileArchiveProgress(
+                            archiveSizeBytes,
+                            archiveSizeBytes,
+                            $"Unable to remove Data Dragon archive after extraction: {FormatException(archiveDeleteException)}"));
+                    }
                 }
                 else
                 {
+                    archiveDeleted = false;
                     progress?.Report(new ChampionTileArchiveProgress(
                         archiveSizeBytes,
                         archiveSizeBytes,
-                        $"Unable to remove Data Dragon archive after extraction: {FormatException(archiveDeleteException)}"));
+                        $"Keeping Data Dragon archive {Path.GetFileName(archiveFilePath)} for reuse."));
                 }
             }
 
@@ -393,6 +413,7 @@ namespace JoinGameAfk.Services
         private static ChampionTileArchiveExtractionResult ExtractChampionTilesFromTarGz(
             string archiveFilePath,
             string tileDirectoryPath,
+            int? maxTileIndex,
             CancellationToken cancellationToken)
         {
             int checkedTileCount = 0;
@@ -418,6 +439,12 @@ namespace JoinGameAfk.Services
                 string fileName = Path.GetFileName(normalizedEntryName);
                 if (!TryGetSafeFileName(fileName, out fileName))
                     continue;
+
+                if (maxTileIndex is int maximumTileIndex
+                    && (!TryGetTileIndex(fileName, out int tileIndex) || tileIndex > maximumTileIndex))
+                {
+                    continue;
+                }
 
                 string destinationFilePath = Path.Combine(tileDirectoryPath, fileName);
                 string temporaryTileFilePath = Path.Combine(tileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
@@ -475,6 +502,20 @@ namespace JoinGameAfk.Services
 
             fileName = safeFileName;
             return true;
+        }
+
+        private static bool TryGetTileIndex(string fileName, out int tileIndex)
+        {
+            tileIndex = 0;
+            string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            int separatorIndex = nameWithoutExtension.LastIndexOf('_');
+            return separatorIndex >= 0
+                && int.TryParse(
+                    nameWithoutExtension[(separatorIndex + 1)..],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out tileIndex)
+                && tileIndex >= 0;
         }
 
         private static bool FilesHaveSameSha256(string firstFilePath, string secondFilePath)

@@ -1227,22 +1227,40 @@
                                 </Viewbox>
                             </Grid>
 
-                            <TextBlock x:Name="ChampionPicturePickerStatusTextBlock"
-                                       Grid.Column="2"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextSoftBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap" />
+                            <StackPanel Grid.Column="2"
+                                        VerticalAlignment="Center">
+                                <TextBlock x:Name="ChampionPicturePickerStatusTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock x:Name="ChampionPicturePickerDownloadStatusTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0"
+                                           Visibility="Collapsed" />
+                            </StackPanel>
 
-                            <Button x:Name="ChampionPicturePickerUseDefaultButton"
-                                    Grid.Column="4"
-                                    Content="Use Default"
-                                    Click="ChampionPicturePickerUseDefaultButton_Click"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Padding="12,8"
-                                    VerticalAlignment="Center"
-                                    ToolTip="Remove the custom picture selection for this champion." />
+                            <StackPanel Grid.Column="4"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <Button x:Name="ChampionPicturePickerDownloadAllButton"
+                                        Content="Download All Images"
+                                        Click="ChampionPicturePickerDownloadAllButton_Click"
+                                        Style="{StaticResource AccentButtonStyle}"
+                                        Padding="12,8"
+                                        MinWidth="146"
+                                        ToolTip="Download every available Riot Data Dragon picture for this champion." />
+                                <Button x:Name="ChampionPicturePickerUseDefaultButton"
+                                        Content="Use Default"
+                                        Click="ChampionPicturePickerUseDefaultButton_Click"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,8"
+                                        Margin="8,0,0,0"
+                                        ToolTip="Remove the custom picture selection for this champion." />
+                            </StackPanel>
                         </Grid>
 
                         <ListBox x:Name="ChampionPicturePickerTileListBox"

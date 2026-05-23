@@ -38,28 +38,44 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
 
-      - name: Generate champion tile seed cache
+      - name: Build solution
+        run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION
+
+      - name: Clean champion tile seed cache
+        shell: pwsh
+        run: |
+          $tileDirectory = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\ChampionTiles'
+          $cacheFile = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\champion-tile-cache.json'
+
+          if (Test-Path $tileDirectory) {
+            Remove-Item -LiteralPath $tileDirectory -Recurse -Force
+          }
+
+          if (Test-Path $cacheFile) {
+            Remove-Item -LiteralPath $cacheFile -Force
+          }
+
+      - name: Generate light champion tile seed cache
         shell: pwsh
         run: >
           dotnet run --project JoinGameAfk.ChampionTileSeeder/JoinGameAfk.ChampionTileSeeder.csproj --configuration Release --
           --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
           --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
           --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
+          --max-tile-index 1
+          --keep-archive
 
-      - name: Build solution
-        run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION
+      - name: Publish light single-file app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-light
 
-      - name: Publish single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-single
-
-      - name: Verify single-file artifact
+      - name: Verify light single-file artifact
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-single'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-light'
           $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
 
           if (-not (Test-Path $exePath)) {
-            throw "Single-file executable was not produced at $exePath."
+            throw "Light single-file executable was not produced at $exePath."
           }
 
           $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
@@ -67,17 +83,66 @@ jobs:
 
           if ($unexpectedFiles) {
             $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
-            throw "Single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
+            throw "Light single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
           }
 
-      - name: Rename single-file executable
-        run: Copy-Item -Path ${{ github.workspace }}\publish-single\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
+      - name: Rename light executable
+        run: Copy-Item -Path ${{ github.workspace }}\publish-light\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-light.exe
 
-      - name: Publish split app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-split
+      - name: Clean champion tile seed cache before full build
+        shell: pwsh
+        run: |
+          $tileDirectory = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\ChampionTiles'
+          $cacheFile = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\champion-tile-cache.json'
 
-      - name: Create split zip
-        run: Compress-Archive -Path publish-split\* -DestinationPath JoinGameAfk-win-x64.zip
+          if (Test-Path $tileDirectory) {
+            Remove-Item -LiteralPath $tileDirectory -Recurse -Force
+          }
+
+          if (Test-Path $cacheFile) {
+            Remove-Item -LiteralPath $cacheFile -Force
+          }
+
+      - name: Generate full champion tile seed cache
+        shell: pwsh
+        run: >
+          dotnet run --project JoinGameAfk.ChampionTileSeeder/JoinGameAfk.ChampionTileSeeder.csproj --configuration Release --
+          --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
+          --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
+          --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
+
+      - name: Publish full single-file app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full
+
+      - name: Verify full single-file artifact
+        shell: pwsh
+        run: |
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-full'
+          $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
+
+          if (-not (Test-Path $exePath)) {
+            throw "Full single-file executable was not produced at $exePath."
+          }
+
+          $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
+            Where-Object { $_.FullName -ne $exePath }
+
+          if ($unexpectedFiles) {
+            $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
+            throw "Full single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
+          }
+
+      - name: Rename full executable
+        run: Copy-Item -Path ${{ github.workspace }}\publish-full\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-full.exe
+
+      - name: Clean downloaded Data Dragon archive
+        shell: pwsh
+        run: |
+          $archiveDirectory = Join-Path $env:RUNNER_TEMP 'JoinGameAfkChampionTileArchives'
+
+          if (Test-Path $archiveDirectory) {
+            Remove-Item -LiteralPath $archiveDirectory -Recurse -Force
+          }
 
       - name: Generate release notes
         shell: pwsh
@@ -115,7 +180,7 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: release-notes.md
           files: |
-            JoinGameAfk.exe
-            JoinGameAfk-win-x64.zip
+            JoinGameAfk-light.exe
+            JoinGameAfk-full.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

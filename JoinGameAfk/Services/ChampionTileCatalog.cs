@@ -141,6 +141,23 @@ namespace JoinGameAfk.Services
             return result;
         }
 
+        public static async Task<ChampionTileDownloadResult> DownloadAllImagesForChampionAsync(
+            ChampionInfo champion,
+            IProgress<ChampionTileDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            var syncInfo = GetCacheSyncInfo();
+            var result = await DataDragonChampionTileDownloadService.DownloadChampionTilesAsync(
+                    champion,
+                    syncInfo.DataDragonVersion,
+                    TileDirectoryPath,
+                    progress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            Reload();
+            return result;
+        }
+
         public static ChampionTileArchiveCleanupResult DeleteDownloadedArchives()
         {
             return ChampionTileArchiveInstaller.DeleteDownloadedArchives(AppStorage.ChampionTileArchiveDirectoryPath);
@@ -320,9 +337,9 @@ namespace JoinGameAfk.Services
                 .ToDictionary(
                     group => group.Key,
                     group => (IReadOnlyList<ChampionTileOption>)group
-                        .Select(tile => new ChampionTileOption(tile.FileName, CreateDisplayName(tile.FileName)))
                         .OrderBy(option => GetTileNumber(option.FileName))
                         .ThenBy(option => option.FileName, StringComparer.OrdinalIgnoreCase)
+                        .Select((tile, index) => new ChampionTileOption(tile.FileName, CreateDisplayName(tile.FileName, index)))
                         .ToList(),
                     StringComparer.OrdinalIgnoreCase);
         }
@@ -411,12 +428,12 @@ namespace JoinGameAfk.Services
                 : fileNameWithoutExtension;
         }
 
-        private static string CreateDisplayName(string fileName)
+        private static string CreateDisplayName(string fileName, int sortedIndex)
         {
             int tileNumber = GetTileNumber(fileName);
             return tileNumber == 0
                 ? $"Default ({fileName})"
-                : $"Variant {tileNumber} ({fileName})";
+                : $"Variant {Math.Max(1, sortedIndex)} ({fileName})";
         }
 
         private static bool IsDefaultTile(string fileName)
