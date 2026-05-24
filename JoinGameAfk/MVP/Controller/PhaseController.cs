@@ -290,6 +290,18 @@ namespace JoinGameAfk.MVP.Controller
                         var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
                         bool isChampSelectFlow = IsChampSelectFlow(phase);
 
+                        if (phase == ClientPhase.ReadyCheck
+                            && handler != null
+                            && _lastHandledPhase != phase)
+                        {
+                            string? actionMessage = GetActionMessage(phase);
+                            if (!string.IsNullOrWhiteSpace(actionMessage))
+                                Log(actionMessage);
+
+                            await handler.HandleAsync(ct);
+                            _lastHandledPhase = phase;
+                        }
+
                         if (!isChampSelectFlow)
                         {
                             if (phase == ClientPhase.ReadyCheck)
@@ -773,6 +785,12 @@ namespace JoinGameAfk.MVP.Controller
 
         private void OnSettingsSaved()
         {
+            if (_lastObservedPhase == ClientPhase.ReadyCheck
+                && !_champSelectSettings.IsInQueueAutomationActive())
+            {
+                _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
+            }
+
             if (!_isShutdownRequested)
                 SignalLcuEvent();
         }
@@ -913,9 +931,24 @@ namespace JoinGameAfk.MVP.Controller
                 }
             }
 
+            var readyCheckHandler = _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault();
+            string readyCheckResponse = GetReadyCheckResponse(readyCheckJson);
+            if (!string.IsNullOrWhiteSpace(readyCheckResponse)
+                || !_champSelectSettings.IsInQueueAutomationActive())
+            {
+                readyCheckHandler?.CancelPendingAccept();
+            }
+
+            ReadyCheck.AutoAcceptCountdownSnapshot countdown = string.IsNullOrWhiteSpace(readyCheckResponse)
+                ? readyCheckHandler?.GetPendingAutoAcceptCountdown() ?? ReadyCheck.AutoAcceptCountdownSnapshot.Empty
+                : ReadyCheck.AutoAcceptCountdownSnapshot.Empty;
+
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus
             {
-                ReadyCheckResponse = GetReadyCheckResponse(readyCheckJson)
+                ReadyCheckResponse = readyCheckResponse,
+                ReadyCheckAutoAcceptDelayMilliseconds = countdown.TotalDelayMilliseconds,
+                ReadyCheckAutoAcceptTimeLeftMilliseconds = countdown.RemainingMilliseconds,
+                ReadyCheckAutoAcceptObservedAtUtc = countdown.ObservedAtUtc
             });
         }
 

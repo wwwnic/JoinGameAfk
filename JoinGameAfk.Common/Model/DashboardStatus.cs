@@ -53,6 +53,9 @@ namespace JoinGameAfk.Model
         public string PickLockText { get; init; } = "—";
         public string ChampSelectSubPhase { get; init; } = "";
         public string ReadyCheckResponse { get; init; } = "";
+        public long ReadyCheckAutoAcceptDelayMilliseconds { get; init; } = -1;
+        public long ReadyCheckAutoAcceptTimeLeftMilliseconds { get; init; } = -1;
+        public DateTime ReadyCheckAutoAcceptObservedAtUtc { get; init; } = DateTime.MinValue;
         public int TimeLeftSeconds { get; init; } = -1;
         public long TimeLeftMilliseconds { get; init; } = -1;
         public DateTime TimeLeftObservedAtUtc { get; init; } = DateTime.MinValue;

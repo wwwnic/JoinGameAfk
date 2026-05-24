@@ -7,6 +7,7 @@ namespace JoinGameAfk.View.Controls
     {
         QueueOrbit,
         ReadyCheckOrbitPulse,
+        ReadyCheckCountdown,
         ChampionSelectOrbit
     }
 
@@ -42,6 +43,9 @@ namespace JoinGameAfk.View.Controls
         private bool _isRendering;
         private PhaseActivityRingMode _mode = PhaseActivityRingMode.ChampionSelectOrbit;
         private PhaseActivityRingProfile _profile = PhaseActivityRingProfile.Neutral;
+        private long _countdownTotalMilliseconds = -1;
+        private long _countdownRemainingMilliseconds = -1;
+        private DateTime _countdownObservedAtUtc = DateTime.MinValue;
 
         public PhaseActivityRing()
         {
@@ -73,6 +77,7 @@ namespace JoinGameAfk.View.Controls
             _mode = mode;
             _profile = profile;
             _shouldAnimate = true;
+            ClearCountdown();
 
             if (restartLoop)
                 _startedAtUtc = DateTime.UtcNow;
@@ -83,9 +88,31 @@ namespace JoinGameAfk.View.Controls
             InvalidateVisual();
         }
 
+        public void StartReadyCheckCountdown(
+            PhaseActivityRingProfile profile,
+            long totalMilliseconds,
+            long remainingMilliseconds,
+            DateTime observedAtUtc)
+        {
+            _mode = PhaseActivityRingMode.ReadyCheckCountdown;
+            _profile = profile;
+            _countdownTotalMilliseconds = totalMilliseconds;
+            _countdownRemainingMilliseconds = remainingMilliseconds;
+            _countdownObservedAtUtc = observedAtUtc == DateTime.MinValue
+                ? DateTime.UtcNow
+                : observedAtUtc;
+            _shouldAnimate = totalMilliseconds > 0 && remainingMilliseconds >= 0;
+
+            if (IsLoaded && _shouldAnimate)
+                StartRendering();
+
+            InvalidateVisual();
+        }
+
         public void Stop()
         {
             _shouldAnimate = false;
+            ClearCountdown();
             StopRendering();
             InvalidateVisual();
         }
@@ -109,6 +136,12 @@ namespace JoinGameAfk.View.Controls
             if (_mode == PhaseActivityRingMode.ReadyCheckOrbitPulse)
             {
                 DrawReadyCheckOrbitPulse(drawingContext, center, size, elapsedSeconds);
+                return;
+            }
+
+            if (_mode == PhaseActivityRingMode.ReadyCheckCountdown)
+            {
+                DrawReadyCheckCountdown(drawingContext, center, size);
                 return;
             }
 
@@ -155,6 +188,23 @@ namespace JoinGameAfk.View.Controls
             DrawPulseRing(drawingContext, center, size, loop, PulseColor, 0.24, 0.45, 92, 1.0);
             DrawArc(drawingContext, center, orbitRadius, -90 + spinDegrees, 112, RingColor, 226, 1.0);
             DrawArc(drawingContext, center, orbitRadius, 90 + spinDegrees, 112, RingColor, 226, 1.0);
+        }
+
+        private void DrawReadyCheckCountdown(DrawingContext drawingContext, Point center, double size)
+        {
+            double orbitRadius = Math.Floor(size * 0.39);
+            DrawBaseRing(drawingContext, center, orbitRadius, RingColor, 30, 1.0);
+
+            if (_countdownTotalMilliseconds <= 0)
+                return;
+
+            double remainingMilliseconds = GetCountdownRemainingMilliseconds();
+            double progress = 1 - (remainingMilliseconds / _countdownTotalMilliseconds);
+            double sweepDegrees = Math.Clamp(progress, 0, 1) * 359.5;
+            if (sweepDegrees <= 0.5)
+                return;
+
+            DrawArc(drawingContext, center, orbitRadius, -90, sweepDegrees, RingColor, 236, 1.35);
         }
 
         private void DrawQueueOrbit(DrawingContext drawingContext, Point center, double size, double elapsedSeconds)
@@ -386,6 +436,22 @@ namespace JoinGameAfk.View.Controls
             return loop < 0
                 ? (loop + loopSeconds) / loopSeconds
                 : loop / loopSeconds;
+        }
+
+        private double GetCountdownRemainingMilliseconds()
+        {
+            if (_countdownRemainingMilliseconds < 0 || _countdownObservedAtUtc == DateTime.MinValue)
+                return -1;
+
+            double elapsedMilliseconds = Math.Max(0, (DateTime.UtcNow - _countdownObservedAtUtc).TotalMilliseconds);
+            return Math.Max(0, _countdownRemainingMilliseconds - elapsedMilliseconds);
+        }
+
+        private void ClearCountdown()
+        {
+            _countdownTotalMilliseconds = -1;
+            _countdownRemainingMilliseconds = -1;
+            _countdownObservedAtUtc = DateTime.MinValue;
         }
 
         private static double EaseOutCubic(double value)

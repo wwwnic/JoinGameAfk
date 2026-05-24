@@ -51,7 +51,20 @@ namespace JoinGameAfk.View
             PreviewIndicator(ClientPhase.Matchmaking, isWatcherRunning: true, isClientConnected: true);
         }
 
-        private void PreviewReadyCheckIndicator_Click(object sender, RoutedEventArgs e)
+        private void PreviewReadyCheckCountdownIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            const long countdownMilliseconds = 5000;
+            PreviewIndicator(
+                ClientPhase.ReadyCheck,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                champSelectSubPhase: string.Empty,
+                readyCheckAutoAcceptDelayMilliseconds: countdownMilliseconds,
+                readyCheckAutoAcceptTimeLeftMilliseconds: countdownMilliseconds,
+                readyCheckAutoAcceptObservedAtUtc: DateTime.UtcNow);
+        }
+
+        private void PreviewReadyCheckAutoDisabledIndicator_Click(object sender, RoutedEventArgs e)
         {
             PreviewIndicator(ClientPhase.ReadyCheck, isWatcherRunning: true, isClientConnected: true);
         }
@@ -186,13 +199,19 @@ namespace JoinGameAfk.View
             ClientPhase phase,
             bool isWatcherRunning,
             bool isClientConnected,
-            string champSelectSubPhase = "")
+            string champSelectSubPhase = "",
+            long readyCheckAutoAcceptDelayMilliseconds = -1,
+            long readyCheckAutoAcceptTimeLeftMilliseconds = -1,
+            DateTime readyCheckAutoAcceptObservedAtUtc = default)
         {
             TestPhaseIndicator.Update(
                 phase,
                 isWatcherRunning,
                 isClientConnected,
-                champSelectSubPhase);
+                champSelectSubPhase,
+                readyCheckAutoAcceptDelayMilliseconds,
+                readyCheckAutoAcceptTimeLeftMilliseconds,
+                readyCheckAutoAcceptObservedAtUtc);
         }
 
         private void AddChampionPlanItem(string text, List<DashboardChampionPlanItem> target, string statusText)

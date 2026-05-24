@@ -112,8 +112,12 @@
                                         Click="PreviewInQueueIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
                                         Margin="0,0,8,6" />
-                                <Button Content="Ready check"
-                                        Click="PreviewReadyCheckIndicator_Click"
+                                <Button Content="Ready countdown"
+                                        Click="PreviewReadyCheckCountdownIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Ready auto disabled"
+                                        Click="PreviewReadyCheckAutoDisabledIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
                                         Margin="0,0,8,6" />
                                 <Button Content="Ready accepted"

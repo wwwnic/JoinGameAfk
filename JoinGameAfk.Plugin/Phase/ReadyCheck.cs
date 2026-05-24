@@ -12,7 +12,7 @@ public class ReadyCheck : IPhaseHandler
     private readonly ChampSelectSettings _settings;
     private readonly Action<string>? _log;
     private readonly object _pendingAcceptLock = new();
-    private CancellationTokenSource? _pendingAcceptCts;
+    private PendingAccept? _pendingAccept;
 
     public ReadyCheck(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null)
     {
@@ -33,45 +33,76 @@ public class ReadyCheck : IPhaseHandler
             return Task.CompletedTask;
         }
 
+        int delaySeconds = Math.Max(0, _settings.ReadyCheckAcceptDelaySeconds);
+        long delayMilliseconds = delaySeconds * 1000L;
+        DateTime scheduledAtUtc = DateTime.UtcNow;
         var pendingAcceptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var pendingAccept = new PendingAccept(
+            pendingAcceptCts,
+            delayMilliseconds,
+            scheduledAtUtc.AddMilliseconds(delayMilliseconds));
+
         lock (_pendingAcceptLock)
         {
-            _pendingAcceptCts = pendingAcceptCts;
+            _pendingAccept = pendingAccept;
         }
 
-        _ = AcceptAfterDelayAsync(pendingAcceptCts);
+        _ = AcceptAfterDelayAsync(pendingAccept);
         return Task.CompletedTask;
     }
 
     public void CancelPendingAccept()
     {
-        CancellationTokenSource? pendingAcceptCts;
+        PendingAccept? pendingAccept;
         lock (_pendingAcceptLock)
         {
-            pendingAcceptCts = _pendingAcceptCts;
-            _pendingAcceptCts = null;
+            pendingAccept = _pendingAccept;
+            _pendingAccept = null;
         }
 
         try
         {
-            pendingAcceptCts?.Cancel();
+            pendingAccept?.CancellationTokenSource.Cancel();
         }
         catch (ObjectDisposedException)
         {
         }
     }
 
-    private async Task AcceptAfterDelayAsync(CancellationTokenSource pendingAcceptCts)
+    public AutoAcceptCountdownSnapshot GetPendingAutoAcceptCountdown()
     {
-        CancellationToken cancellationToken = pendingAcceptCts.Token;
-        int delaySeconds = Math.Max(0, _settings.ReadyCheckAcceptDelaySeconds);
+        lock (_pendingAcceptLock)
+        {
+            if (_pendingAccept is not { TotalDelayMilliseconds: > 0 } pendingAccept
+                || !_settings.IsInQueueAutomationActive())
+            {
+                return AutoAcceptCountdownSnapshot.Empty;
+            }
+
+            DateTime observedAtUtc = DateTime.UtcNow;
+            long remainingMilliseconds = Math.Max(
+                0,
+                (long)Math.Ceiling((pendingAccept.AcceptAtUtc - observedAtUtc).TotalMilliseconds));
+
+            return new AutoAcceptCountdownSnapshot(
+                pendingAccept.TotalDelayMilliseconds,
+                remainingMilliseconds,
+                observedAtUtc);
+        }
+    }
+
+    private async Task AcceptAfterDelayAsync(PendingAccept pendingAccept)
+    {
+        CancellationToken cancellationToken = pendingAccept.CancellationTokenSource.Token;
+        long delayMilliseconds = pendingAccept.TotalDelayMilliseconds;
+        double delaySeconds = delayMilliseconds / 1000d;
 
         try
         {
-            if (delaySeconds > 0)
+            if (delayMilliseconds > 0)
             {
-                Log($"Ready check detected. Waiting {delaySeconds}s before auto-accept so you can respond manually.");
-                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
+                Log($"Ready check detected. Waiting {delaySeconds:0.#}s before auto-accept so you can respond manually.");
+                await Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds), cancellationToken);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -82,7 +113,7 @@ public class ReadyCheck : IPhaseHandler
                 return;
             }
 
-            if (!IsCurrentPendingAccept(pendingAcceptCts))
+            if (!IsCurrentPendingAccept(pendingAccept))
                 return;
 
             ReadyCheckAcceptDecision decision = await GetReadyCheckAcceptDecisionAsync(cancellationToken);
@@ -92,7 +123,7 @@ public class ReadyCheck : IPhaseHandler
                 return;
             }
 
-            if (!IsCurrentPendingAccept(pendingAcceptCts))
+            if (!IsCurrentPendingAccept(pendingAccept))
                 return;
 
             bool accepted = await _http.AcceptMatchAsync(cancellationToken);
@@ -113,19 +144,19 @@ public class ReadyCheck : IPhaseHandler
         {
             lock (_pendingAcceptLock)
             {
-                if (ReferenceEquals(_pendingAcceptCts, pendingAcceptCts))
-                    _pendingAcceptCts = null;
+                if (ReferenceEquals(_pendingAccept, pendingAccept))
+                    _pendingAccept = null;
             }
 
-            pendingAcceptCts.Dispose();
+            pendingAccept.CancellationTokenSource.Dispose();
         }
     }
 
-    private bool IsCurrentPendingAccept(CancellationTokenSource pendingAcceptCts)
+    private bool IsCurrentPendingAccept(PendingAccept pendingAccept)
     {
         lock (_pendingAcceptLock)
         {
-            return ReferenceEquals(_pendingAcceptCts, pendingAcceptCts);
+            return ReferenceEquals(_pendingAccept, pendingAccept);
         }
     }
 
@@ -226,5 +257,22 @@ public class ReadyCheck : IPhaseHandler
         {
             return new ReadyCheckAcceptDecision(false, message);
         }
+    }
+
+    private sealed record PendingAccept(
+        CancellationTokenSource CancellationTokenSource,
+        long TotalDelayMilliseconds,
+        DateTime AcceptAtUtc);
+
+    public readonly record struct AutoAcceptCountdownSnapshot(
+        long TotalDelayMilliseconds,
+        long RemainingMilliseconds,
+        DateTime ObservedAtUtc)
+    {
+        public static AutoAcceptCountdownSnapshot Empty { get; } = new(-1, -1, DateTime.MinValue);
+
+        public bool HasValue => TotalDelayMilliseconds > 0
+            && RemainingMilliseconds >= 0
+            && ObservedAtUtc != DateTime.MinValue;
     }
 }

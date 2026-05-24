@@ -17,6 +17,9 @@ namespace JoinGameAfk.View.Controls
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
+        private long _readyCheckAutoAcceptDelayMilliseconds = -1;
+        private long _readyCheckAutoAcceptTimeLeftMilliseconds = -1;
+        private DateTime _readyCheckAutoAcceptObservedAtUtc = DateTime.MinValue;
         private bool _isThemeRefreshSubscribed;
         private PhaseActivityRingMode? _activeActivityRingMode;
         private PhaseActivityRingProfile? _activeActivityRingProfile;
@@ -50,12 +53,18 @@ namespace JoinGameAfk.View.Controls
             ClientPhase phase,
             bool isWatcherRunning,
             bool isClientConnected,
-            string champSelectSubPhase)
+            string champSelectSubPhase,
+            long readyCheckAutoAcceptDelayMilliseconds = -1,
+            long readyCheckAutoAcceptTimeLeftMilliseconds = -1,
+            DateTime readyCheckAutoAcceptObservedAtUtc = default)
         {
             _phase = phase;
             _isWatcherRunning = isWatcherRunning;
             _isClientConnected = isClientConnected;
             _champSelectSubPhase = champSelectSubPhase;
+            _readyCheckAutoAcceptDelayMilliseconds = readyCheckAutoAcceptDelayMilliseconds;
+            _readyCheckAutoAcceptTimeLeftMilliseconds = readyCheckAutoAcceptTimeLeftMilliseconds;
+            _readyCheckAutoAcceptObservedAtUtc = readyCheckAutoAcceptObservedAtUtc;
 
             Refresh();
         }
@@ -223,6 +232,12 @@ namespace JoinGameAfk.View.Controls
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen);
 
+            if (HasReadyCheckAutoAcceptCountdown())
+            {
+                ShowReadyCheckCountdownRing(readyCheckColor);
+                return;
+            }
+
             ShowReadyCheckActivityRing(readyCheckColor, animateColor: false);
         }
 
@@ -269,6 +284,24 @@ namespace JoinGameAfk.View.Controls
             ApplyActivityRingColors(color, color, shouldAnimateRingColor);
             ActivityRing.Visibility = Visibility.Visible;
             ActivityRing.Start(mode, profile);
+            _activeActivityRingMode = mode;
+            _activeActivityRingProfile = profile;
+        }
+
+        private void ShowReadyCheckCountdownRing(Color color)
+        {
+            const PhaseActivityRingMode mode = PhaseActivityRingMode.ReadyCheckCountdown;
+            const PhaseActivityRingProfile profile = PhaseActivityRingProfile.ReadyCheck;
+            bool activityRingStateChanged = _activeActivityRingMode != mode || _activeActivityRingProfile != profile;
+            bool shouldAnimateRingColor = ActivityRing.Visibility == Visibility.Visible && activityRingStateChanged;
+
+            ApplyActivityRingColors(color, color, shouldAnimateRingColor);
+            ActivityRing.Visibility = Visibility.Visible;
+            ActivityRing.StartReadyCheckCountdown(
+                profile,
+                _readyCheckAutoAcceptDelayMilliseconds,
+                _readyCheckAutoAcceptTimeLeftMilliseconds,
+                _readyCheckAutoAcceptObservedAtUtc);
             _activeActivityRingMode = mode;
             _activeActivityRingProfile = profile;
         }
@@ -354,6 +387,13 @@ namespace JoinGameAfk.View.Controls
                 return ReadyCheckResponseState.Declined;
 
             return ReadyCheckResponseState.Pending;
+        }
+
+        private bool HasReadyCheckAutoAcceptCountdown()
+        {
+            return _readyCheckAutoAcceptDelayMilliseconds > 0
+                && _readyCheckAutoAcceptTimeLeftMilliseconds >= 0
+                && _readyCheckAutoAcceptObservedAtUtc != DateTime.MinValue;
         }
 
         private void ShowChampionActivityRing(ChampionAnimationPalette palette, bool animate)

@@ -478,7 +478,10 @@ namespace JoinGameAfk.View
                 _currentPhase,
                 _isWatcherRunning,
                 _isClientConnected,
-                GetPhaseIndicatorState());
+                GetPhaseIndicatorState(),
+                _lastDashboardStatus.ReadyCheckAutoAcceptDelayMilliseconds,
+                _lastDashboardStatus.ReadyCheckAutoAcceptTimeLeftMilliseconds,
+                _lastDashboardStatus.ReadyCheckAutoAcceptObservedAtUtc);
         }
 
         private string GetPhaseIndicatorState()
