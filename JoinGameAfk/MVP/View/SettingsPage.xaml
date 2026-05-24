@@ -132,6 +132,12 @@
                             Style="{StaticResource TabButtonStyle}"
                             MinWidth="92"
                             AutomationProperties.Name="Sound settings section" />
+                    <Button x:Name="OverlaySettingsSectionButton"
+                            Content="Overlays"
+                            Click="OverlaySettingsSectionButton_Click"
+                            Style="{StaticResource TabButtonStyle}"
+                            MinWidth="92"
+                            AutomationProperties.Name="Overlay settings section" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -528,6 +534,7 @@
                         </Grid>
                     </Border>
                     </StackPanel>
+
                 </StackPanel>
             </Border>
 
@@ -774,6 +781,7 @@
             </Border>
 
             <Border Grid.Row="6"
+                    Visibility="Collapsed"
                     Style="{StaticResource SectionCardStyle}"
                     Margin="0,0,0,12">
                 <StackPanel>
@@ -1451,6 +1459,12 @@
         </Grid>
 
         <Frame x:Name="SoundSettingsFrame"
+               Grid.Row="1"
+               NavigationUIVisibility="Hidden"
+               Background="Transparent"
+               BorderThickness="0"
+               Visibility="Collapsed" />
+        <Frame x:Name="OverlaySettingsFrame"
                Grid.Row="1"
                NavigationUIVisibility="Hidden"
                Background="Transparent"

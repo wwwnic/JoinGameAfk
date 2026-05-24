@@ -29,9 +29,11 @@ namespace JoinGameAfk.View
         private readonly LogsPage _logsPage;
         private readonly ChampionPrioritiesPage _championPrioritiesPage;
         private readonly ChampSelectSettings _settings;
+        private readonly OverlaySettings _overlaySettings;
         private PhaseController? _phaseController;
         private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
         private PickBanOverlayWindow? _pickBanOverlayWindow;
+        private QueueMicroOverlayWindow? _queueMicroOverlayWindow;
         private DashboardStatus _lastDashboardStatus = new();
         private int _activeTabIndex;
         private ClientPhase _currentPhase = ClientPhase.Unknown;
@@ -46,7 +48,7 @@ namespace JoinGameAfk.View
 
         public int ActiveTabIndex => _activeTabIndex;
 
-        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, ChampSelectSettings settings)
+        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, ChampSelectSettings settings, OverlaySettings overlaySettings)
         {
             InitializeComponent();
             SetApplicationVersion();
@@ -55,6 +57,7 @@ namespace JoinGameAfk.View
             _logsPage = logsPage;
             _championPrioritiesPage = championPrioritiesPage;
             _settings = settings;
+            _overlaySettings = overlaySettings;
             DashboardFrame.Content = dashboardPage;
             ChampionPrioritiesFrame.Content = championPrioritiesPage;
             SettingsFrame.Content = settingsPage;
@@ -67,6 +70,7 @@ namespace JoinGameAfk.View
             Closed += MainWindow_Closed;
             _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
             _settings.Saved += Settings_Saved;
+            _overlaySettings.Saved += OverlaySettings_Saved;
             AppThemeManager.ThemeChanged += RefreshTheme;
             ActivateTab(0);
             SetWatcherState(false);
@@ -129,8 +133,10 @@ namespace JoinGameAfk.View
             _phaseController = null;
             AppThemeManager.ThemeChanged -= RefreshTheme;
             _settings.Saved -= Settings_Saved;
+            _overlaySettings.Saved -= OverlaySettings_Saved;
             _dashboardPage.DashboardStatusChanged -= UpdateDashboardStatus;
             _pickBanOverlayWindow?.Close();
+            _queueMicroOverlayWindow?.Close();
         }
 
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
@@ -155,6 +161,8 @@ namespace JoinGameAfk.View
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.SetWatcherState(_isWatcherRunning);
                 SynchronizeAutoPickBanOverlay();
+                _queueMicroOverlayWindow?.SetWatcherState(_isWatcherRunning);
+                SynchronizeQueueMicroOverlay();
             });
         }
 
@@ -167,6 +175,8 @@ namespace JoinGameAfk.View
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.SetClientConnection(_isClientConnected);
                 SynchronizeAutoPickBanOverlay();
+                _queueMicroOverlayWindow?.SetClientConnection(_isClientConnected);
+                SynchronizeQueueMicroOverlay();
             });
         }
 
@@ -442,6 +452,8 @@ namespace JoinGameAfk.View
                 RefreshPhaseText();
                 _pickBanOverlayWindow?.UpdatePhase(_currentPhase);
                 SynchronizeAutoPickBanOverlay();
+                _queueMicroOverlayWindow?.UpdatePhase(_currentPhase);
+                SynchronizeQueueMicroOverlay();
             });
         }
 
@@ -453,6 +465,7 @@ namespace JoinGameAfk.View
                 _readyCheckResponse = status.ReadyCheckResponse;
                 RefreshPhaseIndicator();
                 _pickBanOverlayWindow?.UpdateDashboardStatus(status);
+                _queueMicroOverlayWindow?.UpdateDashboardStatus(status);
             });
         }
 
@@ -470,6 +483,16 @@ namespace JoinGameAfk.View
         private void Settings_Saved()
         {
             Dispatcher.TryInvoke(SynchronizeAutoPickBanOverlay);
+        }
+
+        private void OverlaySettings_Saved()
+        {
+            Dispatcher.TryInvoke(() =>
+            {
+                SynchronizeAutoPickBanOverlay();
+                _queueMicroOverlayWindow?.ApplySettings();
+                SynchronizeQueueMicroOverlay();
+            });
         }
 
         private void RefreshPhaseIndicator()
@@ -530,7 +553,7 @@ namespace JoinGameAfk.View
 
             if (_pickBanOverlayWindow is null)
             {
-                _pickBanOverlayWindow = new PickBanOverlayWindow(_settings);
+                _pickBanOverlayWindow = new PickBanOverlayWindow(_overlaySettings);
                 _pickBanOverlayWindow.ToggleMainAppRequested += ToggleMainWindowFromOverlay;
                 _pickBanOverlayWindow.PositionChangedByUser += PickBanOverlayWindow_PositionChangedByUser;
                 _pickBanOverlayWindow.Closed += (_, _) =>
@@ -591,6 +614,54 @@ namespace JoinGameAfk.View
             Focus();
         }
 
+        private void SynchronizeQueueMicroOverlay()
+        {
+            if (ShouldAutoShowQueueMicroOverlay())
+            {
+                if (_queueMicroOverlayWindow is null || !_queueMicroOverlayWindow.IsVisible)
+                    ShowQueueMicroOverlay();
+                else
+                    RefreshQueueMicroOverlayState(_queueMicroOverlayWindow);
+
+                return;
+            }
+
+            CloseQueueMicroOverlay();
+        }
+
+        private bool ShouldAutoShowQueueMicroOverlay()
+        {
+            return _overlaySettings.QueueMicroOverlayEnabled
+                && _isWatcherRunning
+                && _isClientConnected
+                && IsQueueMicroOverlayPhase(_currentPhase);
+        }
+
+        private void ShowQueueMicroOverlay()
+        {
+            if (_queueMicroOverlayWindow is null)
+            {
+                _queueMicroOverlayWindow = new QueueMicroOverlayWindow(_overlaySettings);
+                _queueMicroOverlayWindow.PositionChangedByUser += QueueMicroOverlayWindow_PositionChangedByUser;
+                _queueMicroOverlayWindow.Closed += (_, _) => _queueMicroOverlayWindow = null;
+                PositionQueueMicroOverlay(_queueMicroOverlayWindow);
+            }
+
+            RefreshQueueMicroOverlayState(_queueMicroOverlayWindow);
+
+            if (!_queueMicroOverlayWindow.IsVisible)
+                _queueMicroOverlayWindow.Show();
+        }
+
+        private void CloseQueueMicroOverlay()
+        {
+            if (_queueMicroOverlayWindow?.IsVisible != true)
+                return;
+
+            _queueMicroOverlayWindow.Close();
+            _queueMicroOverlayWindow = null;
+        }
+
         private void SynchronizeAutoPickBanOverlay()
         {
             TrackPickBanOverlayVisibleDuringChampSelect();
@@ -611,7 +682,7 @@ namespace JoinGameAfk.View
 
         private bool ShouldAutoShowPickBanOverlay()
         {
-            return _settings.AutoShowPickBanOverlayEnabled
+            return _overlaySettings.AutoShowPickBanOverlayEnabled
                 && _isWatcherRunning
                 && _isClientConnected
                 && !_suppressAutoPickBanOverlayForCurrentChampSelect
@@ -620,7 +691,7 @@ namespace JoinGameAfk.View
 
         private bool ShouldAutoClosePickBanOverlay()
         {
-            return _settings.PickBanOverlayAutoCloseAfterChampSelectEnabled
+            return _overlaySettings.PickBanOverlayAutoCloseAfterChampSelectEnabled
                 && _isPickBanOverlayVisibleDuringChampSelect
                 && _pickBanOverlayWindow?.IsVisible == true
                 && (!_isWatcherRunning || !_isClientConnected || !IsChampSelectFlow(_currentPhase));
@@ -680,6 +751,22 @@ namespace JoinGameAfk.View
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
+        private static bool IsQueueMicroOverlayPhase(ClientPhase phase)
+        {
+            return phase is ClientPhase.Matchmaking or ClientPhase.ReadyCheck;
+        }
+
+        private void RefreshQueueMicroOverlayState(QueueMicroOverlayWindow overlayWindow)
+        {
+            overlayWindow.ApplySettings();
+            if (double.IsFinite(overlayWindow.Left) && double.IsFinite(overlayWindow.Top))
+                ApplyQueueMicroOverlayPosition(overlayWindow, overlayWindow.Left, overlayWindow.Top, GetVirtualScreenBounds());
+            overlayWindow.SetWatcherState(_isWatcherRunning);
+            overlayWindow.SetClientConnection(_isClientConnected);
+            overlayWindow.UpdatePhase(_currentPhase);
+            overlayWindow.UpdateDashboardStatus(_lastDashboardStatus);
+        }
+
         private void RefreshPickBanOverlayState(PickBanOverlayWindow overlayWindow)
         {
             overlayWindow.SetWatcherState(_isWatcherRunning);
@@ -709,15 +796,47 @@ namespace JoinGameAfk.View
             ApplyOverlayPosition(overlayWindow, targetLeft, targetTop, workArea);
         }
 
+        private void PositionQueueMicroOverlay(QueueMicroOverlayWindow overlayWindow)
+        {
+            Rect virtualScreenBounds = GetVirtualScreenBounds();
+            if (TryGetSavedQueueMicroOverlayPosition(out double savedLeft, out double savedTop))
+            {
+                ApplyQueueMicroOverlayPosition(overlayWindow, savedLeft, savedTop, virtualScreenBounds);
+                return;
+            }
+
+            Rect anchorBounds = WindowState == WindowState.Normal
+                ? new Rect(Left, Top, ActualWidth > 0 ? ActualWidth : Width, ActualHeight > 0 ? ActualHeight : Height)
+                : RestoreBounds;
+
+            Rect workArea = SystemParameters.WorkArea;
+            double targetLeft = anchorBounds.Right - GetQueueMicroOverlayWidth(overlayWindow) - 18;
+            double targetTop = anchorBounds.Top + 76;
+
+            ApplyQueueMicroOverlayPosition(overlayWindow, targetLeft, targetTop, workArea);
+        }
+
         private void PickBanOverlayWindow_PositionChangedByUser(double left, double top)
         {
             if (!double.IsFinite(left) || !double.IsFinite(top))
                 return;
 
             Rect bounds = GetVirtualScreenBounds();
-            _settings.PickBanOverlayLeft = ClampToRange(left, bounds.Left + 8, bounds.Right - GetOverlayWidth(_pickBanOverlayWindow) - 8);
-            _settings.PickBanOverlayTop = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetOverlayHeight(_pickBanOverlayWindow) - 8);
-            _settings.Save();
+            _overlaySettings.PickBanOverlayLeft = ClampToRange(left, bounds.Left + 8, bounds.Right - GetOverlayWidth(_pickBanOverlayWindow) - 8);
+            _overlaySettings.PickBanOverlayTop = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetOverlayHeight(_pickBanOverlayWindow) - 8);
+            _overlaySettings.Save();
+        }
+
+        private void QueueMicroOverlayWindow_PositionChangedByUser(double left, double top)
+        {
+            if (!double.IsFinite(left) || !double.IsFinite(top))
+                return;
+
+            Rect bounds = GetVirtualScreenBounds();
+            _overlaySettings.QueueMicroOverlayLeft = ClampToRange(left, bounds.Left + 8, bounds.Right - GetQueueMicroOverlayWidth(_queueMicroOverlayWindow) - 8);
+            _overlaySettings.QueueMicroOverlayTop = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetQueueMicroOverlayHeight(_queueMicroOverlayWindow) - 8);
+            _overlaySettings.NormalizeOptions();
+            _overlaySettings.Save();
         }
 
         private bool TryGetSavedPickBanOverlayPosition(out double left, out double top)
@@ -725,8 +844,26 @@ namespace JoinGameAfk.View
             left = 0;
             top = 0;
 
-            if (_settings.PickBanOverlayLeft is not double savedLeft
-                || _settings.PickBanOverlayTop is not double savedTop
+            if (_overlaySettings.PickBanOverlayLeft is not double savedLeft
+                || _overlaySettings.PickBanOverlayTop is not double savedTop
+                || !double.IsFinite(savedLeft)
+                || !double.IsFinite(savedTop))
+            {
+                return false;
+            }
+
+            left = savedLeft;
+            top = savedTop;
+            return true;
+        }
+
+        private bool TryGetSavedQueueMicroOverlayPosition(out double left, out double top)
+        {
+            left = 0;
+            top = 0;
+
+            if (_overlaySettings.QueueMicroOverlayLeft is not double savedLeft
+                || _overlaySettings.QueueMicroOverlayTop is not double savedTop
                 || !double.IsFinite(savedLeft)
                 || !double.IsFinite(savedTop))
             {
@@ -742,6 +879,12 @@ namespace JoinGameAfk.View
         {
             overlayWindow.Left = ClampToRange(left, bounds.Left + 8, bounds.Right - GetOverlayWidth(overlayWindow) - 8);
             overlayWindow.Top = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetOverlayHeight(overlayWindow) - 8);
+        }
+
+        private static void ApplyQueueMicroOverlayPosition(QueueMicroOverlayWindow overlayWindow, double left, double top, Rect bounds)
+        {
+            overlayWindow.Left = ClampToRange(left, bounds.Left + 8, bounds.Right - GetQueueMicroOverlayWidth(overlayWindow) - 8);
+            overlayWindow.Top = ClampToRange(top, bounds.Top + 8, bounds.Bottom - GetQueueMicroOverlayHeight(overlayWindow) - 8);
         }
 
         private static Rect GetVirtualScreenBounds()
@@ -765,6 +908,22 @@ namespace JoinGameAfk.View
         {
             if (overlayWindow is null)
                 return 420;
+
+            return overlayWindow.ActualHeight > 0 ? overlayWindow.ActualHeight : overlayWindow.Height;
+        }
+
+        private static double GetQueueMicroOverlayWidth(QueueMicroOverlayWindow? overlayWindow)
+        {
+            if (overlayWindow is null)
+                return 56;
+
+            return overlayWindow.ActualWidth > 0 ? overlayWindow.ActualWidth : overlayWindow.Width;
+        }
+
+        private static double GetQueueMicroOverlayHeight(QueueMicroOverlayWindow? overlayWindow)
+        {
+            if (overlayWindow is null)
+                return 56;
 
             return overlayWindow.ActualHeight > 0 ? overlayWindow.ActualHeight : overlayWindow.Height;
         }

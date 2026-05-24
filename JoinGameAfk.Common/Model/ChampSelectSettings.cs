@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 
@@ -28,6 +29,26 @@ namespace JoinGameAfk.Model
         public const int MaxSoundAlertThresholdSeconds = 30;
         public const int MinSoundAlertPlaybackDurationSeconds = 1;
         public const int MaxSoundAlertPlaybackDurationSeconds = 30;
+
+        private static readonly HashSet<string> OverlaySettingPropertyNames =
+        [
+            nameof(AutoShowPickBanOverlayEnabled),
+            nameof(PickBanOverlayOpenOnStartup),
+            nameof(PickBanOverlayAutoCloseAfterChampSelectEnabled),
+            nameof(PickBanOverlayLeft),
+            nameof(PickBanOverlayTop),
+            nameof(PickBanOverlayScalePercent),
+            nameof(PickBanOverlayWidth),
+            nameof(PickBanOverlayHeight),
+            nameof(PickBanOverlayOpacityPercent),
+            nameof(PickBanOverlayTopmostEnabled),
+            nameof(PickBanOverlayShowPhaseSummary),
+            nameof(PickBanOverlayShowTimers),
+            nameof(PickBanOverlayShowPickPlan),
+            nameof(PickBanOverlayShowBanPlan)
+        ];
+
+        private static readonly JsonSerializerOptions SaveSerializerOptions = CreateSaveSerializerOptions();
 
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
@@ -406,9 +427,31 @@ namespace JoinGameAfk.Model
             Version = AppStorage.SettingsFileVersion;
             NormalizeSoundAlertOptions();
 
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(this, SaveSerializerOptions);
             File.WriteAllText(AppStorage.SettingsFilePath, json);
             Saved?.Invoke();
+        }
+
+        private static JsonSerializerOptions CreateSaveSerializerOptions()
+        {
+            var resolver = new DefaultJsonTypeInfoResolver();
+            resolver.Modifiers.Add(typeInfo =>
+            {
+                if (typeInfo.Type != typeof(ChampSelectSettings))
+                    return;
+
+                foreach (var property in typeInfo.Properties)
+                {
+                    if (OverlaySettingPropertyNames.Contains(property.Name))
+                        property.ShouldSerialize = static (_, _) => false;
+                }
+            });
+
+            return new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                TypeInfoResolver = resolver
+            };
         }
 
         public static ChampSelectSettings Load()

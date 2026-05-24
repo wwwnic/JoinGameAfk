@@ -18,7 +18,7 @@ namespace JoinGameAfk.View
         private const double SettingsPopupGap = 8;
         private static readonly TimeSpan OverlaySettingsSaveDelay = TimeSpan.FromMilliseconds(350);
 
-        private readonly ChampSelectSettings _settings;
+        private readonly OverlaySettings _settings;
         private readonly DraftCountdownTimer _draftCountdownTimer;
         private readonly DispatcherTimer _overlaySettingsSaveTimer;
         private DashboardStatus _lastDashboardStatus = new();
@@ -36,7 +36,7 @@ namespace JoinGameAfk.View
         public event Action<double, double>? PositionChangedByUser;
         public event Action? ToggleMainAppRequested;
 
-        public PickBanOverlayWindow(ChampSelectSettings settings)
+        public PickBanOverlayWindow(OverlaySettings settings)
         {
             _settings = settings;
             _settings.NormalizePickBanOverlayOptions();
@@ -285,7 +285,7 @@ namespace JoinGameAfk.View
         private void ResetOverlayViewButton_Click(object sender, RoutedEventArgs e)
         {
             ResetOverlayDisplayDefaults();
-            _settings.PickBanOverlayOpacityPercent = ChampSelectSettings.DefaultPickBanOverlayOpacityPercent;
+            _settings.PickBanOverlayOpacityPercent = OverlaySettings.DefaultPickBanOverlayOpacityPercent;
             _settings.PickBanOverlayTopmostEnabled = true;
             ApplyOverlaySettings(updateControls: true);
             QueueOverlaySettingsSave();
@@ -293,7 +293,7 @@ namespace JoinGameAfk.View
 
         private void ResetOverlayDisplayDefaults()
         {
-            _settings.PickBanOverlayScalePercent = ChampSelectSettings.DefaultPickBanOverlayScalePercent;
+            _settings.PickBanOverlayScalePercent = OverlaySettings.DefaultPickBanOverlayScalePercent;
             _settings.PickBanOverlayWidth = null;
             _settings.PickBanOverlayHeight = null;
             _settings.PickBanOverlayShowPhaseSummary = true;
@@ -343,7 +343,7 @@ namespace JoinGameAfk.View
             if (_isApplyingOverlaySettings)
                 return;
 
-            int scalePercent = ChampSelectSettings.NormalizePickBanOverlayScalePercent((int)Math.Round(ScaleSlider.Value));
+            int scalePercent = OverlaySettings.NormalizePickBanOverlayScalePercent((int)Math.Round(ScaleSlider.Value));
             if (_settings.PickBanOverlayScalePercent != scalePercent)
             {
                 _settings.PickBanOverlayWidth = null;
@@ -351,7 +351,7 @@ namespace JoinGameAfk.View
             }
 
             _settings.PickBanOverlayScalePercent = scalePercent;
-            _settings.PickBanOverlayOpacityPercent = ChampSelectSettings.NormalizePickBanOverlayOpacityPercent((int)Math.Round(OpacitySlider.Value));
+            _settings.PickBanOverlayOpacityPercent = OverlaySettings.NormalizePickBanOverlayOpacityPercent((int)Math.Round(OpacitySlider.Value));
             _settings.PickBanOverlayTopmostEnabled = TopmostCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowPhaseSummary = ShowPhaseSummaryCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowTimers = ShowTimersCheckBox.IsChecked == true;

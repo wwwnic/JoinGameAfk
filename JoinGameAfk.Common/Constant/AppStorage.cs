@@ -3,10 +3,12 @@ namespace JoinGameAfk.Constant
     public static class AppStorage
     {
         public const int SettingsFileVersion = 2;
+        public const int OverlaySettingsFileVersion = 1;
         public const int ChampionFileVersion = 2;
         public const int ChampionImageSelectionFileVersion = 1;
 
         public const string SettingsFileName = "configuration.json";
+        public const string OverlaySettingsFileName = "overlay-settings.json";
         public const string ChampionFileName = "champions.json";
         public const string ChampionImageSelectionFileName = "champion-image-selections.json";
         public const string ChampionChipLabelBreaksFileName = "champion-chip-label-breaks.json";
@@ -19,6 +21,8 @@ namespace JoinGameAfk.Constant
             "JoinGameAfk");
 
         public static string SettingsFilePath => Path.Combine(DirectoryPath, SettingsFileName);
+
+        public static string OverlaySettingsFilePath => Path.Combine(DirectoryPath, OverlaySettingsFileName);
 
         public static string ChampionFilePath => Path.Combine(DirectoryPath, ChampionFileName);
 

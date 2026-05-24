@@ -23,6 +23,7 @@ namespace JoinGameAfk
             try
             {
                 var champSelectSettings = ChampSelectSettings.Load();
+                var overlaySettings = OverlaySettings.Load(champSelectSettings);
                 champSelectSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(champSelectSettings.ThemeKey);
                 AppThemeManager.ApplyTheme(champSelectSettings.ThemeKey);
 
@@ -37,12 +38,12 @@ namespace JoinGameAfk
                     bundledTileSeedError = FormatException(ex);
                 }
 
-                fMainWindow = CreateMainWindow(champSelectSettings);
+                fMainWindow = CreateMainWindow(champSelectSettings, overlaySettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
                 LogBundledChampionTileSeedResult(bundledTileSeedResult, bundledTileSeedError);
 
-                if (champSelectSettings.PickBanOverlayOpenOnStartup)
+                if (overlaySettings.PickBanOverlayOpenOnStartup)
                     fMainWindow.ShowPickBanOverlayOnStartup();
 
                 if (champSelectSettings.StartWatcherOnStartup)
@@ -80,6 +81,7 @@ namespace JoinGameAfk
 
         private MainWindow CreateMainWindow(
             ChampSelectSettings champSelectSettings,
+            OverlaySettings overlaySettings,
             int activeTabIndex = 0,
             string? selectedThemeKey = null,
             bool themePickerExpanded = false)
@@ -94,13 +96,14 @@ namespace JoinGameAfk
             var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
             var settingsPage = new SettingsPage(
                 champSelectSettings,
+                overlaySettings,
                 ReloadUiForTheme,
                 logsPage.WriteLine,
                 logsPage.WriteErrorLine,
                 selectedThemeKey,
                 themePickerExpanded);
 
-            var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings);
+            var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings, overlaySettings);
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
@@ -246,6 +249,7 @@ namespace JoinGameAfk
 
         private void ReloadUiForTheme(
             ChampSelectSettings champSelectSettings,
+            OverlaySettings overlaySettings,
             string? themeKey,
             bool themePickerExpanded)
         {
@@ -262,6 +266,7 @@ namespace JoinGameAfk
 
                 var newWindow = CreateMainWindow(
                     champSelectSettings,
+                    overlaySettings,
                     activeTabIndex,
                     normalizedThemeKey,
                     themePickerExpanded);
