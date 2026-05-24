@@ -27,6 +27,7 @@ namespace JoinGameAfk.View
         private bool _isClientConnected;
         private bool _isApplyingOverlaySettings;
         private string _champSelectSubPhase = string.Empty;
+        private string _readyCheckResponse = string.Empty;
 
         public event Action<double, double>? PositionChangedByUser;
         public event Action? ToggleMainAppRequested;
@@ -97,7 +98,9 @@ namespace JoinGameAfk.View
             Dispatch(() =>
             {
                 _lastDashboardStatus = status;
+                _readyCheckResponse = status.ReadyCheckResponse;
                 RenderDashboardStatus(status);
+                RefreshStatusDisplay();
             });
         }
 
@@ -191,7 +194,14 @@ namespace JoinGameAfk.View
                 _currentPhase,
                 _isWatcherRunning,
                 _isClientConnected,
-                _champSelectSubPhase);
+                GetPhaseIndicatorState());
+        }
+
+        private string GetPhaseIndicatorState()
+        {
+            return _currentPhase == ClientPhase.ReadyCheck
+                ? _readyCheckResponse
+                : _champSelectSubPhase;
         }
 
         private string GetStatusLine(ClientPhase phase)

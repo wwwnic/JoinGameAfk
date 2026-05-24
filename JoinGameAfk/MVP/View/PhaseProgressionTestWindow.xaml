@@ -116,6 +116,14 @@
                                         Click="PreviewReadyCheckIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
                                         Margin="0,0,8,6" />
+                                <Button Content="Ready accepted"
+                                        Click="PreviewReadyCheckAcceptedIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
+                                <Button Content="Ready declined"
+                                        Click="PreviewReadyCheckDeclinedIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
                                 <Button Content="Planning"
                                         Click="PreviewPlanningIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"

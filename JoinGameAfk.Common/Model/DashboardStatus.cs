@@ -52,6 +52,7 @@ namespace JoinGameAfk.Model
         public string PickChampionText { get; init; } = "Waiting for champion select.";
         public string PickLockText { get; init; } = "—";
         public string ChampSelectSubPhase { get; init; } = "";
+        public string ReadyCheckResponse { get; init; } = "";
         public int TimeLeftSeconds { get; init; } = -1;
         public long TimeLeftMilliseconds { get; init; } = -1;
         public DateTime TimeLeftObservedAtUtc { get; init; } = DateTime.MinValue;

@@ -56,6 +56,16 @@ namespace JoinGameAfk.View
             PreviewIndicator(ClientPhase.ReadyCheck, isWatcherRunning: true, isClientConnected: true);
         }
 
+        private void PreviewReadyCheckAcceptedIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.ReadyCheck, isWatcherRunning: true, isClientConnected: true, "Accepted");
+        }
+
+        private void PreviewReadyCheckDeclinedIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.ReadyCheck, isWatcherRunning: true, isClientConnected: true, "Declined");
+        }
+
         private void PreviewPlanningIndicator_Click(object sender, RoutedEventArgs e)
         {
             PreviewIndicator(ClientPhase.Planning, isWatcherRunning: true, isClientConnected: true, "Planning");

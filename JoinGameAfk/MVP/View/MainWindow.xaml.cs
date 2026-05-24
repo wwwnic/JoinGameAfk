@@ -38,6 +38,7 @@ namespace JoinGameAfk.View
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
+        private string _readyCheckResponse = string.Empty;
         private bool _isPickBanOverlayAutoOpened;
         private bool _isClosingAutoPickBanOverlay;
         private bool _isPickBanOverlayVisibleDuringChampSelect;
@@ -449,6 +450,8 @@ namespace JoinGameAfk.View
             Dispatcher.TryInvoke(() =>
             {
                 _lastDashboardStatus = status;
+                _readyCheckResponse = status.ReadyCheckResponse;
+                RefreshPhaseIndicator();
                 _pickBanOverlayWindow?.UpdateDashboardStatus(status);
             });
         }
@@ -475,7 +478,14 @@ namespace JoinGameAfk.View
                 _currentPhase,
                 _isWatcherRunning,
                 _isClientConnected,
-                _champSelectSubPhase);
+                GetPhaseIndicatorState());
+        }
+
+        private string GetPhaseIndicatorState()
+        {
+            return _currentPhase == ClientPhase.ReadyCheck
+                ? _readyCheckResponse
+                : _champSelectSubPhase;
         }
 
         private void RefreshWatcherButton()

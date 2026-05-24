@@ -27,9 +27,11 @@ namespace JoinGameAfk.MVP.Controller
         private readonly record struct LcuEventSnapshot(
             ClientPhase? Phase,
             string? ChampSelectSessionJson,
-            DateTime ChampSelectSessionObservedAtUtc)
+            DateTime ChampSelectSessionObservedAtUtc,
+            string? ReadyCheckJson)
         {
             public bool HasChampSelectSession => !string.IsNullOrWhiteSpace(ChampSelectSessionJson);
+            public bool HasReadyCheckJson => !string.IsNullOrWhiteSpace(ReadyCheckJson);
         }
 
         private readonly PhaseProgressionPage fPhaseProgressionPage;
@@ -50,6 +52,7 @@ namespace JoinGameAfk.MVP.Controller
         private ClientPhase? _pendingEventPhase;
         private string? _pendingChampSelectSessionJson;
         private DateTime _pendingChampSelectSessionObservedAtUtc;
+        private string? _pendingReadyCheckJson;
         private string? _pendingClientDisconnectMessage;
         private bool _isRunning;
         private ClientPhase _lastObservedPhase;
@@ -288,7 +291,12 @@ namespace JoinGameAfk.MVP.Controller
                         bool isChampSelectFlow = IsChampSelectFlow(phase);
 
                         if (!isChampSelectFlow)
-                            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                        {
+                            if (phase == ClientPhase.ReadyCheck)
+                                await UpdateReadyCheckDashboardStatusAsync(http, eventSnapshot, ct);
+                            else
+                                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                        }
 
                         if (handler != null && _lastHandledPhase != phase)
                         {
@@ -574,6 +582,7 @@ namespace JoinGameAfk.MVP.Controller
                     lock (_pendingLcuEventsLock)
                     {
                         _pendingEventPhase = ClientPhase.ReadyCheck;
+                        _pendingReadyCheckJson = apiEvent.DataJson;
                     }
                 }
 
@@ -611,11 +620,13 @@ namespace JoinGameAfk.MVP.Controller
                 var snapshot = new LcuEventSnapshot(
                     _pendingEventPhase,
                     _pendingChampSelectSessionJson,
-                    _pendingChampSelectSessionObservedAtUtc);
+                    _pendingChampSelectSessionObservedAtUtc,
+                    _pendingReadyCheckJson);
 
                 _pendingEventPhase = null;
                 _pendingChampSelectSessionJson = null;
                 _pendingChampSelectSessionObservedAtUtc = DateTime.MinValue;
+                _pendingReadyCheckJson = null;
                 return snapshot;
             }
         }
@@ -627,6 +638,7 @@ namespace JoinGameAfk.MVP.Controller
                 _pendingEventPhase = null;
                 _pendingChampSelectSessionJson = null;
                 _pendingChampSelectSessionObservedAtUtc = DateTime.MinValue;
+                _pendingReadyCheckJson = null;
             }
         }
 
@@ -873,6 +885,64 @@ namespace JoinGameAfk.MVP.Controller
                 champSelect.Reset();
                 return false;
             }
+        }
+
+        private async Task UpdateReadyCheckDashboardStatusAsync(
+            Lcu.LeagueClientHttp http,
+            LcuEventSnapshot eventSnapshot,
+            CancellationToken cancellationToken)
+        {
+            string? readyCheckJson = eventSnapshot.HasReadyCheckJson
+                ? eventSnapshot.ReadyCheckJson
+                : null;
+
+            if (string.IsNullOrWhiteSpace(readyCheckJson))
+            {
+                try
+                {
+                    readyCheckJson = await http.GetReadyCheckAsync(cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (HttpRequestException)
+                {
+                    fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                    return;
+                }
+            }
+
+            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus
+            {
+                ReadyCheckResponse = GetReadyCheckResponse(readyCheckJson)
+            });
+        }
+
+        private static string GetReadyCheckResponse(string readyCheckJson)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(readyCheckJson);
+                if (document.RootElement.ValueKind != JsonValueKind.Object
+                    || !document.RootElement.TryGetProperty("playerResponse", out JsonElement playerResponseProperty)
+                    || playerResponseProperty.ValueKind != JsonValueKind.String)
+                {
+                    return string.Empty;
+                }
+
+                string? playerResponse = playerResponseProperty.GetString();
+                if (string.Equals(playerResponse, "Accepted", StringComparison.OrdinalIgnoreCase))
+                    return "Accepted";
+
+                if (string.Equals(playerResponse, "Declined", StringComparison.OrdinalIgnoreCase))
+                    return "Declined";
+            }
+            catch (JsonException)
+            {
+            }
+
+            return string.Empty;
         }
 
         private static async Task<(bool ReceivedPhase, ClientPhase Phase)> TryGetCurrentPhaseAsync(Lcu.LeagueClientHttp http, CancellationToken cancellationToken)

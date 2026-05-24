@@ -30,6 +30,13 @@ namespace JoinGameAfk.View.Controls
             Finalization
         }
 
+        private enum ReadyCheckResponseState
+        {
+            Pending,
+            Accepted,
+            Declined
+        }
+
         public PhaseStatusIndicator()
         {
             InitializeComponent();
@@ -89,6 +96,7 @@ namespace JoinGameAfk.View.Controls
 
             StopChampionAnimation();
             StopActivityRing();
+            HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
             ChampionGlyph.Visibility = Visibility.Collapsed;
             PhaseCircle.Visibility = Visibility.Visible;
@@ -159,6 +167,7 @@ namespace JoinGameAfk.View.Controls
         private void ShowChampionGlyphWithoutAnimation(ChampionAnimationPalette palette)
         {
             PhaseCircle.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
             ChampionGlyph.Visibility = Visibility.Visible;
             ApplyChampionAnimationPalette(palette, animate: false);
@@ -169,6 +178,7 @@ namespace JoinGameAfk.View.Controls
         private void ShowChampionAnimation(ChampionAnimationPalette palette)
         {
             PhaseCircle.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
             ChampionGlyph.Visibility = Visibility.Visible;
 
@@ -190,20 +200,73 @@ namespace JoinGameAfk.View.Controls
 
         private void ShowReadyCheckAnimation()
         {
+            ReadyCheckResponseState responseState = GetReadyCheckResponseState();
+            if (responseState == ReadyCheckResponseState.Accepted)
+            {
+                ShowReadyCheckAcceptedIndicator();
+                return;
+            }
+
+            if (responseState == ReadyCheckResponseState.Declined)
+            {
+                ShowReadyCheckDeclinedIndicator();
+                return;
+            }
+
             StopChampionAnimation();
 
             Color readyCheckColor = ResourceColor("PhaseReadyCheckBrush", Colors.ForestGreen);
-            const PhaseActivityRingMode mode = PhaseActivityRingMode.ReadyCheckOrbitPulse;
-            const PhaseActivityRingProfile profile = PhaseActivityRingProfile.ReadyCheck;
-            bool activityRingStateChanged = _activeActivityRingMode != mode || _activeActivityRingProfile != profile;
-            bool shouldAnimateRingColor = ActivityRing.Visibility == Visibility.Visible && activityRingStateChanged;
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen);
 
-            ApplyActivityRingColors(readyCheckColor, readyCheckColor, shouldAnimateRingColor);
+            ShowReadyCheckActivityRing(readyCheckColor, animateColor: false);
+        }
+
+        private void ShowReadyCheckAcceptedIndicator()
+        {
+            StopChampionAnimation();
+
+            Color readyCheckColor = ResourceColor("PhaseReadyCheckBrush", Colors.ForestGreen);
+
+            ChampionGlyph.Visibility = Visibility.Collapsed;
+            CompletionCheck.Visibility = Visibility.Collapsed;
+            PhaseCircle.Visibility = Visibility.Collapsed;
+            ReadyCheckResponseGlyph.Visibility = Visibility.Visible;
+            ReadyCheckAcceptedGlyph.Visibility = Visibility.Visible;
+            ReadyCheckDeclinedGlyph.Visibility = Visibility.Collapsed;
+
+            ShowReadyCheckActivityRing(readyCheckColor, animateColor: false);
+        }
+
+        private void ShowReadyCheckDeclinedIndicator()
+        {
+            StopChampionAnimation();
+
+            Color declinedColor = ResourceColor("PhaseBanBrush", Colors.IndianRed);
+
+            ChampionGlyph.Visibility = Visibility.Collapsed;
+            CompletionCheck.Visibility = Visibility.Collapsed;
+            PhaseCircle.Visibility = Visibility.Collapsed;
+            ReadyCheckResponseGlyph.Visibility = Visibility.Visible;
+            ReadyCheckAcceptedGlyph.Visibility = Visibility.Collapsed;
+            ReadyCheckDeclinedGlyph.Visibility = Visibility.Visible;
+
+            ShowReadyCheckActivityRing(declinedColor, animateColor: true);
+        }
+
+        private void ShowReadyCheckActivityRing(Color color, bool animateColor)
+        {
+            const PhaseActivityRingMode mode = PhaseActivityRingMode.ReadyCheckOrbitPulse;
+            const PhaseActivityRingProfile profile = PhaseActivityRingProfile.ReadyCheck;
+            bool activityRingStateChanged = _activeActivityRingMode != mode || _activeActivityRingProfile != profile;
+            bool shouldAnimateRingColor = ActivityRing.Visibility == Visibility.Visible
+                && (animateColor || activityRingStateChanged);
+
+            ApplyActivityRingColors(color, color, shouldAnimateRingColor);
             ActivityRing.Visibility = Visibility.Visible;
             ActivityRing.Start(mode, profile);
             _activeActivityRingMode = mode;
@@ -222,6 +285,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue);
 
@@ -238,6 +302,7 @@ namespace JoinGameAfk.View.Controls
             bool paletteChanged = _activeChampionAnimationPalette != palette;
 
             PhaseCircle.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
             ChampionGlyph.Visibility = Visibility.Visible;
             CompletionCheck.Visibility = Visibility.Visible;
 
@@ -271,6 +336,24 @@ namespace JoinGameAfk.View.Controls
             ActivityRing.Visibility = Visibility.Collapsed;
             _activeActivityRingMode = null;
             _activeActivityRingProfile = null;
+        }
+
+        private void HideReadyCheckResponseGlyph()
+        {
+            ReadyCheckResponseGlyph.Visibility = Visibility.Collapsed;
+            ReadyCheckAcceptedGlyph.Visibility = Visibility.Collapsed;
+            ReadyCheckDeclinedGlyph.Visibility = Visibility.Collapsed;
+        }
+
+        private ReadyCheckResponseState GetReadyCheckResponseState()
+        {
+            if (string.Equals(_champSelectSubPhase, "Accepted", StringComparison.OrdinalIgnoreCase))
+                return ReadyCheckResponseState.Accepted;
+
+            if (string.Equals(_champSelectSubPhase, "Declined", StringComparison.OrdinalIgnoreCase))
+                return ReadyCheckResponseState.Declined;
+
+            return ReadyCheckResponseState.Pending;
         }
 
         private void ShowChampionActivityRing(ChampionAnimationPalette palette, bool animate)

@@ -29,6 +29,37 @@
                      VerticalAlignment="Center"
                      SnapsToDevicePixels="True" />
 
+            <Grid x:Name="ReadyCheckResponseGlyph"
+                  Margin="5"
+                  Visibility="Collapsed"
+                  IsHitTestVisible="False">
+                <controls:LogoCheckGlyph x:Name="ReadyCheckAcceptedGlyph"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Stretch"
+                                         Visibility="Collapsed"
+                                         SnapsToDevicePixels="True" />
+                <Viewbox x:Name="ReadyCheckDeclinedGlyph"
+                         Stretch="Uniform"
+                         Visibility="Collapsed"
+                         SnapsToDevicePixels="True">
+                    <Canvas Width="20"
+                            Height="20">
+                        <Path Data="M5,5 L15,15 M15,5 L5,15"
+                              Stroke="{DynamicResource AppSurfaceInsetBrush}"
+                              StrokeThickness="5"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round" />
+                        <Path Data="M5,5 L15,15 M15,5 L5,15"
+                              Stroke="{DynamicResource PhaseBanBrush}"
+                              StrokeThickness="3"
+                              StrokeStartLineCap="Round"
+                              StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round" />
+                    </Canvas>
+                </Viewbox>
+            </Grid>
+
             <Grid x:Name="ChampionGlyph"
                   Margin="4"
                   Visibility="Collapsed">
