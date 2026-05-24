@@ -14,27 +14,47 @@
 
 ---
 
-## Screenshots
-### Logo
-![JoinGameAfk logo](JoinGameAfk/Assets/logo.svg)
+## Demo
 
-### Dashboard
+![JoinGameAfk dashboard demo](docs/images/dashboard-demo.gif)
 
-![JoinGameAfk dashboard view](docs/images/dashboard-portraits.jpg)
+JoinGameAfk keeps champion select readable at a glance: current phase, draft timer, team picks, bans, pick/ban priorities, lock timing, and live watcher output are all in one place.
 
-The dashboard shows the current phase, timers, bans, both teams, role-aware pick/ban plans, unavailable champion warnings, and the live watcher log.
+---
+
+## Visual Tour
 
 ### Champion Priorities
 
-![JoinGameAfk champion priorities view](docs/images/champion-priorities-tab.jpg)
+![JoinGameAfk champion priorities demo](docs/images/champion-priorities-demo.gif)
 
-Build pick and ban priority lists per role with champion tiles, search, role filters, drag-and-drop ordering, and per-champion picture selection.
+Build role-specific pick and ban plans before queue. Drag champions into the right lane, keep fallback options ready, and let the app use your priority list when champion select starts.
 
 ### Pick/Ban Overlay
 
-![JoinGameAfk pick ban overlay](docs/images/pick-ban-overlay.jpg)
+![JoinGameAfk pick ban overlay demo](docs/images/pick-ban-overlay-demo.gif)
 
-The optional overlay keeps your current pick and ban plan visible during champion select without needing the main window in front.
+Keep the important decisions visible without leaving the League Client. The compact overlay shows your current pick or ban plan, the remaining timer, and the lock countdown.
+
+### Queue Overlay
+
+![JoinGameAfk queue overlay demo](docs/images/in-queue-overlay-demo.gif)
+
+![JoinGameAfk ready check indicator](docs/images/in-queue-overlay-ready-check-indicator.gif)
+
+Use a tiny always-on-top queue indicator when you do not want the full dashboard open. It gives you a quick visual signal that the watcher is running, then highlights the moment a ready check appears.
+
+### Champion Pictures
+
+![JoinGameAfk champion picture selector](docs/images/champion-picture-selector.jpg)
+
+Choose the champion art you want to see in your plans and overlays. Download Riot Data Dragon images locally, then pick the variant that is easiest for you to recognize during draft.
+
+### Sound Studio
+
+![JoinGameAfk sound studio settings](docs/images/settings-sound-studio.jpg)
+
+Customize alert sounds for queue events, phase changes, actions, and lock warnings. Preview sounds directly in the app so the important moments stand out while you are focused on the client.
 
 ---
 
@@ -45,7 +65,8 @@ The optional overlay keeps your current pick and ban plan visible during champio
 - Attempts to hover champions from your priority list during champion select.
 - Can auto-lock your current pick or ban near the end of the timer.
 - Shows current teams, bans, timers, blocked champions, and action logs.
-- Provides a compact pick/ban overlay for champion select.
+- Provides compact overlays for queue and champion select.
+- Lets you customize champion pictures and alert sounds.
 - Uses Riot Data Dragon champion names and tile images stored locally.
 
 ---
@@ -54,10 +75,10 @@ The optional overlay keeps your current pick and ban plan visible during champio
 
 1. Open JoinGameAfk.
 2. Go to **Champion Priorities** and set your pick/ban lists.
-3. Go to **Settings** and adjust timers, theme, and champion pictures if needed.
+3. Go to **Settings** and adjust timers, theme, overlays, sounds, and champion pictures if needed.
 4. Return to **Dashboard**.
-5. Click **Start** while the League Client is open.
-6. Watch the dashboard or open the pick/ban overlay during champion select.
+5. Click **Start watcher** while the League Client is open.
+6. Watch the dashboard or open an overlay during queue and champion select.
 
 ---
 
