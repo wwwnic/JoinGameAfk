@@ -189,11 +189,24 @@ public class ChampSelect : IPhaseHandler
 
                     if (completed)
                     {
+                        int? completedActionId = TryGetInt32(action, "id", out int completedActionIdValue)
+                            ? completedActionIdValue
+                            : null;
+                        int completedChampionId = TryGetInt32(action, "championId", out int completedChampionIdValue)
+                            ? completedChampionIdValue
+                            : 0;
+
                         if (type == "pick")
+                        {
                             localPlayerPickCompleted = true;
+                            MarkLocalActionCompleted(completedActionId, completedChampionId, isPickAction: true);
+                        }
 
                         if (type == "ban")
+                        {
                             localPlayerBanCompleted = true;
+                            MarkLocalActionCompleted(completedActionId, completedChampionId, isPickAction: false);
+                        }
 
                         continue;
                     }
@@ -318,6 +331,59 @@ public class ChampSelect : IPhaseHandler
     {
         return _settings.ChampionSelectAutomationEnabled
             && _settings.AutoLockSelectionEnabled;
+    }
+
+    private void MarkLocalActionCompleted(int? actionId, int championId, bool isPickAction)
+    {
+        if (isPickAction)
+        {
+            bool hadScheduledLock = _scheduledPickLock is not null;
+            CancelScheduledPickLock();
+            ClearPendingPickAutomationAfterCompletion();
+            _hasPicked = true;
+            if (championId != 0)
+                _hoveredPickChampionId = championId;
+
+            if (hadScheduledLock)
+                Log($"Pick already completed in League Client. Canceled scheduled auto-lock{FormatOptionalActionId(actionId)}.");
+
+            return;
+        }
+
+        bool hadScheduledBanLock = _scheduledBanLock is not null;
+        CancelScheduledBanLock();
+        ClearPendingBanAutomationAfterCompletion();
+        _hasBanned = true;
+        if (championId != 0)
+            _hoveredBanChampionId = championId;
+
+        if (hadScheduledBanLock)
+            Log($"Ban already completed in League Client. Canceled scheduled auto-lock{FormatOptionalActionId(actionId)}.");
+    }
+
+    private void ClearPendingPickAutomationAfterCompletion()
+    {
+        CancelScheduledHoverWake();
+        _manualPickSelectionOverride = false;
+        _pendingPickHoverActionId = 0;
+        _pendingPickHoverPhase = string.Empty;
+        _pickHoverReadyAtUtc = DateTime.MinValue;
+    }
+
+    private void ClearPendingBanAutomationAfterCompletion()
+    {
+        CancelScheduledHoverWake();
+        _manualBanSelectionOverride = false;
+        _pendingBanHoverActionId = 0;
+        _pendingBanHoverPhase = string.Empty;
+        _banHoverReadyAtUtc = DateTime.MinValue;
+    }
+
+    private static string FormatOptionalActionId(int? actionId)
+    {
+        return actionId is int value
+            ? $" for actionId={value}"
+            : string.Empty;
     }
 
     private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, bool requiresOwnedChampion, string availableStatusText)
@@ -1089,6 +1155,10 @@ public class ChampSelect : IPhaseHandler
     private async Task CompleteScheduledLockAsync(ScheduledLockState scheduledLock, bool isPickAction, CancellationToken cancellationToken)
     {
         string actionLabel = GetActionLabel(isPickAction);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsScheduledLockCurrent(scheduledLock, isPickAction))
+            return;
+
         StopLockSoundChannel(scheduledLock, isPickAction);
         Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}.");
         await _http.CompleteActionAsync(scheduledLock.ActionId, scheduledLock.ChampionId, cancellationToken);
@@ -1274,6 +1344,9 @@ public class ChampSelect : IPhaseHandler
                 await Task.Delay(delay, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsScheduledLockCurrent(scheduledLock, isPickAction))
+                return;
+
             TryPlayLockCountdownSoundAlert(scheduledLock, isPickAction, alertId, playbackDurationSeconds);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -1322,6 +1395,13 @@ public class ChampSelect : IPhaseHandler
     private void StopLockSoundChannel(ScheduledLockState scheduledLock, bool isPickAction)
     {
         _playSoundAlert?.Invoke(SoundAlertPlaybackRequest.StopChannel(GetLockSoundChannelKey(scheduledLock, isPickAction)));
+    }
+
+    private bool IsScheduledLockCurrent(ScheduledLockState scheduledLock, bool isPickAction)
+    {
+        ScheduledLockState? currentSchedule = isPickAction ? _scheduledPickLock : _scheduledBanLock;
+        return ReferenceEquals(currentSchedule, scheduledLock)
+            && !scheduledLock.CancellationTokenSource.IsCancellationRequested;
     }
 
     private static string GetLockSoundChannelKey(ScheduledLockState scheduledLock, bool isPickAction)
