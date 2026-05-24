@@ -216,15 +216,40 @@ jobs:
           $commitRange = if ($previousTag) { "$previousTag..$currentTag" } else { $currentTag }
           $commits = git log $commitRange --pretty=format:'- %s (`%h`) by %an'
 
-          "# $currentTag" | Out-File release-notes.md -Encoding utf8
+          function Get-ReleaseAssetSizeText {
+            param([string]$FileName)
+
+            $assetPath = Join-Path $env:GITHUB_WORKSPACE $FileName
+            if (-not (Test-Path $assetPath)) {
+              throw "Release asset was not found: $assetPath"
+            }
+
+            $sizeBytes = (Get-Item $assetPath).Length
+            if ($sizeBytes -lt 1MB) {
+              return "{0:0.0} KB" -f ($sizeBytes / 1KB)
+            }
+
+            return "{0:0.0} MB" -f ($sizeBytes / 1MB)
+          }
+
+          $lightExeSize = Get-ReleaseAssetSizeText 'JoinGameAfk-light.exe'
+          $fullExeSize = Get-ReleaseAssetSizeText 'JoinGameAfk-full.exe'
+          $lightZipSize = Get-ReleaseAssetSizeText 'JoinGameAfk-light-requires-dotnet.zip'
+          $fullZipSize = Get-ReleaseAssetSizeText 'JoinGameAfk-full-requires-dotnet.zip'
+
+          'Thanks for using JoinGameAfk. If you are not sure which file to download, choose `JoinGameAfk-full.exe`.' | Out-File release-notes.md -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Downloads:" | Out-File release-notes.md -Append -Encoding utf8
-          "- Recommended: JoinGameAfk-light.exe includes .NET and bundles one champion picture per champion." | Out-File release-notes.md -Append -Encoding utf8
-          "- Recommended: JoinGameAfk-full.exe includes .NET and bundles the full champion picture seed cache." | Out-File release-notes.md -Append -Encoding utf8
-          "- Advanced smaller download: JoinGameAfk-light-requires-dotnet.zip requires the .NET 10 Desktop Runtime x64 and must be extracted before running." | Out-File release-notes.md -Append -Encoding utf8
-          "- Advanced smaller download: JoinGameAfk-full-requires-dotnet.zip requires the .NET 10 Desktop Runtime x64 and must be extracted before running." | Out-File release-notes.md -Append -Encoding utf8
+          ('- Recommended: `JoinGameAfk-full.exe` ({0}). This includes everything needed to run and bundles the full champion picture cache.' -f $fullExeSize) | Out-File release-notes.md -Append -Encoding utf8
+          ('- Smaller normal download: `JoinGameAfk-light.exe` ({0}). This also includes everything needed to run, but bundles only one champion picture per champion.' -f $lightExeSize) | Out-File release-notes.md -Append -Encoding utf8
+          ('- Advanced smaller download: `JoinGameAfk-light-requires-dotnet.zip` ({0}). Use this only if you already have the .NET 10 Desktop Runtime x64 installed. Extract the zip, then run `JoinGameAfk.exe`.' -f $lightZipSize) | Out-File release-notes.md -Append -Encoding utf8
+          ('- Advanced smaller download with all champion pictures: `JoinGameAfk-full-requires-dotnet.zip` ({0}). This also requires the .NET 10 Desktop Runtime x64 and must be extracted before running.' -f $fullZipSize) | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
-          ".NET 10 Desktop Runtime x64: https://dotnet.microsoft.com/download/dotnet/10.0" | Out-File release-notes.md -Append -Encoding utf8
+          "Windows warning:" | Out-File release-notes.md -Append -Encoding utf8
+          'This app is not code-signed yet, so Windows may show a blue warning such as "Windows protected your PC". If you downloaded the file from this GitHub release and trust this project, click "More info" and then "Run anyway". Do not do this for copies downloaded from somewhere else.' | Out-File release-notes.md -Append -Encoding utf8
+          "" | Out-File release-notes.md -Append -Encoding utf8
+          "Advanced note:" | Out-File release-notes.md -Append -Encoding utf8
+          "- .NET 10 Desktop Runtime x64: https://dotnet.microsoft.com/download/dotnet/10.0" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
 
           if ($previousTag) {
