@@ -17,13 +17,15 @@ try
     string? dataDragonVersion = arguments.GetValue("--version");
     int? maxTileIndex = arguments.GetOptionalNonNegativeInt32("--max-tile-index");
     bool keepArchive = arguments.HasFlag("--keep-archive");
+    bool reuseArchive = arguments.HasFlag("--reuse-archive");
 
     var installOptions = new ChampionTileArchiveInstallOptions(
         tileDirectoryPath,
         archiveDirectoryPath,
         cacheFilePath,
         maxTileIndex,
-        DeleteArchiveAfterExtraction: !keepArchive);
+        DeleteArchiveAfterExtraction: !keepArchive,
+        DeleteExistingArchivesBeforeDownload: !reuseArchive);
 
     Console.WriteLine("Generating bundled champion tile seed cache.");
     Console.WriteLine($"Tile directory: {tileDirectoryPath}");
@@ -32,6 +34,7 @@ try
     if (maxTileIndex is int maximumTileIndex)
         Console.WriteLine($"Maximum bundled tile index: {maximumTileIndex}");
     Console.WriteLine($"Keep archive after extraction: {keepArchive}");
+    Console.WriteLine($"Reuse existing archive before download: {reuseArchive}");
 
     var progress = new ConsoleArchiveProgress();
     ChampionTileArchiveInstallResult result = string.IsNullOrWhiteSpace(dataDragonVersion)
@@ -57,7 +60,7 @@ static void PrintUsage()
     Console.WriteLine(
         """
         Usage:
-          dotnet run --project JoinGameAfk.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>] [--max-tile-index <number>] [--keep-archive]
+          dotnet run --project JoinGameAfk.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>] [--max-tile-index <number>] [--keep-archive] [--reuse-archive]
 
         Options:
           --tile-directory      Directory where extracted champion tile JPGs are written.
@@ -66,6 +69,7 @@ static void PrintUsage()
           --version             Data Dragon version to install. Defaults to the latest version.
           --max-tile-index      Highest champion tile index to extract. Defaults to all tiles.
           --keep-archive        Leave the downloaded Data Dragon archive in place after extraction.
+          --reuse-archive       Reuse an existing archive from the archive directory instead of deleting it before download.
         """);
 }
 
@@ -139,7 +143,8 @@ file sealed class CommandLineArguments
             if (!name.StartsWith("--", StringComparison.Ordinal))
                 throw new ArgumentException($"Unexpected argument '{name}'.");
 
-            if (string.Equals(name, "--keep-archive", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(name, "--keep-archive", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "--reuse-archive", StringComparison.OrdinalIgnoreCase))
             {
                 flags.Add(name);
                 continue;

@@ -55,6 +55,20 @@ jobs:
             Remove-Item -LiteralPath $cacheFile -Force
           }
 
+      - name: Resolve Data Dragon seed version
+        shell: pwsh
+        run: |
+          $versions = Invoke-RestMethod -Uri 'https://ddragon.leagueoflegends.com/api/versions.json'
+          $dataDragonVersion = $versions | Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($dataDragonVersion)) {
+            throw "Riot Data Dragon returned no versions."
+          }
+
+          $dataDragonVersion = $dataDragonVersion.Trim()
+          "DATA_DRAGON_VERSION=$dataDragonVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "Resolved Data Dragon seed version: $dataDragonVersion"
+
       - name: Generate light champion tile seed cache
         shell: pwsh
         run: >
@@ -62,6 +76,7 @@ jobs:
           --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
           --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
           --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
+          --version "$env:DATA_DRAGON_VERSION"
           --max-tile-index 0
           --keep-archive
 
@@ -131,6 +146,8 @@ jobs:
           --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
           --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
           --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
+          --version "$env:DATA_DRAGON_VERSION"
+          --reuse-archive
 
       - name: Publish full self-contained single-file app
         run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full

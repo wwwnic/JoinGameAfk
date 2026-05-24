@@ -50,7 +50,8 @@ namespace JoinGameAfk.Services
         string ArchiveDirectoryPath,
         string CacheFilePath,
         int? MaxTileIndex = null,
-        bool DeleteArchiveAfterExtraction = true)
+        bool DeleteArchiveAfterExtraction = true,
+        bool DeleteExistingArchivesBeforeDownload = true)
     {
         public static ChampionTileArchiveInstallOptions Default => new(
             AppStorage.ChampionTileDirectoryPath,
@@ -163,7 +164,8 @@ namespace JoinGameAfk.Services
 
             Directory.CreateDirectory(options.TileDirectoryPath);
             Directory.CreateDirectory(options.ArchiveDirectoryPath);
-            ReportArchiveCleanup(DeleteDownloadedArchives(options.ArchiveDirectoryPath), progress);
+            if (options.DeleteExistingArchivesBeforeDownload)
+                ReportArchiveCleanup(DeleteDownloadedArchives(options.ArchiveDirectoryPath), progress);
 
             dataDragonVersion = NormalizeDataDragonVersion(dataDragonVersion);
             string archiveFilePath = Path.Combine(options.ArchiveDirectoryPath, $"dragontail-{dataDragonVersion}.tgz");
