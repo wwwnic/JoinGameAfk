@@ -26,6 +26,10 @@ namespace JoinGameAfk.View
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private bool _isApplyingOverlaySettings;
+        private bool _isResizingOverlay;
+        private Point _resizeStartPoint;
+        private double _resizeStartWidth;
+        private double _resizeStartHeight;
         private string _champSelectSubPhase = string.Empty;
         private string _readyCheckResponse = string.Empty;
 
@@ -287,6 +291,8 @@ namespace JoinGameAfk.View
         private void ResetOverlayDisplayDefaults()
         {
             _settings.PickBanOverlayScalePercent = ChampSelectSettings.DefaultPickBanOverlayScalePercent;
+            _settings.PickBanOverlayWidth = null;
+            _settings.PickBanOverlayHeight = null;
             _settings.PickBanOverlayShowPhaseSummary = true;
             _settings.PickBanOverlayShowTimers = true;
             _settings.PickBanOverlayShowPickPlan = true;
@@ -302,8 +308,8 @@ namespace JoinGameAfk.View
             {
                 Topmost = _settings.PickBanOverlayTopmostEnabled;
                 OverlayPanel.Opacity = _settings.PickBanOverlayOpacityPercent / 100d;
-                ApplyOverlaySize();
                 ApplyOverlaySectionVisibility();
+                ApplyOverlaySize();
 
                 if (updateControls)
                     ApplySettingsToOverlayControls();
@@ -334,7 +340,14 @@ namespace JoinGameAfk.View
             if (_isApplyingOverlaySettings)
                 return;
 
-            _settings.PickBanOverlayScalePercent = ChampSelectSettings.NormalizePickBanOverlayScalePercent((int)Math.Round(ScaleSlider.Value));
+            int scalePercent = ChampSelectSettings.NormalizePickBanOverlayScalePercent((int)Math.Round(ScaleSlider.Value));
+            if (_settings.PickBanOverlayScalePercent != scalePercent)
+            {
+                _settings.PickBanOverlayWidth = null;
+                _settings.PickBanOverlayHeight = null;
+            }
+
+            _settings.PickBanOverlayScalePercent = scalePercent;
             _settings.PickBanOverlayOpacityPercent = ChampSelectSettings.NormalizePickBanOverlayOpacityPercent((int)Math.Round(OpacitySlider.Value));
             _settings.PickBanOverlayTopmostEnabled = TopmostCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowPhaseSummary = ShowPhaseSummaryCheckBox.IsChecked == true;
@@ -351,6 +364,11 @@ namespace JoinGameAfk.View
 
             CaptureOverlayControlsToSettings();
             ApplyOverlaySettings(updateControls: true);
+            QueueOverlaySettingsPersist();
+        }
+
+        private void QueueOverlaySettingsPersist()
+        {
             _overlaySettingsSaveTimer.Stop();
             _overlaySettingsSaveTimer.Start();
         }
@@ -378,16 +396,62 @@ namespace JoinGameAfk.View
             LockTimerCard.Visibility = ToVisibility(showTimers);
             PickPlanSection.Visibility = ToVisibility(_settings.PickBanOverlayShowPickPlan);
             BanPlanSection.Visibility = ToVisibility(_settings.PickBanOverlayShowBanPlan);
-            ContentPanel.Margin = new Thickness(12);
+            ContentPanel.Margin = new Thickness(12, 12, 18, 18);
         }
 
         private void ApplyOverlaySize()
         {
             double scale = _settings.PickBanOverlayScalePercent / 100d;
-            Width = Math.Round(FullLayoutBaseWidth * scale);
-            Height = Math.Round(FullLayoutBaseHeight * scale);
+            double scaledWidth = Math.Round(FullLayoutBaseWidth * scale);
+            double targetWidth = ClampToRange(
+                _settings.PickBanOverlayWidth ?? scaledWidth,
+                MinWidth,
+                GetMaxOverlayWidth());
+
+            Width = Math.Round(targetWidth);
+
+            double autoFitHeight = MeasureAutoFitOverlayHeight(Width);
+            double maxHeight = GetEffectiveMaxOverlayHeight(autoFitHeight);
+            double requestedHeight = _settings.PickBanOverlayHeight ?? autoFitHeight;
+
+            MaxWidth = GetMaxOverlayWidth();
+            MaxHeight = GetMaxOverlayHeight();
+            Height = Math.Round(ClampToRange(requestedHeight, MinHeight, maxHeight));
             OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
             RefreshOpenSettingsPopupPlacement();
+        }
+
+        private double MeasureAutoFitOverlayHeight(double targetWidth)
+        {
+            ScrollBarVisibility previousVisibility = OverlayScrollViewer.VerticalScrollBarVisibility;
+            try
+            {
+                OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+                OverlayPanel.Measure(new Size(Math.Max(MinWidth, targetWidth), double.PositiveInfinity));
+
+                return double.IsFinite(OverlayPanel.DesiredSize.Height) && OverlayPanel.DesiredSize.Height > 0
+                    ? Math.Ceiling(OverlayPanel.DesiredSize.Height)
+                    : FullLayoutBaseHeight * (_settings.PickBanOverlayScalePercent / 100d);
+            }
+            finally
+            {
+                OverlayScrollViewer.VerticalScrollBarVisibility = previousVisibility;
+            }
+        }
+
+        private double GetEffectiveMaxOverlayHeight(double autoFitHeight)
+        {
+            return Math.Max(MinHeight, Math.Min(GetMaxOverlayHeight(), autoFitHeight));
+        }
+
+        private double GetMaxOverlayWidth()
+        {
+            return Math.Max(MinWidth, SystemParameters.VirtualScreenWidth - (ScreenPadding * 2));
+        }
+
+        private double GetMaxOverlayHeight()
+        {
+            return Math.Max(MinHeight, SystemParameters.VirtualScreenHeight - (ScreenPadding * 2));
         }
 
         private void RefreshSliderValueText()
@@ -414,6 +478,82 @@ namespace JoinGameAfk.View
                 PositionChangedByUser?.Invoke(Left, Top);
                 RefreshOpenSettingsPopupPlacement();
             }
+        }
+
+        private void ResizeGrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            _isResizingOverlay = true;
+            _resizeStartPoint = e.GetPosition(this);
+            _resizeStartWidth = ActualWidth > 0 ? ActualWidth : Width;
+            _resizeStartHeight = ActualHeight > 0 ? ActualHeight : Height;
+            WindowResizeGrip.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private void ResizeGrip_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isResizingOverlay)
+                return;
+
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                FinishOverlayResize(saveSettings: true);
+                return;
+            }
+
+            Point currentPoint = e.GetPosition(this);
+            double targetWidth = ClampToRange(
+                _resizeStartWidth + currentPoint.X - _resizeStartPoint.X,
+                MinWidth,
+                GetMaxOverlayWidth());
+
+            Width = Math.Round(targetWidth);
+
+            double autoFitHeight = MeasureAutoFitOverlayHeight(Width);
+            double maxHeight = GetEffectiveMaxOverlayHeight(autoFitHeight);
+            double targetHeight = ClampToRange(
+                _resizeStartHeight + currentPoint.Y - _resizeStartPoint.Y,
+                MinHeight,
+                maxHeight);
+
+            Height = Math.Round(targetHeight);
+            OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            RefreshOpenSettingsPopupPlacement();
+            e.Handled = true;
+        }
+
+        private void ResizeGrip_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isResizingOverlay)
+                return;
+
+            FinishOverlayResize(saveSettings: true);
+            e.Handled = true;
+        }
+
+        private void ResizeGrip_LostMouseCapture(object sender, MouseEventArgs e)
+        {
+            if (_isResizingOverlay)
+                FinishOverlayResize(saveSettings: true);
+        }
+
+        private void FinishOverlayResize(bool saveSettings)
+        {
+            _isResizingOverlay = false;
+
+            if (WindowResizeGrip.IsMouseCaptured)
+                WindowResizeGrip.ReleaseMouseCapture();
+
+            if (!saveSettings)
+                return;
+
+            _settings.PickBanOverlayWidth = Math.Round(ActualWidth > 0 ? ActualWidth : Width);
+            _settings.PickBanOverlayHeight = Math.Round(ActualHeight > 0 ? ActualHeight : Height);
+            ClampToVirtualScreen();
+            QueueOverlaySettingsPersist();
         }
 
         private void UpdateSettingsPopupPlacement()

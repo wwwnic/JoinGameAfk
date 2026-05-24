@@ -228,7 +228,7 @@
                               Grid.Row="1"
                               Style="{StaticResource StableVerticalScrollViewerStyle}">
                     <StackPanel x:Name="ContentPanel"
-                                Margin="12">
+                                Margin="12,12,18,18">
                         <Grid x:Name="PhaseTimerSection">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -433,6 +433,20 @@
                 </ScrollViewer>
             </Grid>
         </Border>
+
+        <ResizeGrip x:Name="WindowResizeGrip"
+                    Width="18"
+                    Height="18"
+                    Margin="0,0,4,4"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Panel.ZIndex="20"
+                    Cursor="SizeNWSE"
+                    ToolTip="Drag to resize overlay"
+                    MouseLeftButtonDown="ResizeGrip_MouseLeftButtonDown"
+                    MouseMove="ResizeGrip_MouseMove"
+                    MouseLeftButtonUp="ResizeGrip_MouseLeftButtonUp"
+                    LostMouseCapture="ResizeGrip_LostMouseCapture" />
 
         <Popup x:Name="SettingsPopup"
                PlacementTarget="{Binding ElementName=OverlayPanel}"

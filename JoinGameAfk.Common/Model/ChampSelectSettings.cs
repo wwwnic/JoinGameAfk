@@ -123,6 +123,16 @@ namespace JoinGameAfk.Model
         public int PickBanOverlayScalePercent { get; set; } = DefaultPickBanOverlayScalePercent;
 
         /// <summary>
+        /// Optional user-resized pick/ban overlay width in WPF device-independent pixels.
+        /// </summary>
+        public double? PickBanOverlayWidth { get; set; }
+
+        /// <summary>
+        /// Optional user-resized pick/ban overlay height in WPF device-independent pixels.
+        /// </summary>
+        public double? PickBanOverlayHeight { get; set; }
+
+        /// <summary>
         /// Overlay panel opacity percentage.
         /// </summary>
         public int PickBanOverlayOpacityPercent { get; set; } = DefaultPickBanOverlayOpacityPercent;
@@ -356,6 +366,8 @@ namespace JoinGameAfk.Model
             PickBanOverlayOpenOnStartup = defaults.PickBanOverlayOpenOnStartup;
             PickBanOverlayAutoCloseAfterChampSelectEnabled = defaults.PickBanOverlayAutoCloseAfterChampSelectEnabled;
             PickBanOverlayScalePercent = defaults.PickBanOverlayScalePercent;
+            PickBanOverlayWidth = defaults.PickBanOverlayWidth;
+            PickBanOverlayHeight = defaults.PickBanOverlayHeight;
             PickBanOverlayOpacityPercent = defaults.PickBanOverlayOpacityPercent;
             PickBanOverlayTopmostEnabled = defaults.PickBanOverlayTopmostEnabled;
             PickBanOverlayShowPhaseSummary = defaults.PickBanOverlayShowPhaseSummary;
@@ -507,6 +519,8 @@ namespace JoinGameAfk.Model
         public void NormalizePickBanOverlayOptions()
         {
             PickBanOverlayScalePercent = NormalizePickBanOverlayScalePercent(PickBanOverlayScalePercent);
+            PickBanOverlayWidth = NormalizeNullableOverlayLength(PickBanOverlayWidth);
+            PickBanOverlayHeight = NormalizeNullableOverlayLength(PickBanOverlayHeight);
             PickBanOverlayOpacityPercent = NormalizePickBanOverlayOpacityPercent(PickBanOverlayOpacityPercent);
             EnsurePickBanOverlayHasVisibleSection();
         }
@@ -538,6 +552,13 @@ namespace JoinGameAfk.Model
                 opacityPercent <= 0 ? DefaultPickBanOverlayOpacityPercent : opacityPercent,
                 MinPickBanOverlayOpacityPercent,
                 MaxPickBanOverlayOpacityPercent);
+        }
+
+        private static double? NormalizeNullableOverlayLength(double? length)
+        {
+            return length is double value && double.IsFinite(value) && value > 0
+                ? value
+                : null;
         }
 
         public static int NormalizeReadyCheckSoundVolumePercent(int? volumePercent)

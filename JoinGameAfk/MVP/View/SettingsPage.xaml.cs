@@ -324,7 +324,14 @@ namespace JoinGameAfk.View
             _settings.PickBanOverlayOpenOnStartup = OpenPickBanOverlayOnStartupCheckBox.IsChecked == true;
             EnsureOverlayControlsHaveVisibleSection();
             var overlaySections = CaptureCurrentOverlaySectionSnapshot();
-            _settings.PickBanOverlayScalePercent = GetOverlayScalePercent();
+            int overlayScalePercent = GetOverlayScalePercent();
+            if (_settings.PickBanOverlayScalePercent != overlayScalePercent)
+            {
+                _settings.PickBanOverlayWidth = null;
+                _settings.PickBanOverlayHeight = null;
+            }
+
+            _settings.PickBanOverlayScalePercent = overlayScalePercent;
             _settings.PickBanOverlayOpacityPercent = GetOverlayOpacityPercent();
             _settings.PickBanOverlayTopmostEnabled = OverlayTopmostCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowPhaseSummary = overlaySections.ShowPhaseSummary;
