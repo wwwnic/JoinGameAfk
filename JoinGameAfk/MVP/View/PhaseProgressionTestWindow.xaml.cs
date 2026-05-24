@@ -58,7 +58,12 @@ namespace JoinGameAfk.View
 
         private void PreviewPlanningIndicator_Click(object sender, RoutedEventArgs e)
         {
-            PreviewIndicator(ClientPhase.Planning, isWatcherRunning: true, isClientConnected: true, "Hover");
+            PreviewIndicator(ClientPhase.Planning, isWatcherRunning: true, isClientConnected: true, "Planning");
+        }
+
+        private void PreviewPlanningDoneIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewIndicator(ClientPhase.Planning, isWatcherRunning: true, isClientConnected: true, "Planning done");
         }
 
         private void PreviewBanIndicator_Click(object sender, RoutedEventArgs e)
@@ -66,14 +71,19 @@ namespace JoinGameAfk.View
             PreviewChampionSelectIndicator("Ban");
         }
 
+        private void PreviewBanDoneIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Ban done");
+        }
+
         private void PreviewPickIndicator_Click(object sender, RoutedEventArgs e)
         {
             PreviewChampionSelectIndicator("Pick");
         }
 
-        private void PreviewHoverIndicator_Click(object sender, RoutedEventArgs e)
+        private void PreviewPickDoneIndicator_Click(object sender, RoutedEventArgs e)
         {
-            PreviewChampionSelectIndicator("Hover");
+            PreviewChampionSelectIndicator("Pick done");
         }
 
         private void PreviewFinalizationIndicator_Click(object sender, RoutedEventArgs e)

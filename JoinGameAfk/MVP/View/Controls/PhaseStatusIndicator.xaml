@@ -2,31 +2,44 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:JoinGameAfk.View.Controls"
-             Width="28"
-             Height="28">
+             Width="32"
+             Height="32"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
     <Border Background="{DynamicResource AppSurfaceInsetBrush}"
             BorderBrush="{DynamicResource AppMutedBorderBrush}"
             BorderThickness="1"
-            CornerRadius="8">
-        <Grid Width="18"
-              Height="18"
-              HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              ClipToBounds="False">
+            CornerRadius="9"
+            SnapsToDevicePixels="True">
+        <Grid x:Name="IndicatorContent"
+              Margin="3"
+              ClipToBounds="False"
+              SnapsToDevicePixels="True">
+            <controls:PhaseActivityRing x:Name="ActivityRing"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Visibility="Collapsed"
+                                        SnapsToDevicePixels="True" />
+
             <Ellipse x:Name="PhaseCircle"
                      Width="10"
                      Height="10"
                      Fill="{DynamicResource PhaseDefaultBrush}"
                      HorizontalAlignment="Center"
-                     VerticalAlignment="Center" />
+                     VerticalAlignment="Center"
+                     SnapsToDevicePixels="True" />
 
             <Grid x:Name="ChampionGlyph"
-                  Width="18"
-                  Height="18"
+                  Margin="4"
                   Visibility="Collapsed">
                 <controls:PolyhedronGlyph x:Name="ChampionPolyhedron"
-                                           Width="18"
-                                           Height="18" />
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch" />
+                <controls:LogoCheckGlyph x:Name="CompletionCheck"
+                                         HorizontalAlignment="Stretch"
+                                         VerticalAlignment="Stretch"
+                                         Visibility="Collapsed"
+                                         SnapsToDevicePixels="True" />
             </Grid>
         </Grid>
     </Border>

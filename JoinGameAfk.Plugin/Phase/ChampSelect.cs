@@ -165,6 +165,8 @@ public class ChampSelect : IPhaseHandler
         string? localPlayerActiveActionType = null;
         int localPickActionId = 0;
         int localBanActionId = 0;
+        bool localPlayerPickCompleted = false;
+        bool localPlayerBanCompleted = false;
 
         if (root.TryGetProperty("actions", out var actions) && actions.ValueKind == JsonValueKind.Array)
         {
@@ -178,12 +180,23 @@ public class ChampSelect : IPhaseHandler
                     if (!TryGetInt32(action, "actorCellId", out int actorCellId) || actorCellId != localPlayerCellId)
                         continue;
 
-                    if (!TryGetBool(action, "completed", out bool completed) || completed)
-                        continue;
-
                     string type = action.TryGetProperty("type", out var typeProperty)
                         ? typeProperty.GetString() ?? string.Empty
                         : string.Empty;
+
+                    if (!TryGetBool(action, "completed", out bool completed))
+                        continue;
+
+                    if (completed)
+                    {
+                        if (type == "pick")
+                            localPlayerPickCompleted = true;
+
+                        if (type == "ban")
+                            localPlayerBanCompleted = true;
+
+                        continue;
+                    }
 
                     if (!TryGetInt32(action, "id", out int actionId))
                         continue;
@@ -217,10 +230,25 @@ public class ChampSelect : IPhaseHandler
             }
         }
 
-        LastDashboardStatus = BuildDashboardStatus(root, localPlayerCellId, localPickActionId, localBanActionId, pickChoices, banChoices, ownershipSnapshot, assignedPosition, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, localPlayerActiveActionType);
+        LastDashboardStatus = BuildDashboardStatus(
+            root,
+            localPlayerCellId,
+            localPickActionId,
+            localBanActionId,
+            pickChoices,
+            banChoices,
+            ownershipSnapshot,
+            assignedPosition,
+            champSelectPhase,
+            timeLeftMs,
+            timeLeftObservedAtUtc,
+            localPlayerActiveActionType,
+            localPlayerPickCompleted || _hasPicked,
+            localPlayerBanCompleted || _hasBanned,
+            _hasHoveredPick);
     }
 
-    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, ChampionOwnershipSnapshot ownershipSnapshot, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType)
+    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, ChampionOwnershipSnapshot ownershipSnapshot, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType, bool localPlayerPickCompleted, bool localPlayerBanCompleted, bool localPlayerPlanningHoverCompleted)
     {
         var activeLockCountdown = GetActiveLockCountdownStatus(champSelectPhase, localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
 
@@ -237,7 +265,7 @@ public class ChampSelect : IPhaseHandler
             BanChampionText = "No bans configured",
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
             BanLockText = BuildLockText(_settings.BanLockDelaySeconds, _manualBanSelectionOverride),
-            ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType),
+            ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType, localPlayerPickCompleted, localPlayerBanCompleted, localPlayerPlanningHoverCompleted),
             TimeLeftSeconds = GetDisplayTimeLeftSeconds(timeLeftMs),
             TimeLeftMilliseconds = Math.Max(0, timeLeftMs),
             TimeLeftObservedAtUtc = timeLeftObservedAtUtc,
@@ -579,10 +607,15 @@ public class ChampSelect : IPhaseHandler
         return championIds;
     }
 
-    private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType)
+    private static string GetSubPhaseLabel(string champSelectPhase, string? localPlayerActiveActionType, bool localPlayerPickCompleted, bool localPlayerBanCompleted, bool localPlayerPlanningHoverCompleted)
     {
+        if (localPlayerPickCompleted)
+            return "Pick done";
+
         if (IsPlanningPhase(champSelectPhase))
-            return "Hover";
+            return localPlayerPlanningHoverCompleted
+                ? "Planning done"
+                : "Planning";
 
         if (localPlayerActiveActionType is not null)
         {
@@ -594,10 +627,13 @@ public class ChampSelect : IPhaseHandler
             };
         }
 
+        if (localPlayerBanCompleted)
+            return "Ban done";
+
         return champSelectPhase.ToUpperInvariant() switch
         {
             "BAN_PICK" => "Waiting",
-            "FINALIZATION" => "Finalization",
+            "FINALIZATION" => "Pick done",
             _ => "Waiting",
         };
     }

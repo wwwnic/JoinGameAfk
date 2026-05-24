@@ -1,3 +1,5 @@
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 
@@ -26,10 +28,10 @@ namespace JoinGameAfk.View.Controls
                 typeof(PolyhedronGlyph),
                 new FrameworkPropertyMetadata(Color.FromArgb(220, 236, 254, 255), FrameworkPropertyMetadataOptions.AffectsRender));
 
-        private static readonly PolyhedronModel[] Models =
-        [
-            CreateSubdividedIcosahedron(subdivisionCount: 1)
-        ];
+        private const double CameraDistance = 3.2;
+        private static readonly LogoGlyphSettings LogoShapeSettings = LogoGlyphSettings.Load();
+        private static readonly PolyhedronModel LogoModel =
+            CreateSubdividedIcosahedron(LogoShapeSettings.FacetDetailLevel < 0.5 ? 0 : 1);
 
         private readonly DateTime _createdAtUtc = DateTime.UtcNow;
         private bool _shouldAnimate;
@@ -93,13 +95,15 @@ namespace JoinGameAfk.View.Controls
                 ? (DateTime.UtcNow - _createdAtUtc).TotalSeconds
                 : 0;
 
-            DrawPulse(drawingContext, width, height, elapsedSeconds);
+            double pulse = GetPulse(elapsedSeconds);
+            DrawPulse(drawingContext, width, height, pulse);
 
-            double angleY = elapsedSeconds * 1.32;
-            double angleX = 0.58 + Math.Sin(elapsedSeconds * 0.74) * 0.24;
-            double angleZ = elapsedSeconds * 0.34;
+            double angleY = DegreesToRadians(LogoShapeSettings.RotationYDegrees) + elapsedSeconds * 1.32;
+            double angleX = DegreesToRadians(LogoShapeSettings.RotationXDegrees) + Math.Sin(elapsedSeconds * 0.74) * 0.24;
+            double angleZ = DegreesToRadians(LogoShapeSettings.RotationZDegrees) + elapsedSeconds * 0.34;
+            double pulseScale = 0.70 + pulse * 0.1;
 
-            DrawModel(drawingContext, Models[0], width, height, angleX, angleY, angleZ, 1);
+            DrawModel(drawingContext, LogoModel, width, height, angleX, angleY, angleZ, pulseScale, 1);
         }
 
         private void StartRendering()
@@ -125,10 +129,12 @@ namespace JoinGameAfk.View.Controls
             InvalidateVisual();
         }
 
-        private void DrawPulse(DrawingContext drawingContext, double width, double height, double elapsedSeconds)
+        private static double GetPulse(double elapsedSeconds) =>
+            0.5 + Math.Sin(elapsedSeconds * 2.2) * 0.5;
+
+        private void DrawPulse(DrawingContext drawingContext, double width, double height, double pulse)
         {
-            double pulse = 0.5 + Math.Sin(elapsedSeconds * 2.2) * 0.5;
-            double radius = Math.Min(width, height) * (0.4 + pulse * 0.08);
+            double radius = Math.Min(width, height) * (0.34 + pulse * 0.28);
             byte alpha = (byte)(34 + pulse * 34);
             var pen = new Pen(new SolidColorBrush(WithAlpha(RidgeColor, alpha)), 0.7);
             drawingContext.DrawEllipse(null, pen, new Point(width / 2, height / 2), radius, radius);
@@ -142,6 +148,7 @@ namespace JoinGameAfk.View.Controls
             double angleX,
             double angleY,
             double angleZ,
+            double scaleMultiplier,
             double opacity)
         {
             if (opacity <= 0.01)
@@ -152,7 +159,7 @@ namespace JoinGameAfk.View.Controls
                 .ToArray();
 
             var faces = model.Faces
-                .Select(face => CreateProjectedFace(face, rotatedVertices, width, height))
+                .Select(face => CreateProjectedFace(face, rotatedVertices, width, height, scaleMultiplier))
                 .OrderBy(face => face.Depth)
                 .ToList();
 
@@ -164,14 +171,16 @@ namespace JoinGameAfk.View.Controls
                 faceColor = ScaleBrightness(faceColor, face.Brightness);
 
                 var fillBrush = new SolidColorBrush(WithAlpha(faceColor, (byte)(150 + face.Brightness * 72)));
-                var edgePen = new Pen(new SolidColorBrush(WithAlpha(RidgeColor, (byte)(135 + face.Brightness * 80))), 0.62);
+                Pen? edgePen = LogoShapeSettings.HideFacetLinesAtAllSizes
+                    ? null
+                    : new Pen(new SolidColorBrush(WithAlpha(RidgeColor, (byte)(135 + face.Brightness * 80))), 0.62);
                 drawingContext.DrawGeometry(fillBrush, edgePen, CreateFaceGeometry(face.Points));
             }
 
             drawingContext.Pop();
         }
 
-        private static ProjectedFace CreateProjectedFace(int[] face, Vector3[] vertices, double width, double height)
+        private static ProjectedFace CreateProjectedFace(int[] face, Vector3[] vertices, double width, double height, double scaleMultiplier)
         {
             Vector3 a = vertices[face[0]];
             Vector3 b = vertices[face[1]];
@@ -181,7 +190,7 @@ namespace JoinGameAfk.View.Controls
             double brightness = Math.Clamp(0.36 + facing * 0.58, 0.28, 1);
             double shadeMix = Math.Clamp((normal.X + 1) * 0.42 + facing * 0.18, 0.1, 0.9);
             double depth = face.Average(index => vertices[index].Z);
-            Point[] points = face.Select(index => Project(vertices[index], width, height)).ToArray();
+            Point[] points = face.Select(index => Project(vertices[index], width, height, scaleMultiplier)).ToArray();
 
             return new ProjectedFace(points, depth, brightness, shadeMix);
         }
@@ -201,16 +210,20 @@ namespace JoinGameAfk.View.Controls
             return new PathGeometry([figure]);
         }
 
-        private static Point Project(Vector3 point, double width, double height)
+        private static Point Project(Vector3 point, double width, double height, double scaleMultiplier)
         {
-            const double cameraDistance = 3.2;
-            double perspective = cameraDistance / (cameraDistance - point.Z);
-            double scale = Math.Min(width, height) * 0.34;
+            double perspective = CameraDistance / (CameraDistance - point.Z);
+            double scale = Math.Min(width, height) * LogoShapeSettings.PolyhedronScale * scaleMultiplier;
+            double offsetX = Math.Clamp(LogoShapeSettings.PolyhedronOffsetX, -0.35, 0.35) * width;
+            double offsetY = Math.Clamp(LogoShapeSettings.PolyhedronOffsetY, -0.35, 0.35) * height;
 
             return new Point(
-                width / 2 + point.X * scale * perspective,
-                height / 2 - point.Y * scale * perspective);
+                width / 2 + offsetX + point.X * scale * perspective,
+                height / 2 + offsetY - point.Y * scale * perspective);
         }
+
+        private static double DegreesToRadians(double degrees) =>
+            degrees * Math.PI / 180;
 
         private static Vector3 Rotate(Vector3 point, double angleX, double angleY, double angleZ)
         {
@@ -560,6 +573,111 @@ namespace JoinGameAfk.View.Controls
         private sealed record PolyhedronModel(Vector3[] Vertices, int[][] Faces);
 
         private sealed record ProjectedFace(Point[] Points, double Depth, double Brightness, double ShadeMix);
+
+        private sealed class LogoGlyphSettings
+        {
+            private const string ResourceName = "JoinGameAfk.Assets.logo.jgalogo";
+
+            public double FacetDetailLevel { get; init; }
+
+            public double PolyhedronScale { get; init; } = 0.445;
+
+            public double PolyhedronOffsetX { get; init; }
+
+            public double PolyhedronOffsetY { get; init; }
+
+            public bool HideFacetLinesAtAllSizes { get; init; } = true;
+
+            public double RotationXDegrees { get; init; } = 0.76 * 180 / Math.PI;
+
+            public double RotationYDegrees { get; init; } = -0.54 * 180 / Math.PI;
+
+            public double RotationZDegrees { get; init; } = 0.22 * 180 / Math.PI;
+
+            public static LogoGlyphSettings Load()
+            {
+                try
+                {
+                    using Stream? stream = typeof(PolyhedronGlyph).Assembly.GetManifestResourceStream(ResourceName);
+                    if (stream is null)
+                        return CreateDefault();
+
+                    using JsonDocument document = JsonDocument.Parse(stream);
+                    return FromJson(document.RootElement).Sanitize();
+                }
+                catch (JsonException)
+                {
+                    return CreateDefault();
+                }
+                catch (IOException)
+                {
+                    return CreateDefault();
+                }
+            }
+
+            private static LogoGlyphSettings FromJson(JsonElement element)
+            {
+                LogoGlyphSettings fallback = CreateDefault();
+                return new()
+                {
+                    FacetDetailLevel = GetDouble(element, nameof(FacetDetailLevel), fallback.FacetDetailLevel),
+                    PolyhedronScale = GetDouble(element, nameof(PolyhedronScale), fallback.PolyhedronScale),
+                    PolyhedronOffsetX = GetDouble(element, nameof(PolyhedronOffsetX), fallback.PolyhedronOffsetX),
+                    PolyhedronOffsetY = GetDouble(element, nameof(PolyhedronOffsetY), fallback.PolyhedronOffsetY),
+                    HideFacetLinesAtAllSizes = GetBoolean(element, nameof(HideFacetLinesAtAllSizes), fallback.HideFacetLinesAtAllSizes),
+                    RotationXDegrees = GetDouble(element, nameof(RotationXDegrees), fallback.RotationXDegrees),
+                    RotationYDegrees = GetDouble(element, nameof(RotationYDegrees), fallback.RotationYDegrees),
+                    RotationZDegrees = GetDouble(element, nameof(RotationZDegrees), fallback.RotationZDegrees)
+                };
+            }
+
+            private LogoGlyphSettings Sanitize()
+            {
+                LogoGlyphSettings fallback = CreateDefault();
+                return new()
+                {
+                    FacetDetailLevel = ClampFinite(FacetDetailLevel, 0, 1, fallback.FacetDetailLevel),
+                    PolyhedronScale = ClampFinite(PolyhedronScale, 0.1, 0.5, fallback.PolyhedronScale),
+                    PolyhedronOffsetX = ClampFinite(PolyhedronOffsetX, -0.35, 0.35, fallback.PolyhedronOffsetX),
+                    PolyhedronOffsetY = ClampFinite(PolyhedronOffsetY, -0.35, 0.35, fallback.PolyhedronOffsetY),
+                    HideFacetLinesAtAllSizes = HideFacetLinesAtAllSizes,
+                    RotationXDegrees = ClampFinite(RotationXDegrees, -360, 360, fallback.RotationXDegrees),
+                    RotationYDegrees = ClampFinite(RotationYDegrees, -360, 360, fallback.RotationYDegrees),
+                    RotationZDegrees = ClampFinite(RotationZDegrees, -360, 360, fallback.RotationZDegrees)
+                };
+            }
+
+            private static double GetDouble(JsonElement element, string propertyName, double fallback) =>
+                element.TryGetProperty(propertyName, out JsonElement property)
+                && property.ValueKind == JsonValueKind.Number
+                && property.TryGetDouble(out double value)
+                    ? value
+                    : fallback;
+
+            private static LogoGlyphSettings CreateDefault() =>
+                new()
+                {
+                    FacetDetailLevel = 0,
+                    PolyhedronScale = 0.49373665480427065,
+                    PolyhedronOffsetX = -0.004982206405693955,
+                    PolyhedronOffsetY = 0.029893238434163708,
+                    HideFacetLinesAtAllSizes = true,
+                    RotationXDegrees = -133.87900355871898,
+                    RotationYDegrees = -115.94306049822069,
+                    RotationZDegrees = -53.16725978647682
+                };
+
+            private static bool GetBoolean(JsonElement element, string propertyName, bool fallback) =>
+                element.TryGetProperty(propertyName, out JsonElement property)
+                && property.ValueKind is JsonValueKind.True or JsonValueKind.False
+                    ? property.GetBoolean()
+                    : fallback;
+
+            private static double ClampFinite(double value, double minimum, double maximum, double fallback) =>
+                double.IsFinite(value)
+                    ? Math.Clamp(value, minimum, maximum)
+                    : fallback;
+        }
 
         private readonly record struct EdgeKey
         {

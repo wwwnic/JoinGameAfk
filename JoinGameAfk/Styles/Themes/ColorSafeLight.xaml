@@ -69,6 +69,22 @@
     <SolidColorBrush x:Key="PhaseBanBrush" Color="#CC79A7" />
     <SolidColorBrush x:Key="PhaseDefaultBrush" Color="#384A52" />
 
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralPrimaryBrush" Color="#0072B2" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralSecondaryBrush" Color="#009E73" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralRidgeBrush" Color="#DCEAF8FD" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanPrimaryBrush" Color="#CC79A7" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanSecondaryBrush" Color="#8E4E78" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanRidgeBrush" Color="#DCFAEDF5" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickPrimaryBrush" Color="#0072B2" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickSecondaryBrush" Color="#003A5B" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickRidgeBrush" Color="#DCDDF2FB" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerHoverPrimaryBrush" Color="#E69F00" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerHoverSecondaryBrush" Color="#9A6700" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerHoverRidgeBrush" Color="#DCFFF8EA" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationPrimaryBrush" Color="#009E73" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationSecondaryBrush" Color="#005A43" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationRidgeBrush" Color="#DCEAFBF6" />
+
     <SolidColorBrush x:Key="TargetActiveBrush" Color="#0072B2" />
     <SolidColorBrush x:Key="TargetInactiveBrush" Color="#A6B6BE" />
     <SolidColorBrush x:Key="TargetDropHoverBrush" Color="#CC79A7" />

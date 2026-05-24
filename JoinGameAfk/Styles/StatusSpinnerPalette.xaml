@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralPrimaryBrush" Color="#22D3EE" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralSecondaryBrush" Color="#7C3AED" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerNeutralRidgeBrush" Color="#DCECFEFF" />
+
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanPrimaryBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanSecondaryBrush" Color="#7F1D1D" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerBanRidgeBrush" Color="#DCFECACA" />
+
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickPrimaryBrush" Color="#38BDF8" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickSecondaryBrush" Color="#1E40AF" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPickRidgeBrush" Color="#DCDBEAFE" />
+
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPlanningPrimaryBrush" Color="#F59E0B" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPlanningSecondaryBrush" Color="#7C3AED" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerPlanningRidgeBrush" Color="#DCFEF3C7" />
+
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationPrimaryBrush" Color="#A855F7" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationSecondaryBrush" Color="#4C1D95" />
+    <SolidColorBrush x:Key="ChampionStatusSpinnerFinalizationRidgeBrush" Color="#EBF5D0FF" />
+</ResourceDictionary>
