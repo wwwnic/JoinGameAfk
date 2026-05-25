@@ -766,11 +766,21 @@
                                             ToolTip="{Binding PlanReferenceText}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="9" />
                                                 <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="9" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0"
+                                            <StackPanel Grid.Column="0"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ChampionName}"
+                                                           Style="{StaticResource DraftRoleTextStyle}"
+                                                           TextAlignment="Right" />
+                                                <TextBlock Text="{Binding RoleName}"
+                                                           MinHeight="17"
+                                                           Style="{StaticResource DraftChampionTextStyle}"
+                                                           TextAlignment="Right" />
+                                            </StackPanel>
+                                            <Border Grid.Column="2"
                                                     Style="{StaticResource DraftAvatarStyle}">
                                                 <Grid>
                                                     <viewControls:ChampionMysteryGlyph Width="28"
@@ -783,14 +793,6 @@
                                                            SnapsToDevicePixels="True" />
                                                 </Grid>
                                             </Border>
-                                            <StackPanel Grid.Column="2"
-                                                        VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding ChampionName}"
-                                                           Style="{StaticResource DraftRoleTextStyle}" />
-                                                <TextBlock Text="{Binding RoleName}"
-                                                           MinHeight="17"
-                                                           Style="{StaticResource DraftChampionTextStyle}" />
-                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
