@@ -105,7 +105,7 @@ jobs:
         run: Copy-Item -Path ${{ github.workspace }}\publish-light\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-light.exe
 
       - name: Publish light framework-dependent single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-light-framework-dependent-single-file
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-light-framework-dependent-single-file
 
       - name: Verify light framework-dependent single-file artifact
         shell: pwsh
@@ -200,7 +200,7 @@ jobs:
         run: Copy-Item -Path ${{ github.workspace }}\publish-full\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
 
       - name: Publish full framework-dependent single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full-framework-dependent-single-file
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full-framework-dependent-single-file
 
       - name: Verify full framework-dependent single-file artifact
         shell: pwsh
