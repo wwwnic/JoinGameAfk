@@ -464,8 +464,10 @@ namespace JoinGameAfk.View
                 _lastDashboardStatus = status;
                 _readyCheckResponse = status.ReadyCheckResponse;
                 RefreshPhaseIndicator();
+                RefreshPhaseText();
                 _pickBanOverlayWindow?.UpdateDashboardStatus(status);
                 _queueMicroOverlayWindow?.UpdateDashboardStatus(status);
+                SynchronizeAutoPickBanOverlay();
             });
         }
 
@@ -685,6 +687,7 @@ namespace JoinGameAfk.View
             return _overlaySettings.AutoShowPickBanOverlayEnabled
                 && _isWatcherRunning
                 && _isClientConnected
+                && !_lastDashboardStatus.IsUnsupportedMode
                 && !_suppressAutoPickBanOverlayForCurrentChampSelect
                 && IsChampSelectFlow(_currentPhase);
         }
@@ -694,7 +697,7 @@ namespace JoinGameAfk.View
             return _overlaySettings.PickBanOverlayAutoCloseAfterChampSelectEnabled
                 && _isPickBanOverlayVisibleDuringChampSelect
                 && _pickBanOverlayWindow?.IsVisible == true
-                && (!_isWatcherRunning || !_isClientConnected || !IsChampSelectFlow(_currentPhase));
+                && (!_isWatcherRunning || !_isClientConnected || !IsChampSelectFlow(_currentPhase) || _lastDashboardStatus.IsUnsupportedMode);
         }
 
         private void TrackPickBanOverlayVisibleDuringChampSelect()
@@ -734,6 +737,9 @@ namespace JoinGameAfk.View
 
             if (!IsChampSelectFlow(_currentPhase))
                 return "champion select ended";
+
+            if (_lastDashboardStatus.IsUnsupportedMode)
+                return "unsupported mode";
 
             if (_suppressAutoPickBanOverlayForCurrentChampSelect)
                 return "manual suppression active";

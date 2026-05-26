@@ -140,6 +140,10 @@
                                         Click="PreviewNeutralIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
                                         Margin="0,0,8,6" />
+                                <Button Content="Log unsupported mode"
+                                        Click="TriggerUnsupportedMode_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
                                 <Button Content="Ban"
                                         Click="PreviewBanIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"

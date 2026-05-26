@@ -124,6 +124,15 @@ namespace JoinGameAfk.View
             PreviewIndicator(ClientPhase.InGame, isWatcherRunning: true, isClientConnected: true);
         }
 
+        private void TriggerUnsupportedMode_Click(object sender, RoutedEventArgs e)
+        {
+            if (!EnsureCanApply())
+                return;
+
+            const string unsupportedModeText = "Quickplay (queue 490) is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, or Ranked Flex; auto-accept can still work here.";
+            _logsPage.WriteLine($"Unsupported queue detected: {unsupportedModeText}");
+        }
+
         private void AddMyBan_Click(object sender, RoutedEventArgs e)
         {
             AddChampionPlanItem(MyBanBox.Text, _myTeamBans, string.Empty);
@@ -252,11 +261,8 @@ namespace JoinGameAfk.View
 
         private void ApplyDashboardStatus()
         {
-            if (!_canApply())
-            {
-                Close();
+            if (!EnsureCanApply())
                 return;
-            }
 
             _phaseProgressionPage.UpdateDashboardStatus(new DashboardStatus
             {
@@ -273,6 +279,15 @@ namespace JoinGameAfk.View
                 ChampSelectSubPhase = "Test",
                 TimeLeftSeconds = -1
             });
+        }
+
+        private bool EnsureCanApply()
+        {
+            if (_canApply())
+                return true;
+
+            Close();
+            return false;
         }
 
         private static string NormalizeText(string text)

@@ -37,9 +37,15 @@ namespace LcuClient
                 _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             }
 
-            public async Task<string> GetSessionAsync(CancellationToken cancellationToken = default)
+            public async Task<string> GetGameflowSessionAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-gameflow/v1/session";
+                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
+            }
+
+            public async Task<string> GetLobbyAsync(CancellationToken cancellationToken = default)
+            {
+                string endpoint = "/lol-lobby/v2/lobby";
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 

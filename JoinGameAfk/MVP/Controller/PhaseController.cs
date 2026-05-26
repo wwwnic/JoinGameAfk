@@ -24,14 +24,60 @@ namespace JoinGameAfk.MVP.Controller
             TimeSpan.FromSeconds(30)
         ];
 
+        private static readonly IReadOnlyDictionary<int, string> SupportedQueueNames = new Dictionary<int, string>
+        {
+            [400] = "Normal Draft",
+            [420] = "Ranked Solo/Duo",
+            [430] = "Blind Pick",
+            [440] = "Ranked Flex"
+        };
+
+        private static readonly IReadOnlyDictionary<int, string> KnownQueueNames = new Dictionary<int, string>
+        {
+            [400] = "Normal Draft",
+            [420] = "Ranked Solo/Duo",
+            [430] = "Blind Pick",
+            [440] = "Ranked Flex",
+            [450] = "ARAM",
+            [480] = "Swiftplay",
+            [490] = "Quickplay",
+            [700] = "Clash",
+            [720] = "ARAM Clash",
+            [870] = "Intro Bots",
+            [880] = "Beginner Bots",
+            [890] = "Intermediate Bots",
+            [900] = "ARURF",
+            [1020] = "One for All",
+            [1400] = "Ultimate Spellbook",
+            [1700] = "Arena",
+            [1710] = "Arena",
+            [1900] = "Pick URF",
+            [2300] = "Brawl",
+            [2400] = "ARAM: Mayhem"
+        };
+
         private readonly record struct LcuEventSnapshot(
             ClientPhase? Phase,
             string? ChampSelectSessionJson,
             DateTime ChampSelectSessionObservedAtUtc,
-            string? ReadyCheckJson)
+            string? ReadyCheckJson,
+            string? GameflowSessionJson,
+            string? LobbyJson)
         {
             public bool HasChampSelectSession => !string.IsNullOrWhiteSpace(ChampSelectSessionJson);
             public bool HasReadyCheckJson => !string.IsNullOrWhiteSpace(ReadyCheckJson);
+            public bool HasGameflowSessionJson => !string.IsNullOrWhiteSpace(GameflowSessionJson);
+            public bool HasLobbyJson => !string.IsNullOrWhiteSpace(LobbyJson);
+        }
+
+        private readonly record struct QueueSupportState(
+            int? QueueId,
+            string QueueName,
+            bool HasQueue,
+            bool IsSupported)
+        {
+            public static QueueSupportState Unknown { get; } = new(null, string.Empty, false, false);
+            public bool IsUnsupported => HasQueue && !IsSupported;
         }
 
         private readonly PhaseProgressionPage fPhaseProgressionPage;
@@ -53,10 +99,14 @@ namespace JoinGameAfk.MVP.Controller
         private string? _pendingChampSelectSessionJson;
         private DateTime _pendingChampSelectSessionObservedAtUtc;
         private string? _pendingReadyCheckJson;
+        private string? _pendingGameflowSessionJson;
+        private string? _pendingLobbyJson;
         private string? _pendingClientDisconnectMessage;
         private bool _isRunning;
         private ClientPhase _lastObservedPhase;
         private ClientPhase _lastHandledPhase;
+        private QueueSupportState _lastQueueSupportState = QueueSupportState.Unknown;
+        private string _lastUnsupportedQueueLogKey = string.Empty;
         private bool _isClientConnected;
         private bool _isEventStreamConnecting;
         private bool _isEventStreamAvailable;
@@ -100,6 +150,7 @@ namespace JoinGameAfk.MVP.Controller
             ResetLcuEventSignal();
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
+            ResetQueueSupportState();
 
             fPhaseProgressionPage.SetWatcherState(true);
             fPhaseProgressionPage.SetClientConnection(false);
@@ -143,6 +194,7 @@ namespace JoinGameAfk.MVP.Controller
             _hasPendingChampSelectExitSound = false;
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
+            ResetQueueSupportState();
             if (!updateUi || _isShutdownRequested)
                 return;
 
@@ -289,6 +341,12 @@ namespace JoinGameAfk.MVP.Controller
                         var handler = _phaseHandlers.FirstOrDefault(h => h.ClientPhase == phase);
                         var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
                         bool isChampSelectFlow = IsChampSelectFlow(phase);
+                        QueueSupportState queueSupportState = await ResolveQueueSupportStateAsync(http, eventSnapshot, phase, ct);
+
+                        if (queueSupportState.IsUnsupported)
+                            LogUnsupportedQueueIfNeeded(queueSupportState);
+                        else if (queueSupportState.HasQueue)
+                            _lastUnsupportedQueueLogKey = string.Empty;
 
                         if (phase == ClientPhase.ReadyCheck
                             && handler != null
@@ -302,34 +360,42 @@ namespace JoinGameAfk.MVP.Controller
                             _lastHandledPhase = phase;
                         }
 
-                        if (!isChampSelectFlow)
+                        if (isChampSelectFlow && queueSupportState.IsUnsupported)
                         {
-                            if (phase == ClientPhase.ReadyCheck)
-                                await UpdateReadyCheckDashboardStatusAsync(http, eventSnapshot, ct);
-                            else
-                                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                            champSelect?.Reset();
+                            fPhaseProgressionPage.UpdateDashboardStatus(BuildUnsupportedModeDashboardStatus(queueSupportState));
                         }
-
-                        if (handler != null && _lastHandledPhase != phase)
+                        else
                         {
-                            string? actionMessage = GetActionMessage(phase);
-                            if (!string.IsNullOrWhiteSpace(actionMessage))
-                                Log(actionMessage);
-
-                            if (handler is ChampSelect cs)
+                            if (!isChampSelectFlow)
                             {
-                                if (await TryHandleChampSelectAsync(cs, eventSnapshot, ct))
+                                if (phase == ClientPhase.ReadyCheck)
+                                    await UpdateReadyCheckDashboardStatusAsync(http, eventSnapshot, queueSupportState, ct);
+                                else
+                                    fPhaseProgressionPage.UpdateDashboardStatus(BuildNonChampSelectDashboardStatus(queueSupportState));
+                            }
+
+                            if (handler != null && _lastHandledPhase != phase)
+                            {
+                                string? actionMessage = GetActionMessage(phase);
+                                if (!string.IsNullOrWhiteSpace(actionMessage))
+                                    Log(actionMessage);
+
+                                if (handler is ChampSelect cs)
+                                {
+                                    if (await TryHandleChampSelectAsync(cs, eventSnapshot, ct))
+                                        _lastHandledPhase = phase;
+                                }
+                                else
+                                {
+                                    await handler.HandleAsync(ct);
                                     _lastHandledPhase = phase;
+                                }
                             }
-                            else
+                            else if (champSelect != null && isChampSelectFlow)
                             {
-                                await handler.HandleAsync(ct);
-                                _lastHandledPhase = phase;
+                                await TryHandleChampSelectAsync(champSelect, eventSnapshot, ct);
                             }
-                        }
-                        else if (champSelect != null && isChampSelectFlow)
-                        {
-                            await TryHandleChampSelectAsync(champSelect, eventSnapshot, ct);
                         }
 
                         int? delayMs = GetLoopDelayMs();
@@ -363,6 +429,7 @@ namespace JoinGameAfk.MVP.Controller
                 ResetEventStreamState();
                 ClearClientDisconnectRequest();
                 ClearPendingLcuEvents();
+                ResetQueueSupportState();
                 http?.Dispose();
                 Log("Stopped watching.");
             }
@@ -382,6 +449,7 @@ namespace JoinGameAfk.MVP.Controller
             _eventStreamTask = null;
             ResetEventStreamState();
             ClearPendingLcuEvents();
+            ResetQueueSupportState();
             http?.Dispose();
             http = null;
             currentAuth = null;
@@ -576,12 +644,35 @@ namespace JoinGameAfk.MVP.Controller
             if (string.Equals(apiEvent.Uri, "/lol-gameflow/v1/gameflow-phase", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(apiEvent.Uri, "/lol-gameflow/v1/session", StringComparison.OrdinalIgnoreCase))
             {
+                bool isGameflowSession = string.Equals(apiEvent.Uri, "/lol-gameflow/v1/session", StringComparison.OrdinalIgnoreCase);
+
                 if (TryGetPhaseFromEvent(apiEvent, out var phase))
                 {
                     lock (_pendingLcuEventsLock)
                     {
                         _pendingEventPhase = phase;
+                        if (isGameflowSession && IsJsonObject(apiEvent.DataJson))
+                            _pendingGameflowSessionJson = apiEvent.DataJson;
                     }
+                }
+                else if (isGameflowSession && IsJsonObject(apiEvent.DataJson))
+                {
+                    lock (_pendingLcuEventsLock)
+                    {
+                        _pendingGameflowSessionJson = apiEvent.DataJson;
+                    }
+                }
+
+                return true;
+            }
+
+            if (string.Equals(apiEvent.Uri, "/lol-lobby/v2/lobby", StringComparison.OrdinalIgnoreCase))
+            {
+                lock (_pendingLcuEventsLock)
+                {
+                    _pendingLobbyJson = IsDeleteEvent(apiEvent) || !IsJsonObject(apiEvent.DataJson)
+                        ? null
+                        : apiEvent.DataJson;
                 }
 
                 return true;
@@ -633,12 +724,16 @@ namespace JoinGameAfk.MVP.Controller
                     _pendingEventPhase,
                     _pendingChampSelectSessionJson,
                     _pendingChampSelectSessionObservedAtUtc,
-                    _pendingReadyCheckJson);
+                    _pendingReadyCheckJson,
+                    _pendingGameflowSessionJson,
+                    _pendingLobbyJson);
 
                 _pendingEventPhase = null;
                 _pendingChampSelectSessionJson = null;
                 _pendingChampSelectSessionObservedAtUtc = DateTime.MinValue;
                 _pendingReadyCheckJson = null;
+                _pendingGameflowSessionJson = null;
+                _pendingLobbyJson = null;
                 return snapshot;
             }
         }
@@ -651,7 +746,299 @@ namespace JoinGameAfk.MVP.Controller
                 _pendingChampSelectSessionJson = null;
                 _pendingChampSelectSessionObservedAtUtc = DateTime.MinValue;
                 _pendingReadyCheckJson = null;
+                _pendingGameflowSessionJson = null;
+                _pendingLobbyJson = null;
             }
+        }
+
+        private async Task<QueueSupportState> ResolveQueueSupportStateAsync(
+            Lcu.LeagueClientHttp http,
+            LcuEventSnapshot eventSnapshot,
+            ClientPhase phase,
+            CancellationToken cancellationToken)
+        {
+            if (phase is ClientPhase.Unknown or ClientPhase.InGame)
+            {
+                ResetQueueSupportState();
+                return QueueSupportState.Unknown;
+            }
+
+            if (TryGetQueueSupportStateFromEventSnapshot(eventSnapshot, phase, out var eventState))
+                return CacheQueueSupportState(eventState);
+
+            if (phase is ClientPhase.Lobby or ClientPhase.Matchmaking or ClientPhase.ReadyCheck)
+            {
+                if (await TryGetLobbyQueueSupportStateAsync(http, cancellationToken) is { HasQueue: true } lobbyState)
+                    return CacheQueueSupportState(lobbyState);
+            }
+
+            if (IsChampSelectFlow(phase) || phase == ClientPhase.ReadyCheck)
+            {
+                if (await TryGetGameflowQueueSupportStateAsync(http, cancellationToken) is { HasQueue: true } gameflowState)
+                    return CacheQueueSupportState(gameflowState);
+            }
+
+            return _lastQueueSupportState;
+        }
+
+        private static bool TryGetQueueSupportStateFromEventSnapshot(
+            LcuEventSnapshot eventSnapshot,
+            ClientPhase phase,
+            out QueueSupportState queueSupportState)
+        {
+            try
+            {
+                if (IsChampSelectFlow(phase))
+                {
+                    return TryParseGameflowQueueSupportState(eventSnapshot.GameflowSessionJson, out queueSupportState)
+                        || TryParseLobbyQueueSupportState(eventSnapshot.LobbyJson, out queueSupportState);
+                }
+
+                return TryParseLobbyQueueSupportState(eventSnapshot.LobbyJson, out queueSupportState)
+                    || TryParseGameflowQueueSupportState(eventSnapshot.GameflowSessionJson, out queueSupportState);
+            }
+            catch (JsonException)
+            {
+                queueSupportState = QueueSupportState.Unknown;
+                return false;
+            }
+        }
+
+        private async Task<QueueSupportState?> TryGetLobbyQueueSupportStateAsync(
+            Lcu.LeagueClientHttp http,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                string lobbyJson = await http.GetLobbyAsync(cancellationToken);
+                return TryParseLobbyQueueSupportState(lobbyJson, out var state)
+                    ? state
+                    : QueueSupportState.Unknown;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+            catch (JsonException)
+            {
+                return QueueSupportState.Unknown;
+            }
+        }
+
+        private async Task<QueueSupportState?> TryGetGameflowQueueSupportStateAsync(
+            Lcu.LeagueClientHttp http,
+            CancellationToken cancellationToken)
+        {
+            try
+            {
+                string gameflowJson = await http.GetGameflowSessionAsync(cancellationToken);
+                return TryParseGameflowQueueSupportState(gameflowJson, out var state)
+                    ? state
+                    : QueueSupportState.Unknown;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+            catch (JsonException)
+            {
+                return QueueSupportState.Unknown;
+            }
+        }
+
+        private QueueSupportState CacheQueueSupportState(QueueSupportState queueSupportState)
+        {
+            if (queueSupportState.HasQueue)
+                _lastQueueSupportState = queueSupportState;
+
+            return queueSupportState;
+        }
+
+        private void ResetQueueSupportState()
+        {
+            _lastQueueSupportState = QueueSupportState.Unknown;
+            _lastUnsupportedQueueLogKey = string.Empty;
+        }
+
+        private static bool TryParseLobbyQueueSupportState(string? lobbyJson, out QueueSupportState queueSupportState)
+        {
+            queueSupportState = QueueSupportState.Unknown;
+            if (string.IsNullOrWhiteSpace(lobbyJson))
+                return false;
+
+            using var document = JsonDocument.Parse(lobbyJson);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return false;
+
+            if (root.TryGetProperty("gameConfig", out var gameConfig)
+                && gameConfig.ValueKind == JsonValueKind.Object
+                && TryReadInt32(gameConfig, "queueId", out int gameConfigQueueId))
+            {
+                queueSupportState = CreateQueueSupportState(gameConfigQueueId, TryReadQueueDescription(gameConfig));
+                return true;
+            }
+
+            if (TryReadInt32(root, "queueId", out int rootQueueId))
+            {
+                queueSupportState = CreateQueueSupportState(rootQueueId, TryReadQueueDescription(root));
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryParseGameflowQueueSupportState(string? gameflowJson, out QueueSupportState queueSupportState)
+        {
+            queueSupportState = QueueSupportState.Unknown;
+            if (string.IsNullOrWhiteSpace(gameflowJson))
+                return false;
+
+            using var document = JsonDocument.Parse(gameflowJson);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return false;
+
+            if (root.TryGetProperty("gameData", out var gameData)
+                && gameData.ValueKind == JsonValueKind.Object)
+            {
+                if (gameData.TryGetProperty("queue", out var queue)
+                    && queue.ValueKind == JsonValueKind.Object
+                    && TryReadQueueId(queue, out int queueObjectId))
+                {
+                    queueSupportState = CreateQueueSupportState(queueObjectId, TryReadQueueDescription(queue));
+                    return true;
+                }
+
+                if (TryReadInt32(gameData, "queueId", out int gameDataQueueId))
+                {
+                    queueSupportState = CreateQueueSupportState(gameDataQueueId, TryReadQueueDescription(gameData));
+                    return true;
+                }
+            }
+
+            if (TryReadInt32(root, "queueId", out int rootQueueId))
+            {
+                queueSupportState = CreateQueueSupportState(rootQueueId, TryReadQueueDescription(root));
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryReadQueueId(JsonElement queue, out int queueId)
+        {
+            return TryReadInt32(queue, "id", out queueId)
+                || TryReadInt32(queue, "queueId", out queueId);
+        }
+
+        private static bool TryReadInt32(JsonElement element, string propertyName, out int value)
+        {
+            value = 0;
+            if (element.ValueKind != JsonValueKind.Object
+                || !element.TryGetProperty(propertyName, out var property))
+            {
+                return false;
+            }
+
+            if (property.ValueKind == JsonValueKind.Number)
+                return property.TryGetInt32(out value);
+
+            if (property.ValueKind == JsonValueKind.String
+                && int.TryParse(property.GetString(), out value))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static string TryReadQueueDescription(JsonElement element)
+        {
+            foreach (string propertyName in new[] { "description", "name", "shortName", "queueName", "gameMode" })
+            {
+                if (element.ValueKind == JsonValueKind.Object
+                    && element.TryGetProperty(propertyName, out var property)
+                    && property.ValueKind == JsonValueKind.String)
+                {
+                    string? value = property.GetString();
+                    if (!string.IsNullOrWhiteSpace(value)
+                        && !string.Equals(value, "null", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return value.Trim();
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static QueueSupportState CreateQueueSupportState(int queueId, string queueDescription)
+        {
+            bool isSupported = SupportedQueueNames.ContainsKey(queueId);
+            string queueName = GetQueueName(queueId, queueDescription);
+            return new QueueSupportState(queueId, queueName, true, isSupported);
+        }
+
+        private static string GetQueueName(int queueId, string queueDescription)
+        {
+            if (SupportedQueueNames.TryGetValue(queueId, out string? supportedName))
+                return supportedName;
+
+            if (KnownQueueNames.TryGetValue(queueId, out string? knownName))
+                return knownName;
+
+            return !string.IsNullOrWhiteSpace(queueDescription)
+                ? queueDescription.Trim()
+                : $"Queue {queueId}";
+        }
+
+        private static DashboardStatus BuildNonChampSelectDashboardStatus(QueueSupportState queueSupportState)
+        {
+            return ApplyQueueSupportWarning(new DashboardStatus(), queueSupportState);
+        }
+
+        private static DashboardStatus BuildUnsupportedModeDashboardStatus(QueueSupportState queueSupportState)
+        {
+            return ApplyQueueSupportWarning(new DashboardStatus(), queueSupportState);
+        }
+
+        private static DashboardStatus ApplyQueueSupportWarning(DashboardStatus status, QueueSupportState queueSupportState)
+        {
+            if (!queueSupportState.IsUnsupported)
+                return status;
+
+            return status with
+            {
+                IsUnsupportedMode = true
+            };
+        }
+
+        private static string FormatUnsupportedModeText(QueueSupportState queueSupportState)
+        {
+            string modeText = queueSupportState.QueueId is int queueId
+                ? $"{queueSupportState.QueueName} (queue {queueId})"
+                : queueSupportState.QueueName;
+
+            return $"{modeText} is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, or Ranked Flex; auto-accept can still work here.";
+        }
+
+        private void LogUnsupportedQueueIfNeeded(QueueSupportState queueSupportState)
+        {
+            string logKey = queueSupportState.QueueId?.ToString() ?? queueSupportState.QueueName;
+            if (string.Equals(_lastUnsupportedQueueLogKey, logKey, StringComparison.Ordinal))
+                return;
+
+            _lastUnsupportedQueueLogKey = logKey;
+            Log($"Unsupported queue detected: {FormatUnsupportedModeText(queueSupportState)}");
         }
 
         private async Task<ClientPhase> ResolveCurrentPhaseAsync(
@@ -908,6 +1295,7 @@ namespace JoinGameAfk.MVP.Controller
         private async Task UpdateReadyCheckDashboardStatusAsync(
             Lcu.LeagueClientHttp http,
             LcuEventSnapshot eventSnapshot,
+            QueueSupportState queueSupportState,
             CancellationToken cancellationToken)
         {
             string? readyCheckJson = eventSnapshot.HasReadyCheckJson
@@ -926,7 +1314,7 @@ namespace JoinGameAfk.MVP.Controller
                 }
                 catch (HttpRequestException)
                 {
-                    fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
+                    fPhaseProgressionPage.UpdateDashboardStatus(BuildNonChampSelectDashboardStatus(queueSupportState));
                     return;
                 }
             }
@@ -943,13 +1331,15 @@ namespace JoinGameAfk.MVP.Controller
                 ? readyCheckHandler?.GetPendingAutoAcceptCountdown() ?? ReadyCheck.AutoAcceptCountdownSnapshot.Empty
                 : ReadyCheck.AutoAcceptCountdownSnapshot.Empty;
 
-            fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus
+            DashboardStatus status = new DashboardStatus
             {
                 ReadyCheckResponse = readyCheckResponse,
                 ReadyCheckAutoAcceptDelayMilliseconds = countdown.TotalDelayMilliseconds,
                 ReadyCheckAutoAcceptTimeLeftMilliseconds = countdown.RemainingMilliseconds,
                 ReadyCheckAutoAcceptObservedAtUtc = countdown.ObservedAtUtc
-            });
+            };
+
+            fPhaseProgressionPage.UpdateDashboardStatus(ApplyQueueSupportWarning(status, queueSupportState));
         }
 
         private static string GetReadyCheckResponse(string readyCheckJson)
