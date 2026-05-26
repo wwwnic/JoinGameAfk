@@ -2,6 +2,8 @@
 
 > A free Windows helper for League of Legends ready checks, champion priority planning, and champion select pick/ban flow.
 
+**Download latest version:** [GitHub Releases](https://github.com/wwwnic/JoinGameAfk/releases)
+
 **Platform:** Windows  
 **License:** MIT  
 **Status:** Free, open source fan project  
