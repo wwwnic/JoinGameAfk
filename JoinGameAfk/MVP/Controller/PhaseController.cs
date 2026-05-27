@@ -106,6 +106,7 @@ namespace JoinGameAfk.MVP.Controller
         private ClientPhase _lastObservedPhase;
         private ClientPhase _lastHandledPhase;
         private QueueSupportState _lastQueueSupportState = QueueSupportState.Unknown;
+        private bool _hasLookedUpQueueSupportDuringReadyCheck;
         private string _lastUnsupportedQueueLogKey = string.Empty;
         private bool _isClientConnected;
         private bool _isEventStreamConnecting;
@@ -766,6 +767,21 @@ namespace JoinGameAfk.MVP.Controller
             if (TryGetQueueSupportStateFromEventSnapshot(eventSnapshot, phase, out var eventState))
                 return CacheQueueSupportState(eventState);
 
+            if (phase == ClientPhase.ReadyCheck)
+            {
+                if (_lastQueueSupportState.HasQueue)
+                    return _lastQueueSupportState;
+
+                if (_hasLookedUpQueueSupportDuringReadyCheck)
+                    return _lastQueueSupportState;
+
+                _hasLookedUpQueueSupportDuringReadyCheck = true;
+            }
+            else
+            {
+                _hasLookedUpQueueSupportDuringReadyCheck = false;
+            }
+
             if (phase is ClientPhase.Lobby or ClientPhase.Matchmaking or ClientPhase.ReadyCheck)
             {
                 if (await TryGetLobbyQueueSupportStateAsync(http, cancellationToken) is { HasQueue: true } lobbyState)
@@ -865,6 +881,7 @@ namespace JoinGameAfk.MVP.Controller
         private void ResetQueueSupportState()
         {
             _lastQueueSupportState = QueueSupportState.Unknown;
+            _hasLookedUpQueueSupportDuringReadyCheck = false;
             _lastUnsupportedQueueLogKey = string.Empty;
         }
 
