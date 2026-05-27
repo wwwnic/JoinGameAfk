@@ -28,6 +28,10 @@
                     <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
                     <Setter Property="BorderBrush" Value="{DynamicResource PhaseHoverBrush}" />
                 </Trigger>
+                <Trigger Property="Tag" Value="Warning">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource PhaseHoverBrush}" />
+                </Trigger>
             </Style.Triggers>
         </Style>
 
@@ -249,7 +253,8 @@
                                 BorderThickness="1"
                                 CornerRadius="13"
                                 VerticalAlignment="Center">
-                            <TextBlock Text="4"
+                            <TextBlock x:Name="ChampionSelectStepNumberText"
+                                       Text="4"
                                        FontSize="12"
                                        FontWeight="Bold"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -258,7 +263,8 @@
                         </Border>
                         <StackPanel Grid.Column="2"
                                     VerticalAlignment="Center">
-                            <TextBlock Text="Champion select"
+                            <TextBlock x:Name="ChampionSelectStepTitle"
+                                       Text="Draft"
                                        Style="{StaticResource ReadyStepTitleStyle}" />
                             <TextBlock x:Name="ChampionSelectStepText"
                                        Text="Waiting"

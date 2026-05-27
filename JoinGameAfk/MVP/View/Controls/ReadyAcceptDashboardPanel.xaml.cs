@@ -59,16 +59,20 @@ namespace JoinGameAfk.View.Controls
             ResetStep(QueueStep, QueueStepText);
             ResetStep(ReadyCheckStep, ReadyCheckStepText);
             ResetStep(ChampionSelectStep, ChampionSelectStepText);
+            ResetChampionSelectStepHeader();
 
             if (!isWatcherRunning || !isClientConnected)
                 return;
+
+            if (status.IsUnsupportedMode)
+                SetChampionSelectWarningStep("Unsupported queue");
 
             if (status.IsUnsupportedMode && IsChampionSelectStandbyPhase(phase))
             {
                 SetDoneStep(LobbyStep, LobbyStepText, "Complete");
                 SetDoneStep(QueueStep, QueueStepText, "Complete");
                 SetDoneStep(ReadyCheckStep, ReadyCheckStepText, "Complete");
-                SetStandbyStep(ChampionSelectStep, ChampionSelectStepText, "Standby");
+                SetChampionSelectWarningStep("Not supported");
                 return;
             }
 
@@ -212,6 +216,20 @@ namespace JoinGameAfk.View.Controls
         {
             step.Tag = "Standby";
             text.Text = value;
+        }
+
+        private void ResetChampionSelectStepHeader()
+        {
+            ChampionSelectStepNumberText.Text = "4";
+            ChampionSelectStepTitle.Text = "Draft";
+        }
+
+        private void SetChampionSelectWarningStep(string value)
+        {
+            ChampionSelectStep.Tag = "Warning";
+            ChampionSelectStepNumberText.Text = "!";
+            ChampionSelectStepTitle.Text = "Draft unavailable";
+            ChampionSelectStepText.Text = value;
         }
     }
 }

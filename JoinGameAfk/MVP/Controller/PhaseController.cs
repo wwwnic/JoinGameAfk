@@ -1455,7 +1455,7 @@ namespace JoinGameAfk.MVP.Controller
             if (_hasPendingChampSelectExitSound && phase != ClientPhase.Unknown)
             {
                 if (IsChampSelectDodgeReturnPhase(phase))
-                    PlaySoundAlert(SoundAlertIds.ChampSelectEnded, "Champion select dodge sound alert");
+                    HandleChampSelectDodgeReturn();
 
                 _hasPendingChampSelectExitSound = false;
             }
@@ -1470,7 +1470,13 @@ namespace JoinGameAfk.MVP.Controller
             }
 
             if (IsChampSelectDodgeReturnPhase(phase))
-                PlaySoundAlert(SoundAlertIds.ChampSelectEnded, "Champion select dodge sound alert");
+                HandleChampSelectDodgeReturn();
+        }
+
+        private void HandleChampSelectDodgeReturn()
+        {
+            PlaySoundAlert(SoundAlertIds.ChampSelectEnded, "Champion select dodge sound alert");
+            fPhaseProgressionPage.ShowReadyAcceptDashboardView();
         }
 
         private static bool IsChampSelectDodgeReturnPhase(ClientPhase phase)

@@ -150,6 +150,16 @@ namespace JoinGameAfk.View
             ActivateDashboardView(1);
         }
 
+        public void ShowReadyAcceptDashboardView()
+        {
+            Dispatcher.TryInvoke(() =>
+            {
+                _hasManualDashboardViewOverride = false;
+                ActivateDashboardView(0);
+                RefreshReadyAcceptPanel();
+            });
+        }
+
         private void SynchronizeDashboardViewForPhase()
         {
             if (_hasManualDashboardViewOverride)
