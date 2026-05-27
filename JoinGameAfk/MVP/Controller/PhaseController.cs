@@ -773,6 +773,12 @@ namespace JoinGameAfk.MVP.Controller
             if (TryGetQueueSupportStateFromEventSnapshot(eventSnapshot, phase, out var eventState))
                 return CacheQueueSupportState(eventState);
 
+            if (IsChampSelectFlow(phase) && HasConcreteQueueId(_lastQueueSupportState))
+            {
+                _hasLookedUpQueueSupportDuringReadyCheck = false;
+                return _lastQueueSupportState;
+            }
+
             if (phase == ClientPhase.ReadyCheck)
             {
                 if (_lastQueueSupportState.HasQueue)
@@ -801,6 +807,11 @@ namespace JoinGameAfk.MVP.Controller
             }
 
             return _lastQueueSupportState;
+        }
+
+        private static bool HasConcreteQueueId(QueueSupportState queueSupportState)
+        {
+            return queueSupportState.QueueId is > 0;
         }
 
         private static bool TryGetQueueSupportStateFromEventSnapshot(
