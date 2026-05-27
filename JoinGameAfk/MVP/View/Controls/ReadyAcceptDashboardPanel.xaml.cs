@@ -20,7 +20,7 @@ namespace JoinGameAfk.View.Controls
             DashboardStatus status)
         {
             bool isStandbyIndicator = ShouldUseStandbyIndicator(phase, status);
-            ClientPhase indicatorPhase = GetIndicatorPhase(phase, isStandbyIndicator);
+            ClientPhase indicatorPhase = GetIndicatorPhase(phase, isStandbyIndicator, status);
 
             ReadyPhaseIndicator.Update(
                 indicatorPhase,
@@ -71,6 +71,15 @@ namespace JoinGameAfk.View.Controls
                 SetDoneStep(QueueStep, QueueStepText, "Complete");
                 SetDoneStep(ReadyCheckStep, ReadyCheckStepText, "Complete");
                 SetChampionSelectWarningStep("Not supported");
+                return;
+            }
+
+            if (status.SkipsReadyCheck && phase == ClientPhase.ReadyCheck)
+            {
+                SetDoneStep(LobbyStep, LobbyStepText, "Complete");
+                SetDoneStep(QueueStep, QueueStepText, "Complete");
+                SetDoneStep(ReadyCheckStep, ReadyCheckStepText, "Skipped");
+                SetActiveStep(ChampionSelectStep, ChampionSelectStepText, "Current");
                 return;
             }
 
@@ -126,6 +135,9 @@ namespace JoinGameAfk.View.Controls
             if (!isClientConnected)
                 return "Client offline";
 
+            if (status.SkipsReadyCheck && phase == ClientPhase.ReadyCheck)
+                return "Handed off";
+
             if (phase == ClientPhase.ReadyCheck && !string.IsNullOrWhiteSpace(status.ReadyCheckResponse))
                 return status.ReadyCheckResponse;
 
@@ -143,12 +155,15 @@ namespace JoinGameAfk.View.Controls
             };
         }
 
-        private static ClientPhase GetIndicatorPhase(ClientPhase phase, bool isStandbyIndicator)
+        private static ClientPhase GetIndicatorPhase(
+            ClientPhase phase,
+            bool isStandbyIndicator,
+            DashboardStatus status)
         {
             if (isStandbyIndicator)
                 return ClientPhase.Unknown;
 
-            return ShouldShowAcceptedReadyCheckIndicator(phase)
+            return ShouldShowAcceptedReadyCheckIndicator(phase, status)
                 ? ClientPhase.ReadyCheck
                 : phase;
         }
@@ -158,7 +173,7 @@ namespace JoinGameAfk.View.Controls
             ClientPhase indicatorPhase,
             DashboardStatus status)
         {
-            if (ShouldShowAcceptedReadyCheckIndicator(actualPhase))
+            if (ShouldShowAcceptedReadyCheckIndicator(actualPhase, status))
                 return "Accepted";
 
             return indicatorPhase == ClientPhase.ReadyCheck
@@ -191,9 +206,10 @@ namespace JoinGameAfk.View.Controls
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning or ClientPhase.InGame;
         }
 
-        private static bool ShouldShowAcceptedReadyCheckIndicator(ClientPhase phase)
+        private static bool ShouldShowAcceptedReadyCheckIndicator(ClientPhase phase, DashboardStatus status)
         {
-            return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
+            return phase is ClientPhase.ChampSelect or ClientPhase.Planning
+                || status.SkipsReadyCheck && phase == ClientPhase.ReadyCheck;
         }
 
         private static bool TryGetCountdownText(DashboardStatus status, out string countdownText)

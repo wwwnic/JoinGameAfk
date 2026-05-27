@@ -189,6 +189,9 @@ namespace JoinGameAfk.View
             if (status.IsUnsupportedMode)
                 return 0;
 
+            if (status.SkipsReadyCheck && phase == ClientPhase.ReadyCheck)
+                return 1;
+
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning
                 ? 1
                 : 0;

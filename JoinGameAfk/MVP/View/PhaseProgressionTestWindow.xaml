@@ -204,6 +204,10 @@
                                     Click="PreviewReadyAcceptDeclined_Click"
                                     Style="{StaticResource TesterActionButtonStyle}"
                                     Margin="0,0,8,6" />
+                            <Button Content="Skipped ready"
+                                    Click="PreviewReadyAcceptSkippedReadyCheck_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
                             <Button Content="Champion select"
                                     Click="PreviewReadyAcceptChampionSelect_Click"
                                     Style="{StaticResource TesterActionButtonStyle}"

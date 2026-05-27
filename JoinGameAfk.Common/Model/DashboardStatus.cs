@@ -52,6 +52,7 @@ namespace JoinGameAfk.Model
         public string PickChampionText { get; init; } = "Waiting for champion select.";
         public string PickLockText { get; init; } = "—";
         public string ChampSelectSubPhase { get; init; } = "";
+        public bool SkipsReadyCheck { get; init; }
         public bool IsUnsupportedMode { get; init; }
         public string UnsupportedQueueText { get; init; } = "";
         public string UnsupportedModeText { get; init; } = "";

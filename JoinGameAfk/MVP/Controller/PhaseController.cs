@@ -29,8 +29,11 @@ namespace JoinGameAfk.MVP.Controller
             [400] = "Normal Draft",
             [420] = "Ranked Solo/Duo",
             [430] = "Blind Pick",
-            [440] = "Ranked Flex"
+            [440] = "Ranked Flex",
+            [3110] = "Custom Game Draft"
         };
+
+        private static readonly HashSet<int> ReadyCheckSkippedQueueIds = [3110];
 
         private static readonly IReadOnlyDictionary<int, string> KnownQueueNames = new Dictionary<int, string>
         {
@@ -53,7 +56,8 @@ namespace JoinGameAfk.MVP.Controller
             [1710] = "Arena",
             [1900] = "Pick URF",
             [2300] = "Brawl",
-            [2400] = "ARAM: Mayhem"
+            [2400] = "ARAM: Mayhem",
+            [3110] = "Custom Game Draft"
         };
 
         private readonly record struct LcuEventSnapshot(
@@ -321,6 +325,8 @@ namespace JoinGameAfk.MVP.Controller
 
                         LcuEventSnapshot eventSnapshot = ConsumePendingLcuEvents();
                         ClientPhase phase = await ResolveCurrentPhaseAsync(http, eventSnapshot, ct);
+                        QueueSupportState queueSupportState = await ResolveQueueSupportStateAsync(http, eventSnapshot, phase, ct);
+                        phase = GetEffectivePhaseForQueueFlow(phase, queueSupportState);
                         fPhaseProgressionPage.UpdatePhase(phase);
                         SyncEventStreamState(currentAuth, ct);
 
@@ -342,7 +348,6 @@ namespace JoinGameAfk.MVP.Controller
                         var handler = _phaseHandlers.FirstOrDefault(h => h.ClientPhase == phase);
                         var champSelect = _phaseHandlers.OfType<ChampSelect>().FirstOrDefault();
                         bool isChampSelectFlow = IsChampSelectFlow(phase);
-                        QueueSupportState queueSupportState = await ResolveQueueSupportStateAsync(http, eventSnapshot, phase, ct);
 
                         if (queueSupportState.IsUnsupported)
                             LogUnsupportedQueueIfNeeded(queueSupportState);
@@ -406,7 +411,7 @@ namespace JoinGameAfk.MVP.Controller
                             : null;
                         await WaitForLoopDelayAsync(remainingDelayMs, ct);
                     }
-                    catch (TaskCanceledException)
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
                     {
                         break;
                     }
@@ -1007,7 +1012,8 @@ namespace JoinGameAfk.MVP.Controller
 
         private static string GetQueueName(int queueId, string queueDescription)
         {
-            if (SupportedQueueNames.TryGetValue(queueId, out string? supportedName))
+            if (SupportedQueueNames.TryGetValue(queueId, out string? supportedName)
+                && !string.IsNullOrWhiteSpace(supportedName))
                 return supportedName;
 
             if (KnownQueueNames.TryGetValue(queueId, out string? knownName))
@@ -1030,6 +1036,8 @@ namespace JoinGameAfk.MVP.Controller
 
         private static DashboardStatus ApplyQueueSupportWarning(DashboardStatus status, QueueSupportState queueSupportState)
         {
+            status = ApplyQueueFlowStatus(status, queueSupportState);
+
             if (!queueSupportState.IsUnsupported)
                 return status;
 
@@ -1039,6 +1047,26 @@ namespace JoinGameAfk.MVP.Controller
                 UnsupportedQueueText = queueSupportState.QueueName,
                 UnsupportedModeText = FormatUnsupportedModeText(queueSupportState)
             };
+        }
+
+        private static DashboardStatus ApplyQueueFlowStatus(DashboardStatus status, QueueSupportState queueSupportState)
+        {
+            return IsReadyCheckSkippedQueue(queueSupportState)
+                    ? status with { SkipsReadyCheck = true }
+                    : status;
+        }
+
+        private static ClientPhase GetEffectivePhaseForQueueFlow(ClientPhase phase, QueueSupportState queueSupportState)
+        {
+            return phase == ClientPhase.ReadyCheck && IsReadyCheckSkippedQueue(queueSupportState)
+                ? ClientPhase.ChampSelect
+                : phase;
+        }
+
+        private static bool IsReadyCheckSkippedQueue(QueueSupportState queueSupportState)
+        {
+            return queueSupportState.QueueId is int queueId
+                && ReadyCheckSkippedQueueIds.Contains(queueId);
         }
 
         private static string FormatUnsupportedQueueLogText(QueueSupportState queueSupportState)

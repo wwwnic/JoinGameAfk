@@ -173,6 +173,15 @@ namespace JoinGameAfk.View
                 new DashboardStatus { ReadyCheckResponse = "Declined" });
         }
 
+        private void PreviewReadyAcceptSkippedReadyCheck_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(
+                ClientPhase.ReadyCheck,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                new DashboardStatus { SkipsReadyCheck = true });
+        }
+
         private void PreviewReadyAcceptChampionSelect_Click(object sender, RoutedEventArgs e)
         {
             PreviewReadyAccept(ClientPhase.ChampSelect, isWatcherRunning: true, isClientConnected: true);
