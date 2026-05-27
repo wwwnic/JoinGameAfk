@@ -247,7 +247,7 @@ jobs:
 
           'Thanks for using JoinGameAfk. If you are not sure which file to download, choose `JoinGameAfk.exe`.' | Out-File release-notes.md -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
-          "[https://github.com/wwwnic/JoinGameAfk/releases/download/$currentTag/JoinGameAfk.exe](https://github.com/wwwnic/JoinGameAfk/releases/download/$currentTag/JoinGameAfk.exe)" | Out-File release-notes.md -Append -Encoding utf8
+          "Download recommended version: [JoinGameAfk.exe](https://github.com/wwwnic/JoinGameAfk/releases/download/$currentTag/JoinGameAfk.exe)" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Website and README: https://wwwnic.github.io/JoinGameAfk/" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
