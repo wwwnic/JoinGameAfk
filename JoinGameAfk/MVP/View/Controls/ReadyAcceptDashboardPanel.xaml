@@ -1,0 +1,272 @@
+<UserControl x:Class="JoinGameAfk.View.Controls.ReadyAcceptDashboardPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:JoinGameAfk.View.Controls"
+             MinHeight="420"
+             Background="Transparent"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+    <UserControl.Resources>
+        <Style x:Key="ReadyStepStyle" TargetType="Border">
+            <Setter Property="MinHeight" Value="88" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Active">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </Trigger>
+                <Trigger Property="Tag" Value="Done">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentGreenBrush}" />
+                </Trigger>
+                <Trigger Property="Tag" Value="Standby">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource PhaseHoverBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ReadyStepTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="ReadyStepBodyStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style x:Key="ReadyAnimationPanelStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="20" />
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Standby">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource PhaseHoverBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource AppSurfaceBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="16" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Border x:Name="ReadyAnimationPanel"
+                    Grid.Row="0"
+                    Style="{StaticResource ReadyAnimationPanelStyle}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <controls:PhaseStatusIndicator x:Name="ReadyPhaseIndicator"
+                                                   Width="220"
+                                                   Height="220"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
+
+                    <TextBlock x:Name="ReadyStatePillText"
+                               Text="Stopped"
+                               Margin="0,18,0,0"
+                               FontSize="18"
+                               FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="Ready accept"
+                               Margin="0,5,0,0"
+                               Style="{StaticResource EyebrowTextStyle}"
+                               TextAlignment="Center" />
+
+                    <Border x:Name="UnsupportedQueuePanel"
+                            Margin="0,16,0,0"
+                            MaxWidth="560"
+                            Padding="14,11"
+                            Background="{DynamicResource AppSurfaceBrush}"
+                            BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="Champion select standby"
+                                       FontSize="13"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <TextBlock x:Name="UnsupportedQueueText"
+                                       Text="Current queue is not supported for champion select tools. Ready accept can still run."
+                                       Margin="0,4,0,0"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <UniformGrid Grid.Row="2"
+                         Columns="4"
+                         Rows="1">
+                <Border x:Name="LobbyStep"
+                        Style="{StaticResource ReadyStepStyle}"
+                        Margin="0,0,8,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0"
+                                Width="26"
+                                Height="26"
+                                Background="{DynamicResource AppInputFocusBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="13"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="1"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Lobby"
+                                       Style="{StaticResource ReadyStepTitleStyle}" />
+                            <TextBlock x:Name="LobbyStepText"
+                                       Text="Waiting"
+                                       Style="{StaticResource ReadyStepBodyStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border x:Name="QueueStep"
+                        Style="{StaticResource ReadyStepStyle}"
+                        Margin="4,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0"
+                                Width="26"
+                                Height="26"
+                                Background="{DynamicResource AppInputFocusBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="13"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="2"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Queue"
+                                       Style="{StaticResource ReadyStepTitleStyle}" />
+                            <TextBlock x:Name="QueueStepText"
+                                       Text="Waiting"
+                                       Style="{StaticResource ReadyStepBodyStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border x:Name="ReadyCheckStep"
+                        Style="{StaticResource ReadyStepStyle}"
+                        Margin="4,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0"
+                                Width="26"
+                                Height="26"
+                                Background="{DynamicResource AppInputFocusBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="13"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="3"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Ready check"
+                                       Style="{StaticResource ReadyStepTitleStyle}" />
+                            <TextBlock x:Name="ReadyCheckStepText"
+                                       Text="Waiting"
+                                       Style="{StaticResource ReadyStepBodyStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border x:Name="ChampionSelectStep"
+                        Style="{StaticResource ReadyStepStyle}"
+                        Margin="8,0,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0"
+                                Width="26"
+                                Height="26"
+                                Background="{DynamicResource AppInputFocusBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="13"
+                                VerticalAlignment="Center">
+                            <TextBlock Text="4"
+                                       FontSize="12"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Grid.Column="2"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Champion select"
+                                       Style="{StaticResource ReadyStepTitleStyle}" />
+                            <TextBlock x:Name="ChampionSelectStepText"
+                                       Text="Waiting"
+                                       Style="{StaticResource ReadyStepBodyStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </UniformGrid>
+        </Grid>
+    </Border>
+</UserControl>

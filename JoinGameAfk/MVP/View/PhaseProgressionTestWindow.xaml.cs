@@ -24,6 +24,7 @@ namespace JoinGameAfk.View
             _logsPage = logsPage;
             _canApply = canApply;
             PreviewStoppedIndicator();
+            PreviewReadyAccept(ClientPhase.Unknown, isWatcherRunning: false, isClientConnected: false);
         }
 
         private void PreviewNeutralIndicator_Click(object sender, RoutedEventArgs e)
@@ -124,6 +125,78 @@ namespace JoinGameAfk.View
             PreviewIndicator(ClientPhase.InGame, isWatcherRunning: true, isClientConnected: true);
         }
 
+        private void PreviewReadyAcceptStopped_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(ClientPhase.Unknown, isWatcherRunning: false, isClientConnected: false);
+        }
+
+        private void PreviewReadyAcceptLobby_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(ClientPhase.Lobby, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewReadyAcceptQueue_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(ClientPhase.Matchmaking, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewReadyAcceptCountdown_Click(object sender, RoutedEventArgs e)
+        {
+            const long countdownMilliseconds = 5000;
+            PreviewReadyAccept(
+                ClientPhase.ReadyCheck,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                new DashboardStatus
+                {
+                    ReadyCheckAutoAcceptDelayMilliseconds = countdownMilliseconds,
+                    ReadyCheckAutoAcceptTimeLeftMilliseconds = countdownMilliseconds,
+                    ReadyCheckAutoAcceptObservedAtUtc = DateTime.UtcNow
+                });
+        }
+
+        private void PreviewReadyAcceptAccepted_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(
+                ClientPhase.ReadyCheck,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                new DashboardStatus { ReadyCheckResponse = "Accepted" });
+        }
+
+        private void PreviewReadyAcceptDeclined_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(
+                ClientPhase.ReadyCheck,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                new DashboardStatus { ReadyCheckResponse = "Declined" });
+        }
+
+        private void PreviewReadyAcceptChampionSelect_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(ClientPhase.ChampSelect, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewReadyAcceptInGame_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(ClientPhase.InGame, isWatcherRunning: true, isClientConnected: true);
+        }
+
+        private void PreviewReadyAcceptUnsupportedQueue_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewReadyAccept(
+                ClientPhase.ChampSelect,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                new DashboardStatus
+                {
+                    IsUnsupportedMode = true,
+                    UnsupportedQueueText = "Quickplay",
+                    UnsupportedModeText = "Quickplay (queue 490) is not supported for draft tools. Auto-accept can still work here."
+                });
+        }
+
         private void TriggerUnsupportedMode_Click(object sender, RoutedEventArgs e)
         {
             if (!EnsureCanApply())
@@ -221,6 +294,19 @@ namespace JoinGameAfk.View
                 readyCheckAutoAcceptDelayMilliseconds,
                 readyCheckAutoAcceptTimeLeftMilliseconds,
                 readyCheckAutoAcceptObservedAtUtc);
+        }
+
+        private void PreviewReadyAccept(
+            ClientPhase phase,
+            bool isWatcherRunning,
+            bool isClientConnected,
+            DashboardStatus? status = null)
+        {
+            TestReadyAcceptPanel.Update(
+                phase,
+                isWatcherRunning,
+                isClientConnected,
+                status ?? new DashboardStatus());
         }
 
         private void AddChampionPlanItem(string text, List<DashboardChampionPlanItem> target, string statusText)

@@ -219,6 +219,38 @@
             <Setter Property="VerticalAlignment" Value="Top" />
         </Style>
 
+        <Style x:Key="DashboardViewSwitchButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource SecondaryButtonStyle}">
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="9,5" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Opacity" Value="0.72" />
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="Active">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="Opacity" Value="1" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <DataTemplate x:Key="HeaderBanChampionChipTemplate">
             <Border Style="{StaticResource HeaderBanPortraitChipStyle}"
                     ToolTip="{Binding ToolTipText}">
@@ -263,10 +295,21 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="12" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="12" />
                 <RowDefinition x:Name="LogRow" Height="190" />
             </Grid.RowDefinitions>
+
+            <Grid x:Name="DashboardContentHost"
+                  Grid.Row="0">
+                <Grid x:Name="ReadyAcceptTabContent">
+                    <viewControls:ReadyAcceptDashboardPanel x:Name="ReadyAcceptPanel" />
+                </Grid>
+
+                <Grid x:Name="ChampionSelectTabContent">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
             <Border x:Name="HeaderPanel"
                     Grid.Row="0"
@@ -801,8 +844,10 @@
                     </Grid>
                 </Border>
             </Grid>
+                </Grid>
+            </Grid>
 
-            <Border Grid.Row="4"
+            <Border Grid.Row="2"
                     Style="{StaticResource DraftPanelStyle}"
                     Padding="12">
                 <Grid>
@@ -831,9 +876,27 @@
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextSoftBrush}" />
-                        <TextBlock Grid.Column="3"
-                                   Text="Watcher output"
-                                   Style="{StaticResource EyebrowTextStyle}" />
+                        <StackPanel Grid.Column="3"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <TextBlock Text="Watcher output"
+                                       Margin="0,0,10,0"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource EyebrowTextStyle}" />
+                            <Button x:Name="ReadyAcceptDashboardViewButton"
+                                    Content="Ready Accept"
+                                    Click="ReadyAcceptDashboardViewButton_Click"
+                                    AutomationProperties.Name="Show ready accept dashboard"
+                                    ToolTip="Show ready accept"
+                                    Style="{StaticResource DashboardViewSwitchButtonStyle}">
+                            </Button>
+                            <Button x:Name="ChampionSelectDashboardViewButton"
+                                    Content="Champion Select"
+                                    Click="ChampionSelectDashboardViewButton_Click"
+                                    AutomationProperties.Name="Show champion select dashboard"
+                                    ToolTip="Show champion select"
+                                    Style="{StaticResource DashboardViewSwitchButtonStyle}" />
+                        </StackPanel>
                     </Grid>
 
                     <Frame x:Name="EmbeddedLogsFrame"

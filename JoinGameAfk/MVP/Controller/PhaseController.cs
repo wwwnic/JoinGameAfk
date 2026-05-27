@@ -1018,16 +1018,22 @@ namespace JoinGameAfk.MVP.Controller
 
             return status with
             {
-                IsUnsupportedMode = true
+                IsUnsupportedMode = true,
+                UnsupportedQueueText = queueSupportState.QueueName,
+                UnsupportedModeText = FormatUnsupportedModeText(queueSupportState)
             };
+        }
+
+        private static string FormatUnsupportedQueueLogText(QueueSupportState queueSupportState)
+        {
+            return queueSupportState.QueueId is int queueId
+                ? $"{queueSupportState.QueueName} (queue {queueId})"
+                : queueSupportState.QueueName;
         }
 
         private static string FormatUnsupportedModeText(QueueSupportState queueSupportState)
         {
-            string modeText = queueSupportState.QueueId is int queueId
-                ? $"{queueSupportState.QueueName} (queue {queueId})"
-                : queueSupportState.QueueName;
-
+            string modeText = FormatUnsupportedQueueLogText(queueSupportState);
             return $"{modeText} is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, or Ranked Flex; auto-accept can still work here.";
         }
 

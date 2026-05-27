@@ -175,6 +175,53 @@
 
                 <Border Style="{StaticResource TesterSectionStyle}">
                     <StackPanel>
+                        <TextBlock Text="Ready Accept"
+                                   Style="{StaticResource TesterLabelStyle}" />
+                        <controls:ReadyAcceptDashboardPanel x:Name="TestReadyAcceptPanel"
+                                                            Margin="0,0,0,10" />
+                        <WrapPanel>
+                            <Button Content="Stopped"
+                                    Click="PreviewReadyAcceptStopped_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Lobby"
+                                    Click="PreviewReadyAcceptLobby_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="In queue"
+                                    Click="PreviewReadyAcceptQueue_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Ready countdown"
+                                    Click="PreviewReadyAcceptCountdown_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Accepted"
+                                    Click="PreviewReadyAcceptAccepted_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Declined"
+                                    Click="PreviewReadyAcceptDeclined_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Champion select"
+                                    Click="PreviewReadyAcceptChampionSelect_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="In game"
+                                    Click="PreviewReadyAcceptInGame_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                            <Button Content="Unsupported queue"
+                                    Click="PreviewReadyAcceptUnsupportedQueue_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,6" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource TesterSectionStyle}">
+                    <StackPanel>
                         <TextBlock Text="Bans"
                                    Style="{StaticResource TesterLabelStyle}" />
                         <Grid>

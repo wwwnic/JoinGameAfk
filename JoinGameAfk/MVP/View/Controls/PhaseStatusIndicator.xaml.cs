@@ -103,6 +103,12 @@ namespace JoinGameAfk.View.Controls
                 return;
             }
 
+            if (ShouldShowLobbyAnimation())
+            {
+                ShowLobbyAnimation();
+                return;
+            }
+
             StopChampionAnimation();
             StopActivityRing();
             HideReadyCheckResponseGlyph();
@@ -139,6 +145,13 @@ namespace JoinGameAfk.View.Controls
             return _isWatcherRunning
                 && _isClientConnected
                 && _phase == ClientPhase.Matchmaking;
+        }
+
+        private bool ShouldShowLobbyAnimation()
+        {
+            return _isWatcherRunning
+                && _isClientConnected
+                && _phase == ClientPhase.Lobby;
         }
 
         private Brush GetPhaseBrush()
@@ -323,6 +336,28 @@ namespace JoinGameAfk.View.Controls
             PhaseCircle.Fill = ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue);
 
             ApplyActivityRingColors(queueColor, queueColor, shouldAnimateRingColor);
+            ActivityRing.Visibility = Visibility.Visible;
+            ActivityRing.Start(mode, profile);
+            _activeActivityRingMode = mode;
+            _activeActivityRingProfile = profile;
+        }
+
+        private void ShowLobbyAnimation()
+        {
+            StopChampionAnimation();
+
+            Color lobbyColor = ResourceColor("PhaseHoverBrush", Colors.Goldenrod);
+            const PhaseActivityRingMode mode = PhaseActivityRingMode.QueueOrbit;
+            const PhaseActivityRingProfile profile = PhaseActivityRingProfile.Queue;
+            bool shouldAnimateRingColor = ActivityRing.Visibility == Visibility.Visible;
+
+            ChampionGlyph.Visibility = Visibility.Collapsed;
+            CompletionCheck.Visibility = Visibility.Collapsed;
+            HideReadyCheckResponseGlyph();
+            PhaseCircle.Visibility = Visibility.Visible;
+            PhaseCircle.Fill = ResourceBrush("PhaseHoverBrush", Brushes.Goldenrod);
+
+            ApplyActivityRingColors(lobbyColor, lobbyColor, shouldAnimateRingColor);
             ActivityRing.Visibility = Visibility.Visible;
             ActivityRing.Start(mode, profile);
             _activeActivityRingMode = mode;

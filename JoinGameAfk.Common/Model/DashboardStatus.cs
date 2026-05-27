@@ -53,6 +53,8 @@ namespace JoinGameAfk.Model
         public string PickLockText { get; init; } = "—";
         public string ChampSelectSubPhase { get; init; } = "";
         public bool IsUnsupportedMode { get; init; }
+        public string UnsupportedQueueText { get; init; } = "";
+        public string UnsupportedModeText { get; init; } = "";
         public string ReadyCheckResponse { get; init; } = "";
         public long ReadyCheckAutoAcceptDelayMilliseconds { get; init; } = -1;
         public long ReadyCheckAutoAcceptTimeLeftMilliseconds { get; init; } = -1;

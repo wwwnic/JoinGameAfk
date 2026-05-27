@@ -19,7 +19,14 @@ namespace JoinGameAfk.View
         private const double MinimumLogRowHeight = 150;
         private readonly ChampSelectSettings _settings;
         private readonly DraftCountdownTimer _draftCountdownTimer;
+        private Button[] _dashboardViewButtons = [];
+        private FrameworkElement[] _dashboardTabContents = [];
         private DashboardStatus _lastDashboardStatus = new();
+        private ClientPhase _currentPhase = ClientPhase.Unknown;
+        private bool _isWatcherRunning;
+        private bool _isClientConnected;
+        private int _activeDashboardViewIndex;
+        private bool _hasManualDashboardViewOverride;
 
         public PhaseProgressionPage(ChampSelectSettings settings)
         {
@@ -27,11 +34,14 @@ namespace JoinGameAfk.View
             InitializeComponent();
 
             _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
+            _dashboardViewButtons = [ReadyAcceptDashboardViewButton, ChampionSelectDashboardViewButton];
+            _dashboardTabContents = [ReadyAcceptTabContent, ChampionSelectTabContent];
 
             SetWatcherState(false);
             SetClientConnection(false);
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
+            ActivateDashboardView(0);
             Loaded += (_, _) => QueueLogRowResize();
             Unloaded += PhaseProgressionPage_Unloaded;
             _settings.Saved += Settings_Saved;
@@ -78,6 +88,13 @@ namespace JoinGameAfk.View
         {
             Dispatcher.TryInvoke(() =>
             {
+                bool phaseChanged = phase != _currentPhase;
+                _currentPhase = phase;
+                if (phaseChanged)
+                    _hasManualDashboardViewOverride = false;
+
+                SynchronizeDashboardViewForPhase();
+                RefreshReadyAcceptPanel();
                 PhaseChanged?.Invoke(phase);
             });
         }
@@ -86,6 +103,12 @@ namespace JoinGameAfk.View
         {
             Dispatcher.TryInvoke(() =>
             {
+                _isWatcherRunning = isRunning;
+                if (!isRunning)
+                    _hasManualDashboardViewOverride = false;
+
+                SynchronizeDashboardViewForPhase();
+                RefreshReadyAcceptPanel();
                 WatcherStateChanged?.Invoke(isRunning);
             });
         }
@@ -94,6 +117,12 @@ namespace JoinGameAfk.View
         {
             Dispatcher.TryInvoke(() =>
             {
+                _isClientConnected = isConnected;
+                if (!isConnected)
+                    _hasManualDashboardViewOverride = false;
+
+                SynchronizeDashboardViewForPhase();
+                RefreshReadyAcceptPanel();
                 ClientConnectionChanged?.Invoke(isConnected);
             });
         }
@@ -104,7 +133,60 @@ namespace JoinGameAfk.View
             {
                 _lastDashboardStatus = status;
                 RenderDashboardStatus(status);
+                SynchronizeDashboardViewForPhase();
+                RefreshReadyAcceptPanel();
             });
+        }
+
+        private void ReadyAcceptDashboardViewButton_Click(object sender, RoutedEventArgs e)
+        {
+            _hasManualDashboardViewOverride = true;
+            ActivateDashboardView(0);
+        }
+
+        private void ChampionSelectDashboardViewButton_Click(object sender, RoutedEventArgs e)
+        {
+            _hasManualDashboardViewOverride = true;
+            ActivateDashboardView(1);
+        }
+
+        private void SynchronizeDashboardViewForPhase()
+        {
+            if (_hasManualDashboardViewOverride)
+                return;
+
+            ActivateDashboardView(GetPreferredDashboardViewIndex(_currentPhase, _lastDashboardStatus));
+        }
+
+        private void ActivateDashboardView(int index)
+        {
+            if (index < 0 || index >= _dashboardTabContents.Length)
+                index = 0;
+
+            _activeDashboardViewIndex = index;
+
+            for (int i = 0; i < _dashboardTabContents.Length; i++)
+            {
+                _dashboardTabContents[i].Visibility = i == index ? Visibility.Visible : Visibility.Hidden;
+                _dashboardViewButtons[i].Tag = i == index ? "Active" : null;
+            }
+
+            QueueLogRowResize();
+        }
+
+        private static int GetPreferredDashboardViewIndex(ClientPhase phase, DashboardStatus status)
+        {
+            if (status.IsUnsupportedMode)
+                return 0;
+
+            return phase is ClientPhase.ChampSelect or ClientPhase.Planning
+                ? 1
+                : 0;
+        }
+
+        private void RefreshReadyAcceptPanel()
+        {
+            ReadyAcceptPanel.Update(_currentPhase, _isWatcherRunning, _isClientConnected, _lastDashboardStatus);
         }
 
         private void RenderDashboardStatus(DashboardStatus status)
@@ -441,13 +523,12 @@ namespace JoinGameAfk.View
 
         private void UpdateLogRowHeight()
         {
-            if (ActualHeight <= 0 || HeaderPanel.ActualHeight <= 0 || DraftLayoutGrid.ActualHeight <= 0)
+            if (ActualHeight <= 0 || DashboardContentHost.ActualHeight <= 0)
                 return;
 
             double availableHeight = ActualHeight
-                - HeaderPanel.ActualHeight
-                - DraftLayoutGrid.ActualHeight
-                - 24;
+                - DashboardContentHost.ActualHeight
+                - 12;
             double targetHeight = Math.Max(MinimumLogRowHeight, availableHeight);
 
             if (!LogRow.Height.IsAbsolute || Math.Abs(LogRow.Height.Value - targetHeight) > 0.5)
