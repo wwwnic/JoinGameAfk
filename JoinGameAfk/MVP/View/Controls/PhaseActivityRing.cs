@@ -204,7 +204,7 @@ namespace JoinGameAfk.View.Controls
             if (sweepDegrees <= 0.5)
                 return;
 
-            DrawArc(drawingContext, center, orbitRadius, -90, sweepDegrees, RingColor, 236, 1.35);
+            DrawArc(drawingContext, center, orbitRadius, 90, sweepDegrees, RingColor, 236, 1.35);
         }
 
         private void DrawQueueOrbit(DrawingContext drawingContext, Point center, double size, double elapsedSeconds)
