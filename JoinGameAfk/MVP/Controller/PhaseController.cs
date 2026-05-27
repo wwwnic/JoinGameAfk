@@ -24,6 +24,8 @@ namespace JoinGameAfk.MVP.Controller
             TimeSpan.FromSeconds(30)
         ];
 
+        private const int CustomQueueIdMinimum = 3000;
+
         private static readonly IReadOnlyDictionary<int, string> SupportedQueueNames = new Dictionary<int, string>
         {
             [400] = "Normal Draft",
@@ -32,8 +34,6 @@ namespace JoinGameAfk.MVP.Controller
             [440] = "Ranked Flex",
             [3110] = "Custom Game Draft"
         };
-
-        private static readonly HashSet<int> ReadyCheckSkippedQueueIds = [3110];
 
         private static readonly IReadOnlyDictionary<int, string> KnownQueueNames = new Dictionary<int, string>
         {
@@ -57,7 +57,8 @@ namespace JoinGameAfk.MVP.Controller
             [1900] = "Pick URF",
             [2300] = "Brawl",
             [2400] = "ARAM: Mayhem",
-            [3110] = "Custom Game Draft"
+            [3110] = "Custom Game Draft",
+            [3120] = "Custom Game Classic"
         };
 
         private readonly record struct LcuEventSnapshot(
@@ -1005,9 +1006,14 @@ namespace JoinGameAfk.MVP.Controller
 
         private static QueueSupportState CreateQueueSupportState(int queueId, string queueDescription)
         {
-            bool isSupported = SupportedQueueNames.ContainsKey(queueId);
+            bool isSupported = IsSupportedQueueId(queueId);
             string queueName = GetQueueName(queueId, queueDescription);
             return new QueueSupportState(queueId, queueName, true, isSupported);
+        }
+
+        private static bool IsSupportedQueueId(int queueId)
+        {
+            return SupportedQueueNames.ContainsKey(queueId);
         }
 
         private static string GetQueueName(int queueId, string queueDescription)
@@ -1019,9 +1025,23 @@ namespace JoinGameAfk.MVP.Controller
             if (KnownQueueNames.TryGetValue(queueId, out string? knownName))
                 return knownName;
 
+            if (IsCustomQueueId(queueId))
+                return FormatCustomQueueName(queueDescription);
+
             return !string.IsNullOrWhiteSpace(queueDescription)
                 ? queueDescription.Trim()
                 : $"Queue {queueId}";
+        }
+
+        private static string FormatCustomQueueName(string queueDescription)
+        {
+            if (string.IsNullOrWhiteSpace(queueDescription))
+                return "Custom Game";
+
+            string description = queueDescription.Trim();
+            return string.Equals(description, "CLASSIC", StringComparison.OrdinalIgnoreCase)
+                ? "Custom Game Classic"
+                : $"Custom Game {description}";
         }
 
         private static DashboardStatus BuildNonChampSelectDashboardStatus(QueueSupportState queueSupportState)
@@ -1066,7 +1086,12 @@ namespace JoinGameAfk.MVP.Controller
         private static bool IsReadyCheckSkippedQueue(QueueSupportState queueSupportState)
         {
             return queueSupportState.QueueId is int queueId
-                && ReadyCheckSkippedQueueIds.Contains(queueId);
+                && IsCustomQueueId(queueId);
+        }
+
+        private static bool IsCustomQueueId(int queueId)
+        {
+            return queueId >= CustomQueueIdMinimum;
         }
 
         private static string FormatUnsupportedQueueLogText(QueueSupportState queueSupportState)
