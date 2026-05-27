@@ -20,15 +20,13 @@ namespace JoinGameAfk.View.Controls
             DashboardStatus status)
         {
             bool isStandbyIndicator = ShouldUseStandbyIndicator(phase, status);
-            ClientPhase indicatorPhase = isStandbyIndicator
-                ? ClientPhase.Unknown
-                : phase;
+            ClientPhase indicatorPhase = GetIndicatorPhase(phase, isStandbyIndicator);
 
             ReadyPhaseIndicator.Update(
                 indicatorPhase,
                 isWatcherRunning,
                 isClientConnected,
-                GetPhaseIndicatorState(indicatorPhase, status),
+                GetPhaseIndicatorState(phase, indicatorPhase, status),
                 status.ReadyCheckAutoAcceptDelayMilliseconds,
                 status.ReadyCheckAutoAcceptTimeLeftMilliseconds,
                 status.ReadyCheckAutoAcceptObservedAtUtc);
@@ -145,9 +143,25 @@ namespace JoinGameAfk.View.Controls
             };
         }
 
-        private static string GetPhaseIndicatorState(ClientPhase phase, DashboardStatus status)
+        private static ClientPhase GetIndicatorPhase(ClientPhase phase, bool isStandbyIndicator)
         {
-            return phase == ClientPhase.ReadyCheck
+            if (isStandbyIndicator)
+                return ClientPhase.Unknown;
+
+            return ShouldShowAcceptedReadyCheckIndicator(phase)
+                ? ClientPhase.ReadyCheck
+                : phase;
+        }
+
+        private static string GetPhaseIndicatorState(
+            ClientPhase actualPhase,
+            ClientPhase indicatorPhase,
+            DashboardStatus status)
+        {
+            if (ShouldShowAcceptedReadyCheckIndicator(actualPhase))
+                return "Accepted";
+
+            return indicatorPhase == ClientPhase.ReadyCheck
                 ? status.ReadyCheckResponse
                 : string.Empty;
         }
@@ -175,6 +189,11 @@ namespace JoinGameAfk.View.Controls
         private static bool IsChampionSelectStandbyPhase(ClientPhase phase)
         {
             return phase is ClientPhase.ChampSelect or ClientPhase.Planning or ClientPhase.InGame;
+        }
+
+        private static bool ShouldShowAcceptedReadyCheckIndicator(ClientPhase phase)
+        {
+            return phase is ClientPhase.ChampSelect or ClientPhase.Planning;
         }
 
         private static bool TryGetCountdownText(DashboardStatus status, out string countdownText)
