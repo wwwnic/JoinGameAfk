@@ -17,6 +17,7 @@ namespace JoinGameAfk.View.Controls
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private string _champSelectSubPhase = string.Empty;
+        private bool _showChampionWarningGlyph;
         private long _readyCheckAutoAcceptDelayMilliseconds = -1;
         private long _readyCheckAutoAcceptTimeLeftMilliseconds = -1;
         private DateTime _readyCheckAutoAcceptObservedAtUtc = DateTime.MinValue;
@@ -56,12 +57,14 @@ namespace JoinGameAfk.View.Controls
             string champSelectSubPhase,
             long readyCheckAutoAcceptDelayMilliseconds = -1,
             long readyCheckAutoAcceptTimeLeftMilliseconds = -1,
-            DateTime readyCheckAutoAcceptObservedAtUtc = default)
+            DateTime readyCheckAutoAcceptObservedAtUtc = default,
+            bool showChampionWarningGlyph = false)
         {
             _phase = phase;
             _isWatcherRunning = isWatcherRunning;
             _isClientConnected = isClientConnected;
             _champSelectSubPhase = champSelectSubPhase;
+            _showChampionWarningGlyph = showChampionWarningGlyph;
             _readyCheckAutoAcceptDelayMilliseconds = readyCheckAutoAcceptDelayMilliseconds;
             _readyCheckAutoAcceptTimeLeftMilliseconds = readyCheckAutoAcceptTimeLeftMilliseconds;
             _readyCheckAutoAcceptObservedAtUtc = readyCheckAutoAcceptObservedAtUtc;
@@ -76,6 +79,12 @@ namespace JoinGameAfk.View.Controls
             if (ShouldShowCompletedChampionIndicator())
             {
                 ShowCompletedChampionIndicator();
+                return;
+            }
+
+            if (ShouldShowUnavailableOptionsWarning())
+            {
+                ShowUnavailableOptionsWarning();
                 return;
             }
 
@@ -113,6 +122,7 @@ namespace JoinGameAfk.View.Controls
             StopActivityRing();
             HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             ChampionGlyph.Visibility = Visibility.Collapsed;
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = GetPhaseBrush();
@@ -123,6 +133,11 @@ namespace JoinGameAfk.View.Controls
             return _isWatcherRunning
                 && _isClientConnected
                 && _phase is ClientPhase.ChampSelect or ClientPhase.Planning;
+        }
+
+        private bool ShouldShowUnavailableOptionsWarning()
+        {
+            return ShouldShowChampionAnimation() && _showChampionWarningGlyph;
         }
 
         private bool ShouldShowCompletedChampionIndicator()
@@ -191,6 +206,7 @@ namespace JoinGameAfk.View.Controls
             PhaseCircle.Visibility = Visibility.Collapsed;
             HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             ChampionGlyph.Visibility = Visibility.Visible;
             ApplyChampionAnimationPalette(palette, animate: false);
             ShowChampionActivityRing(palette, animate: false);
@@ -202,6 +218,7 @@ namespace JoinGameAfk.View.Controls
             PhaseCircle.Visibility = Visibility.Collapsed;
             HideReadyCheckResponseGlyph();
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             ChampionGlyph.Visibility = Visibility.Visible;
 
             bool paletteChanged = _activeChampionAnimationPalette != palette;
@@ -218,6 +235,31 @@ namespace JoinGameAfk.View.Controls
             ChampionPolyhedron.Start();
             _isChampionAnimationRunning = true;
             _activeChampionAnimationPalette = palette;
+        }
+
+        private void ShowUnavailableOptionsWarning()
+        {
+            StopChampionAnimation();
+            HideReadyCheckResponseGlyph();
+            CompletionCheck.Visibility = Visibility.Collapsed;
+            ChampionGlyph.Visibility = Visibility.Collapsed;
+            PhaseCircle.Visibility = Visibility.Collapsed;
+            UnavailableWarningGlyph.Visibility = Visibility.Visible;
+
+            Color warningColor = ResourceColor("PhaseBanBrush", Colors.IndianRed);
+            Color warningPulseColor = ResourceColor("UnavailableBannedTextBrush", Color.FromRgb(254, 202, 202));
+            const PhaseActivityRingMode mode = PhaseActivityRingMode.ChampionSelectOrbit;
+            const PhaseActivityRingProfile profile = PhaseActivityRingProfile.Ban;
+            bool activityRingStateChanged = _activeActivityRingMode != mode || _activeActivityRingProfile != profile;
+
+            ApplyActivityRingColors(
+                warningColor,
+                warningPulseColor,
+                ActivityRing.Visibility == Visibility.Visible && activityRingStateChanged);
+            ActivityRing.Visibility = Visibility.Visible;
+            ActivityRing.Start(mode, profile);
+            _activeActivityRingMode = mode;
+            _activeActivityRingProfile = profile;
         }
 
         private void ShowReadyCheckAnimation()
@@ -241,6 +283,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             HideReadyCheckResponseGlyph();
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseReadyCheckBrush", Brushes.ForestGreen);
@@ -262,6 +305,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             PhaseCircle.Visibility = Visibility.Collapsed;
             ReadyCheckResponseGlyph.Visibility = Visibility.Visible;
             ReadyCheckAcceptedGlyph.Visibility = Visibility.Visible;
@@ -278,6 +322,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             PhaseCircle.Visibility = Visibility.Collapsed;
             ReadyCheckResponseGlyph.Visibility = Visibility.Visible;
             ReadyCheckAcceptedGlyph.Visibility = Visibility.Collapsed;
@@ -331,6 +376,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             HideReadyCheckResponseGlyph();
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseLobbyBrush", Brushes.DodgerBlue);
@@ -353,6 +399,7 @@ namespace JoinGameAfk.View.Controls
 
             ChampionGlyph.Visibility = Visibility.Collapsed;
             CompletionCheck.Visibility = Visibility.Collapsed;
+            HideUnavailableWarningGlyph();
             HideReadyCheckResponseGlyph();
             PhaseCircle.Visibility = Visibility.Visible;
             PhaseCircle.Fill = ResourceBrush("PhaseHoverBrush", Brushes.Goldenrod);
@@ -373,6 +420,7 @@ namespace JoinGameAfk.View.Controls
             HideReadyCheckResponseGlyph();
             ChampionGlyph.Visibility = Visibility.Visible;
             CompletionCheck.Visibility = Visibility.Visible;
+            HideUnavailableWarningGlyph();
 
             ApplyChampionAnimationPalette(palette, animate: _isChampionAnimationRunning && paletteChanged);
             ShowChampionActivityRing(palette, animate: ActivityRing.Visibility == Visibility.Visible && paletteChanged);
@@ -411,6 +459,11 @@ namespace JoinGameAfk.View.Controls
             ReadyCheckResponseGlyph.Visibility = Visibility.Collapsed;
             ReadyCheckAcceptedGlyph.Visibility = Visibility.Collapsed;
             ReadyCheckDeclinedGlyph.Visibility = Visibility.Collapsed;
+        }
+
+        private void HideUnavailableWarningGlyph()
+        {
+            UnavailableWarningGlyph.Visibility = Visibility.Collapsed;
         }
 
         private ReadyCheckResponseState GetReadyCheckResponseState()
@@ -643,6 +696,10 @@ namespace JoinGameAfk.View.Controls
             double circleSize = NearestEvenPixelSize(Math.Clamp(ringSize * 0.38, 10, 14));
             PhaseCircle.Width = circleSize;
             PhaseCircle.Height = circleSize;
+
+            double unavailableWarningSize = NearestEvenPixelSize(Math.Clamp(ringSize * 0.72, 18, 22));
+            UnavailableWarningGlyph.Width = unavailableWarningSize;
+            UnavailableWarningGlyph.Height = unavailableWarningSize;
         }
 
         private static double FloorToEvenPixelSize(double value)

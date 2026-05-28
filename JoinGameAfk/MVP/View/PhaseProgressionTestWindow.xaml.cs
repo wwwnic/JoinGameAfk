@@ -105,6 +105,11 @@ namespace JoinGameAfk.View
             PreviewChampionSelectIndicator("Pick");
         }
 
+        private void PreviewOptionsUnavailableIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            PreviewChampionSelectIndicator("Pick", showChampionWarningGlyph: true);
+        }
+
         private void PreviewPickDoneIndicator_Click(object sender, RoutedEventArgs e)
         {
             PreviewChampionSelectIndicator("Pick done");
@@ -276,9 +281,14 @@ namespace JoinGameAfk.View
             Close();
         }
 
-        private void PreviewChampionSelectIndicator(string champSelectSubPhase)
+        private void PreviewChampionSelectIndicator(string champSelectSubPhase, bool showChampionWarningGlyph = false)
         {
-            PreviewIndicator(ClientPhase.ChampSelect, isWatcherRunning: true, isClientConnected: true, champSelectSubPhase);
+            PreviewIndicator(
+                ClientPhase.ChampSelect,
+                isWatcherRunning: true,
+                isClientConnected: true,
+                champSelectSubPhase,
+                showChampionWarningGlyph: showChampionWarningGlyph);
         }
 
         private void PreviewStoppedIndicator()
@@ -293,7 +303,8 @@ namespace JoinGameAfk.View
             string champSelectSubPhase = "",
             long readyCheckAutoAcceptDelayMilliseconds = -1,
             long readyCheckAutoAcceptTimeLeftMilliseconds = -1,
-            DateTime readyCheckAutoAcceptObservedAtUtc = default)
+            DateTime readyCheckAutoAcceptObservedAtUtc = default,
+            bool showChampionWarningGlyph = false)
         {
             TestPhaseIndicator.Update(
                 phase,
@@ -302,7 +313,8 @@ namespace JoinGameAfk.View
                 champSelectSubPhase,
                 readyCheckAutoAcceptDelayMilliseconds,
                 readyCheckAutoAcceptTimeLeftMilliseconds,
-                readyCheckAutoAcceptObservedAtUtc);
+                readyCheckAutoAcceptObservedAtUtc,
+                showChampionWarningGlyph);
         }
 
         private void PreviewReadyAccept(

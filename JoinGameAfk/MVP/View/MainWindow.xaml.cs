@@ -506,7 +506,8 @@ namespace JoinGameAfk.View
                 GetPhaseIndicatorState(),
                 _lastDashboardStatus.ReadyCheckAutoAcceptDelayMilliseconds,
                 _lastDashboardStatus.ReadyCheckAutoAcceptTimeLeftMilliseconds,
-                _lastDashboardStatus.ReadyCheckAutoAcceptObservedAtUtc);
+                _lastDashboardStatus.ReadyCheckAutoAcceptObservedAtUtc,
+                _lastDashboardStatus.AllConfiguredOptionsUnavailable);
         }
 
         private string GetPhaseIndicatorState()

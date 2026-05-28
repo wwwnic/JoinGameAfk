@@ -29,7 +29,8 @@ namespace JoinGameAfk.View.Controls
                 GetPhaseIndicatorState(phase, indicatorPhase, status),
                 status.ReadyCheckAutoAcceptDelayMilliseconds,
                 status.ReadyCheckAutoAcceptTimeLeftMilliseconds,
-                status.ReadyCheckAutoAcceptObservedAtUtc);
+                status.ReadyCheckAutoAcceptObservedAtUtc,
+                status.AllConfiguredOptionsUnavailable);
 
             ReadyAnimationPanel.Tag = isStandbyIndicator ? "Standby" : null;
             ReadyPhaseIndicator.Opacity = isStandbyIndicator ? 0.62 : 1;

@@ -250,6 +250,8 @@ public class ChampSelect : IPhaseHandler
             localBanActionId,
             pickChoices,
             banChoices,
+            mergedPickIds,
+            mergedBanIds,
             ownershipSnapshot,
             assignedPosition,
             champSelectPhase,
@@ -261,7 +263,24 @@ public class ChampSelect : IPhaseHandler
             _hasHoveredPick);
     }
 
-    private DashboardStatus BuildDashboardStatus(JsonElement root, int localPlayerCellId, int pickActionId, int banActionId, IReadOnlyList<ChampionPlanChoice> pickChoices, IReadOnlyList<ChampionPlanChoice> banChoices, ChampionOwnershipSnapshot ownershipSnapshot, Position assignedPosition, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, string? localPlayerActiveActionType, bool localPlayerPickCompleted, bool localPlayerBanCompleted, bool localPlayerPlanningHoverCompleted)
+    private DashboardStatus BuildDashboardStatus(
+        JsonElement root,
+        int localPlayerCellId,
+        int pickActionId,
+        int banActionId,
+        IReadOnlyList<ChampionPlanChoice> pickChoices,
+        IReadOnlyList<ChampionPlanChoice> banChoices,
+        IReadOnlyCollection<int> pickChampionIds,
+        IReadOnlyCollection<int> banChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        Position assignedPosition,
+        string champSelectPhase,
+        long timeLeftMs,
+        DateTime timeLeftObservedAtUtc,
+        string? localPlayerActiveActionType,
+        bool localPlayerPickCompleted,
+        bool localPlayerBanCompleted,
+        bool localPlayerPlanningHoverCompleted)
     {
         var activeLockCountdown = GetActiveLockCountdownStatus(champSelectPhase, localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
 
@@ -279,6 +298,18 @@ public class ChampSelect : IPhaseHandler
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
             BanLockText = BuildLockText(_settings.BanLockDelaySeconds, _manualBanSelectionOverride),
             ChampSelectSubPhase = GetSubPhaseLabel(champSelectPhase, localPlayerActiveActionType, localPlayerPickCompleted, localPlayerBanCompleted, localPlayerPlanningHoverCompleted),
+            AllConfiguredOptionsUnavailable = HasAllConfiguredOptionsUnavailableWarning(
+                root,
+                localPlayerCellId,
+                pickActionId,
+                banActionId,
+                pickChampionIds,
+                banChampionIds,
+                ownershipSnapshot,
+                champSelectPhase,
+                localPlayerActiveActionType,
+                localPlayerPickCompleted,
+                localPlayerBanCompleted),
             TimeLeftSeconds = GetDisplayTimeLeftSeconds(timeLeftMs),
             TimeLeftMilliseconds = Math.Max(0, timeLeftMs),
             TimeLeftObservedAtUtc = timeLeftObservedAtUtc,
@@ -308,6 +339,52 @@ public class ChampSelect : IPhaseHandler
                 timeLeftObservedAtUtc),
             _ => new ActiveLockCountdownStatus(string.Empty, -1, DateTime.MinValue)
         };
+    }
+
+    private bool HasAllConfiguredOptionsUnavailableWarning(
+        JsonElement root,
+        int localPlayerCellId,
+        int pickActionId,
+        int banActionId,
+        IReadOnlyCollection<int> pickChampionIds,
+        IReadOnlyCollection<int> banChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        string champSelectPhase,
+        string? localPlayerActiveActionType,
+        bool localPlayerPickCompleted,
+        bool localPlayerBanCompleted)
+    {
+        if (!localPlayerPickCompleted
+            && pickActionId != 0
+            && (IsPlanningPhase(champSelectPhase) || string.Equals(localPlayerActiveActionType, "pick", StringComparison.Ordinal)))
+        {
+            return AreAllConfiguredOptionsUnavailable(
+                root,
+                localPlayerCellId,
+                pickActionId,
+                pickChampionIds,
+                _failedPickChampionIds,
+                ownershipSnapshot,
+                _manualPickSelectionOverride,
+                isPickAction: true);
+        }
+
+        if (!localPlayerBanCompleted
+            && banActionId != 0
+            && string.Equals(localPlayerActiveActionType, "ban", StringComparison.Ordinal))
+        {
+            return AreAllConfiguredOptionsUnavailable(
+                root,
+                localPlayerCellId,
+                banActionId,
+                banChampionIds,
+                _failedBanChampionIds,
+                ChampionOwnershipSnapshot.Unknown,
+                _manualBanSelectionOverride,
+                isPickAction: false);
+        }
+
+        return false;
     }
 
     private ActiveLockCountdownStatus GetPlanningHoverCountdownStatus()
@@ -1206,16 +1283,38 @@ public class ChampSelect : IPhaseHandler
         bool manualSelectionOverride,
         bool isPickAction)
     {
-        if (manualSelectionOverride || preferredChampionIds.Count == 0)
+        if (!AreAllConfiguredOptionsUnavailable(
+            root,
+            localPlayerCellId,
+            actionId,
+            preferredChampionIds,
+            excludedChampionIds,
+            ownershipSnapshot,
+            manualSelectionOverride,
+            isPickAction))
+        {
             return;
-
-        if (HasAvailableConfiguredChampion(root, localPlayerCellId, actionId, preferredChampionIds, excludedChampionIds, ownershipSnapshot, isPickAction))
-            return;
+        }
 
         TryPlaySoundAlertOnce(
             SoundAlertIds.AllOptionsUnavailable,
             $"{sessionId}:{SoundAlertIds.AllOptionsUnavailable}:{actionId}:{GetActionLabel(isPickAction)}",
             $"{GetActionLabel(isPickAction)} configured options unavailable sound alert");
+    }
+
+    private static bool AreAllConfiguredOptionsUnavailable(
+        JsonElement root,
+        int localPlayerCellId,
+        int actionId,
+        IReadOnlyCollection<int> championIds,
+        IReadOnlySet<int> excludedChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        bool manualSelectionOverride,
+        bool isPickAction)
+    {
+        return !manualSelectionOverride
+            && championIds.Count > 0
+            && !HasAvailableConfiguredChampion(root, localPlayerCellId, actionId, championIds, excludedChampionIds, ownershipSnapshot, isPickAction);
     }
 
     private static bool HasAvailableConfiguredChampion(

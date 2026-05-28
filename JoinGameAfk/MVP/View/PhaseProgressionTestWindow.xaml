@@ -156,6 +156,10 @@
                                         Click="PreviewPickIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
                                         Margin="0,0,8,6" />
+                                <Button Content="Options unavailable"
+                                        Click="PreviewOptionsUnavailableIndicator_Click"
+                                        Style="{StaticResource TesterActionButtonStyle}"
+                                        Margin="0,0,8,6" />
                                 <Button Content="Pick done"
                                         Click="PreviewPickDoneIndicator_Click"
                                         Style="{StaticResource TesterActionButtonStyle}"
