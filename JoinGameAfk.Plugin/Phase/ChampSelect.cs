@@ -913,9 +913,9 @@ public class ChampSelect : IPhaseHandler
             }
 
             string hoverActionLabel = IsPlanningPhase(champSelectPhase) ? "Hover" : "Pick";
-            if (ShouldAttemptHover(actionId, champSelectPhase, isPickAction: true, out int hoverDelaySeconds))
+            if (ShouldAttemptHover(actionId, champSelectPhase, timeLeftMs, isPickAction: true, out int hoverDelaySeconds))
             {
-                LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
+                LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} delay satisfied. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
                 await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: hoverActionLabel, cancellationToken);
                 TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
             }
@@ -1059,9 +1059,9 @@ public class ChampSelect : IPhaseHandler
         }
         else if (!_hasHoveredBan && !_manualBanSelectionOverride && !IsPlanningPhase(champSelectPhase))
         {
-            if (ShouldAttemptHover(actionId, champSelectPhase, isPickAction: false, out int hoverDelaySeconds))
+            if (ShouldAttemptHover(actionId, champSelectPhase, timeLeftMs, isPickAction: false, out int hoverDelaySeconds))
             {
-                LogStatus(ref _lastBanStatusMessage, $"Ban hover delay elapsed. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
+                LogStatus(ref _lastBanStatusMessage, $"Ban hover delay satisfied. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
                 await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
                 TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
             }
@@ -1838,13 +1838,16 @@ public class ChampSelect : IPhaseHandler
         _lastBanStatusMessage = null;
     }
 
-    private bool ShouldAttemptHover(int actionId, string champSelectPhase, bool isPickAction, out int hoverDelaySeconds)
+    private bool ShouldAttemptHover(int actionId, string champSelectPhase, long timeLeftMs, bool isPickAction, out int hoverDelaySeconds)
     {
         string phaseKey = string.IsNullOrWhiteSpace(champSelectPhase)
             ? string.Empty
             : champSelectPhase;
         hoverDelaySeconds = GetHoverDelaySeconds(phaseKey);
         DateTime now = DateTime.UtcNow;
+        DateTime initialHoverReadyAtUtc = ShouldHoverImmediatelyForRemainingTime(timeLeftMs, hoverDelaySeconds)
+            ? now
+            : now.AddSeconds(hoverDelaySeconds);
 
         if (isPickAction)
         {
@@ -1852,7 +1855,7 @@ public class ChampSelect : IPhaseHandler
             {
                 _pendingPickHoverActionId = actionId;
                 _pendingPickHoverPhase = phaseKey;
-                _pickHoverReadyAtUtc = now.AddSeconds(hoverDelaySeconds);
+                _pickHoverReadyAtUtc = initialHoverReadyAtUtc;
             }
 
             return now >= _pickHoverReadyAtUtc;
@@ -1862,10 +1865,18 @@ public class ChampSelect : IPhaseHandler
         {
             _pendingBanHoverActionId = actionId;
             _pendingBanHoverPhase = phaseKey;
-            _banHoverReadyAtUtc = now.AddSeconds(hoverDelaySeconds);
+            _banHoverReadyAtUtc = initialHoverReadyAtUtc;
         }
 
         return now >= _banHoverReadyAtUtc;
+    }
+
+    private static bool ShouldHoverImmediatelyForRemainingTime(long timeLeftMs, int hoverDelaySeconds)
+    {
+        if (hoverDelaySeconds <= 0)
+            return true;
+
+        return timeLeftMs > 0 && timeLeftMs <= hoverDelaySeconds * 1000L;
     }
 
     private int GetHoverDelaySeconds(string champSelectPhase)
