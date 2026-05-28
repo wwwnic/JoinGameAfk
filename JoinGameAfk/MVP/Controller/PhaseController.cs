@@ -811,7 +811,7 @@ namespace JoinGameAfk.MVP.Controller
 
         private static bool HasConcreteQueueId(QueueSupportState queueSupportState)
         {
-            return queueSupportState.QueueId is > 0;
+            return queueSupportState.QueueId is int queueId && IsConcreteQueueId(queueId);
         }
 
         private static bool TryGetQueueSupportStateFromEventSnapshot(
@@ -917,14 +917,12 @@ namespace JoinGameAfk.MVP.Controller
                 && gameConfig.ValueKind == JsonValueKind.Object
                 && TryReadInt32(gameConfig, "queueId", out int gameConfigQueueId))
             {
-                queueSupportState = CreateQueueSupportState(gameConfigQueueId, TryReadQueueDescription(gameConfig));
-                return true;
+                return TryCreateQueueSupportState(gameConfigQueueId, TryReadQueueDescription(gameConfig), out queueSupportState);
             }
 
             if (TryReadInt32(root, "queueId", out int rootQueueId))
             {
-                queueSupportState = CreateQueueSupportState(rootQueueId, TryReadQueueDescription(root));
-                return true;
+                return TryCreateQueueSupportState(rootQueueId, TryReadQueueDescription(root), out queueSupportState);
             }
 
             return false;
@@ -948,21 +946,18 @@ namespace JoinGameAfk.MVP.Controller
                     && queue.ValueKind == JsonValueKind.Object
                     && TryReadQueueId(queue, out int queueObjectId))
                 {
-                    queueSupportState = CreateQueueSupportState(queueObjectId, TryReadQueueDescription(queue));
-                    return true;
+                    return TryCreateQueueSupportState(queueObjectId, TryReadQueueDescription(queue), out queueSupportState);
                 }
 
                 if (TryReadInt32(gameData, "queueId", out int gameDataQueueId))
                 {
-                    queueSupportState = CreateQueueSupportState(gameDataQueueId, TryReadQueueDescription(gameData));
-                    return true;
+                    return TryCreateQueueSupportState(gameDataQueueId, TryReadQueueDescription(gameData), out queueSupportState);
                 }
             }
 
             if (TryReadInt32(root, "queueId", out int rootQueueId))
             {
-                queueSupportState = CreateQueueSupportState(rootQueueId, TryReadQueueDescription(root));
-                return true;
+                return TryCreateQueueSupportState(rootQueueId, TryReadQueueDescription(root), out queueSupportState);
             }
 
             return false;
@@ -1015,11 +1010,21 @@ namespace JoinGameAfk.MVP.Controller
             return string.Empty;
         }
 
-        private static QueueSupportState CreateQueueSupportState(int queueId, string queueDescription)
+        private static bool TryCreateQueueSupportState(int queueId, string queueDescription, out QueueSupportState queueSupportState)
         {
+            queueSupportState = QueueSupportState.Unknown;
+            if (!IsConcreteQueueId(queueId))
+                return false;
+
             bool isSupported = IsSupportedQueueId(queueId);
             string queueName = GetQueueName(queueId, queueDescription);
-            return new QueueSupportState(queueId, queueName, true, isSupported);
+            queueSupportState = new QueueSupportState(queueId, queueName, true, isSupported);
+            return true;
+        }
+
+        private static bool IsConcreteQueueId(int queueId)
+        {
+            return queueId > 0;
         }
 
         private static bool IsSupportedQueueId(int queueId)
