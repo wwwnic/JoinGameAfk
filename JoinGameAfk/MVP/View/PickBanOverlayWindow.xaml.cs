@@ -39,7 +39,7 @@ namespace JoinGameAfk.View
         public PickBanOverlayWindow(OverlaySettings settings)
         {
             _settings = settings;
-            _settings.NormalizePickBanOverlayOptions();
+            _settings.NormalizeOptions();
             InitializeComponent();
             ScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
             OpacitySlider.ValueChanged += OverlaySlider_ValueChanged;
@@ -305,7 +305,7 @@ namespace JoinGameAfk.View
 
         private void ApplyOverlaySettings(bool updateControls)
         {
-            _settings.NormalizePickBanOverlayOptions();
+            _settings.NormalizeOptions();
             EnsureAtLeastOneOverlaySection();
             _isApplyingOverlaySettings = true;
             try
@@ -380,7 +380,7 @@ namespace JoinGameAfk.View
         private void OverlaySettingsSaveTimer_Tick(object? sender, EventArgs e)
         {
             _overlaySettingsSaveTimer.Stop();
-            _settings.NormalizePickBanOverlayOptions();
+            _settings.NormalizeOptions();
             _settings.Save();
         }
 

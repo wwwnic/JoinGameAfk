@@ -141,7 +141,6 @@ namespace JoinGameAfk.View
                 : SoundAlertProfile.Off;
             _settings.SoundAlertVolumePercent = GetSoundAlertVolumePercent();
             _settings.SoundAlerts = CaptureSoundAlertSettings();
-            SyncLegacyReadyCheckSoundSettings();
             _settings.Save();
 
             RefreshDirtyState();
@@ -1220,14 +1219,6 @@ namespace JoinGameAfk.View
         private IEnumerable<SoundAlertOption> GetSoundAlertOptions()
         {
             return _soundAlertGroups.SelectMany(group => group.Alerts);
-        }
-
-        private void SyncLegacyReadyCheckSoundSettings()
-        {
-            var readyCheckSetting = _settings.GetSoundAlertSetting(SoundAlertIds.ReadyCheck);
-            _settings.ReadyCheckSoundNotificationEnabled = _settings.IsSoundAlertActive(SoundAlertIds.ReadyCheck);
-            _settings.ReadyCheckSoundNotificationKey = NotificationSoundPlayer.NormalizeSoundKey(readyCheckSetting.SoundKey);
-            _settings.ReadyCheckSoundNotificationVolumePercent = _settings.GetSoundAlertEffectiveVolumePercent(SoundAlertIds.ReadyCheck);
         }
 
         private void ShowSavedMessage()

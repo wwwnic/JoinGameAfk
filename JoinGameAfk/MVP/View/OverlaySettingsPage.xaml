@@ -47,6 +47,7 @@
                             ToolTip="Discard unsaved overlay changes." />
                     <Button Content="Save Overlays"
                             Click="SaveButton_Click"
+                            Background="{DynamicResource AccentGreenBrush}"
                             Style="{StaticResource AccentButtonStyle}"
                             Padding="18,10"
                             Margin="8,0,0,0"

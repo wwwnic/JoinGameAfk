@@ -23,7 +23,7 @@ namespace JoinGameAfk
             try
             {
                 var champSelectSettings = ChampSelectSettings.Load();
-                var overlaySettings = OverlaySettings.Load(champSelectSettings);
+                var overlaySettings = OverlaySettings.Load();
                 champSelectSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(champSelectSettings.ThemeKey);
                 AppThemeManager.ApplyTheme(champSelectSettings.ThemeKey);
 

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 
@@ -13,15 +12,6 @@ namespace JoinGameAfk.Model
 
     public class ChampSelectSettings
     {
-        public const int MinPickBanOverlayScalePercent = 80;
-        public const int MaxPickBanOverlayScalePercent = 140;
-        public const int DefaultPickBanOverlayScalePercent = 100;
-        public const int MinPickBanOverlayOpacityPercent = 55;
-        public const int MaxPickBanOverlayOpacityPercent = 100;
-        public const int DefaultPickBanOverlayOpacityPercent = 94;
-        public const int MinReadyCheckSoundVolumePercent = 0;
-        public const int MaxReadyCheckSoundVolumePercent = 100;
-        public const int DefaultReadyCheckSoundVolumePercent = 50;
         public const int MinSoundAlertVolumePercent = 0;
         public const int MaxSoundAlertVolumePercent = 100;
         public const int DefaultSoundAlertVolumePercent = 50;
@@ -29,26 +19,6 @@ namespace JoinGameAfk.Model
         public const int MaxSoundAlertThresholdSeconds = 30;
         public const int MinSoundAlertPlaybackDurationSeconds = 1;
         public const int MaxSoundAlertPlaybackDurationSeconds = 30;
-
-        private static readonly HashSet<string> OverlaySettingPropertyNames =
-        [
-            nameof(AutoShowPickBanOverlayEnabled),
-            nameof(PickBanOverlayOpenOnStartup),
-            nameof(PickBanOverlayAutoCloseAfterChampSelectEnabled),
-            nameof(PickBanOverlayLeft),
-            nameof(PickBanOverlayTop),
-            nameof(PickBanOverlayScalePercent),
-            nameof(PickBanOverlayWidth),
-            nameof(PickBanOverlayHeight),
-            nameof(PickBanOverlayOpacityPercent),
-            nameof(PickBanOverlayTopmostEnabled),
-            nameof(PickBanOverlayShowPhaseSummary),
-            nameof(PickBanOverlayShowTimers),
-            nameof(PickBanOverlayShowPickPlan),
-            nameof(PickBanOverlayShowBanPlan)
-        ];
-
-        private static readonly JsonSerializerOptions SaveSerializerOptions = CreateSaveSerializerOptions();
 
         public int Version { get; set; } = AppStorage.SettingsFileVersion;
 
@@ -66,21 +36,6 @@ namespace JoinGameAfk.Model
         /// Whether the app should automatically accept ready checks.
         /// </summary>
         public bool AutoReadyCheckEnabled { get; set; } = true;
-
-        /// <summary>
-        /// Whether the app should play a short cue when a ready check popup is detected.
-        /// </summary>
-        public bool ReadyCheckSoundNotificationEnabled { get; set; } = true;
-
-        /// <summary>
-        /// Sound cue used when a ready check popup is detected.
-        /// </summary>
-        public string ReadyCheckSoundNotificationKey { get; set; } = "assistant-beacon";
-
-        /// <summary>
-        /// Volume percentage used for ready check sound notifications and previews.
-        /// </summary>
-        public int? ReadyCheckSoundNotificationVolumePercent { get; set; } = DefaultReadyCheckSoundVolumePercent;
 
         /// <summary>
         /// Preset that controls which sound alerts are active.
@@ -112,61 +67,6 @@ namespace JoinGameAfk.Model
         /// Whether the app should perform champion select automation.
         /// </summary>
         public bool ChampionSelectAutomationEnabled { get; set; } = true;
-
-        /// <summary>
-        /// Whether the pick/ban overlay should open automatically during champion select.
-        /// </summary>
-        public bool AutoShowPickBanOverlayEnabled { get; set; } = true;
-
-        /// <summary>
-        /// Whether the pick/ban overlay should open automatically when the app starts.
-        /// </summary>
-        public bool PickBanOverlayOpenOnStartup { get; set; }
-
-        /// <summary>
-        /// Whether the pick/ban overlay should close automatically after champion select is over.
-        /// </summary>
-        public bool PickBanOverlayAutoCloseAfterChampSelectEnabled { get; set; } = true;
-
-        /// <summary>
-        /// Last user-selected pick/ban overlay left position in WPF device-independent pixels.
-        /// </summary>
-        public double? PickBanOverlayLeft { get; set; }
-
-        /// <summary>
-        /// Last user-selected pick/ban overlay top position in WPF device-independent pixels.
-        /// </summary>
-        public double? PickBanOverlayTop { get; set; }
-
-        /// <summary>
-        /// Overlay visual scale percentage.
-        /// </summary>
-        public int PickBanOverlayScalePercent { get; set; } = DefaultPickBanOverlayScalePercent;
-
-        /// <summary>
-        /// Optional user-resized pick/ban overlay width in WPF device-independent pixels.
-        /// </summary>
-        public double? PickBanOverlayWidth { get; set; }
-
-        /// <summary>
-        /// Optional user-resized pick/ban overlay height in WPF device-independent pixels.
-        /// </summary>
-        public double? PickBanOverlayHeight { get; set; }
-
-        /// <summary>
-        /// Overlay panel opacity percentage.
-        /// </summary>
-        public int PickBanOverlayOpacityPercent { get; set; } = DefaultPickBanOverlayOpacityPercent;
-
-        /// <summary>
-        /// Whether the pick/ban overlay should stay above other windows.
-        /// </summary>
-        public bool PickBanOverlayTopmostEnabled { get; set; } = true;
-
-        public bool PickBanOverlayShowPhaseSummary { get; set; } = true;
-        public bool PickBanOverlayShowTimers { get; set; } = true;
-        public bool PickBanOverlayShowPickPlan { get; set; } = true;
-        public bool PickBanOverlayShowBanPlan { get; set; } = true;
 
         /// <summary>
         /// Whether the app should automatically hover configured champions during pick or ban.
@@ -388,18 +288,6 @@ namespace JoinGameAfk.Model
             ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
             PickLockDelaySeconds = defaults.PickLockDelaySeconds;
             ChampionSelectAutomationEnabled = defaults.ChampionSelectAutomationEnabled;
-            AutoShowPickBanOverlayEnabled = defaults.AutoShowPickBanOverlayEnabled;
-            PickBanOverlayOpenOnStartup = defaults.PickBanOverlayOpenOnStartup;
-            PickBanOverlayAutoCloseAfterChampSelectEnabled = defaults.PickBanOverlayAutoCloseAfterChampSelectEnabled;
-            PickBanOverlayScalePercent = defaults.PickBanOverlayScalePercent;
-            PickBanOverlayWidth = defaults.PickBanOverlayWidth;
-            PickBanOverlayHeight = defaults.PickBanOverlayHeight;
-            PickBanOverlayOpacityPercent = defaults.PickBanOverlayOpacityPercent;
-            PickBanOverlayTopmostEnabled = defaults.PickBanOverlayTopmostEnabled;
-            PickBanOverlayShowPhaseSummary = defaults.PickBanOverlayShowPhaseSummary;
-            PickBanOverlayShowTimers = defaults.PickBanOverlayShowTimers;
-            PickBanOverlayShowPickPlan = defaults.PickBanOverlayShowPickPlan;
-            PickBanOverlayShowBanPlan = defaults.PickBanOverlayShowBanPlan;
             AutoHoverChampionEnabled = defaults.AutoHoverChampionEnabled;
             ChampionHoverDelaySeconds = defaults.ChampionHoverDelaySeconds;
             PlanningHoverDelaySeconds = defaults.PlanningHoverDelaySeconds;
@@ -419,9 +307,6 @@ namespace JoinGameAfk.Model
         {
             var defaults = new ChampSelectSettings();
 
-            ReadyCheckSoundNotificationEnabled = defaults.ReadyCheckSoundNotificationEnabled;
-            ReadyCheckSoundNotificationKey = defaults.ReadyCheckSoundNotificationKey;
-            ReadyCheckSoundNotificationVolumePercent = defaults.ReadyCheckSoundNotificationVolumePercent;
             SoundAlertProfile = defaults.SoundAlertProfile;
             SoundAlertVolumePercent = defaults.SoundAlertVolumePercent;
             SoundAlerts = SoundAlertDefaults.CreateDefaultSettings();
@@ -433,31 +318,9 @@ namespace JoinGameAfk.Model
             Version = AppStorage.SettingsFileVersion;
             NormalizeSoundAlertOptions();
 
-            var json = JsonSerializer.Serialize(this, SaveSerializerOptions);
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(AppStorage.SettingsFilePath, json);
             Saved?.Invoke();
-        }
-
-        private static JsonSerializerOptions CreateSaveSerializerOptions()
-        {
-            var resolver = new DefaultJsonTypeInfoResolver();
-            resolver.Modifiers.Add(typeInfo =>
-            {
-                if (typeInfo.Type != typeof(ChampSelectSettings))
-                    return;
-
-                foreach (var property in typeInfo.Properties)
-                {
-                    if (OverlaySettingPropertyNames.Contains(property.Name))
-                        property.ShouldSerialize = static (_, _) => false;
-                }
-            });
-
-            return new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                TypeInfoResolver = resolver
-            };
         }
 
         public static ChampSelectSettings Load()
@@ -470,7 +333,7 @@ namespace JoinGameAfk.Model
                     var settings = JsonSerializer.Deserialize<ChampSelectSettings>(json);
                     return settings is null
                         ? ResetSettingsFile()
-                        : NormalizeVersion(settings);
+                        : NormalizeSettings(settings);
                 }
             }
             catch
@@ -495,43 +358,16 @@ namespace JoinGameAfk.Model
             return defaults;
         }
 
-        private static ChampSelectSettings NormalizeVersion(ChampSelectSettings settings)
+        private static ChampSelectSettings NormalizeSettings(ChampSelectSettings settings)
         {
-            int storedVersion = settings.Version <= 0 ? 1 : settings.Version;
-
             settings.Preferences.Remove(Position.None);
-
-            if (string.IsNullOrWhiteSpace(settings.ReadyCheckSoundNotificationKey))
-                settings.ReadyCheckSoundNotificationKey = new ChampSelectSettings().ReadyCheckSoundNotificationKey;
-
-            settings.ReadyCheckSoundNotificationVolumePercent = NormalizeReadyCheckSoundVolumePercent(settings.ReadyCheckSoundNotificationVolumePercent);
-
-            if (storedVersion < 2)
-                settings.MigrateLegacySoundAlertSettings();
-
             settings.NormalizeSoundAlertOptions();
-
             settings.Version = AppStorage.SettingsFileVersion;
 
             if (settings.ChampSelectEventFallbackPollIntervalMs <= 0)
                 settings.ChampSelectEventFallbackPollIntervalMs = new ChampSelectSettings().ChampSelectEventFallbackPollIntervalMs;
 
-            settings.NormalizePickBanOverlayOptions();
-
             return settings;
-        }
-
-        private void MigrateLegacySoundAlertSettings()
-        {
-            SoundAlertProfile = ReadyCheckSoundNotificationEnabled
-                ? SoundAlertProfile.Minimal
-                : SoundAlertProfile.Off;
-            SoundAlertVolumePercent = NormalizeSoundAlertVolumePercent(ReadyCheckSoundNotificationVolumePercent);
-            SoundAlerts = SoundAlertDefaults.CreateDefaultSettings();
-
-            var readyCheckAlert = SoundAlerts[SoundAlertIds.ReadyCheck];
-            readyCheckAlert.Enabled = ReadyCheckSoundNotificationEnabled;
-            readyCheckAlert.SoundKey = ReadyCheckSoundNotificationKey;
         }
 
         public void NormalizeSoundAlertOptions()
@@ -563,62 +399,6 @@ namespace JoinGameAfk.Model
             }
 
             SoundAlerts = normalizedAlerts;
-        }
-
-        public void NormalizePickBanOverlayOptions()
-        {
-            PickBanOverlayScalePercent = NormalizePickBanOverlayScalePercent(PickBanOverlayScalePercent);
-            PickBanOverlayWidth = NormalizeNullableOverlayLength(PickBanOverlayWidth);
-            PickBanOverlayHeight = NormalizeNullableOverlayLength(PickBanOverlayHeight);
-            PickBanOverlayOpacityPercent = NormalizePickBanOverlayOpacityPercent(PickBanOverlayOpacityPercent);
-            EnsurePickBanOverlayHasVisibleSection();
-        }
-
-        public void EnsurePickBanOverlayHasVisibleSection()
-        {
-            if (PickBanOverlayShowPhaseSummary
-                || PickBanOverlayShowTimers
-                || PickBanOverlayShowPickPlan
-                || PickBanOverlayShowBanPlan)
-            {
-                return;
-            }
-
-            PickBanOverlayShowPhaseSummary = true;
-        }
-
-        public static int NormalizePickBanOverlayScalePercent(int scalePercent)
-        {
-            return Math.Clamp(
-                scalePercent <= 0 ? DefaultPickBanOverlayScalePercent : scalePercent,
-                MinPickBanOverlayScalePercent,
-                MaxPickBanOverlayScalePercent);
-        }
-
-        public static int NormalizePickBanOverlayOpacityPercent(int opacityPercent)
-        {
-            return Math.Clamp(
-                opacityPercent <= 0 ? DefaultPickBanOverlayOpacityPercent : opacityPercent,
-                MinPickBanOverlayOpacityPercent,
-                MaxPickBanOverlayOpacityPercent);
-        }
-
-        private static double? NormalizeNullableOverlayLength(double? length)
-        {
-            return length is double value && double.IsFinite(value) && value > 0
-                ? value
-                : null;
-        }
-
-        public static int NormalizeReadyCheckSoundVolumePercent(int? volumePercent)
-        {
-            if (volumePercent is null)
-                return DefaultReadyCheckSoundVolumePercent;
-
-            return Math.Clamp(
-                volumePercent.Value < MinReadyCheckSoundVolumePercent ? DefaultReadyCheckSoundVolumePercent : volumePercent.Value,
-                MinReadyCheckSoundVolumePercent,
-                MaxReadyCheckSoundVolumePercent);
         }
 
         public static int NormalizeSoundAlertVolumePercent(int? volumePercent)

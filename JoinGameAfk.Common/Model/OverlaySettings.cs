@@ -40,7 +40,7 @@ namespace JoinGameAfk.Model
 
         public event Action? Saved;
 
-        public static OverlaySettings Load(ChampSelectSettings? legacySettings = null)
+        public static OverlaySettings Load()
         {
             try
             {
@@ -49,16 +49,16 @@ namespace JoinGameAfk.Model
                     var json = File.ReadAllText(AppStorage.OverlaySettingsFilePath);
                     var settings = JsonSerializer.Deserialize<OverlaySettings>(json);
                     return settings is null
-                        ? ResetSettingsFile(legacySettings)
-                        : NormalizeVersion(settings);
+                        ? ResetSettingsFile()
+                        : NormalizeSettings(settings);
                 }
             }
             catch
             {
-                return ResetSettingsFile(legacySettings);
+                return ResetSettingsFile();
             }
 
-            return ResetSettingsFile(legacySettings);
+            return ResetSettingsFile();
         }
 
         public void Save()
@@ -113,11 +113,6 @@ namespace JoinGameAfk.Model
             EnsurePickBanOverlayHasVisibleSection();
         }
 
-        public void NormalizePickBanOverlayOptions()
-        {
-            NormalizeOptions();
-        }
-
         public void EnsurePickBanOverlayHasVisibleSection()
         {
             if (PickBanOverlayShowPhaseSummary
@@ -155,11 +150,9 @@ namespace JoinGameAfk.Model
                 MaxQueueMicroOverlayScalePercent);
         }
 
-        private static OverlaySettings ResetSettingsFile(ChampSelectSettings? legacySettings)
+        private static OverlaySettings ResetSettingsFile()
         {
-            var defaults = legacySettings is null
-                ? new OverlaySettings()
-                : CreateFromLegacySettings(legacySettings);
+            var defaults = new OverlaySettings();
             try
             {
                 defaults.Save();
@@ -171,96 +164,11 @@ namespace JoinGameAfk.Model
             return defaults;
         }
 
-        private static OverlaySettings NormalizeVersion(OverlaySettings settings)
+        private static OverlaySettings NormalizeSettings(OverlaySettings settings)
         {
             settings.Version = AppStorage.OverlaySettingsFileVersion;
             settings.NormalizeOptions();
             return settings;
-        }
-
-        private static OverlaySettings CreateFromLegacySettings(ChampSelectSettings settings)
-        {
-            var overlaySettings = new OverlaySettings
-            {
-                AutoShowPickBanOverlayEnabled = settings.AutoShowPickBanOverlayEnabled,
-                PickBanOverlayOpenOnStartup = settings.PickBanOverlayOpenOnStartup,
-                PickBanOverlayAutoCloseAfterChampSelectEnabled = settings.PickBanOverlayAutoCloseAfterChampSelectEnabled,
-                PickBanOverlayLeft = settings.PickBanOverlayLeft,
-                PickBanOverlayTop = settings.PickBanOverlayTop,
-                PickBanOverlayScalePercent = settings.PickBanOverlayScalePercent,
-                PickBanOverlayWidth = settings.PickBanOverlayWidth,
-                PickBanOverlayHeight = settings.PickBanOverlayHeight,
-                PickBanOverlayOpacityPercent = settings.PickBanOverlayOpacityPercent,
-                PickBanOverlayTopmostEnabled = settings.PickBanOverlayTopmostEnabled,
-                PickBanOverlayShowPhaseSummary = settings.PickBanOverlayShowPhaseSummary,
-                PickBanOverlayShowTimers = settings.PickBanOverlayShowTimers,
-                PickBanOverlayShowPickPlan = settings.PickBanOverlayShowPickPlan,
-                PickBanOverlayShowBanPlan = settings.PickBanOverlayShowBanPlan
-            };
-
-            ApplyLegacyQueueMicroOverlaySettings(overlaySettings);
-            overlaySettings.NormalizeOptions();
-            return overlaySettings;
-        }
-
-        private static void ApplyLegacyQueueMicroOverlaySettings(OverlaySettings overlaySettings)
-        {
-            try
-            {
-                if (!File.Exists(AppStorage.SettingsFilePath))
-                    return;
-
-                using var document = JsonDocument.Parse(File.ReadAllText(AppStorage.SettingsFilePath));
-                var root = document.RootElement;
-
-                if (TryGetBoolean(root, nameof(QueueMicroOverlayEnabled), out bool enabled))
-                    overlaySettings.QueueMicroOverlayEnabled = enabled;
-
-                if (TryGetBoolean(root, nameof(QueueMicroOverlayTopmostEnabled), out bool topmostEnabled))
-                    overlaySettings.QueueMicroOverlayTopmostEnabled = topmostEnabled;
-
-                if (TryGetInt32(root, nameof(QueueMicroOverlayScalePercent), out int scalePercent))
-                    overlaySettings.QueueMicroOverlayScalePercent = scalePercent;
-
-                if (TryGetDouble(root, nameof(QueueMicroOverlayLeft), out double left))
-                    overlaySettings.QueueMicroOverlayLeft = left;
-
-                if (TryGetDouble(root, nameof(QueueMicroOverlayTop), out double top))
-                    overlaySettings.QueueMicroOverlayTop = top;
-            }
-            catch
-            {
-            }
-        }
-
-        private static bool TryGetBoolean(JsonElement element, string propertyName, out bool value)
-        {
-            value = false;
-            if (!element.TryGetProperty(propertyName, out var property))
-                return false;
-
-            if (property.ValueKind == JsonValueKind.True)
-            {
-                value = true;
-                return true;
-            }
-
-            return property.ValueKind == JsonValueKind.False;
-        }
-
-        private static bool TryGetInt32(JsonElement element, string propertyName, out int value)
-        {
-            value = 0;
-            return element.TryGetProperty(propertyName, out var property)
-                && property.TryGetInt32(out value);
-        }
-
-        private static bool TryGetDouble(JsonElement element, string propertyName, out double value)
-        {
-            value = 0;
-            return element.TryGetProperty(propertyName, out var property)
-                && property.TryGetDouble(out value)
-                && double.IsFinite(value);
         }
 
         private static double? NormalizeNullableOverlayLength(double? length)
