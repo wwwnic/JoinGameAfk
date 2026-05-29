@@ -121,7 +121,8 @@ namespace JoinGameAfk.View
                 AutoLockSelectionCheckBox,
                 UseLiveEventsCheckBox,
                 EventFallbackPollingCheckBox,
-                AutoUpdateChampionCatalogOnStartupCheckBox
+                AutoUpdateChampionCatalogOnStartupCheckBox,
+                DownloadRawChampionPicturesCheckBox
             ];
 
             foreach (var checkBox in checkBoxes)
@@ -239,7 +240,8 @@ namespace JoinGameAfk.View
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? CreateNumericSnapshot(EventFallbackPollIntervalBox) : string.Empty,
                 GetSelectedThemeKey(),
-                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true);
+                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true,
+                DownloadRawChampionPicturesCheckBox.IsChecked == true);
         }
 
         private SettingsPageSnapshot CaptureSavedSettingsSnapshot()
@@ -269,7 +271,8 @@ namespace JoinGameAfk.View
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? _settings.ChampSelectEventFallbackPollIntervalMs.ToString() : string.Empty,
                 AppThemeManager.NormalizeThemeKey(_settings.ThemeKey),
-                _settings.AutoUpdateChampionCatalogOnStartup);
+                _settings.AutoUpdateChampionCatalogOnStartup,
+                _settings.DownloadRawChampionPictures);
         }
 
         private static string CreateNumericSnapshot(TextBox textBox)
@@ -301,6 +304,7 @@ namespace JoinGameAfk.View
             _settings.ChampSelectEventFallbackPollIntervalMs = input.ChampSelectEventFallbackPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
             _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
+            _settings.DownloadRawChampionPictures = DownloadRawChampionPicturesCheckBox.IsChecked == true;
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
@@ -318,7 +322,7 @@ namespace JoinGameAfk.View
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default startup, automation, timing, performance, theme, and download-warning settings?\n\nChampion priorities, sound alerts, and overlay settings are kept.",
+                "Restore default startup, automation, timing, performance, theme, and download settings?\n\nChampion priorities, sound alerts, and overlay settings are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -412,6 +416,7 @@ namespace JoinGameAfk.View
                 _pendingInitialThemeSelectionKey = null;
                 SelectTheme(themeKeyToSelect);
                 AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = _settings.AutoUpdateChampionCatalogOnStartup;
+                DownloadRawChampionPicturesCheckBox.IsChecked = _settings.DownloadRawChampionPictures;
                 UpdateThemePickerExpansionState();
             }
             finally
@@ -816,9 +821,13 @@ namespace JoinGameAfk.View
 
         private bool ConfirmChampionPictureRefresh()
         {
+            string cacheModeText = IsRawChampionPictureDownloadSelected()
+                ? "Raw picture mode is enabled, so extracted jpg files stay as Riot's original files."
+                : "Compact picture mode is enabled, so extracted jpg files are resized to 96px-wide cache copies at maximum JPEG quality.";
+
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\nContinue?",
+                $"This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
                 "Download Data Dragon Archive",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -1111,7 +1120,9 @@ namespace JoinGameAfk.View
                     }
                 });
 
-                var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(progress);
+                var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(
+                    progress,
+                    optimizeForLocalCache: !IsRawChampionPictureDownloadSelected());
                 RefreshChampionPictureCacheStatus(result);
                 ChampionPictureDownloadStatusLabel.Foreground = result.ArchiveDeleted
                     ? TryFindResource("AccentGreenTextBrush") as Brush ?? Brushes.ForestGreen
@@ -1119,9 +1130,12 @@ namespace JoinGameAfk.View
                 string archiveCleanupText = result.ArchiveDeleted
                     ? "then removed the archive"
                     : $"but could not remove the archive ({result.ArchiveDeleteError})";
+                string pictureModeText = IsRawChampionPictureDownloadSelected()
+                    ? "kept raw originals"
+                    : "stored compact resized copies";
                 ChampionPictureDownloadStatusLabel.Text =
-                    $"Data Dragon archive {result.DataDragonVersion} installed. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}, checked {result.CheckedTileCount} champion tiles, updated {result.UpdatedTileCount}, unchanged {result.UnchangedTileCount}, {archiveCleanupText}. Cache now has {result.CachedTileCount} jpg files.";
-                LogMessage($"Manual champion picture archive install completed for Riot Data Dragon {result.DataDragonVersion}. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}; checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; cache now has {result.CachedTileCount} jpg files.");
+                    $"Data Dragon archive {result.DataDragonVersion} installed. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}, checked {result.CheckedTileCount} champion tiles, updated {result.UpdatedTileCount}, unchanged {result.UnchangedTileCount}, {archiveCleanupText}, {pictureModeText}. Cache now has {result.CachedTileCount} jpg files.";
+                LogMessage($"Manual champion picture archive install completed for Riot Data Dragon {result.DataDragonVersion}. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}; checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; {pictureModeText}; cache now has {result.CachedTileCount} jpg files.");
                 if (!result.ArchiveDeleted)
                     LogErrorMessage($"Champion picture archive cleanup failed after successful extraction. {result.ArchiveDeleteError}");
             }
@@ -1143,6 +1157,12 @@ namespace JoinGameAfk.View
             DownloadChampionPictureArchiveButton.IsEnabled = enabled;
             ReloadChampionPicturesButton.IsEnabled = enabled;
             OpenChampionPictureFolderButton.IsEnabled = enabled;
+            DownloadRawChampionPicturesCheckBox.IsEnabled = enabled;
+        }
+
+        private bool IsRawChampionPictureDownloadSelected()
+        {
+            return DownloadRawChampionPicturesCheckBox.IsChecked == true;
         }
 
         private void LogMessage(string message)
@@ -1325,7 +1345,8 @@ namespace JoinGameAfk.View
             bool ChampSelectEventFallbackPollingEnabled,
             string ChampSelectEventFallbackPollIntervalMs,
             string ThemeKey,
-            bool AutoUpdateChampionCatalogOnStartup);
+            bool AutoUpdateChampionCatalogOnStartup,
+            bool DownloadRawChampionPictures);
 
     }
 }

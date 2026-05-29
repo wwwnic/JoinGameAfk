@@ -1072,6 +1072,38 @@
                     </Border>
 
                     <Border Style="{StaticResource SettingRowStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <StackPanel Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="Download raw champion pictures"
+                                               Style="{StaticResource FieldLabelStyle}" />
+                                    <Button Style="{StaticResource InfoIndicatorStyle}"
+                                            Content="?"
+                                            Margin="8,0,0,0"
+                                            VerticalAlignment="Center"
+                                            ToolTip="When enabled, future manual Data Dragon picture downloads keep Riot's original full-resolution jpg files. Existing compact files stay compact until downloaded again." />
+                                </StackPanel>
+                                <TextBlock Text="Leave off to save disk space with compact 96px cache pictures. Turn on only when you want full-resolution Riot JPGs, then manually download the pictures again. Release-bundled pictures stay compact either way."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <CheckBox x:Name="DownloadRawChampionPicturesCheckBox"
+                                      Grid.Column="2"
+                                      Style="{StaticResource AppCheckBoxStyle}"
+                                      VerticalAlignment="Center"
+                                      ToolTip="Off stores smaller resized files. On stores larger raw files for future manual downloads only." />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource SettingRowStyle}">
                         <StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>

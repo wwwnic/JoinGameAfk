@@ -1,4 +1,7 @@
+using System.IO;
 using JoinGameAfk.Services;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 try
 {
@@ -16,6 +19,8 @@ try
         ?? Path.Combine(Path.GetTempPath(), "JoinGameAfkChampionTileArchives"));
     string? dataDragonVersion = arguments.GetValue("--version");
     int? maxTileIndex = arguments.GetOptionalNonNegativeInt32("--max-tile-index");
+    int? resizeWidth = arguments.GetOptionalPositiveInt32("--resize-width");
+    int? jpegQuality = arguments.GetOptionalRangeInt32("--jpeg-quality", 1, 100);
     bool keepArchive = arguments.HasFlag("--keep-archive");
     bool reuseArchive = arguments.HasFlag("--reuse-archive");
 
@@ -33,6 +38,10 @@ try
     Console.WriteLine($"Archive directory: {archiveDirectoryPath}");
     if (maxTileIndex is int maximumTileIndex)
         Console.WriteLine($"Maximum bundled tile index: {maximumTileIndex}");
+    if (resizeWidth is int targetResizeWidth)
+        Console.WriteLine($"Resize extracted seed tiles to width: {targetResizeWidth}px");
+    if (jpegQuality is int targetJpegQuality)
+        Console.WriteLine($"Re-encode extracted seed tiles with JPEG quality: {targetJpegQuality}");
     Console.WriteLine($"Keep archive after extraction: {keepArchive}");
     Console.WriteLine($"Reuse existing archive before download: {reuseArchive}");
 
@@ -43,6 +52,17 @@ try
 
     if (!File.Exists(cacheFilePath))
         throw new InvalidOperationException($"Champion tile cache metadata was not written to '{cacheFilePath}'.");
+
+    if (resizeWidth is not null || jpegQuality is not null)
+    {
+        var optimizationResult = ChampionTileSeedOptimizer.Optimize(
+            tileDirectoryPath,
+            resizeWidth,
+            jpegQuality ?? ChampionTileSeedOptimizer.DefaultJpegQuality);
+
+        Console.WriteLine(
+            $"Champion tile seed optimization complete. Checked {optimizationResult.CheckedFileCount}; optimized {optimizationResult.OptimizedFileCount}; kept {optimizationResult.KeptFileCount}; failed {optimizationResult.FailedFileCount}; size {FormatMegabytes(optimizationResult.BeforeBytes)} -> {FormatMegabytes(optimizationResult.AfterBytes)} ({FormatPercentReduction(optimizationResult.BeforeBytes, optimizationResult.AfterBytes)} smaller).");
+    }
 
     Console.WriteLine(
         $"Champion tile seed cache ready. Version: {result.DataDragonVersion}; checked {result.CheckedTileCount}; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; cached {result.CachedTileCount}; archive {FormatMegabytes(result.ArchiveSizeBytes)}.");
@@ -68,6 +88,8 @@ static void PrintUsage()
           --archive-directory   Temporary Data Dragon archive directory. Defaults to the OS temp folder.
           --version             Data Dragon version to install. Defaults to the latest version.
           --max-tile-index      Highest champion tile index to extract. Defaults to all tiles.
+          --resize-width        Re-encode extracted seed JPGs to this pixel width, preserving aspect ratio.
+          --jpeg-quality        Re-encode extracted seed JPGs at this JPEG quality (1-100). Defaults to 100 when resizing is enabled.
           --keep-archive        Leave the downloaded Data Dragon archive in place after extraction.
           --reuse-archive       Reuse an existing archive from the archive directory instead of deleting it before download.
         """);
@@ -76,6 +98,148 @@ static void PrintUsage()
 static string FormatMegabytes(long bytes)
 {
     return $"{bytes / 1024d / 1024d:0.0} MB";
+}
+
+static string FormatPercentReduction(long beforeBytes, long afterBytes)
+{
+    if (beforeBytes <= 0 || afterBytes >= beforeBytes)
+        return "0.0%";
+
+    double reduction = (beforeBytes - afterBytes) / (double)beforeBytes;
+    return $"{reduction:P1}";
+}
+
+file sealed record ChampionTileSeedOptimizationResult(
+    int CheckedFileCount,
+    int OptimizedFileCount,
+    int KeptFileCount,
+    int FailedFileCount,
+    long BeforeBytes,
+    long AfterBytes);
+
+file static class ChampionTileSeedOptimizer
+{
+    public const int DefaultJpegQuality = 100;
+
+    public static ChampionTileSeedOptimizationResult Optimize(
+        string tileDirectoryPath,
+        int? resizeWidth,
+        int jpegQuality)
+    {
+        if (!Directory.Exists(tileDirectoryPath))
+            throw new DirectoryNotFoundException($"Champion tile directory was not found: {tileDirectoryPath}");
+
+        if (resizeWidth is <= 0)
+            throw new ArgumentOutOfRangeException(nameof(resizeWidth), "Resize width must be greater than zero.");
+
+        jpegQuality = Math.Clamp(jpegQuality, 1, 100);
+
+        int checkedFileCount = 0;
+        int optimizedFileCount = 0;
+        int keptFileCount = 0;
+        int failedFileCount = 0;
+        long beforeBytes = 0;
+
+        foreach (string filePath in Directory.EnumerateFiles(tileDirectoryPath, "*.jpg", SearchOption.TopDirectoryOnly))
+        {
+            checkedFileCount++;
+            long originalLength = new FileInfo(filePath).Length;
+            beforeBytes += originalLength;
+
+            try
+            {
+                if (TryOptimizeJpeg(filePath, resizeWidth, jpegQuality, originalLength))
+                    optimizedFileCount++;
+                else
+                    keptFileCount++;
+            }
+            catch (Exception ex)
+            {
+                failedFileCount++;
+                Console.Error.WriteLine($"Unable to optimize champion tile '{Path.GetFileName(filePath)}': {ex.GetType().Name}: {ex.Message}");
+            }
+        }
+
+        long afterBytes = Directory.EnumerateFiles(tileDirectoryPath, "*.jpg", SearchOption.TopDirectoryOnly)
+            .Sum(filePath => new FileInfo(filePath).Length);
+
+        return new ChampionTileSeedOptimizationResult(
+            checkedFileCount,
+            optimizedFileCount,
+            keptFileCount,
+            failedFileCount,
+            beforeBytes,
+            afterBytes);
+    }
+
+    private static bool TryOptimizeJpeg(
+        string filePath,
+        int? resizeWidth,
+        int jpegQuality,
+        long originalLength)
+    {
+        string temporaryFilePath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+
+        try
+        {
+            BitmapSource source = LoadBitmap(filePath, resizeWidth);
+            SaveJpeg(source, temporaryFilePath, jpegQuality);
+
+            long optimizedLength = new FileInfo(temporaryFilePath).Length;
+            if (optimizedLength >= originalLength)
+                return false;
+
+            File.Move(temporaryFilePath, filePath, overwrite: true);
+            return true;
+        }
+        finally
+        {
+            TryDeleteFile(temporaryFilePath);
+        }
+    }
+
+    private static BitmapSource LoadBitmap(string filePath, int? resizeWidth)
+    {
+        using var input = File.OpenRead(filePath);
+        var decoder = BitmapDecoder.Create(
+            input,
+            BitmapCreateOptions.PreservePixelFormat,
+            BitmapCacheOption.OnLoad);
+
+        BitmapSource source = decoder.Frames[0];
+        if (resizeWidth is not int targetWidth || source.PixelWidth <= targetWidth)
+            return source;
+
+        double scale = targetWidth / (double)source.PixelWidth;
+        var resized = new TransformedBitmap(source, new ScaleTransform(scale, scale));
+        resized.Freeze();
+        return resized;
+    }
+
+    private static void SaveJpeg(BitmapSource source, string filePath, int jpegQuality)
+    {
+        var encoder = new JpegBitmapEncoder
+        {
+            QualityLevel = jpegQuality
+        };
+
+        encoder.Frames.Add(BitmapFrame.Create(source));
+
+        using var output = File.Create(filePath);
+        encoder.Save(output);
+    }
+
+    private static void TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch
+        {
+        }
+    }
 }
 
 file sealed class ConsoleArchiveProgress : IProgress<ChampionTileArchiveProgress>
@@ -184,6 +348,30 @@ file sealed class CommandLineArguments
 
         if (!int.TryParse(value, out int number) || number < 0)
             throw new ArgumentException($"Argument '{name}' must be a non-negative integer.");
+
+        return number;
+    }
+
+    public int? GetOptionalPositiveInt32(string name)
+    {
+        string? value = GetValue(name);
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (!int.TryParse(value, out int number) || number <= 0)
+            throw new ArgumentException($"Argument '{name}' must be a positive integer.");
+
+        return number;
+    }
+
+    public int? GetOptionalRangeInt32(string name, int minValue, int maxValue)
+    {
+        string? value = GetValue(name);
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (!int.TryParse(value, out int number) || number < minValue || number > maxValue)
+            throw new ArgumentException($"Argument '{name}' must be an integer from {minValue} to {maxValue}.");
 
         return number;
     }

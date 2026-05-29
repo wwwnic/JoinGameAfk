@@ -45,7 +45,8 @@ namespace JoinGameAfk.Services
             string? preferredDataDragonVersion,
             string tileDirectoryPath,
             IProgress<ChampionTileDownloadProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true)
         {
             ArgumentNullException.ThrowIfNull(champion);
 
@@ -133,6 +134,7 @@ namespace JoinGameAfk.Services
                             skinNumber,
                             tileDirectoryPath,
                             fileName,
+                            optimizeForLocalCache,
                             cancellationToken)
                         .ConfigureAwait(false);
 
@@ -285,6 +287,7 @@ namespace JoinGameAfk.Services
             int skinNumber,
             string tileDirectoryPath,
             string fileName,
+            bool optimizeForLocalCache,
             CancellationToken cancellationToken)
         {
             string tileUrl = string.Format(
@@ -309,6 +312,9 @@ namespace JoinGameAfk.Services
 
                 if (!File.Exists(temporaryFilePath) || new FileInfo(temporaryFilePath).Length == 0)
                     throw new InvalidOperationException("Champion tile download produced an empty file.");
+
+                if (optimizeForLocalCache)
+                    ChampionTileCacheImageOptimizer.TryOptimizeJpegInPlace(temporaryFilePath, cancellationToken);
 
                 if (File.Exists(destinationFilePath)
                     && FilesHaveSameSha256(destinationFilePath, temporaryFilePath))

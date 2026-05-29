@@ -716,7 +716,10 @@ namespace JoinGameAfk.View
                             : Brushes.SlateGray);
                 });
 
-                var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(champion, progress);
+                var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
+                    champion,
+                    progress,
+                    optimizeForLocalCache: !_settings.DownloadRawChampionPictures);
                 if (_selectedChampionPictureChampion?.Id != requestedChampionId
                     || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                 {
@@ -1070,7 +1073,7 @@ namespace JoinGameAfk.View
             if (!_settings.ShowChampionPictureDownloadWarning)
                 return true;
 
-            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name)
+            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _settings.DownloadRawChampionPictures)
             {
                 Owner = Window.GetWindow(this)
             };

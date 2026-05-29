@@ -51,7 +51,8 @@ namespace JoinGameAfk.Services
         string CacheFilePath,
         int? MaxTileIndex = null,
         bool DeleteArchiveAfterExtraction = true,
-        bool DeleteExistingArchivesBeforeDownload = true)
+        bool DeleteExistingArchivesBeforeDownload = true,
+        Func<string, CancellationToken, bool>? OptimizeTileFile = null)
     {
         public static ChampionTileArchiveInstallOptions Default => new(
             AppStorage.ChampionTileDirectoryPath,
@@ -187,6 +188,7 @@ namespace JoinGameAfk.Services
                     archiveFilePath,
                     options.TileDirectoryPath,
                     options.MaxTileIndex,
+                    options.OptimizeTileFile,
                     cancellationToken);
                 if (extractionResult.CheckedTileCount == 0)
                     throw new InvalidOperationException("No champion tile jpg files were found in the Riot Data Dragon archive.");
@@ -416,6 +418,7 @@ namespace JoinGameAfk.Services
             string archiveFilePath,
             string tileDirectoryPath,
             int? maxTileIndex,
+            Func<string, CancellationToken, bool>? optimizeTileFile,
             CancellationToken cancellationToken)
         {
             int checkedTileCount = 0;
@@ -457,6 +460,8 @@ namespace JoinGameAfk.Services
                     {
                         entry.DataStream.CopyTo(outputStream);
                     }
+
+                    optimizeTileFile?.Invoke(temporaryTileFilePath, cancellationToken);
 
                     checkedTileCount++;
                     if (File.Exists(destinationFilePath)

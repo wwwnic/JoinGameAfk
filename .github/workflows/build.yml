@@ -69,7 +69,7 @@ jobs:
           "DATA_DRAGON_VERSION=$dataDragonVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "Resolved Data Dragon seed version: $dataDragonVersion"
 
-      - name: Generate light champion tile seed cache
+      - name: Generate champion tile seed cache
         shell: pwsh
         run: >
           dotnet run --project JoinGameAfk.ChampionTileSeeder/JoinGameAfk.ChampionTileSeeder.csproj --configuration Release --
@@ -77,20 +77,19 @@ jobs:
           --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
           --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
           --version "$env:DATA_DRAGON_VERSION"
-          --max-tile-index 0
-          --keep-archive
+          --resize-width 96
 
-      - name: Publish light self-contained single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-light
+      - name: Publish self-contained single-file app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-self-contained
 
-      - name: Verify light single-file artifact
+      - name: Verify self-contained single-file artifact
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-light'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-self-contained'
           $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
 
           if (-not (Test-Path $exePath)) {
-            throw "Light single-file executable was not produced at $exePath."
+            throw "Self-contained single-file executable was not produced at $exePath."
           }
 
           $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
@@ -98,23 +97,23 @@ jobs:
 
           if ($unexpectedFiles) {
             $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
-            throw "Light single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
+            throw "Self-contained single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
           }
 
-      - name: Rename light executable
-        run: Copy-Item -Path ${{ github.workspace }}\publish-light\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-light.exe
+      - name: Rename self-contained executable
+        run: Copy-Item -Path ${{ github.workspace }}\publish-self-contained\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
 
-      - name: Publish light framework-dependent single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-light-framework-dependent-single-file
+      - name: Publish framework-dependent single-file app
+        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-framework-dependent-single-file
 
-      - name: Verify light framework-dependent single-file artifact
+      - name: Verify framework-dependent single-file artifact
         shell: pwsh
         run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-light-framework-dependent-single-file'
+          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-framework-dependent-single-file'
           $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
 
           if (-not (Test-Path $exePath)) {
-            throw "Light framework-dependent single-file executable was not produced at $exePath."
+            throw "Framework-dependent single-file executable was not produced at $exePath."
           }
 
           $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
@@ -122,106 +121,11 @@ jobs:
 
           if ($unexpectedFiles) {
             $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
-            throw "Light framework-dependent single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
+            throw "Framework-dependent single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
           }
 
-      - name: Rename light framework-dependent single-file executable
-        run: Copy-Item -Path ${{ github.workspace }}\publish-light-framework-dependent-single-file\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-light-requires-dotnet-10.exe
-
-      - name: Verify reusable Data Dragon archive
-        shell: pwsh
-        run: |
-          $archiveDirectory = Join-Path $env:RUNNER_TEMP 'JoinGameAfkChampionTileArchives'
-          $expectedArchivePath = Join-Path $archiveDirectory "dragontail-$env:DATA_DRAGON_VERSION.tgz"
-
-          if (-not (Test-Path $expectedArchivePath)) {
-            throw "Expected reusable Data Dragon archive was not found at $expectedArchivePath. The full build would download it again."
-          }
-
-          $expectedArchive = Get-Item -LiteralPath $expectedArchivePath
-          if ($expectedArchive.Length -le 0) {
-            throw "Expected reusable Data Dragon archive is empty at $expectedArchivePath. The full build cannot safely reuse it."
-          }
-
-          $archives = @(Get-ChildItem -Path $archiveDirectory -Filter 'dragontail-*.tgz' -File)
-          if ($archives.Count -ne 1) {
-            $fileList = $archives.FullName -join [Environment]::NewLine
-            throw "Expected exactly one reusable Data Dragon archive, but found $($archives.Count):$([Environment]::NewLine)$fileList"
-          }
-
-          "Reusable Data Dragon archive verified: $expectedArchivePath"
-
-      - name: Clean champion tile seed cache before full build
-        shell: pwsh
-        run: |
-          $tileDirectory = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\ChampionTiles'
-          $cacheFile = Join-Path $env:GITHUB_WORKSPACE 'JoinGameAfk\Assets\champion-tile-cache.json'
-
-          if (Test-Path $tileDirectory) {
-            Remove-Item -LiteralPath $tileDirectory -Recurse -Force
-          }
-
-          if (Test-Path $cacheFile) {
-            Remove-Item -LiteralPath $cacheFile -Force
-          }
-
-      - name: Generate full champion tile seed cache
-        shell: pwsh
-        run: >
-          dotnet run --project JoinGameAfk.ChampionTileSeeder/JoinGameAfk.ChampionTileSeeder.csproj --configuration Release --
-          --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
-          --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
-          --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
-          --version "$env:DATA_DRAGON_VERSION"
-          --reuse-archive
-
-      - name: Publish full self-contained single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained true -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full
-
-      - name: Verify full single-file artifact
-        shell: pwsh
-        run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-full'
-          $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
-
-          if (-not (Test-Path $exePath)) {
-            throw "Full single-file executable was not produced at $exePath."
-          }
-
-          $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
-            Where-Object { $_.FullName -ne $exePath }
-
-          if ($unexpectedFiles) {
-            $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
-            throw "Full single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
-          }
-
-      - name: Rename full executable
-        run: Copy-Item -Path ${{ github.workspace }}\publish-full\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk.exe
-
-      - name: Publish full framework-dependent single-file app
-        run: dotnet publish JoinGameAfk/JoinGameAfk.csproj --configuration Release --runtime win-x64 --self-contained false -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false --output ${{ github.workspace }}\publish-full-framework-dependent-single-file
-
-      - name: Verify full framework-dependent single-file artifact
-        shell: pwsh
-        run: |
-          $publishDir = Join-Path $env:GITHUB_WORKSPACE 'publish-full-framework-dependent-single-file'
-          $exePath = Join-Path $publishDir 'JoinGameAfk.exe'
-
-          if (-not (Test-Path $exePath)) {
-            throw "Full framework-dependent single-file executable was not produced at $exePath."
-          }
-
-          $unexpectedFiles = Get-ChildItem -Path $publishDir -Recurse -File |
-            Where-Object { $_.FullName -ne $exePath }
-
-          if ($unexpectedFiles) {
-            $fileList = $unexpectedFiles.FullName -join [Environment]::NewLine
-            throw "Full framework-dependent single-file publish emitted loose files. These must be bundled into JoinGameAfk.exe:$([Environment]::NewLine)$fileList"
-          }
-
-      - name: Rename full framework-dependent single-file executable
-        run: Copy-Item -Path ${{ github.workspace }}\publish-full-framework-dependent-single-file\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-requires-dotnet-10.exe
+      - name: Rename framework-dependent single-file executable
+        run: Copy-Item -Path ${{ github.workspace }}\publish-framework-dependent-single-file\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-requires-dotnet-10.exe
 
       - name: Clean downloaded Data Dragon archive
         shell: pwsh
@@ -252,16 +156,14 @@ jobs:
           "Website and README: https://wwwnic.github.io/JoinGameAfk/" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Which Download Should I Use?" | Out-File release-notes.md -Append -Encoding utf8
-          '- Recommended: `JoinGameAfk.exe`. Full includes every champion picture and this file includes .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
-          '- `JoinGameAfk-light.exe`. Light includes one champion picture per champion and also includes .NET.' | Out-File release-notes.md -Append -Encoding utf8
-          '- `JoinGameAfk-requires-dotnet-10.exe`. Full champion pictures, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
-          '- `JoinGameAfk-light-requires-dotnet-10.exe`. Light champion pictures and requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
+          '- Recommended: `JoinGameAfk.exe`. Includes every bundled champion picture and .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
+          '- `JoinGameAfk-requires-dotnet-10.exe`. Includes every bundled champion picture, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Windows warning:" | Out-File release-notes.md -Append -Encoding utf8
           'This app is not code-signed yet, so Windows may show a blue warning such as "Windows protected your PC". If you downloaded the file from this GitHub release and trust this project, click "More info" and then "Run anyway". Do not do this for copies downloaded from somewhere else.' | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Advanced note:" | Out-File release-notes.md -Append -Encoding utf8
-          "If you download `JoinGameAfk-requires-dotnet-10.exe` or `JoinGameAfk-light-requires-dotnet-10.exe`, install the .NET 10 Desktop Runtime x64 first. Download it here: https://dotnet.microsoft.com/download/dotnet/10.0" | Out-File release-notes.md -Append -Encoding utf8
+          "If you download `JoinGameAfk-requires-dotnet-10.exe`, install the .NET 10 Desktop Runtime x64 first. Download it here: https://dotnet.microsoft.com/download/dotnet/10.0" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
 
           if ($previousTag) {
@@ -285,8 +187,6 @@ jobs:
           body_path: release-notes.md
           files: |
             JoinGameAfk.exe
-            JoinGameAfk-light.exe
             JoinGameAfk-requires-dotnet-10.exe
-            JoinGameAfk-light-requires-dotnet-10.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

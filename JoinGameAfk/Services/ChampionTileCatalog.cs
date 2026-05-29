@@ -122,9 +122,13 @@ namespace JoinGameAfk.Services
 
         public static async Task<ChampionTileArchiveInstallResult> InstallLatestDataDragonArchiveAsync(
             IProgress<ChampionTileArchiveProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true)
         {
-            var result = await ChampionTileArchiveInstaller.InstallLatestDataDragonArchiveAsync(progress, cancellationToken)
+            var result = await ChampionTileArchiveInstaller.InstallLatestDataDragonArchiveAsync(
+                    CreateArchiveInstallOptions(optimizeForLocalCache),
+                    progress,
+                    cancellationToken)
                 .ConfigureAwait(false);
             Reload();
             return result;
@@ -133,9 +137,14 @@ namespace JoinGameAfk.Services
         public static async Task<ChampionTileArchiveInstallResult> InstallDataDragonArchiveAsync(
             string dataDragonVersion,
             IProgress<ChampionTileArchiveProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true)
         {
-            var result = await ChampionTileArchiveInstaller.InstallDataDragonArchiveAsync(dataDragonVersion, progress, cancellationToken)
+            var result = await ChampionTileArchiveInstaller.InstallDataDragonArchiveAsync(
+                    dataDragonVersion,
+                    CreateArchiveInstallOptions(optimizeForLocalCache),
+                    progress,
+                    cancellationToken)
                 .ConfigureAwait(false);
             Reload();
             return result;
@@ -144,7 +153,8 @@ namespace JoinGameAfk.Services
         public static async Task<ChampionTileDownloadResult> DownloadAllImagesForChampionAsync(
             ChampionInfo champion,
             IProgress<ChampionTileDownloadProgress>? progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true)
         {
             var syncInfo = GetCacheSyncInfo();
             var result = await DataDragonChampionTileDownloadService.DownloadChampionTilesAsync(
@@ -152,7 +162,8 @@ namespace JoinGameAfk.Services
                     syncInfo.DataDragonVersion,
                     TileDirectoryPath,
                     progress,
-                    cancellationToken)
+                    cancellationToken,
+                    optimizeForLocalCache)
                 .ConfigureAwait(false);
             Reload();
             return result;
@@ -161,6 +172,16 @@ namespace JoinGameAfk.Services
         public static ChampionTileArchiveCleanupResult DeleteDownloadedArchives()
         {
             return ChampionTileArchiveInstaller.DeleteDownloadedArchives(AppStorage.ChampionTileArchiveDirectoryPath);
+        }
+
+        private static ChampionTileArchiveInstallOptions CreateArchiveInstallOptions(bool optimizeForLocalCache)
+        {
+            return ChampionTileArchiveInstallOptions.Default with
+            {
+                OptimizeTileFile = optimizeForLocalCache
+                    ? ChampionTileCacheImageOptimizer.TryOptimizeJpegInPlace
+                    : null
+            };
         }
 
         public static ChampionTileSeedCacheResult InstallBundledSeedCacheIfNeeded()

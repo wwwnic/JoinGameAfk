@@ -167,7 +167,10 @@ namespace JoinGameAfk
                 try
                 {
                     fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; cached files: {tileSyncInfo.CachedTileCount}; latest version: {latestDataDragonVersion}. Installing the archive because the version changed or the picture cache is empty.");
-                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(latestDataDragonVersion, CreateChampionTileArchiveLogProgress());
+                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(
+                        latestDataDragonVersion,
+                        CreateChampionTileArchiveLogProgress(),
+                        optimizeForLocalCache: !champSelectSettings.DownloadRawChampionPictures);
                     string archiveCleanupText = result.ArchiveDeleted
                         ? "archive removed after extraction"
                         : $"archive cleanup failed ({result.ArchiveDeleteError})";

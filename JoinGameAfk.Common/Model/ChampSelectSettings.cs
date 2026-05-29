@@ -228,6 +228,11 @@ namespace JoinGameAfk.Model
         /// </summary>
         public bool ShowChampionPictureDownloadWarning { get; set; } = true;
 
+        /// <summary>
+        /// Whether Data Dragon champion picture downloads should keep Riot's original jpg files instead of resized app-cache copies.
+        /// </summary>
+        public bool DownloadRawChampionPictures { get; set; }
+
         public Dictionary<Position, PositionPreference> Preferences { get; set; } = new()
         {
             { Position.Default, new PositionPreference() },
@@ -407,6 +412,7 @@ namespace JoinGameAfk.Model
             ThemeKey = defaults.ThemeKey;
             AutoUpdateChampionCatalogOnStartup = defaults.AutoUpdateChampionCatalogOnStartup;
             ShowChampionPictureDownloadWarning = defaults.ShowChampionPictureDownloadWarning;
+            DownloadRawChampionPictures = defaults.DownloadRawChampionPictures;
         }
 
         public void ResetSoundAlertOptionsToDefaults()
