@@ -6,6 +6,8 @@ using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using static LcuClient.Lcu;
 
+namespace JoinGameAfk.Phase;
+
 public class ReadyCheck : IPhaseHandler
 {
     private readonly LeagueClientHttp _http;

@@ -5,6 +5,7 @@ using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
+using JoinGameAfk.Phase;
 using JoinGameAfk.Services;
 using JoinGameAfk.View;
 using LcuClient;

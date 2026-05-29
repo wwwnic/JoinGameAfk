@@ -32,7 +32,9 @@ namespace JoinGameAfk.View
         private readonly ChampSelectSettings _settings;
         private readonly OverlaySettings _overlaySettings;
         private PhaseController? _phaseController;
+#if DEBUG
         private PhaseProgressionTestWindow? _phaseProgressionTestWindow;
+#endif
         private PickBanOverlayWindow? _pickBanOverlayWindow;
         private QueueMicroOverlayWindow? _queueMicroOverlayWindow;
         private DashboardStatus _lastDashboardStatus = new();
@@ -188,8 +190,10 @@ namespace JoinGameAfk.View
             Dispatcher.TryInvoke(() =>
             {
                 _isWatcherRunning = isRunning;
+#if DEBUG
                 if (_isWatcherRunning)
                     ClosePhaseProgressionTestWindow();
+#endif
 
                 RefreshWatcherButton();
                 RefreshPhaseIndicator();
@@ -255,12 +259,14 @@ namespace JoinGameAfk.View
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+#if DEBUG
             if (e.Key == Key.F12 && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
             {
                 OpenPhaseProgressionTestWindow();
                 e.Handled = true;
                 return;
             }
+#endif
 
             if (e.Key == Key.Enter && Keyboard.FocusedElement is ButtonBase button && button.IsEnabled)
             {
@@ -288,6 +294,7 @@ namespace JoinGameAfk.View
             e.Handled = true;
         }
 
+#if DEBUG
         private void OpenPhaseProgressionTestWindow()
         {
             if (_isWatcherRunning)
@@ -317,6 +324,7 @@ namespace JoinGameAfk.View
         {
             _phaseProgressionTestWindow?.Close();
         }
+#endif
 
         private static void ActivateButtonFromKeyboard(ButtonBase button)
         {

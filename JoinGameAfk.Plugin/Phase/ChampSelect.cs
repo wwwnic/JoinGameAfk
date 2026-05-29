@@ -6,6 +6,8 @@ using JoinGameAfk.Model;
 using LcuClient;
 using static LcuClient.Lcu;
 
+namespace JoinGameAfk.Phase;
+
 public class ChampSelect : IPhaseHandler
 {
     private sealed record ChampionPlanChoice(int ChampionId, Position SourcePosition);
