@@ -791,18 +791,6 @@ namespace JoinGameAfk.View
             RefreshDirtyState();
         }
 
-        private void SoundAlertVolumeBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            ValidateSoundAlertVolumeBox(sender as TextBox);
-            RefreshDirtyState();
-        }
-
-        private void SoundAlertPlaybackDurationBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            ValidateSoundAlertPlaybackDurationBox(sender as TextBox);
-            RefreshDirtyState();
-        }
-
         private void RefreshDirtyState()
         {
             if (_isApplyingSettingsToControls)
@@ -1068,27 +1056,6 @@ namespace JoinGameAfk.View
             bool isValid = textBox.DataContext is not SoundAlertOption option
                 || !option.HasThreshold
                 || TryParseSoundAlertThreshold(option.ThresholdText, out _);
-            InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
-        }
-
-        private void ValidateSoundAlertVolumeBox(TextBox? textBox)
-        {
-            if (textBox is null)
-                return;
-
-            bool isValid = textBox.DataContext is not SoundAlertOption option
-                || TryParseSoundAlertVolume(option.VolumeText, out _);
-            InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
-        }
-
-        private void ValidateSoundAlertPlaybackDurationBox(TextBox? textBox)
-        {
-            if (textBox is null)
-                return;
-
-            bool isValid = textBox.DataContext is not SoundAlertOption option
-                || !option.HasPlaybackDuration
-                || TryParseSoundAlertPlaybackDuration(option.PlaybackDurationText, out _);
             InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
         }
 

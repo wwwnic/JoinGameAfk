@@ -248,12 +248,6 @@ namespace JoinGameAfk.View.Controls
             text.Text = value;
         }
 
-        private static void SetStandbyStep(Border step, TextBlock text, string value)
-        {
-            step.Tag = "Standby";
-            text.Text = value;
-        }
-
         private void ResetChampionSelectStepHeader()
         {
             ChampionSelectStepNumberText.Text = "4";

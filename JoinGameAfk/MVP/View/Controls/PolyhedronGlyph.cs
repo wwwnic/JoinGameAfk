@@ -245,80 +245,6 @@ namespace JoinGameAfk.View.Controls
             return new Vector3(x3, y3, z2);
         }
 
-        private static PolyhedronModel CreateGem(int sideCount, double equatorRadius, double capRadius, double twist)
-        {
-            var vertices = new List<Vector3>();
-            for (int i = 0; i < sideCount; i++)
-                vertices.Add(CreateRingVertex(sideCount, i, equatorRadius, 0, 0));
-
-            for (int i = 0; i < sideCount; i++)
-                vertices.Add(CreateRingVertex(sideCount, i, capRadius, 0.72, twist));
-
-            for (int i = 0; i < sideCount; i++)
-                vertices.Add(CreateRingVertex(sideCount, i, capRadius, -0.72, -twist));
-
-            var faces = new List<int[]>
-            {
-                Enumerable.Range(sideCount, sideCount).Reverse().ToArray(),
-                Enumerable.Range(sideCount * 2, sideCount).ToArray()
-            };
-
-            for (int i = 0; i < sideCount; i++)
-            {
-                int next = (i + 1) % sideCount;
-                faces.Add([i, next, sideCount + next, sideCount + i]);
-                faces.Add([sideCount * 2 + i, sideCount * 2 + next, next, i]);
-            }
-
-            return Normalize(new PolyhedronModel(vertices.ToArray(), faces.ToArray()));
-        }
-
-        private static Vector3 CreateRingVertex(int sideCount, int index, double radius, double y, double twist)
-        {
-            double angle = Math.PI * 2 * index / sideCount + twist;
-            return new Vector3(Math.Cos(angle) * radius, y, Math.Sin(angle) * radius);
-        }
-
-        private static PolyhedronModel CreateTetrahedron()
-        {
-            return Normalize(new PolyhedronModel(
-                [
-                    new Vector3(1, 1, 1),
-                    new Vector3(-1, -1, 1),
-                    new Vector3(-1, 1, -1),
-                    new Vector3(1, -1, -1)
-                ],
-                [
-                    [0, 1, 2],
-                    [0, 3, 1],
-                    [0, 2, 3],
-                    [1, 3, 2]
-                ]));
-        }
-
-        private static PolyhedronModel CreateOctahedron()
-        {
-            return Normalize(new PolyhedronModel(
-                [
-                    new Vector3(1, 0, 0),
-                    new Vector3(-1, 0, 0),
-                    new Vector3(0, 1, 0),
-                    new Vector3(0, -1, 0),
-                    new Vector3(0, 0, 1),
-                    new Vector3(0, 0, -1)
-                ],
-                [
-                    [0, 2, 4],
-                    [2, 1, 4],
-                    [1, 3, 4],
-                    [3, 0, 4],
-                    [2, 0, 5],
-                    [1, 2, 5],
-                    [3, 1, 5],
-                    [0, 3, 5]
-                ]));
-        }
-
         private static PolyhedronModel CreateIcosahedron()
         {
             double phi = (1 + Math.Sqrt(5)) / 2;
@@ -371,61 +297,6 @@ namespace JoinGameAfk.View.Controls
             return Normalize(model);
         }
 
-        private static PolyhedronModel CreateLatitudeSphere(int sideCount, int latitudeRingCount)
-        {
-            var vertices = new List<Vector3>
-            {
-                new(0, 1, 0)
-            };
-
-            for (int ring = 1; ring <= latitudeRingCount; ring++)
-            {
-                double latitude = Math.PI * ring / (latitudeRingCount + 1);
-                double y = Math.Cos(latitude);
-                double radius = Math.Sin(latitude);
-                double twist = ring % 2 == 0
-                    ? Math.PI / sideCount
-                    : 0;
-
-                for (int side = 0; side < sideCount; side++)
-                    vertices.Add(CreateRingVertex(sideCount, side, radius, y, twist));
-            }
-
-            int bottomIndex = vertices.Count;
-            vertices.Add(new Vector3(0, -1, 0));
-
-            var faces = new List<int[]>();
-            int firstRingStart = 1;
-            int lastRingStart = 1 + (latitudeRingCount - 1) * sideCount;
-
-            for (int side = 0; side < sideCount; side++)
-            {
-                int next = (side + 1) % sideCount;
-                faces.Add([0, firstRingStart + side, firstRingStart + next]);
-            }
-
-            for (int ring = 0; ring < latitudeRingCount - 1; ring++)
-            {
-                int upperStart = 1 + ring * sideCount;
-                int lowerStart = upperStart + sideCount;
-
-                for (int side = 0; side < sideCount; side++)
-                {
-                    int next = (side + 1) % sideCount;
-                    faces.Add([upperStart + side, lowerStart + side, lowerStart + next]);
-                    faces.Add([upperStart + side, lowerStart + next, upperStart + next]);
-                }
-            }
-
-            for (int side = 0; side < sideCount; side++)
-            {
-                int next = (side + 1) % sideCount;
-                faces.Add([bottomIndex, lastRingStart + next, lastRingStart + side]);
-            }
-
-            return Normalize(new PolyhedronModel(vertices.ToArray(), faces.ToArray()));
-        }
-
         private static PolyhedronModel SubdivideTriangles(PolyhedronModel model)
         {
             var vertices = model.Vertices.ToList();
@@ -471,68 +342,6 @@ namespace JoinGameAfk.View.Controls
             return midpointIndex;
         }
 
-        private static PolyhedronModel CreateDodecahedron()
-        {
-            PolyhedronModel icosahedron = CreateIcosahedron();
-            Vector3[] faceCenters = icosahedron.Faces
-                .Select(face => Vector3.Normalize(AverageVertices(icosahedron.Vertices, face)))
-                .ToArray();
-
-            int[][] faces = icosahedron.Vertices
-                .Select((vertex, vertexIndex) => CreateDualFace(vertex, vertexIndex, icosahedron.Faces, faceCenters))
-                .ToArray();
-
-            return Normalize(new PolyhedronModel(faceCenters, faces));
-        }
-
-        private static int[] CreateDualFace(Vector3 vertex, int vertexIndex, int[][] sourceFaces, Vector3[] faceCenters)
-        {
-            Vector3 normal = Vector3.Normalize(vertex);
-            Vector3 axis = Math.Abs(normal.Z) > 0.88
-                ? new Vector3(0, 1, 0)
-                : new Vector3(0, 0, 1);
-            Vector3 basisU = Vector3.Normalize(Vector3.Cross(axis, normal));
-            Vector3 basisV = Vector3.Cross(normal, basisU);
-
-            int[] face = sourceFaces
-                .Select((sourceFace, faceIndex) => new
-                {
-                    FaceIndex = faceIndex,
-                    ContainsVertex = sourceFace.Contains(vertexIndex)
-                })
-                .Where(item => item.ContainsVertex)
-                .Select(item =>
-                {
-                    Vector3 tangent = faceCenters[item.FaceIndex] - normal * Vector3.Dot(faceCenters[item.FaceIndex], normal);
-                    double angle = Math.Atan2(Vector3.Dot(tangent, basisV), Vector3.Dot(tangent, basisU));
-                    return new { item.FaceIndex, Angle = angle };
-                })
-                .OrderBy(item => item.Angle)
-                .Select(item => item.FaceIndex)
-                .ToArray();
-
-            if (face.Length >= 3)
-            {
-                Vector3 a = faceCenters[face[0]];
-                Vector3 b = faceCenters[face[1]];
-                Vector3 c = faceCenters[face[2]];
-                Vector3 faceNormal = Vector3.Normalize(Vector3.Cross(b - a, c - a));
-                if (Vector3.Dot(faceNormal, normal) < 0)
-                    Array.Reverse(face);
-            }
-
-            return face;
-        }
-
-        private static Vector3 AverageVertices(Vector3[] vertices, int[] indexes)
-        {
-            Vector3 sum = new(0, 0, 0);
-            foreach (int index in indexes)
-                sum += vertices[index];
-
-            return sum / indexes.Length;
-        }
-
         private static PolyhedronModel Normalize(PolyhedronModel model)
         {
             double maxLength = model.Vertices.Max(vertex => vertex.Length);
@@ -541,12 +350,6 @@ namespace JoinGameAfk.View.Controls
                 .ToArray();
 
             return model with { Vertices = vertices };
-        }
-
-        private static double SmoothStep(double value)
-        {
-            value = Math.Clamp(value, 0, 1);
-            return value * value * (3 - 2 * value);
         }
 
         private static Color Blend(Color first, Color second, double amount)
@@ -702,9 +505,6 @@ namespace JoinGameAfk.View.Controls
             public static Vector3 operator +(Vector3 left, Vector3 right) =>
                 new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
 
-            public static Vector3 operator *(Vector3 vector, double scalar) =>
-                new(vector.X * scalar, vector.Y * scalar, vector.Z * scalar);
-
             public static Vector3 operator /(Vector3 vector, double scalar) =>
                 new(vector.X / scalar, vector.Y / scalar, vector.Z / scalar);
 
@@ -713,9 +513,6 @@ namespace JoinGameAfk.View.Controls
                     left.Y * right.Z - left.Z * right.Y,
                     left.Z * right.X - left.X * right.Z,
                     left.X * right.Y - left.Y * right.X);
-
-            public static double Dot(Vector3 left, Vector3 right) =>
-                left.X * right.X + left.Y * right.Y + left.Z * right.Z;
 
             public static Vector3 Normalize(Vector3 vector)
             {

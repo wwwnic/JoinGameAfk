@@ -215,11 +215,6 @@ namespace JoinGameAfk.Services
             return Math.Clamp(playbackDurationSeconds.Value, 1, 30);
         }
 
-        private static NotificationSoundOption GetReadyCheckSoundOption(string? soundKey)
-        {
-            return GetSoundOption(soundKey);
-        }
-
         private static NotificationSoundOption GetSoundOption(string? soundKey)
         {
             string normalizedKey = NormalizeSoundKey(soundKey);
