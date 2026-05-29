@@ -287,6 +287,16 @@ namespace JoinGameAfk.Services
                 : null;
         }
 
+        public static Task<int> PreloadSelectedImageSourcesAsync(
+            IEnumerable<ChampionInfo> champions,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(champions);
+
+            var championSnapshot = champions.ToList();
+            return Task.Run(() => PreloadSelectedImageSources(championSnapshot, cancellationToken), cancellationToken);
+        }
+
         public static ImageSource? GetImageSource(string? fileName)
         {
             if (!TryGetSafeFileName(fileName, out string safeFileName))
@@ -306,6 +316,21 @@ namespace JoinGameAfk.Services
             }
 
             return imageSource;
+        }
+
+        private static int PreloadSelectedImageSources(
+            IEnumerable<ChampionInfo> champions,
+            CancellationToken cancellationToken)
+        {
+            int loadedCount = 0;
+            foreach (var champion in champions)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (GetSelectedOption(champion)?.ImageSource is not null)
+                    loadedCount++;
+            }
+
+            return loadedCount;
         }
 
         private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>> OptionsByChampionKey

@@ -7,6 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.MVP.Controller;
@@ -45,6 +46,8 @@ namespace JoinGameAfk.View
         private bool _isClosingAutoPickBanOverlay;
         private bool _isPickBanOverlayVisibleDuringChampSelect;
         private bool _suppressAutoPickBanOverlayForCurrentChampSelect;
+        private bool _keepInactiveFramesMeasured;
+        private bool _inactiveFrameWarmupQueued;
 
         public int ActiveTabIndex => _activeTabIndex;
 
@@ -66,6 +69,7 @@ namespace JoinGameAfk.View
             _frames = [DashboardFrame, ChampionPrioritiesFrame, SettingsFrame];
 
             SourceInitialized += MainWindow_SourceInitialized;
+            ContentRendered += MainWindow_ContentRendered;
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
             Closed += MainWindow_Closed;
             _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
@@ -127,10 +131,41 @@ namespace JoinGameAfk.View
                 source.AddHook(WindowProc);
         }
 
+        private void MainWindow_ContentRendered(object? sender, EventArgs e)
+        {
+            if (_inactiveFrameWarmupQueued)
+                return;
+
+            _inactiveFrameWarmupQueued = true;
+            Dispatcher.InvokeAsync(WarmInactiveTabFrames, DispatcherPriority.ApplicationIdle);
+            _ = WarmChampionImageCacheAsync();
+        }
+
+        private void WarmInactiveTabFrames()
+        {
+            if (!IsLoaded || !IsVisible)
+                return;
+
+            _keepInactiveFramesMeasured = true;
+            ActivateTab(_activeTabIndex);
+        }
+
+        private static async Task WarmChampionImageCacheAsync()
+        {
+            try
+            {
+                await ChampionTileCatalog.PreloadSelectedImageSourcesAsync(ChampionCatalog.All).ConfigureAwait(false);
+            }
+            catch
+            {
+            }
+        }
+
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
             _phaseController?.Dispose();
             _phaseController = null;
+            ContentRendered -= MainWindow_ContentRendered;
             AppThemeManager.ThemeChanged -= RefreshTheme;
             _settings.Saved -= Settings_Saved;
             _overlaySettings.Saved -= OverlaySettings_Saved;
@@ -318,7 +353,11 @@ namespace JoinGameAfk.View
                 _tabs[i].Background = Brushes.Transparent;
                 _tabs[i].Foreground = isActive ? activeTabFg : inactiveTabFg;
                 _tabs[i].BorderBrush = isActive ? activeTabBorder : inactiveTabBorder;
-                _frames[i].Visibility = isActive ? Visibility.Visible : Visibility.Collapsed;
+                _frames[i].Visibility = isActive
+                    ? Visibility.Visible
+                    : _keepInactiveFramesMeasured
+                        ? Visibility.Hidden
+                        : Visibility.Collapsed;
             }
         }
 
