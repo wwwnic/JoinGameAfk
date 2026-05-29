@@ -853,20 +853,18 @@
             </Border>
         </StackPanel>
 
-        <Popup x:Name="SoundDragPreviewPopup"
-               Grid.RowSpan="4"
-               Placement="RelativePoint"
-               PlacementTarget="{Binding ElementName=RootPage}"
-               AllowsTransparency="True"
-               IsHitTestVisible="False"
-               PopupAnimation="None"
-               StaysOpen="True">
-            <Border Background="{DynamicResource AppInputFocusBrush}"
+        <Canvas Grid.RowSpan="4"
+                Panel.ZIndex="100"
+                ClipToBounds="False"
+                IsHitTestVisible="False">
+            <Border x:Name="SoundDragPreviewOverlay"
+                    Background="{DynamicResource AppInputFocusBrush}"
                     BorderBrush="{DynamicResource TargetDropHoverBrush}"
                     BorderThickness="1"
                     CornerRadius="10"
                     Padding="7,6"
-                    Opacity="0.95">
+                    Opacity="0.95"
+                    Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <Border Width="24"
@@ -894,6 +892,6 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
-        </Popup>
+        </Canvas>
     </Grid>
 </Page>

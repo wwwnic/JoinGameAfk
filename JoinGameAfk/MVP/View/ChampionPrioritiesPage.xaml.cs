@@ -2339,20 +2339,20 @@ namespace JoinGameAfk.View
             DragPreviewImageFrame.Visibility = champion.IsBatchDeleteOnly ? Visibility.Collapsed : Visibility.Visible;
             DragPreviewText.Text = champion.PreviewText;
             UpdateDragPreviewPosition(position);
-            DragPreviewPopup.IsOpen = true;
+            DragPreviewOverlay.Visibility = Visibility.Visible;
         }
 
         private void UpdateDragPreviewPosition(Point position)
         {
-            DragPreviewPopup.HorizontalOffset = position.X + 14;
-            DragPreviewPopup.VerticalOffset = position.Y + 14;
-            if (!DragPreviewPopup.IsOpen)
-                DragPreviewPopup.IsOpen = true;
+            Canvas.SetLeft(DragPreviewOverlay, position.X + 14);
+            Canvas.SetTop(DragPreviewOverlay, position.Y + 14);
+            if (DragPreviewOverlay.Visibility != Visibility.Visible)
+                DragPreviewOverlay.Visibility = Visibility.Visible;
         }
 
         private void HideDragPreview(bool clearContent = true)
         {
-            DragPreviewPopup.IsOpen = false;
+            DragPreviewOverlay.Visibility = Visibility.Collapsed;
             if (!clearContent)
                 return;
 

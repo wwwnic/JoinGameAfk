@@ -1404,20 +1404,18 @@
                 </Border>
             </Border>
 
-            <Popup x:Name="DragPreviewPopup"
-                   Grid.ColumnSpan="3"
-                   Placement="RelativePoint"
-                   PlacementTarget="{Binding ElementName=RootPage}"
-                   AllowsTransparency="True"
-                   IsHitTestVisible="False"
-                   PopupAnimation="None"
-                   StaysOpen="True">
-                <Border Background="{DynamicResource AppInputFocusBrush}"
+            <Canvas Grid.ColumnSpan="3"
+                    Panel.ZIndex="100"
+                    ClipToBounds="False"
+                    IsHitTestVisible="False">
+                <Border x:Name="DragPreviewOverlay"
+                        Background="{DynamicResource AppInputFocusBrush}"
                         BorderBrush="{DynamicResource AccentBlueBrush}"
                         BorderThickness="1"
                         CornerRadius="10"
                         Padding="5"
-                        Opacity="0.95">
+                        Opacity="0.95"
+                        Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center">
                         <Border x:Name="DragPreviewImageFrame"
@@ -1449,6 +1447,6 @@
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </Border>
-            </Popup>
+            </Canvas>
         </Grid>
 </Page>

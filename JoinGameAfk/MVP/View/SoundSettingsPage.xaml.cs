@@ -734,20 +734,20 @@ namespace JoinGameAfk.View
         {
             SoundDragPreviewText.Text = sound.DisplayName;
             UpdateSoundDragPreviewPosition(position);
-            SoundDragPreviewPopup.IsOpen = true;
+            SoundDragPreviewOverlay.Visibility = Visibility.Visible;
         }
 
         private void UpdateSoundDragPreviewPosition(Point position)
         {
-            SoundDragPreviewPopup.HorizontalOffset = position.X + 14;
-            SoundDragPreviewPopup.VerticalOffset = position.Y + 14;
-            if (!SoundDragPreviewPopup.IsOpen)
-                SoundDragPreviewPopup.IsOpen = true;
+            Canvas.SetLeft(SoundDragPreviewOverlay, position.X + 14);
+            Canvas.SetTop(SoundDragPreviewOverlay, position.Y + 14);
+            if (SoundDragPreviewOverlay.Visibility != Visibility.Visible)
+                SoundDragPreviewOverlay.Visibility = Visibility.Visible;
         }
 
         private void HideSoundDragPreview(bool clearContent = true)
         {
-            SoundDragPreviewPopup.IsOpen = false;
+            SoundDragPreviewOverlay.Visibility = Visibility.Collapsed;
             if (!clearContent)
                 return;
 
