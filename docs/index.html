@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="google-site-verification" content="9-thqKuCrVBVTaj5RvHswtW9iTH1EDD-yE9y8_oV5GE">
+    <meta name="description" content="JoinGameAfk is a free Windows helper for League of Legends ready checks, champion priority planning, and champion select pick/ban flow.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="https://wwwnic.github.io/JoinGameAfk/">
+    <meta property="og:title" content="JoinGameAfk">
+    <meta property="og:description" content="A free Windows helper for League of Legends ready checks, champion priority planning, and champion select pick/ban flow.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://wwwnic.github.io/JoinGameAfk/">
+    <meta property="og:image" content="https://wwwnic.github.io/JoinGameAfk/images/champion-picture-selector.jpg">
+    <title>JoinGameAfk - League of Legends ready check and champion select helper</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101313;
+        --panel: #171b1b;
+        --text: #f4f1e8;
+        --muted: #b9c0bb;
+        --line: #2b3332;
+        --accent: #d3ad62;
+        --accent-strong: #f0cf78;
+        --blue: #6bb7d6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", Arial, sans-serif;
+        line-height: 1.55;
+      }
+
+      a {
+        color: var(--accent-strong);
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        min-height: 88vh;
+        display: grid;
+        align-items: center;
+        padding: 44px 0 36px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+        gap: 44px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--blue);
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 100%;
+        font-size: clamp(2.8rem, 5.2vw, 4.9rem);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 640px;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: clamp(1.05rem, 2vw, 1.25rem);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px 16px;
+        color: var(--text);
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+      }
+
+      .button.primary {
+        border-color: #8f7136;
+        background: var(--accent);
+        color: #17130a;
+      }
+
+      .preview {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 18px 52px rgba(0, 0, 0, 0.34);
+      }
+
+      .preview img {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: contain;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        padding: 28px 0 64px;
+      }
+
+      .feature {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+
+      .feature h2 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+        letter-spacing: 0;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 22px 0 34px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 840px) {
+        .hero {
+          min-height: auto;
+          padding-top: 32px;
+        }
+
+        .hero-grid,
+        .features {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-grid {
+          gap: 26px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .shell {
+          width: min(100% - 24px, 1120px);
+        }
+
+        h1 {
+          font-size: clamp(2.55rem, 13vw, 3.25rem);
+        }
+
+        .actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="shell hero-grid">
+          <div>
+            <p class="eyebrow">Free Windows helper for League of Legends</p>
+            <h1>JoinGameAfk</h1>
+            <p class="lede">Automate ready checks, plan champion priorities, and keep overlays close at hand in a local-first Windows app.</p>
+            <div class="actions">
+              <a class="button primary" href="https://github.com/wwwnic/JoinGameAfk/releases">Download latest version</a>
+              <a class="button" href="https://github.com/wwwnic/JoinGameAfk">View source on GitHub</a>
+            </div>
+          </div>
+          <figure class="preview">
+            <img src="images/dashboard-demo.gif" alt="JoinGameAfk dashboard showing champion select status and draft information">
+          </figure>
+        </div>
+      </section>
+
+      <section class="shell features" aria-label="Main features">
+        <article class="feature">
+          <h2>Ready Checks</h2>
+          <p>Accept ready checks after a configurable delay while the League Client is open.</p>
+        </article>
+        <article class="feature">
+          <h2>Champion Plans</h2>
+          <p>Build role-specific pick and ban priority lists and keep fallback options visible.</p>
+        </article>
+        <article class="feature">
+          <h2>Draft Overlays</h2>
+          <p>Use compact overlays for queue and champion select without leaving the client.</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <div class="shell">
+        JoinGameAfk is a free, open source fan project and is not endorsed by Riot Games.
+      </div>
+    </footer>
+  </body>
+</html>
