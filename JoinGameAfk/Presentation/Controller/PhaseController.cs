@@ -10,7 +10,7 @@ using JoinGameAfk.Services;
 using JoinGameAfk.View;
 using LcuClient;
 
-namespace JoinGameAfk.MVP.Controller
+namespace JoinGameAfk.Presentation.Controller
 {
     public class PhaseController : IDisposable
     {

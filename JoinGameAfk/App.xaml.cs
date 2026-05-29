@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
-using JoinGameAfk.MVP.Controller;
+using JoinGameAfk.Presentation.Controller;
 using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
