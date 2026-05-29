@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace JoinGameAfk.LogoEditor;
+namespace JoinGameAfk.PolyhedronStudio;
 
 public static class PolyhedronLogoRenderer
 {
@@ -334,7 +334,7 @@ public static class PolyhedronLogoRenderer
             CreateFormattedText("JoinGameAfk", 42, FontWeights.Bold, titleBrush),
             new Point(44, 530));
         drawingContext.DrawText(
-            CreateFormattedText("Logo Editor size preview", 19, FontWeights.Medium, subtitleBrush),
+            CreateFormattedText("Polyhedron Studio size preview", 19, FontWeights.Medium, subtitleBrush),
             new Point(47, 576));
     }
 
@@ -730,7 +730,7 @@ public static class PolyhedronLogoRenderer
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Unable to locate JoinGameAfk.sln from the logo editor output directory.");
+        throw new DirectoryNotFoundException("Unable to locate JoinGameAfk.sln from the polyhedron studio output directory.");
     }
 
     private sealed record PolyhedronModel(Vector3[] Vertices, int[][] Faces);

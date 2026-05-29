@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace JoinGameAfk.LogoEditor;
+namespace JoinGameAfk.PolyhedronStudio;
 
 public partial class MainWindow : Window
 {
@@ -496,7 +496,7 @@ public partial class MainWindow : Window
             ? $"Contrast thickness: {settings.EdgeShadowStrokeWidth:0.0}"
             : "Contrast thickness: hidden";
         FadeStrengthLabel.Text = $"Fade strength: {settings.FadeStrength:0.00}x";
-        ShapeScaleLabel.Text = $"Logo size: {settings.PolyhedronScale:0.000}";
+        ShapeScaleLabel.Text = $"Polyhedron size: {settings.PolyhedronScale:0.000}";
         ShapeOffsetXLabel.Text = $"Shape horizontal: {settings.PolyhedronOffsetX:+0.000;-0.000;0.000}";
         ShapeOffsetYLabel.Text = $"Shape vertical: {settings.PolyhedronOffsetY:+0.000;-0.000;0.000}";
         StrokeInsetLabel.Text = showFacetLinesAtLargeSizes

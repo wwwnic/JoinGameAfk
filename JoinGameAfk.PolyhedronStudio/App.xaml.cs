@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace JoinGameAfk.LogoEditor;
+namespace JoinGameAfk.PolyhedronStudio;
 
 /// <summary>
 /// Interaction logic for App.xaml

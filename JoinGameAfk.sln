@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.Plugin", "JoinG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.ChampionTileSeeder", "JoinGameAfk.ChampionTileSeeder\JoinGameAfk.ChampionTileSeeder.csproj", "{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.LogoEditor", "JoinGameAfk.LogoEditor\JoinGameAfk.LogoEditor.csproj", "{ABFF5239-3ED4-8094-EE28-A98329B88CD5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.PolyhedronStudio", "JoinGameAfk.PolyhedronStudio\JoinGameAfk.PolyhedronStudio.csproj", "{ABFF5239-3ED4-8094-EE28-A98329B88CD5}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Éléments de solution", "Éléments de solution", "{979E3C6A-BD00-4EF4-A146-6890EFADD0EE}"
 	ProjectSection(SolutionItems) = preProject
