@@ -26,6 +26,11 @@
     <Resource Include="Assets\Sounds\*.wav" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <Page Remove="Presentation\View\Dashboard\PhaseProgressionTestWindow.xaml" />
+    <Compile Remove="Presentation\View\Dashboard\PhaseProgressionTestWindow.xaml.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.3.0" />
     <ProjectReference Include="..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
