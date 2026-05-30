@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Input;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
-using JoinGameAfk.Services;
 
 namespace JoinGameAfk.Presentation.View
 {

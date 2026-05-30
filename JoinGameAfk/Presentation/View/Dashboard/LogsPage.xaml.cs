@@ -1,4 +1,3 @@
-using System;
 using System.Windows.Controls;
 using JoinGameAfk.Services;
 

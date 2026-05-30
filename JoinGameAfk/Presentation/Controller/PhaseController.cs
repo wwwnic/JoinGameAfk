@@ -1,13 +1,13 @@
-﻿using System.Text.Json;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net.Http;
+using System.Text.Json;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using JoinGameAfk.Phase;
-using JoinGameAfk.Services;
 using JoinGameAfk.Presentation.View;
+using JoinGameAfk.Services;
 using LcuClient;
 
 namespace JoinGameAfk.Presentation.Controller
