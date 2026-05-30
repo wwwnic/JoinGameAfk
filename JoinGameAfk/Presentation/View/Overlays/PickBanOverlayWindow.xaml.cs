@@ -5,9 +5,10 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Presentation.View.Dashboard;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.Overlays
 {
     public partial class PickBanOverlayWindow : Window
     {

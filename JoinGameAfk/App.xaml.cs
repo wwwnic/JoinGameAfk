@@ -5,6 +5,9 @@ using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Presentation.Controller;
 using JoinGameAfk.Presentation.View;
+using JoinGameAfk.Presentation.View.ChampionPriorities;
+using JoinGameAfk.Presentation.View.Dashboard;
+using JoinGameAfk.Presentation.View.Settings;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 

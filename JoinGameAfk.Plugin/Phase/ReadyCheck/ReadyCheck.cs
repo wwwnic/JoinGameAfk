@@ -6,7 +6,7 @@ using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using static LcuClient.Lcu;
 
-namespace JoinGameAfk.Phase;
+namespace JoinGameAfk.Plugin.Phase.ReadyCheck;
 
 public class ReadyCheck : IPhaseHandler
 {

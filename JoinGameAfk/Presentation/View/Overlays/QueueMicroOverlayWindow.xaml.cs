@@ -3,7 +3,7 @@ using System.Windows.Input;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.Overlays
 {
     public partial class QueueMicroOverlayWindow : Window
     {

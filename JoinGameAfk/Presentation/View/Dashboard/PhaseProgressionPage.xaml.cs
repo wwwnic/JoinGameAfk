@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -6,7 +6,7 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.Dashboard
 {
     public partial class PhaseProgressionPage : Page
     {

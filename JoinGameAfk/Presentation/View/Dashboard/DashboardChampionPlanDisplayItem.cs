@@ -1,9 +1,10 @@
 using System.Windows.Media;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Presentation.View.ChampionPriorities;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.Dashboard
 {
     internal sealed class DashboardChampionPlanDisplayItem
     {

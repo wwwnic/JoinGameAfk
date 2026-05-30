@@ -1,4 +1,4 @@
-<Page x:Class="JoinGameAfk.Presentation.View.PhaseProgressionPage"
+<Page x:Class="JoinGameAfk.Presentation.View.Dashboard.PhaseProgressionPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:viewControls="clr-namespace:JoinGameAfk.Presentation.View.Controls"

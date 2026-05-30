@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
@@ -11,6 +11,10 @@ using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Presentation.Controller;
+using JoinGameAfk.Presentation.View.ChampionPriorities;
+using JoinGameAfk.Presentation.View.Dashboard;
+using JoinGameAfk.Presentation.View.Overlays;
+using JoinGameAfk.Presentation.View.Settings;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 

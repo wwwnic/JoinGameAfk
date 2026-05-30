@@ -2,7 +2,7 @@ using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.ChampionPriorities
 {
     public partial class ChampionPrioritiesPage
     {

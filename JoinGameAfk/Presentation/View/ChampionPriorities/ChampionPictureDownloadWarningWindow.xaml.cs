@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.ChampionPriorities
 {
     public partial class ChampionPictureDownloadWarningWindow : Window
     {

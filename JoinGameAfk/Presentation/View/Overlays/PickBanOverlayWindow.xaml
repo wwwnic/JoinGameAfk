@@ -1,4 +1,4 @@
-<Window x:Class="JoinGameAfk.Presentation.View.PickBanOverlayWindow"
+<Window x:Class="JoinGameAfk.Presentation.View.Overlays.PickBanOverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:JoinGameAfk.Presentation.View.Controls"

@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.Dashboard
 {
     public partial class PhaseProgressionTestWindow : Window
     {

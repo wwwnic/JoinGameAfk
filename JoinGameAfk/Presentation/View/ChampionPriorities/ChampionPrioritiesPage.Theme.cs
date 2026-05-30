@@ -1,7 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.ChampionPriorities
 {
     public partial class ChampionPrioritiesPage
     {

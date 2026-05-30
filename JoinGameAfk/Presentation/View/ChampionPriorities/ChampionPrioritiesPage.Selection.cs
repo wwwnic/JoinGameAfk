@@ -5,7 +5,7 @@ using System.Windows.Input;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.Presentation.View
+namespace JoinGameAfk.Presentation.View.ChampionPriorities
 {
     public partial class ChampionPrioritiesPage
     {
