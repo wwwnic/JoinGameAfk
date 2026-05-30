@@ -560,7 +560,7 @@
                                         <TextBlock Text="Pick plan"
                                                    Style="{StaticResource CardTitleStyle}"
                                                    FontSize="14" />
-                                        <TextBlock Text="Champion priority"
+                                        <TextBlock Text="Priority order"
                                                    Style="{StaticResource MutedTextStyle}"
                                                    Margin="0,1,0,0" />
                                     </StackPanel>
@@ -679,7 +679,7 @@
                                         <TextBlock Text="Ban plan"
                                                    Style="{StaticResource CardTitleStyle}"
                                                    FontSize="14" />
-                                        <TextBlock Text="Champion priority"
+                                        <TextBlock Text="Priority order"
                                                    Style="{StaticResource MutedTextStyle}"
                                                    Margin="0,1,0,0" />
                                     </StackPanel>

@@ -1,34 +1,40 @@
 # JoinGameAfk
 
-> A free Windows helper for League of Legends ready checks, champion priority planning, and champion select pick/ban flow.
+> A free Windows companion that auto-accepts ready checks, handles champion select picks/bans, and plays sound effects.
 
-**Download latest version:** [GitHub Releases](https://github.com/wwwnic/JoinGameAfk/releases)
+[![Download latest version](https://img.shields.io/badge/Download-Latest%20Release-d3ad62?style=for-the-badge&logo=github&logoColor=white)](https://github.com/wwwnic/JoinGameAfk/releases)
+![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
-**Platform:** Windows  
 **License:** MIT  
 **Status:** Free, open source fan project  
 
-> [!IMPORTANT]
-> This app automates actions in the local League Client. Use it carefully, and review the code if you want maximum confidence.
-
-> [!NOTE]
-> JoinGameAfk was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.
 
 ---
 
-## Demo
+## What It Does
 
-![JoinGameAfk dashboard demo](docs/images/dashboard-demo.gif)
-
-JoinGameAfk keeps champion select readable at a glance: current phase, draft timer, team picks, bans, pick/ban priorities, lock timing, and live watcher output are all in one place.
+- Accepts ready checks after a configurable delay.
+- Builds role-specific pick and ban priority plans.
+- Attempts champion hovers from your priority list during champion select.
+- Can auto-lock your current pick or ban near the end of the timer.
+- Shows teams, bans, timers, blocked champions, and action logs.
+- Provides compact overlays for queue and champion select.
+- Lets you customize champion pictures and alert sounds.
+- Uses Riot Data Dragon champion names and tile images stored locally.
 
 ---
 
 ## Visual Tour
 
-### Champion Priorities
+### Dashboard
 
-![JoinGameAfk champion priorities demo](docs/images/champion-priorities-demo.gif)
+![JoinGameAfk dashboard demo](docs/images/dashboard-demo.gif)
+
+JoinGameAfk keeps champion select readable at a glance: current phase, draft timer, team picks, bans, pick/ban priorities, lock timing, and live watcher output are all in one place.
+
+### Role Plans
+
+![JoinGameAfk role plans demo](docs/images/champion-priorities-demo.gif)
 
 Build role-specific pick and ban plans before queue. Drag champions into the right lane, keep fallback options ready, and let the app use your priority list when champion select starts.
 
@@ -60,23 +66,10 @@ Customize alert sounds for queue events, phase changes, actions, and lock warnin
 
 ---
 
-## What It Does
-
-- Auto-accepts ready checks after a configurable delay.
-- Lets you configure role-specific pick and ban priorities.
-- Attempts to hover champions from your priority list during champion select.
-- Can auto-lock your current pick or ban near the end of the timer.
-- Shows current teams, bans, timers, blocked champions, and action logs.
-- Provides compact overlays for queue and champion select.
-- Lets you customize champion pictures and alert sounds.
-- Uses Riot Data Dragon champion names and tile images stored locally.
-
----
-
 ## Quick Start
 
 1. Open JoinGameAfk.
-2. Go to **Champion Priorities** and set your pick/ban lists.
+2. Go to **Role Plans** and set your pick/ban lists.
 3. Go to **Settings** and adjust timers, theme, overlays, sounds, and champion pictures if needed.
 4. Return to **Dashboard**.
 5. Click **Start watcher** while the League Client is open.
@@ -134,8 +127,8 @@ JoinGameAfk is released under the MIT License. See `LICENSE`.
 
 JoinGameAfk is a free, non-commercial fan project. It uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences. Champion pictures, when configured or shown in screenshots, are Riot Games-owned assets provided through Riot Data Dragon and loaded from local app storage.
 
-> JoinGameAfk was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.
+JoinGameAfk was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.
 
-> JoinGameAfk is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
+JoinGameAfk is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
 Champion image cache files are generated or downloaded from Riot Data Dragon for local app use. Source control ignores `JoinGameAfk/Assets/ChampionTiles/` and `JoinGameAfk/Assets/champion-tile-cache.json`.

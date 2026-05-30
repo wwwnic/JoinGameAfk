@@ -414,7 +414,7 @@
                                   Stretch="Uniform"
                                   Fill="{DynamicResource TextSecondaryBrush}"
                                   Data="M7,10 V7 A5,5 0 0 1 17,7 V10 H18 A2,2 0 0 1 20,12 V20 A2,2 0 0 1 18,22 H6 A2,2 0 0 1 4,20 V12 A2,2 0 0 1 6,10 H7 M9,10 H15 V7 A3,3 0 0 0 9,7 V10 Z" />
-                            <TextBlock Text="Champion priorities are locked during champion select."
+                            <TextBlock Text="Role plans are locked during champion select."
                                        FontSize="12"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -853,7 +853,7 @@
                                         Style="{StaticResource InfoIndicatorStyle}">
                                     <Button.ToolTip>
                                         <StackPanel Width="320">
-                                            <TextBlock Text="Champion priority controls"
+                                            <TextBlock Text="Role plan controls"
                                                        Style="{StaticResource ChampionHelpTooltipTitleStyle}" />
 
                                             <TextBlock Text="Add champions"

@@ -162,8 +162,8 @@
                             Click="TabDashboard_Click"
                             Style="{StaticResource TabButtonStyle}" />
                     <Button x:Name="TabChampionPriorities"
-                            Content="Champion Priorities"
-                            AutomationProperties.Name="Champion priorities tab"
+                            Content="Role Plans"
+                            AutomationProperties.Name="Role plans tab"
                             Click="TabChampionPriorities_Click"
                             Style="{StaticResource TabButtonStyle}" />
                     <Button x:Name="TabSettings"

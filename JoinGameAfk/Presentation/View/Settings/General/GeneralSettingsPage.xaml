@@ -125,7 +125,7 @@
                                 Style="{StaticResource SecondaryButtonStyle}"
                                 Padding="18,10"
                                 HorizontalAlignment="Right"
-                                ToolTip="Restore startup, automation, timing, performance, and theme defaults without changing champion priorities." />
+                                ToolTip="Restore startup, automation, timing, performance, and theme defaults without changing role plans." />
 
                         <Button x:Name="CancelSettingsChangesButton"
                                 Content="Cancel Changes"
@@ -544,7 +544,7 @@
                                         Content="?"
                                         Margin="8,0,0,0"
                                         VerticalAlignment="Center"
-                                        ToolTip="Turn this off if you want champion priorities shown without sending hover actions." />
+                                        ToolTip="Turn this off if you want role plans shown without sending hover actions." />
                             </StackPanel>
                             <TextBlock Text="Uses your pick and ban priorities to select a champion during your action."
                                        Style="{StaticResource FieldHintStyle}"
@@ -1163,7 +1163,7 @@
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Champion pictures"
                                        Style="{StaticResource FieldLabelStyle}" />
-                            <TextBlock Text="Manage the local Data Dragon champion tile cache used by champion priorities."
+                            <TextBlock Text="Manage the local Data Dragon champion tile cache used by role plans."
                                        Style="{StaticResource FieldHintStyle}" />
                             <TextBlock x:Name="ChampionPictureFolderPathTextBlock"
                                        Foreground="{DynamicResource TextSoftBrush}"

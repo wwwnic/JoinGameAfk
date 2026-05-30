@@ -45,7 +45,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default startup, automation, timing, performance, theme, and download settings?\n\nChampion priorities, sound alerts, and overlay settings are kept.",
+                "Restore default startup, automation, timing, performance, theme, and download settings?\n\nRole plans, sound alerts, and overlay settings are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,

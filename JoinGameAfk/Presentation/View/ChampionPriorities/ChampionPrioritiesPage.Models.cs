@@ -121,7 +121,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             string header = string.Join(Environment.NewLine,
             [
                 "// JoinGameAfk champion chip label breaks.",
-                "// Edit this file to control where long champion names wrap in the Champion Priorities UI.",
+                "// Edit this file to control where long champion names wrap in the Role Plans UI.",
                 "// Keys are exact champion names. Values are displayed labels; use \\n inside a string to force a line break.",
                 ""
             ]);
