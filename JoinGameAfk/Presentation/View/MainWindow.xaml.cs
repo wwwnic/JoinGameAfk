@@ -33,7 +33,7 @@ namespace JoinGameAfk.Presentation.View
         private readonly PhaseProgressionPage _dashboardPage;
         private readonly LogsPage _logsPage;
         private readonly ChampionPrioritiesPage _championPrioritiesPage;
-        private readonly ChampSelectSettings _settings;
+        private readonly GeneralSettings _settings;
         private readonly OverlaySettings _overlaySettings;
         private PhaseController? _phaseController;
 #if DEBUG
@@ -57,7 +57,7 @@ namespace JoinGameAfk.Presentation.View
 
         public int ActiveTabIndex => _activeTabIndex;
 
-        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, ChampSelectSettings settings, OverlaySettings overlaySettings)
+        public MainWindow(PhaseProgressionPage dashboardPage, LogsPage logsPage, ChampionPrioritiesPage championPrioritiesPage, SettingsPage settingsPage, GeneralSettings settings, OverlaySettings overlaySettings)
         {
             InitializeComponent();
             SetApplicationVersion();

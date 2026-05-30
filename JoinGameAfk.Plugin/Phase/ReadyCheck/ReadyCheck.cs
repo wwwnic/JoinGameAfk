@@ -11,12 +11,12 @@ namespace JoinGameAfk.Plugin.Phase.ReadyCheck;
 public class ReadyCheck : IPhaseHandler
 {
     private readonly LeagueClientHttp _http;
-    private readonly ChampSelectSettings _settings;
+    private readonly GeneralSettings _settings;
     private readonly Action<string>? _log;
     private readonly object _pendingAcceptLock = new();
     private PendingAccept? _pendingAccept;
 
-    public ReadyCheck(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null)
+    public ReadyCheck(LeagueClientHttp http, GeneralSettings settings, Action<string>? log = null)
     {
         _http = http;
         _settings = settings;

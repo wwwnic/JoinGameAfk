@@ -14,9 +14,10 @@ namespace JoinGameAfk.Presentation.View.Settings
         private readonly FrameworkElement[] _settingsSectionViews;
 
         public SettingsPage(
-            ChampSelectSettings settings,
+            GeneralSettings generalSettings,
+            SoundSettings soundSettings,
             OverlaySettings overlaySettings,
-            Action<ChampSelectSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
+            Action<GeneralSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
             Action<string>? logMessage = null,
             Action<string>? logErrorMessage = null,
             string? selectedThemeKey = null,
@@ -25,14 +26,14 @@ namespace JoinGameAfk.Presentation.View.Settings
             InitializeComponent();
 
             GeneralSettingsFrame.Content = new GeneralSettingsPage(
-                settings,
+                generalSettings,
                 overlaySettings,
                 reloadUiForTheme,
                 logMessage,
                 logErrorMessage,
                 selectedThemeKey,
                 themePickerExpanded);
-            SoundSettingsFrame.Content = new SoundSettingsPage(settings);
+            SoundSettingsFrame.Content = new SoundSettingsPage(soundSettings);
             OverlaySettingsFrame.Content = new OverlaySettingsPage(overlaySettings);
 
             _settingsSectionButtons =

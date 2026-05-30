@@ -33,7 +33,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             try
             {
                 SoundAlertsEnabledCheckBox.IsChecked = _settings.SoundAlertProfile != SoundAlertProfile.Off;
-                SoundAlertVolumeSlider.Value = ChampSelectSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent);
+                SoundAlertVolumeSlider.Value = SoundSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent);
                 ApplySoundAlertSettingsToRows();
                 RefreshSoundAlertVolumeValueText();
                 RefreshSoundPickerChoices();
@@ -87,7 +87,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         {
             return new SoundSettingsSnapshot(
                 _settings.SoundAlertProfile != SoundAlertProfile.Off,
-                ChampSelectSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent),
+                SoundSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent),
                 CaptureSavedSoundAlertConfigurationSnapshot());
         }
 
@@ -109,12 +109,12 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
         private int GetSoundAlertVolumePercent()
         {
-            return ChampSelectSettings.NormalizeSoundAlertVolumePercent((int)Math.Round(SoundAlertVolumeSlider.Value));
+            return SoundSettings.NormalizeSoundAlertVolumePercent((int)Math.Round(SoundAlertVolumeSlider.Value));
         }
 
         private int GetEffectiveSoundAlertVolumePercent(SoundAlertOption option)
         {
-            return ChampSelectSettings.GetEffectiveSoundAlertVolumePercent(
+            return SoundSettings.GetEffectiveSoundAlertVolumePercent(
                 GetSoundAlertVolumePercent(),
                 ParseSoundAlertVolumeOrDefault(option));
         }
@@ -164,14 +164,14 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 var setting = _settings.GetSoundAlertSetting(option.AlertId);
                 option.IsEnabled = setting.Enabled;
                 option.SoundKey = NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
-                option.VolumeText = ChampSelectSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
+                option.VolumeText = SoundSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
                 option.ThresholdText = option.HasThreshold
-                    ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, option.DefaultThresholdSeconds).ToString()
+                    ? SoundSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, option.DefaultThresholdSeconds).ToString()
                     : string.Empty;
                 option.IsInfinitePlaybackEnabled = option.SupportsInfinitePlayback
                     && (setting.InfinitePlaybackEnabled ?? option.DefaultInfinitePlaybackEnabled);
                 option.PlaybackDurationText = option.HasPlaybackDuration
-                    ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
+                    ? SoundSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
                     : SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds.ToString();
                 option.RefreshSelectedSound();
             }
@@ -226,12 +226,12 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 {
                     Enabled = option.IsEnabled,
                     SoundKey = NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey),
-                    VolumePercent = ChampSelectSettings.NormalizeSoundAlertVolumePercent(ParseSoundAlertVolumeOrDefault(option)),
+                    VolumePercent = SoundSettings.NormalizeSoundAlertVolumePercent(ParseSoundAlertVolumeOrDefault(option)),
                     ThresholdSeconds = option.HasThreshold
-                        ? ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(ParseSoundAlertThresholdOrDefault(option), option.DefaultThresholdSeconds)
+                        ? SoundSettings.NormalizeSoundAlertThresholdSeconds(ParseSoundAlertThresholdOrDefault(option), option.DefaultThresholdSeconds)
                         : null,
                     PlaybackDurationSeconds = option.HasPlaybackDuration
-                        ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(ParseSoundAlertPlaybackDurationOrDefault(option))
+                        ? SoundSettings.NormalizeSoundAlertPlaybackDurationSeconds(ParseSoundAlertPlaybackDurationOrDefault(option))
                         : null,
                     InfinitePlaybackEnabled = option.SupportsInfinitePlayback
                         ? option.IsInfinitePlaybackEnabled
@@ -252,13 +252,13 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             {
                 var setting = _settings.GetSoundAlertSetting(definition.Id);
                 string soundKey = NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
-                string volume = ChampSelectSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
+                string volume = SoundSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
                 string threshold = definition.DefaultThresholdSeconds is null
                     ? string.Empty
-                    : ChampSelectSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, definition.DefaultThresholdSeconds.Value).ToString();
+                    : SoundSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, definition.DefaultThresholdSeconds.Value).ToString();
                 string playbackDuration = definition.DefaultPlaybackDurationSeconds is not null
                     && NotificationSoundPlayer.IsLoopableSoundKey(soundKey)
-                    ? ChampSelectSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
+                    ? SoundSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
                     : string.Empty;
                 string infinitePlayback = definition.SupportsInfinitePlayback
                     ? (setting.InfinitePlaybackEnabled ?? definition.DefaultInfinitePlaybackEnabled).ToString()
@@ -292,7 +292,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 if (TryParseSoundAlertVolume(option.VolumeText, out _))
                     continue;
 
-                ShowValidationMessage($"{option.DisplayName} volume must be a whole number between {ChampSelectSettings.MinSoundAlertVolumePercent} and {ChampSelectSettings.MaxSoundAlertVolumePercent}.");
+                ShowValidationMessage($"{option.DisplayName} volume must be a whole number between {SoundSettings.MinSoundAlertVolumePercent} and {SoundSettings.MaxSoundAlertVolumePercent}.");
                 return false;
             }
 
@@ -301,7 +301,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 if (TryParseSoundAlertThreshold(option.ThresholdText, out _))
                     continue;
 
-                ShowValidationMessage($"{option.DisplayName} lead time must be a whole number between {ChampSelectSettings.MinSoundAlertThresholdSeconds} and {ChampSelectSettings.MaxSoundAlertThresholdSeconds}.");
+                ShowValidationMessage($"{option.DisplayName} lead time must be a whole number between {SoundSettings.MinSoundAlertThresholdSeconds} and {SoundSettings.MaxSoundAlertThresholdSeconds}.");
                 return false;
             }
 
@@ -310,7 +310,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 if (TryParseSoundAlertPlaybackDuration(option.PlaybackDurationText, out _))
                     continue;
 
-                ShowValidationMessage($"{option.DisplayName} play time must be a whole number between {ChampSelectSettings.MinSoundAlertPlaybackDurationSeconds} and {ChampSelectSettings.MaxSoundAlertPlaybackDurationSeconds}.");
+                ShowValidationMessage($"{option.DisplayName} play time must be a whole number between {SoundSettings.MinSoundAlertPlaybackDurationSeconds} and {SoundSettings.MaxSoundAlertPlaybackDurationSeconds}.");
                 return false;
             }
 
@@ -332,7 +332,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         {
             return TryParseSoundAlertVolume(option.VolumeText, out int volume)
                 ? volume
-                : ChampSelectSettings.DefaultSoundAlertVolumePercent;
+                : SoundSettings.DefaultSoundAlertVolumePercent;
         }
 
         private static bool TryParseSoundAlertVolume(string? text, out int volume)
@@ -341,8 +341,8 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (!int.TryParse(text, out int value))
                 return false;
 
-            if (value < ChampSelectSettings.MinSoundAlertVolumePercent
-                || value > ChampSelectSettings.MaxSoundAlertVolumePercent)
+            if (value < SoundSettings.MinSoundAlertVolumePercent
+                || value > SoundSettings.MaxSoundAlertVolumePercent)
             {
                 return false;
             }
@@ -364,8 +364,8 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (!int.TryParse(text, out int value))
                 return false;
 
-            if (value < ChampSelectSettings.MinSoundAlertThresholdSeconds
-                || value > ChampSelectSettings.MaxSoundAlertThresholdSeconds)
+            if (value < SoundSettings.MinSoundAlertThresholdSeconds
+                || value > SoundSettings.MaxSoundAlertThresholdSeconds)
             {
                 return false;
             }
@@ -387,8 +387,8 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (!int.TryParse(text, out int value))
                 return false;
 
-            if (value < ChampSelectSettings.MinSoundAlertPlaybackDurationSeconds
-                || value > ChampSelectSettings.MaxSoundAlertPlaybackDurationSeconds)
+            if (value < SoundSettings.MinSoundAlertPlaybackDurationSeconds
+                || value > SoundSettings.MaxSoundAlertPlaybackDurationSeconds)
             {
                 return false;
             }

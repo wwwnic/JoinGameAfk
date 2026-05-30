@@ -299,7 +299,7 @@ namespace JoinGameAfk.Model
             if (champions.Count == 0)
                 throw new InvalidOperationException("Riot Data Dragon returned no champions.");
 
-            AppStorage.EnsureDirectoryExists();
+            AppStorage.EnsureDataDirectoryExists();
             string filePath = AppStorage.ChampionFilePath;
             DateTime lastSyncedAtUtc = DateTime.UtcNow;
             SaveCatalogFile(filePath, champions, dataDragonVersion, lastSyncedAtUtc);
@@ -342,14 +342,19 @@ namespace JoinGameAfk.Model
                 if (!File.Exists(filePath))
                     return null;
 
-                var catalogFile = DeserializeCatalogFile(File.ReadAllText(filePath));
+                string json = File.ReadAllText(filePath);
+                var catalogFile = DeserializeCatalogFile(json);
                 if (catalogFile is null || catalogFile.Champions.Count == 0)
                     return null;
 
                 var champions = NormalizeChampions(catalogFile.Champions);
 
-                if (catalogFile.Version < AppStorage.ChampionFileVersion)
-                    SaveCatalogFile(filePath, champions, catalogFile.DataDragonVersion, catalogFile.LastSyncedAtUtc);
+                SaveCatalogFileIfChanged(
+                    filePath,
+                    json,
+                    champions,
+                    catalogFile.DataDragonVersion,
+                    catalogFile.LastSyncedAtUtc);
 
                 return champions;
             }
@@ -406,23 +411,29 @@ namespace JoinGameAfk.Model
             if (File.Exists(filePath))
                 return;
 
-            string legacyFilePath = Path.Combine(AppContext.BaseDirectory, AppStorage.ChampionFileName);
-            if (File.Exists(legacyFilePath))
-            {
-                AppStorage.EnsureDirectoryExists();
-                File.Copy(legacyFilePath, filePath, overwrite: false);
-                return;
-            }
-
             string? bundledCatalogJson = LoadBundledChampionCatalogJson();
             if (!string.IsNullOrWhiteSpace(bundledCatalogJson))
             {
-                AppStorage.EnsureDirectoryExists();
-                File.WriteAllText(filePath, bundledCatalogJson);
-                return;
+                AppStorage.EnsureDataDirectoryExists();
+                try
+                {
+                    var bundledCatalogFile = DeserializeCatalogFile(bundledCatalogJson);
+                    if (bundledCatalogFile is not null && bundledCatalogFile.Champions.Count > 0)
+                    {
+                        SaveCatalogFile(
+                            filePath,
+                            bundledCatalogFile.Champions,
+                            bundledCatalogFile.DataDragonVersion,
+                            bundledCatalogFile.LastSyncedAtUtc);
+                        return;
+                    }
+                }
+                catch
+                {
+                }
             }
 
-            AppStorage.EnsureDirectoryExists();
+            AppStorage.EnsureDataDirectoryExists();
             SaveCatalogFile(filePath, DefaultChampions);
         }
 
@@ -457,6 +468,28 @@ namespace JoinGameAfk.Model
             string? dataDragonVersion = null,
             DateTime? lastSyncedAtUtc = null)
         {
+            File.WriteAllText(filePath, SerializeCatalogFile(champions, dataDragonVersion, lastSyncedAtUtc));
+        }
+
+        private static void SaveCatalogFileIfChanged(
+            string filePath,
+            string currentJson,
+            IReadOnlyList<ChampionInfo> champions,
+            string? dataDragonVersion,
+            DateTime? lastSyncedAtUtc)
+        {
+            string normalizedJson = SerializeCatalogFile(champions, dataDragonVersion, lastSyncedAtUtc);
+            if (string.Equals(NormalizeJsonForComparison(currentJson), NormalizeJsonForComparison(normalizedJson), StringComparison.Ordinal))
+                return;
+
+            File.WriteAllText(filePath, normalizedJson);
+        }
+
+        private static string SerializeCatalogFile(
+            IReadOnlyList<ChampionInfo> champions,
+            string? dataDragonVersion = null,
+            DateTime? lastSyncedAtUtc = null)
+        {
             var catalogFile = new ChampionCatalogFile
             {
                 Version = AppStorage.ChampionFileVersion,
@@ -465,8 +498,14 @@ namespace JoinGameAfk.Model
                 Champions = NormalizeChampions(champions).ToList()
             };
 
-            string json = JsonSerializer.Serialize(catalogFile, CatalogSerializerOptions);
-            File.WriteAllText(filePath, json);
+            return JsonSerializer.Serialize(catalogFile, CatalogSerializerOptions);
+        }
+
+        private static string NormalizeJsonForComparison(string json)
+        {
+            return json
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .TrimEnd();
         }
 
         private static void SetCatalogState(IReadOnlyList<ChampionInfo> champions)

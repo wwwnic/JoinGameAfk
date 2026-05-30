@@ -12,7 +12,9 @@ namespace JoinGameAfk.Presentation.Controller
     {
         private readonly PhaseProgressionPage fPhaseProgressionPage;
         private readonly LogsPage _logsPage;
-        private readonly ChampSelectSettings _champSelectSettings;
+        private readonly GeneralSettings _generalSettings;
+        private readonly RolePlanSettings _rolePlanSettings;
+        private readonly SoundSettings _soundSettings;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly List<IPhaseHandler> _phaseHandlers;
         private readonly Lcu.ProcessManager _processManager;
@@ -51,15 +53,23 @@ namespace JoinGameAfk.Presentation.Controller
 
         public bool IsRunning => _isRunning;
 
-        public PhaseController(PhaseProgressionPage phaseProgressionPage, LogsPage logsPage, ChampSelectSettings champSelectSettings)
+        public PhaseController(
+            PhaseProgressionPage phaseProgressionPage,
+            LogsPage logsPage,
+            GeneralSettings generalSettings,
+            RolePlanSettings rolePlanSettings,
+            SoundSettings soundSettings)
         {
             fPhaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
-            _champSelectSettings = champSelectSettings;
+            _generalSettings = generalSettings;
+            _rolePlanSettings = rolePlanSettings;
+            _soundSettings = soundSettings;
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
             _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
-            _champSelectSettings.Saved += OnSettingsSaved;
+            _generalSettings.Saved += OnSettingsSaved;
+            _rolePlanSettings.Saved += OnSettingsSaved;
         }
 
         public void Start()
@@ -142,7 +152,8 @@ namespace JoinGameAfk.Presentation.Controller
 
             _disposed = true;
             Shutdown();
-            _champSelectSettings.Saved -= OnSettingsSaved;
+            _generalSettings.Saved -= OnSettingsSaved;
+            _rolePlanSettings.Saved -= OnSettingsSaved;
         }
     }
 }

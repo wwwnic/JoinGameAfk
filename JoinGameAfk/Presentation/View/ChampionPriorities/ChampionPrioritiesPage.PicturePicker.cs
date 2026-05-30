@@ -155,7 +155,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
                     champion,
                     progress,
-                    optimizeForLocalCache: !_settings.DownloadRawChampionPictures);
+                    optimizeForLocalCache: !_generalSettings.DownloadRawChampionPictures);
                 if (_selectedChampionPictureChampion?.Id != requestedChampionId
                     || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                 {
@@ -367,20 +367,17 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private bool ConfirmChampionPictureDownload(ChampionInfo champion)
         {
-            if (!_settings.ShowChampionPictureDownloadWarning)
+            if (!ChampionImageSelectionStore.ShowChampionPictureDownloadWarning)
                 return true;
 
-            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _settings.DownloadRawChampionPictures)
+            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _generalSettings.DownloadRawChampionPictures)
             {
                 Owner = Window.GetWindow(this)
             };
 
             bool confirmed = dialog.ShowDialog() == true;
             if (confirmed && dialog.DontShowAgain)
-            {
-                _settings.ShowChampionPictureDownloadWarning = false;
-                _settings.Save();
-            }
+                ChampionImageSelectionStore.SetShowChampionPictureDownloadWarning(false);
 
             return confirmed;
         }

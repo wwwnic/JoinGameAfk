@@ -8,11 +8,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
     {
         private void SaveChampionPreferences()
         {
-            _settings.Preferences.Remove(Position.None);
+            _rolePlanSettings.Preferences.Remove(Position.None);
 
             foreach (var row in _rows)
             {
-                _settings.Preferences[row.Position] = new PositionPreference
+                _rolePlanSettings.Preferences[row.Position] = new PositionPreference
                 {
                     PickChampionIds = row.PickChampions.Select(champion => champion.ChampionId).ToList(),
                     BanChampionIds = row.BanChampions.Select(champion => champion.ChampionId).ToList()
@@ -40,7 +40,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             _pendingPreferenceSaveOperation = null;
             _isPreferenceSavePending = false;
-            _settings.Save();
+            _rolePlanSettings.Save();
         }
 
         private static void UpdateRowTextFromCollection(PositionRow row, bool isPick)

@@ -326,7 +326,7 @@ namespace JoinGameAfk.Presentation.Controller
         private void OnSettingsSaved()
         {
             if (_lastObservedPhase == ClientPhase.ReadyCheck
-                && !_champSelectSettings.IsInQueueAutomationActive())
+                && !_generalSettings.IsInQueueAutomationActive())
             {
                 _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
             }
@@ -350,20 +350,20 @@ namespace JoinGameAfk.Presentation.Controller
 
         private int? GetLoopDelayMs()
         {
-            if (_champSelectSettings.UseChampSelectEventStream
+            if (_generalSettings.UseChampSelectEventStream
                 && _isEventStreamAvailable)
             {
-                if (!_champSelectSettings.ChampSelectEventFallbackPollingEnabled)
+                if (!_generalSettings.ChampSelectEventFallbackPollingEnabled)
                     return null;
 
                 return Math.Clamp(
-                    _champSelectSettings.ChampSelectEventFallbackPollIntervalMs,
+                    _generalSettings.ChampSelectEventFallbackPollIntervalMs,
                     1000,
                     30000);
             }
 
             // Regular polling covers phase detection, ready checks, and champ select when live events are unavailable or disabled.
-            return Math.Clamp(_champSelectSettings.ChampSelectPollIntervalMs, 100, 5000);
+            return Math.Clamp(_generalSettings.ChampSelectPollIntervalMs, 100, 5000);
         }
     }
 }

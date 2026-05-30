@@ -14,7 +14,7 @@ namespace JoinGameAfk.Model
     {
         public bool Enabled { get; set; }
         public string SoundKey { get; set; } = SoundAlertDefaults.DefaultSoundKey;
-        public int? VolumePercent { get; set; } = ChampSelectSettings.DefaultSoundAlertVolumePercent;
+        public int? VolumePercent { get; set; } = SoundSettings.DefaultSoundAlertVolumePercent;
         public int? ThresholdSeconds { get; set; }
         public int? PlaybackDurationSeconds { get; set; }
         public bool? InfinitePlaybackEnabled { get; set; }
@@ -202,7 +202,7 @@ namespace JoinGameAfk.Model
             {
                 Enabled = definition.EnabledInMinimal,
                 SoundKey = definition.DefaultSoundKey,
-                VolumePercent = ChampSelectSettings.DefaultSoundAlertVolumePercent,
+                VolumePercent = SoundSettings.DefaultSoundAlertVolumePercent,
                 ThresholdSeconds = definition.DefaultThresholdSeconds,
                 PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds,
                 InfinitePlaybackEnabled = definition.SupportsInfinitePlayback

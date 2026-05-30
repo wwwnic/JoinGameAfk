@@ -1,5 +1,5 @@
-using System.Text.Json;
 using JoinGameAfk.Constant;
+using JoinGameAfk.Services;
 
 namespace JoinGameAfk.Model
 {
@@ -42,33 +42,12 @@ namespace JoinGameAfk.Model
 
         public static OverlaySettings Load()
         {
-            try
-            {
-                if (File.Exists(AppStorage.OverlaySettingsFilePath))
-                {
-                    var json = File.ReadAllText(AppStorage.OverlaySettingsFilePath);
-                    var settings = JsonSerializer.Deserialize<OverlaySettings>(json);
-                    return settings is null
-                        ? ResetSettingsFile()
-                        : NormalizeSettings(settings);
-                }
-            }
-            catch
-            {
-                return ResetSettingsFile();
-            }
-
-            return ResetSettingsFile();
+            return JsonSettingsStore.Load(AppStorage.OverlaySettingsFilePath, () => new OverlaySettings(), NormalizeSettings);
         }
 
         public void Save()
         {
-            AppStorage.EnsureDirectoryExists();
-            Version = AppStorage.OverlaySettingsFileVersion;
-            NormalizeOptions();
-
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(AppStorage.OverlaySettingsFilePath, json);
+            JsonSettingsStore.Save(AppStorage.OverlaySettingsFilePath, this, NormalizeSettings);
             Saved?.Invoke();
         }
 
@@ -150,25 +129,10 @@ namespace JoinGameAfk.Model
                 MaxQueueMicroOverlayScalePercent);
         }
 
-        private static OverlaySettings ResetSettingsFile()
-        {
-            var defaults = new OverlaySettings();
-            try
-            {
-                defaults.Save();
-            }
-            catch
-            {
-            }
-
-            return defaults;
-        }
-
-        private static OverlaySettings NormalizeSettings(OverlaySettings settings)
+        private static void NormalizeSettings(OverlaySettings settings)
         {
             settings.Version = AppStorage.OverlaySettingsFileVersion;
             settings.NormalizeOptions();
-            return settings;
         }
 
         private static double? NormalizeNullableOverlayLength(double? length)

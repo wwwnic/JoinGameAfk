@@ -61,7 +61,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 _isEnabled = definition.EnabledInMinimal;
                 _isInfinitePlaybackEnabled = SupportsInfinitePlayback && _defaultInfinitePlaybackEnabled;
                 _soundKey = NotificationSoundPlayer.NormalizeSoundKey(definition.DefaultSoundKey);
-                _volumeText = ChampSelectSettings.DefaultSoundAlertVolumePercent.ToString();
+                _volumeText = SoundSettings.DefaultSoundAlertVolumePercent.ToString();
                 _thresholdText = definition.DefaultThresholdSeconds?.ToString() ?? string.Empty;
                 _playbackDurationText = (definition.DefaultPlaybackDurationSeconds ?? SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds).ToString();
                 RefreshSelectedSound();

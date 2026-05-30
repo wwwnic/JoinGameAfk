@@ -121,8 +121,8 @@ public partial class ChampSelect
             urgency: 1);
 
         var schedules = new List<LockSoundAlertSchedule>();
-        bool countdownAlertActive = _settings.IsSoundAlertActive(countdownAlert.AlertId);
-        bool closeAlertActive = _settings.IsSoundAlertActive(closeAlert.AlertId);
+        bool countdownAlertActive = _soundSettings.IsSoundAlertActive(countdownAlert.AlertId);
+        bool closeAlertActive = _soundSettings.IsSoundAlertActive(closeAlert.AlertId);
         if (countdownAlertActive && (!closeAlertActive || countdownAlert.ThresholdSeconds > closeAlert.ThresholdSeconds))
             schedules.Add(countdownAlert);
 
@@ -139,7 +139,7 @@ public partial class ChampSelect
     {
         return new LockSoundAlertSchedule(
             alertId,
-            _settings.GetSoundAlertThresholdSeconds(alertId) ?? fallbackThresholdSeconds,
+            _soundSettings.GetSoundAlertThresholdSeconds(alertId) ?? fallbackThresholdSeconds,
             urgency);
     }
 
@@ -148,7 +148,7 @@ public partial class ChampSelect
         return Math.Clamp(
             (int)Math.Ceiling((playbackEndsAtUtc - playbackStartsAtUtc).TotalSeconds),
             0,
-            ChampSelectSettings.MaxSoundAlertPlaybackDurationSeconds);
+            SoundSettings.MaxSoundAlertPlaybackDurationSeconds);
     }
 
     private async Task RunScheduledLockSoundAlertAsync(ScheduledLockState scheduledLock, bool isPickAction, string alertId, DateTime alertAtUtc, int? playbackDurationSeconds)
@@ -187,10 +187,10 @@ public partial class ChampSelect
 
     private void TryPlayLockCountdownSoundAlert(ScheduledLockState scheduledLock, bool isPickAction, string alertId, int? playbackDurationSeconds)
     {
-        if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
+        if (!_soundSettings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
             return;
 
-        bool repeatPlayback = _settings.IsSoundAlertInfinitePlaybackEnabled(alertId);
+        bool repeatPlayback = _soundSettings.IsSoundAlertInfinitePlaybackEnabled(alertId);
         if (!repeatPlayback)
             StopLockSoundChannel(scheduledLock, isPickAction);
 
@@ -203,7 +203,7 @@ public partial class ChampSelect
 
     private void TryPreloadSoundAlert(string alertId, string context)
     {
-        if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
+        if (!_soundSettings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
             return;
 
         _playSoundAlert(SoundAlertPlaybackRequest.PreloadAlert(alertId, context));
@@ -234,7 +234,7 @@ public partial class ChampSelect
 
     private void TryPlaySoundAlertOnce(string alertId, string dedupeKey, string context, int? playbackDurationSeconds = null)
     {
-        if (!_settings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
+        if (!_soundSettings.IsSoundAlertActive(alertId) || _playSoundAlert is null)
             return;
 
         if (!_playedSoundAlertKeys.Add(dedupeKey))

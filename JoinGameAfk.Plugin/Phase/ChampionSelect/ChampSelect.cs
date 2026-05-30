@@ -9,7 +9,9 @@ namespace JoinGameAfk.Phase;
 public partial class ChampSelect : IPhaseHandler
 {
     private readonly LeagueClientHttp _http;
-    private readonly ChampSelectSettings _settings;
+    private readonly GeneralSettings _settings;
+    private readonly RolePlanSettings _rolePlanSettings;
+    private readonly SoundSettings _soundSettings;
     private readonly LeagueChampionOwnershipService _ownershipService;
     private readonly Action<string>? _log;
     private readonly Action? _requestRefresh;
@@ -54,10 +56,12 @@ public partial class ChampSelect : IPhaseHandler
 
     public DashboardStatus LastDashboardStatus { get; private set; } = new();
 
-    public ChampSelect(LeagueClientHttp http, ChampSelectSettings settings, Action<string>? log = null, Action? requestRefresh = null, Action<SoundAlertPlaybackRequest>? playSoundAlert = null)
+    public ChampSelect(LeagueClientHttp http, GeneralSettings settings, RolePlanSettings rolePlanSettings, SoundSettings soundSettings, Action<string>? log = null, Action? requestRefresh = null, Action<SoundAlertPlaybackRequest>? playSoundAlert = null)
     {
         _http = http;
         _settings = settings;
+        _rolePlanSettings = rolePlanSettings;
+        _soundSettings = soundSettings;
         _ownershipService = new LeagueChampionOwnershipService(http, log);
         _log = log;
         _requestRefresh = requestRefresh;

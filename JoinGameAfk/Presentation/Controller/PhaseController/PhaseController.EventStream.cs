@@ -21,7 +21,7 @@ namespace JoinGameAfk.Presentation.Controller
             _isEventStreamAvailable = false;
             _isEventStreamConnecting = false;
 
-            if (!_champSelectSettings.UseChampSelectEventStream)
+            if (!_generalSettings.UseChampSelectEventStream)
             {
                 _eventStream?.Dispose();
                 _eventStream = null;
@@ -35,7 +35,7 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void SyncEventStreamState(AuthModel? auth, CancellationToken cancellationToken)
         {
-            if (!_champSelectSettings.UseChampSelectEventStream)
+            if (!_generalSettings.UseChampSelectEventStream)
             {
                 if (_eventStream is not null)
                 {
@@ -74,7 +74,7 @@ namespace JoinGameAfk.Presentation.Controller
                     await eventStream.RunAsync(cancellationToken);
 
                     if (!cancellationToken.IsCancellationRequested
-                        && _champSelectSettings.UseChampSelectEventStream
+                        && _generalSettings.UseChampSelectEventStream
                         && ReferenceEquals(_eventStream, eventStream))
                     {
                         ScheduleEventStreamRetry("LCU websocket event stream closed.");
@@ -86,7 +86,7 @@ namespace JoinGameAfk.Presentation.Controller
                 catch (Exception ex)
                 {
                     if (cancellationToken.IsCancellationRequested
-                        || !_champSelectSettings.UseChampSelectEventStream
+                        || !_generalSettings.UseChampSelectEventStream
                         || !ReferenceEquals(_eventStream, eventStream))
                         return;
 
@@ -156,7 +156,7 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void OnLcuEventReceived(Lcu.LeagueClientEvent apiEvent)
         {
-            if (!_champSelectSettings.UseChampSelectEventStream)
+            if (!_generalSettings.UseChampSelectEventStream)
                 return;
 
             if (TryCaptureLcuEvent(apiEvent))

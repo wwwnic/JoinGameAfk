@@ -13,8 +13,8 @@ namespace JoinGameAfk.Presentation.Controller
         private void InitializeHandlers(Lcu.LeagueClientHttp http)
         {
             _phaseHandlers.Clear();
-            _phaseHandlers.Add(new ReadyCheck(http, _champSelectSettings, Log));
-            _phaseHandlers.Add(new ChampSelect(http, _champSelectSettings, Log, SignalLcuEvent, HandleSoundAlertPlayback));
+            _phaseHandlers.Add(new ReadyCheck(http, _generalSettings, Log));
+            _phaseHandlers.Add(new ChampSelect(http, _generalSettings, _rolePlanSettings, _soundSettings, Log, SignalLcuEvent, HandleSoundAlertPlayback));
         }
 
         private async Task<bool> TryHandleChampSelectAsync(ChampSelect champSelect, LcuEventSnapshot eventSnapshot, CancellationToken cancellationToken)
@@ -78,7 +78,7 @@ namespace JoinGameAfk.Presentation.Controller
             var readyCheckHandler = _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault();
             string readyCheckResponse = GetReadyCheckResponse(readyCheckJson);
             if (!string.IsNullOrWhiteSpace(readyCheckResponse)
-                || !_champSelectSettings.IsInQueueAutomationActive())
+                || !_generalSettings.IsInQueueAutomationActive())
             {
                 readyCheckHandler?.CancelPendingAccept();
             }

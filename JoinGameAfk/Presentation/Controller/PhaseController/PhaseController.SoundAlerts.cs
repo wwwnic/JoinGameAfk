@@ -90,25 +90,25 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void PreloadSoundAlert(string? alertId, string context)
         {
-            if (alertId is null || !_champSelectSettings.IsSoundAlertActive(alertId))
+            if (alertId is null || !_soundSettings.IsSoundAlertActive(alertId))
                 return;
 
             _notificationSoundPlayer.PreloadAlert(
-                _champSelectSettings.GetSoundAlertSoundKey(alertId),
+                _soundSettings.GetSoundAlertSoundKey(alertId),
                 context);
         }
 
         private void PlaySoundAlert(string alertId, string context, int? playbackDurationSecondsOverride, string? channelKey)
         {
-            if (!_champSelectSettings.IsSoundAlertActive(alertId))
+            if (!_soundSettings.IsSoundAlertActive(alertId))
                 return;
 
             _notificationSoundPlayer.PlayAlert(
-                _champSelectSettings.GetSoundAlertSoundKey(alertId),
-                _champSelectSettings.GetSoundAlertEffectiveVolumePercent(alertId),
+                _soundSettings.GetSoundAlertSoundKey(alertId),
+                _soundSettings.GetSoundAlertEffectiveVolumePercent(alertId),
                 context,
                 new NotificationSoundPlaybackOptions(
-                    playbackDurationSecondsOverride ?? _champSelectSettings.GetSoundAlertPlaybackDurationSeconds(alertId),
+                    playbackDurationSecondsOverride ?? _soundSettings.GetSoundAlertPlaybackDurationSeconds(alertId),
                     channelKey));
         }
     }

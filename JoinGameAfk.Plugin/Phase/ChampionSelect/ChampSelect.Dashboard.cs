@@ -207,11 +207,11 @@ public partial class ChampSelect
         position = NormalizePreferencePosition(position);
 
         var roleIds = position != Position.Default
-            && _settings.Preferences.TryGetValue(position, out var rolePreference)
+            && _rolePlanSettings.Preferences.TryGetValue(position, out var rolePreference)
             ? selector(rolePreference)
             : [];
 
-        var defaultIds = _settings.Preferences.TryGetValue(Position.Default, out var defaultPreference)
+        var defaultIds = _rolePlanSettings.Preferences.TryGetValue(Position.Default, out var defaultPreference)
             ? selector(defaultPreference)
             : [];
 

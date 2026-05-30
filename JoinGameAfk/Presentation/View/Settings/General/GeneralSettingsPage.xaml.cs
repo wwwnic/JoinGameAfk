@@ -17,10 +17,10 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private const double ThemePickerTileOuterWidth = 192;
         private const double ThemePickerTileOuterHeight = 84;
 
-        private readonly ChampSelectSettings _settings;
+        private readonly GeneralSettings _settings;
         private readonly OverlaySettings _overlaySettings;
         private readonly DispatcherTimer _savedMessageTimer;
-        private readonly Action<ChampSelectSettings, OverlaySettings, string?, bool>? _reloadUiForTheme;
+        private readonly Action<GeneralSettings, OverlaySettings, string?, bool>? _reloadUiForTheme;
         private readonly Action<string>? _logMessage;
         private readonly Action<string>? _logErrorMessage;
         private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
@@ -39,9 +39,9 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private string _selectedThemeKey = AppThemeManager.DefaultThemeKey;
 
         public GeneralSettingsPage(
-            ChampSelectSettings settings,
+            GeneralSettings settings,
             OverlaySettings overlaySettings,
-            Action<ChampSelectSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
+            Action<GeneralSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
             Action<string>? logMessage = null,
             Action<string>? logErrorMessage = null,
             string? selectedThemeKey = null,

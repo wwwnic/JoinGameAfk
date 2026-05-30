@@ -17,7 +17,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         public event Action<DashboardStatus>? DashboardStatusChanged;
 
         private const double MinimumLogRowHeight = 150;
-        private readonly ChampSelectSettings _settings;
+        private readonly RolePlanSettings _rolePlanSettings;
         private readonly DraftCountdownTimer _draftCountdownTimer;
         private Button[] _dashboardViewButtons = [];
         private FrameworkElement[] _dashboardTabContents = [];
@@ -28,9 +28,9 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private int _activeDashboardViewIndex;
         private bool _hasManualDashboardViewOverride;
 
-        public PhaseProgressionPage(ChampSelectSettings settings)
+        public PhaseProgressionPage(RolePlanSettings rolePlanSettings)
         {
-            _settings = settings;
+            _rolePlanSettings = rolePlanSettings;
             InitializeComponent();
 
             _draftCountdownTimer = new DraftCountdownTimer(RenderCountdownTimers);
@@ -44,7 +44,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             ActivateDashboardView(0);
             Loaded += (_, _) => QueueLogRowResize();
             Unloaded += PhaseProgressionPage_Unloaded;
-            _settings.Saved += Settings_Saved;
+            _rolePlanSettings.Saved += RolePlanSettings_Saved;
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
@@ -53,13 +53,13 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private void PhaseProgressionPage_Unloaded(object sender, RoutedEventArgs e)
         {
             _draftCountdownTimer.Stop();
-            _settings.Saved -= Settings_Saved;
+            _rolePlanSettings.Saved -= RolePlanSettings_Saved;
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
             ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
         }
 
-        private void Settings_Saved()
+        private void RolePlanSettings_Saved()
         {
             Dispatcher.TryInvoke(() => RenderDashboardStatus(_lastDashboardStatus));
         }

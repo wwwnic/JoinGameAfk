@@ -20,7 +20,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private const int DefaultPriorityChampionChipsPerRow = 5;
         private const string ChampionPillTag = "ChampionPill";
 
-        private readonly ChampSelectSettings _settings;
+        private readonly GeneralSettings _generalSettings;
+        private readonly RolePlanSettings _rolePlanSettings;
         private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private List<ChampionReferenceItem> _filteredChampionReferences;
@@ -146,10 +147,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             private set => SetValue(IsChampionPictureEditModeProperty, value);
         }
 
-        public ChampionPrioritiesPage(ChampSelectSettings settings)
+        public ChampionPrioritiesPage(GeneralSettings generalSettings, RolePlanSettings rolePlanSettings)
         {
             InitializeComponent();
-            _settings = settings;
+            _generalSettings = generalSettings;
+            _rolePlanSettings = rolePlanSettings;
             ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
             RefreshThemeBrushes();
             Unloaded += ChampionPrioritiesPage_Unloaded;
@@ -177,7 +179,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             _rows = [];
             foreach (Position position in Enum.GetValues<Position>().Where(position => position != Position.None))
             {
-                var pref = _settings.Preferences.GetValueOrDefault(position) ?? new PositionPreference();
+                var pref = _rolePlanSettings.Preferences.GetValueOrDefault(position) ?? new PositionPreference();
                 var row = new PositionRow
                 {
                     Position = position,

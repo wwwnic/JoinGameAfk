@@ -97,7 +97,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             try
             {
-                AppStorage.EnsureDirectoryExists();
+                AppStorage.EnsureRolePlansDirectoryExists();
                 string json = LoadSeedConfiguredBreaksJson();
                 File.WriteAllText(AppStorage.ChampionChipLabelBreaksFilePath, CreateConfiguredBreaksFileContents(json));
             }

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media.Animation;
+using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
@@ -19,16 +20,23 @@ namespace JoinGameAfk
         private PhaseProgressionPage? fDashboardPage;
         private LogsPage? fLogsPage;
         private PhaseController? fPhaseController;
+        private GeneralSettings? fGeneralSettings;
+        private SoundSettings? fSoundSettings;
+        private RolePlanSettings? fRolePlanSettings;
+        private OverlaySettings? fOverlaySettings;
         private static readonly Duration ThemePreviewTransitionDuration = new(TimeSpan.FromMilliseconds(140));
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             try
             {
-                var champSelectSettings = ChampSelectSettings.Load();
+                AppStorage.EnsureStorageLayoutExists();
+                var generalSettings = GeneralSettings.Load();
+                var soundSettings = SoundSettings.Load();
+                var rolePlanSettings = RolePlanSettings.Load();
                 var overlaySettings = OverlaySettings.Load();
-                champSelectSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(champSelectSettings.ThemeKey);
-                AppThemeManager.ApplyTheme(champSelectSettings.ThemeKey);
+                generalSettings.ThemeKey = AppThemeManager.NormalizeThemeKey(generalSettings.ThemeKey);
+                AppThemeManager.ApplyTheme(generalSettings.ThemeKey);
 
                 ChampionTileSeedCacheResult? bundledTileSeedResult = null;
                 string? bundledTileSeedError = null;
@@ -41,7 +49,7 @@ namespace JoinGameAfk
                     bundledTileSeedError = FormatException(ex);
                 }
 
-                fMainWindow = CreateMainWindow(champSelectSettings, overlaySettings);
+                fMainWindow = CreateMainWindow(generalSettings, soundSettings, rolePlanSettings, overlaySettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
                 LogBundledChampionTileSeedResult(bundledTileSeedResult, bundledTileSeedError);
@@ -49,11 +57,11 @@ namespace JoinGameAfk
                 if (overlaySettings.PickBanOverlayOpenOnStartup)
                     fMainWindow.ShowPickBanOverlayOnStartup();
 
-                if (champSelectSettings.StartWatcherOnStartup)
+                if (generalSettings.StartWatcherOnStartup)
                     fPhaseController?.Start();
 
                 LogChampionTileArchiveCleanup(ChampionTileCatalog.DeleteDownloadedArchives());
-                _ = AutoSyncChampionDataOnStartupAsync(champSelectSettings);
+                _ = AutoSyncChampionDataOnStartupAsync(generalSettings);
             }
             catch (Exception ex)
             {
@@ -83,22 +91,30 @@ namespace JoinGameAfk
         }
 
         private MainWindow CreateMainWindow(
-            ChampSelectSettings champSelectSettings,
+            GeneralSettings generalSettings,
+            SoundSettings soundSettings,
+            RolePlanSettings rolePlanSettings,
             OverlaySettings overlaySettings,
             int activeTabIndex = 0,
             string? selectedThemeKey = null,
             bool themePickerExpanded = false)
         {
-            fDashboardPage = new PhaseProgressionPage(champSelectSettings);
+            fGeneralSettings = generalSettings;
+            fSoundSettings = soundSettings;
+            fRolePlanSettings = rolePlanSettings;
+            fOverlaySettings = overlaySettings;
+
+            fDashboardPage = new PhaseProgressionPage(rolePlanSettings);
             var logsPage = new LogsPage();
             fLogsPage = logsPage;
             fDashboardPage.SetLogsPage(logsPage);
 
-            fPhaseController = new PhaseController(fDashboardPage, logsPage, champSelectSettings);
+            fPhaseController = new PhaseController(fDashboardPage, logsPage, generalSettings, rolePlanSettings, soundSettings);
 
-            var championPrioritiesPage = new ChampionPrioritiesPage(champSelectSettings);
+            var championPrioritiesPage = new ChampionPrioritiesPage(generalSettings, rolePlanSettings);
             var settingsPage = new SettingsPage(
-                champSelectSettings,
+                generalSettings,
+                soundSettings,
                 overlaySettings,
                 ReloadUiForTheme,
                 logsPage.WriteLine,
@@ -106,7 +122,7 @@ namespace JoinGameAfk
                 selectedThemeKey,
                 themePickerExpanded);
 
-            var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, champSelectSettings, overlaySettings);
+            var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, generalSettings, overlaySettings);
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
@@ -121,9 +137,9 @@ namespace JoinGameAfk
             return mainWindow;
         }
 
-        private async Task AutoSyncChampionDataOnStartupAsync(ChampSelectSettings champSelectSettings)
+        private async Task AutoSyncChampionDataOnStartupAsync(GeneralSettings generalSettings)
         {
-            if (!champSelectSettings.AutoUpdateChampionCatalogOnStartup)
+            if (!generalSettings.AutoUpdateChampionCatalogOnStartup)
                 return;
 
             var remoteService = new DataDragonChampionCatalogService();
@@ -173,7 +189,7 @@ namespace JoinGameAfk
                     var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(
                         latestDataDragonVersion,
                         CreateChampionTileArchiveLogProgress(),
-                        optimizeForLocalCache: !champSelectSettings.DownloadRawChampionPictures);
+                        optimizeForLocalCache: !generalSettings.DownloadRawChampionPictures);
                     string archiveCleanupText = result.ArchiveDeleted
                         ? "archive removed after extraction"
                         : $"archive cleanup failed ({result.ArchiveDeleteError})";
@@ -254,7 +270,7 @@ namespace JoinGameAfk
         }
 
         private void ReloadUiForTheme(
-            ChampSelectSettings champSelectSettings,
+            GeneralSettings generalSettings,
             OverlaySettings overlaySettings,
             string? themeKey,
             bool themePickerExpanded)
@@ -267,11 +283,13 @@ namespace JoinGameAfk
 
                 fPhaseController?.Stop();
 
-                string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey ?? champSelectSettings.ThemeKey);
+                string normalizedThemeKey = AppThemeManager.NormalizeThemeKey(themeKey ?? generalSettings.ThemeKey);
                 AppThemeManager.ApplyTheme(normalizedThemeKey);
 
                 var newWindow = CreateMainWindow(
-                    champSelectSettings,
+                    generalSettings,
+                    fSoundSettings ?? SoundSettings.Load(),
+                    fRolePlanSettings ?? RolePlanSettings.Load(),
                     overlaySettings,
                     activeTabIndex,
                     normalizedThemeKey,

@@ -13,7 +13,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         private const string SoundStudioPreviewChannelKey = "sound-studio-preview";
         private static readonly TimeSpan SavedMessageDuration = TimeSpan.FromSeconds(3);
 
-        private readonly ChampSelectSettings _settings;
+        private readonly SoundSettings _settings;
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
         private readonly List<NotificationSoundOption> _soundOptions = [];
@@ -41,7 +41,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             private set => SetValue(IsSoundClearDropTargetProperty, value);
         }
 
-        public SoundSettingsPage(ChampSelectSettings settings)
+        public SoundSettingsPage(SoundSettings settings)
         {
             _settings = settings;
             InitializeComponent();

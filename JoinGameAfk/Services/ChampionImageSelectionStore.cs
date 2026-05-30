@@ -16,6 +16,7 @@ namespace JoinGameAfk.Services
 
         private static readonly object SyncRoot = new();
         private static Dictionary<int, string>? _selections;
+        private static bool _showChampionPictureDownloadWarning = true;
 
         public static event EventHandler? SelectionsChanged;
 
@@ -27,6 +28,18 @@ namespace JoinGameAfk.Services
                 {
                     EnsureLoaded();
                     return new Dictionary<int, string>(_selections!);
+                }
+            }
+        }
+
+        public static bool ShowChampionPictureDownloadWarning
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    EnsureLoaded();
+                    return _showChampionPictureDownloadWarning;
                 }
             }
         }
@@ -67,7 +80,7 @@ namespace JoinGameAfk.Services
                     return;
 
                 _selections![championId] = safeFileName;
-                SaveLoadedSelections();
+                SaveLoadedFile();
             }
 
             RaiseSelectionsChanged();
@@ -83,10 +96,23 @@ namespace JoinGameAfk.Services
                 if (!changed)
                     return;
 
-                SaveLoadedSelections();
+                SaveLoadedFile();
             }
 
             RaiseSelectionsChanged();
+        }
+
+        public static void SetShowChampionPictureDownloadWarning(bool showWarning)
+        {
+            lock (SyncRoot)
+            {
+                EnsureLoaded();
+                if (_showChampionPictureDownloadWarning == showWarning)
+                    return;
+
+                _showChampionPictureDownloadWarning = showWarning;
+                SaveLoadedFile();
+            }
         }
 
         public static void Reload()
@@ -94,6 +120,7 @@ namespace JoinGameAfk.Services
             lock (SyncRoot)
             {
                 _selections = null;
+                _showChampionPictureDownloadWarning = true;
                 EnsureLoaded();
             }
 
@@ -105,62 +132,61 @@ namespace JoinGameAfk.Services
             if (_selections is not null)
                 return;
 
-            _selections = LoadSelections();
+            var file = LoadFile();
+            _selections = NormalizeSelections(file.ChampionImageFileNames);
+            _showChampionPictureDownloadWarning = file.ShowChampionPictureDownloadWarning;
         }
 
-        private static Dictionary<int, string> LoadSelections()
+        private static ChampionImageSelectionFile LoadFile()
         {
             if (!File.Exists(AppStorage.ChampionImageSelectionFilePath))
             {
-                var migratedSelections = LoadLegacySelections();
-                SaveSelections(migratedSelections);
-                return migratedSelections;
+                var defaults = CreateDefaultFile();
+                SaveFile(defaults);
+                return defaults;
             }
 
             try
             {
                 string json = File.ReadAllText(AppStorage.ChampionImageSelectionFilePath);
                 var file = JsonSerializer.Deserialize<ChampionImageSelectionFile>(json, SerializerOptions);
-                return NormalizeSelections(file?.ChampionImageFileNames);
+                if (file is not null)
+                    return NormalizeFile(file);
+
+                QuarantineInvalidFile();
             }
             catch
             {
-                return [];
+                QuarantineInvalidFile();
             }
+
+            var defaultFile = CreateDefaultFile();
+            SaveFile(defaultFile);
+            return defaultFile;
         }
 
-        private static Dictionary<int, string> LoadLegacySelections()
+        private static void SaveLoadedFile()
         {
-            try
-            {
-                if (!File.Exists(AppStorage.SettingsFilePath))
-                    return [];
-
-                string json = File.ReadAllText(AppStorage.SettingsFilePath);
-                var legacyFile = JsonSerializer.Deserialize<LegacySettingsFile>(json, SerializerOptions);
-                return NormalizeSelections(legacyFile?.ChampionImageFileNames);
-            }
-            catch
-            {
-                return [];
-            }
-        }
-
-        private static void SaveLoadedSelections()
-        {
-            SaveSelections(_selections ?? []);
-        }
-
-        private static void SaveSelections(IReadOnlyDictionary<int, string> selections)
-        {
-            AppStorage.EnsureDirectoryExists();
-            var file = new ChampionImageSelectionFile
+            SaveFile(new ChampionImageSelectionFile
             {
                 Version = AppStorage.ChampionImageSelectionFileVersion,
-                ChampionImageFileNames = NormalizeSelections(selections)
-            };
+                ShowChampionPictureDownloadWarning = _showChampionPictureDownloadWarning,
+                ChampionImageFileNames = NormalizeSelections(_selections)
+            });
+        }
 
+        private static void SaveFile(ChampionImageSelectionFile file)
+        {
+            AppStorage.EnsureRolePlansDirectoryExists();
+            file = NormalizeFile(file);
             File.WriteAllText(AppStorage.ChampionImageSelectionFilePath, JsonSerializer.Serialize(file, SerializerOptions));
+        }
+
+        private static ChampionImageSelectionFile NormalizeFile(ChampionImageSelectionFile file)
+        {
+            file.Version = AppStorage.ChampionImageSelectionFileVersion;
+            file.ChampionImageFileNames = NormalizeSelections(file.ChampionImageFileNames);
+            return file;
         }
 
         private static Dictionary<int, string> NormalizeSelections(IReadOnlyDictionary<int, string>? selections)
@@ -201,6 +227,40 @@ namespace JoinGameAfk.Services
             return true;
         }
 
+        private static ChampionImageSelectionFile CreateDefaultFile()
+        {
+            return new ChampionImageSelectionFile
+            {
+                Version = AppStorage.ChampionImageSelectionFileVersion,
+                ShowChampionPictureDownloadWarning = true,
+                ChampionImageFileNames = []
+            };
+        }
+
+        private static void QuarantineInvalidFile()
+        {
+            try
+            {
+                if (!File.Exists(AppStorage.ChampionImageSelectionFilePath))
+                    return;
+
+                string directoryPath = Path.GetDirectoryName(AppStorage.ChampionImageSelectionFilePath) ?? string.Empty;
+                string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                string invalidPath = Path.Combine(directoryPath, $"champion-image-selections.invalid-{timestamp}.json");
+                int suffix = 2;
+                while (File.Exists(invalidPath))
+                {
+                    invalidPath = Path.Combine(directoryPath, $"champion-image-selections.invalid-{timestamp}-{suffix}.json");
+                    suffix++;
+                }
+
+                File.Move(AppStorage.ChampionImageSelectionFilePath, invalidPath);
+            }
+            catch
+            {
+            }
+        }
+
         private static void RaiseSelectionsChanged()
         {
             SelectionsChanged?.Invoke(null, EventArgs.Empty);
@@ -210,11 +270,8 @@ namespace JoinGameAfk.Services
         {
             public int Version { get; set; } = AppStorage.ChampionImageSelectionFileVersion;
 
-            public Dictionary<int, string> ChampionImageFileNames { get; set; } = [];
-        }
+            public bool ShowChampionPictureDownloadWarning { get; set; } = true;
 
-        private sealed class LegacySettingsFile
-        {
             public Dictionary<int, string> ChampionImageFileNames { get; set; } = [];
         }
     }
