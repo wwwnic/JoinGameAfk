@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 
-namespace JoinGameAfk.PolyhedronStudio;
+namespace JoinGameAfk.Tools.PolyhedronStudio;
 
 public partial class GitHubBannerPreviewWindow : Window
 {

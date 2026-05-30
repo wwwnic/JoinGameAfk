@@ -1,7 +1,7 @@
-﻿<Application x:Class="JoinGameAfk.PolyhedronStudio.App"
+<Application x:Class="JoinGameAfk.Tools.PolyhedronStudio.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:JoinGameAfk.PolyhedronStudio"
+             xmlns:local="clr-namespace:JoinGameAfk.Tools.PolyhedronStudio"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
          

@@ -80,7 +80,7 @@ static void PrintUsage()
     Console.WriteLine(
         """
         Usage:
-          dotnet run --project JoinGameAfk.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>] [--max-tile-index <number>] [--keep-archive] [--reuse-archive]
+          dotnet run --project JoinGameAfk.Tools/JoinGameAfk.Tools.ChampionTileSeeder -- --tile-directory <path> [--cache-file <path>] [--archive-directory <path>] [--version <data-dragon-version>] [--max-tile-index <number>] [--keep-archive] [--reuse-archive]
 
         Options:
           --tile-directory      Directory where extracted champion tile JPGs are written.

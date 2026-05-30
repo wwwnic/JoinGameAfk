@@ -1,8 +1,8 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.Windows;
 
-namespace JoinGameAfk.PolyhedronStudio;
+namespace JoinGameAfk.Tools.PolyhedronStudio;
 
 /// <summary>
 /// Interaction logic for App.xaml

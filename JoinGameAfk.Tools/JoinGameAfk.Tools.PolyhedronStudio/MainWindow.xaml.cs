@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace JoinGameAfk.PolyhedronStudio;
+namespace JoinGameAfk.Tools.PolyhedronStudio;
 
 public partial class MainWindow : Window
 {

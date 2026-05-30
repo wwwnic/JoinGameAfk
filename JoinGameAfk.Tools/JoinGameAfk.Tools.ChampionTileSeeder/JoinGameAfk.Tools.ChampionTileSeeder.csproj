@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
+    <ProjectReference Include="..\..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Media;
 
-namespace JoinGameAfk.PolyhedronStudio;
+namespace JoinGameAfk.Tools.PolyhedronStudio;
 
 public sealed class LogoSettings
 {
