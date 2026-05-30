@@ -12,9 +12,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (!TryValidateSoundAlertSettings())
                 return;
 
-            _settings.SoundAlertProfile = AreSoundAlertsEnabled()
-                ? SoundAlertProfile.Custom
-                : SoundAlertProfile.Off;
+            _settings.SoundAlertsEnabled = AreSoundAlertsEnabled();
             _settings.SoundAlertVolumePercent = GetSoundAlertVolumePercent();
             _settings.SoundAlerts = CaptureSoundAlertSettings();
             _settings.Save();

@@ -58,7 +58,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 SupportsInfinitePlayback = definition.SupportsInfinitePlayback;
                 _defaultInfinitePlaybackEnabled = definition.DefaultInfinitePlaybackEnabled;
                 SoundChoices = soundOptions.Select(option => new SoundChoiceOption(option.Key, option.DisplayName, option.IsLoopable)).ToList();
-                _isEnabled = definition.EnabledInMinimal;
+                _isEnabled = definition.EnabledByDefault;
                 _isInfinitePlaybackEnabled = SupportsInfinitePlayback && _defaultInfinitePlaybackEnabled;
                 _soundKey = NotificationSoundPlayer.NormalizeSoundKey(definition.DefaultSoundKey);
                 _volumeText = SoundSettings.DefaultSoundAlertVolumePercent.ToString();

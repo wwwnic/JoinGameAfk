@@ -32,7 +32,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             _isApplyingSettingsToControls = true;
             try
             {
-                SoundAlertsEnabledCheckBox.IsChecked = _settings.SoundAlertProfile != SoundAlertProfile.Off;
+                SoundAlertsEnabledCheckBox.IsChecked = _settings.SoundAlertsEnabled;
                 SoundAlertVolumeSlider.Value = SoundSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent);
                 ApplySoundAlertSettingsToRows();
                 RefreshSoundAlertVolumeValueText();
@@ -86,7 +86,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         private SoundSettingsSnapshot CaptureSavedSoundSettingsSnapshot()
         {
             return new SoundSettingsSnapshot(
-                _settings.SoundAlertProfile != SoundAlertProfile.Off,
+                _settings.SoundAlertsEnabled,
                 SoundSettings.NormalizeSoundAlertVolumePercent(_settings.SoundAlertVolumePercent),
                 CaptureSavedSoundAlertConfigurationSnapshot());
         }

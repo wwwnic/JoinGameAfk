@@ -1,15 +1,5 @@
-using System.Text.Json.Serialization;
-
 namespace JoinGameAfk.Model
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum SoundAlertProfile
-    {
-        Off,
-        Minimal,
-        Custom
-    }
-
     public sealed class SoundAlertSetting
     {
         public bool Enabled { get; set; }
@@ -26,7 +16,7 @@ namespace JoinGameAfk.Model
         string DisplayName,
         string Description,
         string DefaultSoundKey,
-        bool EnabledInMinimal,
+        bool EnabledByDefault,
         int? DefaultThresholdSeconds = null,
         int? DefaultPlaybackDurationSeconds = null,
         bool SupportsInfinitePlayback = false,
@@ -69,56 +59,56 @@ namespace JoinGameAfk.Model
                 "Ready check appears",
                 "Plays as soon as the ready check popup is detected.",
                 AssistantBeaconSoundKey,
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.ChampSelectStart,
                 "Phase changes",
                 "Champion select starts",
                 "Plays when the League Client enters champion select.",
                 SoftDigitalTimbreSoundKey,
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.ChampSelectEnded,
                 "Phase changes",
                 "Champion select dodged",
                 "Plays when champion select returns to lobby, matchmaking, or ready check instead of game.",
                 "loud-building-notify",
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.BanActionStart,
                 "Champion select",
                 "Your ban action starts",
                 "Plays when your active ban action begins.",
                 "sword",
-                EnabledInMinimal: false),
+                EnabledByDefault: false),
             new(
                 SoundAlertIds.PickActionStart,
                 "Champion select",
                 "Your pick action starts",
                 "Plays when your active pick action begins.",
                 "action-pulse",
-                EnabledInMinimal: false),
+                EnabledByDefault: false),
             new(
                 SoundAlertIds.ManualSelectionOverride,
                 "Champion select",
                 "Manual selection override detected",
                 "Plays when you manually change the app-hovered pick or ban and auto-lock follows your current selection.",
                 "short-digital-alert",
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.AllOptionsUnavailable,
                 "Champion select",
                 "All configured pick/ban options unavailable",
                 "Plays when every configured champion for your active pick or ban is blocked, failed, or not owned.",
                 "dopamine-notify",
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.PickLockCountdown,
                 "Champion select",
                 "Pick auto-lock countdown starts",
                 "Plays Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
-                EnabledInMinimal: true,
+                EnabledByDefault: true,
                 DefaultLockCountdownThresholdSeconds,
                 SupportsInfinitePlayback: true,
                 DefaultInfinitePlaybackEnabled: true),
@@ -128,7 +118,7 @@ namespace JoinGameAfk.Model
                 "Pick auto-lock final countdown",
                 "Plays Clock Fast until the pick auto-locks.",
                 DefaultLockSoonSoundKey,
-                EnabledInMinimal: true,
+                EnabledByDefault: true,
                 DefaultLockSoonThresholdSeconds,
                 SupportsInfinitePlayback: true,
                 DefaultInfinitePlaybackEnabled: true),
@@ -138,14 +128,14 @@ namespace JoinGameAfk.Model
                 "Pick auto-lock locks champion",
                 "Plays when the app successfully locks your pick.",
                 DefaultSoundKey,
-                EnabledInMinimal: true),
+                EnabledByDefault: true),
             new(
                 SoundAlertIds.BanLockCountdown,
                 "Champion select",
                 "Ban auto-lock countdown starts",
                 "Plays Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
-                EnabledInMinimal: false,
+                EnabledByDefault: false,
                 DefaultLockCountdownThresholdSeconds,
                 SupportsInfinitePlayback: true,
                 DefaultInfinitePlaybackEnabled: true),
@@ -155,7 +145,7 @@ namespace JoinGameAfk.Model
                 "Ban auto-lock final countdown",
                 "Plays Clock Fast until the ban auto-locks.",
                 DefaultLockSoonSoundKey,
-                EnabledInMinimal: false,
+                EnabledByDefault: false,
                 DefaultLockSoonThresholdSeconds,
                 SupportsInfinitePlayback: true,
                 DefaultInfinitePlaybackEnabled: true),
@@ -165,7 +155,7 @@ namespace JoinGameAfk.Model
                 "Ban auto-lock locks champion",
                 "Plays when the app successfully locks your ban.",
                 "lock-in-impact",
-                EnabledInMinimal: false),
+                EnabledByDefault: false),
         ];
 
         public static IReadOnlyList<string> AlertIds { get; } =
@@ -191,16 +181,11 @@ namespace JoinGameAfk.Model
                 ?? Definitions[0];
         }
 
-        public static bool IsEnabledInMinimal(string alertId)
-        {
-            return GetDefinition(alertId).EnabledInMinimal;
-        }
-
         private static SoundAlertSetting CreateDefaultSetting(SoundAlertDefinition definition)
         {
             return new SoundAlertSetting
             {
-                Enabled = definition.EnabledInMinimal,
+                Enabled = definition.EnabledByDefault,
                 SoundKey = definition.DefaultSoundKey,
                 VolumePercent = SoundSettings.DefaultSoundAlertVolumePercent,
                 ThresholdSeconds = definition.DefaultThresholdSeconds,

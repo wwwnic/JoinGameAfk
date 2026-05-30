@@ -16,9 +16,9 @@ namespace JoinGameAfk.Model
         public int Version { get; set; } = AppStorage.SoundSettingsFileVersion;
 
         /// <summary>
-        /// Preset that controls which sound alerts are active.
+        /// Master switch for all sound alerts.
         /// </summary>
-        public SoundAlertProfile SoundAlertProfile { get; set; } = SoundAlertProfile.Minimal;
+        public bool SoundAlertsEnabled { get; set; } = true;
 
         /// <summary>
         /// Shared volume percentage used for all sound alerts and previews.
@@ -26,7 +26,7 @@ namespace JoinGameAfk.Model
         public int? SoundAlertVolumePercent { get; set; } = DefaultSoundAlertVolumePercent;
 
         /// <summary>
-        /// Per-alert sound and timing settings used when the Custom profile is active.
+        /// Per-alert sound and timing settings.
         /// </summary>
         public Dictionary<string, SoundAlertSetting> SoundAlerts { get; set; } = SoundAlertDefaults.CreateDefaultSettings();
 
@@ -34,13 +34,7 @@ namespace JoinGameAfk.Model
 
         public bool IsSoundAlertActive(string alertId)
         {
-            return SoundAlertProfile switch
-            {
-                SoundAlertProfile.Off => false,
-                SoundAlertProfile.Minimal => SoundAlertDefaults.IsEnabledInMinimal(alertId),
-                SoundAlertProfile.Custom => GetSoundAlertSetting(alertId).Enabled,
-                _ => false
-            };
+            return SoundAlertsEnabled && GetSoundAlertSetting(alertId).Enabled;
         }
 
         public string GetSoundAlertSoundKey(string alertId)
@@ -104,7 +98,7 @@ namespace JoinGameAfk.Model
         {
             var defaults = new SoundSettings();
 
-            SoundAlertProfile = defaults.SoundAlertProfile;
+            SoundAlertsEnabled = defaults.SoundAlertsEnabled;
             SoundAlertVolumePercent = defaults.SoundAlertVolumePercent;
             SoundAlerts = SoundAlertDefaults.CreateDefaultSettings();
         }
