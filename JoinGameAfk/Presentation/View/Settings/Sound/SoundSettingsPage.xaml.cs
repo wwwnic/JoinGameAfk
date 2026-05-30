@@ -26,8 +26,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         private SoundDragData? _activeSoundDragData;
         private UIElement? _soundDragCaptureElement;
         private SoundAlertOption? _soundDropTarget;
+        private SoundAlertOption? _editingSoundCueOption;
         private bool _isSoundDragActive;
         private bool _isApplyingSettingsToControls;
+        private bool _isApplyingSoundCueEditor;
 
         public static readonly DependencyProperty IsSoundClearDropTargetProperty = DependencyProperty.Register(
             nameof(IsSoundClearDropTarget),
@@ -86,6 +88,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (_isSoundDragActive)
                 FinishSoundDrag(drop: false);
 
+            CloseSoundCueEditor();
             _settings.Saved -= Settings_Saved;
             Unloaded -= SoundSettingsPage_Unloaded;
         }

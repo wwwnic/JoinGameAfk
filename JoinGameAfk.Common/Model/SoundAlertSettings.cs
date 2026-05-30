@@ -3,8 +3,8 @@ namespace JoinGameAfk.Model
     public sealed class SoundAlertSetting
     {
         public bool Enabled { get; set; }
-        public string SoundKey { get; set; } = SoundAlertDefaults.DefaultSoundKey;
-        public int? VolumePercent { get; set; } = SoundSettings.DefaultSoundAlertVolumePercent;
+        public string? SoundKey { get; set; } = SoundAlertDefaults.DefaultSoundKey;
+        public int? VolumePercent { get; set; } = SoundSettings.DefaultSoundAlertCueVolumePercent;
         public int? ThresholdSeconds { get; set; }
         public int? PlaybackDurationSeconds { get; set; }
         public bool? InfinitePlaybackEnabled { get; set; }
@@ -106,7 +106,7 @@ namespace JoinGameAfk.Model
                 SoundAlertIds.PickLockCountdown,
                 "Champion select",
                 "Pick auto-lock countdown starts",
-                "Plays Clock Slow before the final auto-lock countdown cue.",
+                "Starts Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
                 EnabledByDefault: true,
                 DefaultLockCountdownThresholdSeconds,
@@ -116,7 +116,7 @@ namespace JoinGameAfk.Model
                 SoundAlertIds.PickLockSoon,
                 "Champion select",
                 "Pick auto-lock final countdown",
-                "Plays Clock Fast until the pick auto-locks.",
+                "Starts Clock Fast for the final countdown before pick auto-lock.",
                 DefaultLockSoonSoundKey,
                 EnabledByDefault: true,
                 DefaultLockSoonThresholdSeconds,
@@ -133,7 +133,7 @@ namespace JoinGameAfk.Model
                 SoundAlertIds.BanLockCountdown,
                 "Champion select",
                 "Ban auto-lock countdown starts",
-                "Plays Clock Slow before the final auto-lock countdown cue.",
+                "Starts Clock Slow before the final auto-lock countdown cue.",
                 DefaultLockCountdownSoundKey,
                 EnabledByDefault: false,
                 DefaultLockCountdownThresholdSeconds,
@@ -143,7 +143,7 @@ namespace JoinGameAfk.Model
                 SoundAlertIds.BanLockSoon,
                 "Champion select",
                 "Ban auto-lock final countdown",
-                "Plays Clock Fast until the ban auto-locks.",
+                "Starts Clock Fast for the final countdown before ban auto-lock.",
                 DefaultLockSoonSoundKey,
                 EnabledByDefault: false,
                 DefaultLockSoonThresholdSeconds,
@@ -187,7 +187,7 @@ namespace JoinGameAfk.Model
             {
                 Enabled = definition.EnabledByDefault,
                 SoundKey = definition.DefaultSoundKey,
-                VolumePercent = SoundSettings.DefaultSoundAlertVolumePercent,
+                VolumePercent = SoundSettings.GetDefaultSoundAlertCueVolumePercent(definition.DefaultSoundKey),
                 ThresholdSeconds = definition.DefaultThresholdSeconds,
                 PlaybackDurationSeconds = definition.DefaultPlaybackDurationSeconds,
                 InfinitePlaybackEnabled = definition.SupportsInfinitePlayback

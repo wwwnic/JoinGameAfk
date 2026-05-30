@@ -3,7 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
-using JoinGameAfk.Validation;
 
 namespace JoinGameAfk.Presentation.View.Settings.Sound
 {
@@ -116,7 +115,8 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         {
             return SoundSettings.GetEffectiveSoundAlertVolumePercent(
                 GetSoundAlertVolumePercent(),
-                ParseSoundAlertVolumeOrDefault(option));
+                ParseSoundAlertVolumeOrDefault(option),
+                option.SoundKey ?? option.DefaultSoundKey);
         }
 
         private void RefreshSoundAlertVolumeValueText()
@@ -163,8 +163,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             {
                 var setting = _settings.GetSoundAlertSetting(option.AlertId);
                 option.IsEnabled = setting.Enabled;
-                option.SoundKey = NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
-                option.VolumeText = SoundSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
+                option.SoundKey = setting.SoundKey;
+                option.VolumeText = SoundSettings.NormalizeSoundAlertCueVolumePercent(
+                    setting.VolumePercent,
+                    setting.SoundKey ?? option.DefaultSoundKey).ToString();
                 option.ThresholdText = option.HasThreshold
                     ? SoundSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, option.DefaultThresholdSeconds).ToString()
                     : string.Empty;
@@ -199,13 +201,13 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             int countdownSeconds = ParseSoundAlertThresholdOrDefault(countdownOption);
             int closeSeconds = ParseSoundAlertThresholdOrDefault(closeOption);
             countdownOption.Description = !countdownOption.IsInfinitePlaybackEnabled
-                ? $"Plays {countdownOption.SelectedSoundDisplayName} once at {FormatLeadSeconds(countdownSeconds)} before auto-lock."
+                ? $"Starts {countdownOption.SelectedSoundDisplayName} {FormatLeadSeconds(countdownSeconds)} before auto-lock."
                 : countdownSeconds > closeSeconds
-                ? $"Plays {countdownOption.SelectedSoundDisplayName} from {FormatLeadSeconds(countdownSeconds)} to {FormatLeadSeconds(closeSeconds)} before auto-lock. Replaced by the next countdown cue if enabled."
-                : $"Plays {countdownOption.SelectedSoundDisplayName} from {FormatLeadSeconds(countdownSeconds)} until auto-lock when the next countdown cue is off.";
+                ? $"Starts {countdownOption.SelectedSoundDisplayName} {FormatLeadSeconds(countdownSeconds)} before auto-lock and plays until {FormatLeadSeconds(closeSeconds)} before auto-lock, then the next countdown cue replaces it if enabled."
+                : $"Starts {countdownOption.SelectedSoundDisplayName} {FormatLeadSeconds(countdownSeconds)} before auto-lock and keeps playing until auto-lock when the next countdown cue is off.";
             closeOption.Description = closeOption.IsInfinitePlaybackEnabled
-                ? $"Plays {closeOption.SelectedSoundDisplayName} from {FormatLeadSeconds(closeSeconds)} until auto-lock."
-                : $"Plays {closeOption.SelectedSoundDisplayName} once at {FormatLeadSeconds(closeSeconds)} before auto-lock.";
+                ? $"Starts {closeOption.SelectedSoundDisplayName} {FormatLeadSeconds(closeSeconds)} before auto-lock and keeps playing until auto-lock."
+                : $"Starts {closeOption.SelectedSoundDisplayName} {FormatLeadSeconds(closeSeconds)} before auto-lock.";
         }
 
         private SoundAlertOption? FindSoundAlertOption(string alertId)
@@ -225,8 +227,12 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 option => new SoundAlertSetting
                 {
                     Enabled = option.IsEnabled,
-                    SoundKey = NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey),
-                    VolumePercent = SoundSettings.NormalizeSoundAlertVolumePercent(ParseSoundAlertVolumeOrDefault(option)),
+                    SoundKey = option.HasAssignedSound
+                        ? NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey)
+                        : null,
+                    VolumePercent = SoundSettings.NormalizeSoundAlertCueVolumePercent(
+                        ParseSoundAlertVolumeOrDefault(option),
+                        option.SoundKey ?? option.DefaultSoundKey),
                     ThresholdSeconds = option.HasThreshold
                         ? SoundSettings.NormalizeSoundAlertThresholdSeconds(ParseSoundAlertThresholdOrDefault(option), option.DefaultThresholdSeconds)
                         : null,
@@ -251,19 +257,24 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             return string.Join("|", SoundAlertDefaults.Definitions.Select(definition =>
             {
                 var setting = _settings.GetSoundAlertSetting(definition.Id);
-                string soundKey = NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
-                string volume = SoundSettings.NormalizeSoundAlertVolumePercent(setting.VolumePercent).ToString();
+                string? soundKey = string.IsNullOrWhiteSpace(setting.SoundKey)
+                    ? null
+                    : NotificationSoundPlayer.NormalizeSoundKey(setting.SoundKey);
+                string volume = SoundSettings.NormalizeSoundAlertCueVolumePercent(
+                    setting.VolumePercent,
+                    soundKey ?? definition.DefaultSoundKey).ToString();
                 string threshold = definition.DefaultThresholdSeconds is null
                     ? string.Empty
                     : SoundSettings.NormalizeSoundAlertThresholdSeconds(setting.ThresholdSeconds, definition.DefaultThresholdSeconds.Value).ToString();
                 string playbackDuration = definition.DefaultPlaybackDurationSeconds is not null
+                    && !string.IsNullOrWhiteSpace(soundKey)
                     && NotificationSoundPlayer.IsLoopableSoundKey(soundKey)
                     ? SoundSettings.NormalizeSoundAlertPlaybackDurationSeconds(setting.PlaybackDurationSeconds).ToString()
                     : string.Empty;
                 string infinitePlayback = definition.SupportsInfinitePlayback
                     ? (setting.InfinitePlaybackEnabled ?? definition.DefaultInfinitePlaybackEnabled).ToString()
                     : string.Empty;
-                return $"{definition.Id}:{setting.Enabled}:{soundKey}:{volume}:{threshold}:{playbackDuration}:{infinitePlayback}";
+                return $"{definition.Id}:{setting.Enabled}:{soundKey ?? "none"}:{volume}:{threshold}:{playbackDuration}:{infinitePlayback}";
             }));
         }
 
@@ -279,7 +290,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             string infinitePlayback = option.SupportsInfinitePlayback
                 ? option.IsInfinitePlaybackEnabled.ToString()
                 : string.Empty;
-            return $"{option.AlertId}:{option.IsEnabled}:{NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey)}:{volume}:{threshold}:{playbackDuration}:{infinitePlayback}";
+            string soundKey = option.HasAssignedSound
+                ? NotificationSoundPlayer.NormalizeSoundKey(option.SoundKey)
+                : "none";
+            return $"{option.AlertId}:{option.IsEnabled}:{soundKey}:{volume}:{threshold}:{playbackDuration}:{infinitePlayback}";
         }
 
         private bool TryValidateSoundAlertSettings()
@@ -301,7 +315,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 if (TryParseSoundAlertThreshold(option.ThresholdText, out _))
                     continue;
 
-                ShowValidationMessage($"{option.DisplayName} lead time must be a whole number between {SoundSettings.MinSoundAlertThresholdSeconds} and {SoundSettings.MaxSoundAlertThresholdSeconds}.");
+                ShowValidationMessage($"{option.DisplayName} cue start must be a whole number between {SoundSettings.MinSoundAlertThresholdSeconds} and {SoundSettings.MaxSoundAlertThresholdSeconds} seconds before auto-lock.");
                 return false;
             }
 
@@ -317,22 +331,11 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             return true;
         }
 
-        private void ValidateSoundAlertThresholdBox(TextBox? textBox)
-        {
-            if (textBox is null)
-                return;
-
-            bool isValid = textBox.DataContext is not SoundAlertOption option
-                || !option.HasThreshold
-                || TryParseSoundAlertThreshold(option.ThresholdText, out _);
-            InputValidator.SetValidationState(textBox, isValid ? InputValidationState.Valid : InputValidationState.Invalid);
-        }
-
         private static int ParseSoundAlertVolumeOrDefault(SoundAlertOption option)
         {
             return TryParseSoundAlertVolume(option.VolumeText, out int volume)
                 ? volume
-                : SoundSettings.DefaultSoundAlertVolumePercent;
+                : SoundSettings.GetDefaultSoundAlertCueVolumePercent(option.SoundKey ?? option.DefaultSoundKey);
         }
 
         private static bool TryParseSoundAlertVolume(string? text, out int volume)

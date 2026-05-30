@@ -20,10 +20,11 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
             public static SoundDragData FromAlert(SoundAlertOption option)
             {
+                string soundKey = option.SoundKey ?? option.DefaultSoundKey;
                 return new SoundDragData(
-                    option.SoundKey,
+                    soundKey,
                     option.SelectedSoundDisplayName,
-                    NotificationSoundPlayer.IsLoopableSoundKey(option.SoundKey),
+                    NotificationSoundPlayer.IsLoopableSoundKey(soundKey),
                     null,
                     option);
             }
@@ -38,7 +39,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             private bool _isSoundDragging;
             private readonly bool _supportsPlaybackDuration;
             private readonly bool _defaultInfinitePlaybackEnabled;
-            private string _soundKey;
+            private string? _soundKey;
             private string _description;
             private string _selectedSoundDisplayName = string.Empty;
             private bool _hasPlaybackDuration;
@@ -51,6 +52,9 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             {
                 AlertId = definition.Id;
                 DisplayName = definition.DisplayName;
+                DefaultIsEnabled = definition.EnabledByDefault;
+                DefaultSoundKey = NotificationSoundPlayer.NormalizeSoundKey(definition.DefaultSoundKey);
+                DefaultVolumePercent = SoundSettings.GetDefaultSoundAlertCueVolumePercent(DefaultSoundKey);
                 _description = definition.Description;
                 HasThreshold = definition.DefaultThresholdSeconds is not null;
                 DefaultThresholdSeconds = definition.DefaultThresholdSeconds ?? SoundAlertDefaults.DefaultLockSoonThresholdSeconds;
@@ -58,10 +62,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 SupportsInfinitePlayback = definition.SupportsInfinitePlayback;
                 _defaultInfinitePlaybackEnabled = definition.DefaultInfinitePlaybackEnabled;
                 SoundChoices = soundOptions.Select(option => new SoundChoiceOption(option.Key, option.DisplayName, option.IsLoopable)).ToList();
-                _isEnabled = definition.EnabledByDefault;
+                _isEnabled = DefaultIsEnabled;
                 _isInfinitePlaybackEnabled = SupportsInfinitePlayback && _defaultInfinitePlaybackEnabled;
-                _soundKey = NotificationSoundPlayer.NormalizeSoundKey(definition.DefaultSoundKey);
-                _volumeText = SoundSettings.DefaultSoundAlertVolumePercent.ToString();
+                _soundKey = DefaultSoundKey;
+                _volumeText = DefaultVolumePercent.ToString();
                 _thresholdText = definition.DefaultThresholdSeconds?.ToString() ?? string.Empty;
                 _playbackDurationText = (definition.DefaultPlaybackDurationSeconds ?? SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds).ToString();
                 RefreshSelectedSound();
@@ -71,6 +75,9 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
             public string AlertId { get; }
             public string DisplayName { get; }
+            public bool DefaultIsEnabled { get; }
+            public string DefaultSoundKey { get; }
+            public int DefaultVolumePercent { get; }
             public string Description
             {
                 get => _description;
@@ -87,7 +94,6 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             public int DefaultThresholdSeconds { get; }
             public bool SupportsInfinitePlayback { get; }
             public bool DefaultInfinitePlaybackEnabled => _defaultInfinitePlaybackEnabled;
-            public bool CanShowInfinitePlaybackToggle => SupportsInfinitePlayback && IsEnabled;
             public bool HasPlaybackDuration
             {
                 get => _hasPlaybackDuration;
@@ -152,9 +158,9 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
                     _isEnabled = value;
                     OnPropertyChanged(nameof(IsEnabled));
-                    OnPropertyChanged(nameof(CanShowInfinitePlaybackToggle));
                 }
             }
+            public bool HasAssignedSound => !string.IsNullOrWhiteSpace(SoundKey);
 
             public bool IsInfinitePlaybackEnabled
             {
@@ -170,17 +176,18 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                 }
             }
 
-            public string SoundKey
+            public string? SoundKey
             {
                 get => _soundKey;
                 set
                 {
-                    string normalizedSoundKey = NotificationSoundPlayer.NormalizeSoundKey(value);
+                    string? normalizedSoundKey = NormalizeOptionalSoundKey(value);
                     if (string.Equals(_soundKey, normalizedSoundKey, StringComparison.Ordinal))
                         return;
 
                     _soundKey = normalizedSoundKey;
                     OnPropertyChanged(nameof(SoundKey));
+                    OnPropertyChanged(nameof(HasAssignedSound));
                     RefreshSelectedSound();
                 }
             }
@@ -226,6 +233,13 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
             public void RefreshSelectedSound()
             {
+                if (!HasAssignedSound)
+                {
+                    SelectedSoundDisplayName = "No sound";
+                    HasPlaybackDuration = false;
+                    return;
+                }
+
                 SoundChoiceOption? selectedChoice = SoundChoices.FirstOrDefault(
                     choice => string.Equals(choice.Key, SoundKey, StringComparison.Ordinal));
 
@@ -237,9 +251,26 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
                     PlaybackDurationText = SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds.ToString();
             }
 
+            public void RestoreDefaults()
+            {
+                IsEnabled = DefaultIsEnabled;
+                SoundKey = DefaultSoundKey;
+                VolumeText = DefaultVolumePercent.ToString();
+                ThresholdText = HasThreshold ? DefaultThresholdSeconds.ToString() : string.Empty;
+                PlaybackDurationText = SoundAlertDefaults.DefaultLoopPlaybackDurationSeconds.ToString();
+                IsInfinitePlaybackEnabled = SupportsInfinitePlayback && DefaultInfinitePlaybackEnabled;
+            }
+
             private void OnPropertyChanged(string propertyName)
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            }
+
+            private static string? NormalizeOptionalSoundKey(string? soundKey)
+            {
+                return string.IsNullOrWhiteSpace(soundKey)
+                    ? null
+                    : NotificationSoundPlayer.NormalizeSoundKey(soundKey);
             }
         }
 

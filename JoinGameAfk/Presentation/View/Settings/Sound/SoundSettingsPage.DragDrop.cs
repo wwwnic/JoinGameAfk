@@ -53,7 +53,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
         {
             if (IsInsideButton(e.OriginalSource as DependencyObject)
                 || sender is not FrameworkElement { DataContext: SoundAlertOption option }
-                || !option.IsEnabled)
+                || !option.HasAssignedSound)
             {
                 return;
             }
@@ -87,7 +87,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (_isSoundDragActive
                 || IsInsideButton(e.OriginalSource as DependencyObject)
                 || sender is not FrameworkElement { DataContext: SoundAlertOption option } sourceElement
-                || !option.IsEnabled
+                || !option.HasAssignedSound
                 || !ReferenceEquals(_pendingSoundDragAlert, option)
                 || IsPastDragThreshold(_soundDragStartPoint, e.GetPosition(this))
                 || !IsPointInsideElement(sourceElement, e.GetPosition(sourceElement)))
@@ -399,6 +399,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
         private void ClearSoundAlertOption(SoundAlertOption option)
         {
+            option.SoundKey = null;
             option.IsEnabled = false;
             SyncSoundAlertsEnabledFromRows();
             RefreshDirtyState();
@@ -431,10 +432,14 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
 
         private void PreviewSoundAlertOption(SoundAlertOption option)
         {
-            MarkLastPreviewedSoundChoice(option.SoundKey);
+            string? soundKey = option.SoundKey;
+            if (string.IsNullOrWhiteSpace(soundKey))
+                return;
+
+            MarkLastPreviewedSoundChoice(soundKey);
             _notificationSoundPlayer.StopChannel(SoundStudioPreviewChannelKey);
             _notificationSoundPlayer.PreviewAlert(
-                option.SoundKey,
+                soundKey,
                 GetEffectiveSoundAlertVolumePercent(option),
                 $"{option.DisplayName} sound preview");
         }

@@ -12,6 +12,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (!TryValidateSoundAlertSettings())
                 return;
 
+            CloseSoundCueEditor();
             _settings.SoundAlertsEnabled = AreSoundAlertsEnabled();
             _settings.SoundAlertVolumePercent = GetSoundAlertVolumePercent();
             _settings.SoundAlerts = CaptureSoundAlertSettings();
@@ -34,6 +35,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (result != MessageBoxResult.OK)
                 return;
 
+            CloseSoundCueEditor();
             _settings.ResetSoundAlertOptionsToDefaults();
             ApplySettingsToControls();
             _settings.Save();
@@ -50,6 +52,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             if (_isSoundDragActive)
                 FinishSoundDrag(drop: false);
 
+            CloseSoundCueEditor();
             ClearPendingSoundDrag();
             ClearSoundDropTarget();
             IsSoundClearDropTarget = false;
@@ -98,16 +101,6 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             e.Handled = true;
         }
 
-        private void SoundAlertInfiniteToggle_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isApplyingSettingsToControls)
-                return;
-
-            RefreshLockCountdownDescriptions();
-            RefreshDirtyState();
-            e.Handled = true;
-        }
-
         private void SoundPickerSearchBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             RefreshSoundPickerChoices();
@@ -121,11 +114,5 @@ namespace JoinGameAfk.Presentation.View.Settings.Sound
             e.Handled = true;
         }
 
-        private void SoundAlertThresholdBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            ValidateSoundAlertThresholdBox(sender as TextBox);
-            RefreshLockCountdownDescriptions();
-            RefreshDirtyState();
-        }
     }
 }

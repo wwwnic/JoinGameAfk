@@ -7,7 +7,9 @@ namespace JoinGameAfk.Model
     {
         public const int MinSoundAlertVolumePercent = 0;
         public const int MaxSoundAlertVolumePercent = 100;
-        public const int DefaultSoundAlertVolumePercent = 50;
+        public const int DefaultSoundAlertMasterVolumePercent = 50;
+        public const int DefaultSoundAlertCueVolumePercent = 100;
+        public const int DefaultLoudSoundAlertCueVolumePercent = 50;
         public const int MinSoundAlertThresholdSeconds = 0;
         public const int MaxSoundAlertThresholdSeconds = 30;
         public const int MinSoundAlertPlaybackDurationSeconds = 1;
@@ -23,7 +25,7 @@ namespace JoinGameAfk.Model
         /// <summary>
         /// Shared volume percentage used for all sound alerts and previews.
         /// </summary>
-        public int? SoundAlertVolumePercent { get; set; } = DefaultSoundAlertVolumePercent;
+        public int? SoundAlertVolumePercent { get; set; } = DefaultSoundAlertMasterVolumePercent;
 
         /// <summary>
         /// Per-alert sound and timing settings.
@@ -34,14 +36,17 @@ namespace JoinGameAfk.Model
 
         public bool IsSoundAlertActive(string alertId)
         {
-            return SoundAlertsEnabled && GetSoundAlertSetting(alertId).Enabled;
+            var setting = GetSoundAlertSetting(alertId);
+            return SoundAlertsEnabled
+                && setting.Enabled
+                && !string.IsNullOrWhiteSpace(setting.SoundKey);
         }
 
-        public string GetSoundAlertSoundKey(string alertId)
+        public string? GetSoundAlertSoundKey(string alertId)
         {
             var setting = GetSoundAlertSetting(alertId);
             return string.IsNullOrWhiteSpace(setting.SoundKey)
-                ? SoundAlertDefaults.GetDefinition(alertId).DefaultSoundKey
+                ? null
                 : setting.SoundKey.Trim();
         }
 
@@ -79,9 +84,11 @@ namespace JoinGameAfk.Model
 
         public int GetSoundAlertEffectiveVolumePercent(string alertId)
         {
+            var setting = GetSoundAlertSetting(alertId);
             return GetEffectiveSoundAlertVolumePercent(
                 SoundAlertVolumePercent,
-                GetSoundAlertSetting(alertId).VolumePercent);
+                setting.VolumePercent,
+                setting.SoundKey);
         }
 
         public SoundAlertSetting GetSoundAlertSetting(string alertId)
@@ -125,12 +132,17 @@ namespace JoinGameAfk.Model
                 if (!currentAlerts.TryGetValue(definition.Id, out var currentAlert) || currentAlert is null)
                     continue;
 
+                string? configuredSoundKey = currentAlert.SoundKey?.Trim();
+                bool hasConfiguredSoundKey = !string.IsNullOrWhiteSpace(configuredSoundKey);
                 var normalizedAlert = normalizedAlerts[definition.Id];
-                normalizedAlert.Enabled = currentAlert.Enabled;
-                if (!string.IsNullOrWhiteSpace(currentAlert.SoundKey))
-                    normalizedAlert.SoundKey = currentAlert.SoundKey.Trim();
+                normalizedAlert.Enabled = currentAlert.Enabled && hasConfiguredSoundKey;
+                normalizedAlert.SoundKey = !hasConfiguredSoundKey
+                    ? null
+                    : configuredSoundKey;
 
-                normalizedAlert.VolumePercent = NormalizeSoundAlertVolumePercent(currentAlert.VolumePercent);
+                normalizedAlert.VolumePercent = NormalizeSoundAlertCueVolumePercent(
+                    currentAlert.VolumePercent,
+                    normalizedAlert.SoundKey ?? definition.DefaultSoundKey);
                 normalizedAlert.ThresholdSeconds = definition.DefaultThresholdSeconds is null
                     ? null
                     : NormalizeSoundAlertThresholdSeconds(currentAlert.ThresholdSeconds, definition.DefaultThresholdSeconds.Value);
@@ -147,23 +159,55 @@ namespace JoinGameAfk.Model
 
         public static int NormalizeSoundAlertVolumePercent(int? volumePercent)
         {
+            return NormalizeSoundAlertMasterVolumePercent(volumePercent);
+        }
+
+        public static int NormalizeSoundAlertMasterVolumePercent(int? volumePercent)
+        {
             if (volumePercent is null)
-                return DefaultSoundAlertVolumePercent;
+                return DefaultSoundAlertMasterVolumePercent;
 
             return Math.Clamp(
-                volumePercent.Value < MinSoundAlertVolumePercent ? DefaultSoundAlertVolumePercent : volumePercent.Value,
+                volumePercent.Value < MinSoundAlertVolumePercent ? DefaultSoundAlertMasterVolumePercent : volumePercent.Value,
+                MinSoundAlertVolumePercent,
+                MaxSoundAlertVolumePercent);
+        }
+
+        public static int NormalizeSoundAlertCueVolumePercent(int? volumePercent, string? soundKey)
+        {
+            int fallbackVolumePercent = GetDefaultSoundAlertCueVolumePercent(soundKey);
+            if (volumePercent is null)
+                return fallbackVolumePercent;
+
+            return Math.Clamp(
+                volumePercent.Value < MinSoundAlertVolumePercent ? fallbackVolumePercent : volumePercent.Value,
                 MinSoundAlertVolumePercent,
                 MaxSoundAlertVolumePercent);
         }
 
         public static int GetEffectiveSoundAlertVolumePercent(int? masterVolumePercent, int? alertVolumePercent)
         {
+            return GetEffectiveSoundAlertVolumePercent(masterVolumePercent, alertVolumePercent, soundKey: null);
+        }
+
+        public static int GetEffectiveSoundAlertVolumePercent(int? masterVolumePercent, int? alertVolumePercent, string? soundKey)
+        {
             int normalizedMasterVolume = NormalizeSoundAlertVolumePercent(masterVolumePercent);
-            int normalizedAlertVolume = NormalizeSoundAlertVolumePercent(alertVolumePercent);
+            int normalizedAlertVolume = NormalizeSoundAlertCueVolumePercent(alertVolumePercent, soundKey);
             return Math.Clamp(
                 (int)Math.Round(normalizedMasterVolume * (normalizedAlertVolume / 100d)),
                 MinSoundAlertVolumePercent,
                 MaxSoundAlertVolumePercent);
+        }
+
+        public static int GetDefaultSoundAlertCueVolumePercent(string? soundKey)
+        {
+            string normalizedSoundKey = string.IsNullOrWhiteSpace(soundKey)
+                ? string.Empty
+                : soundKey.Trim();
+            return string.Equals(normalizedSoundKey, SoundAlertDefaults.DefaultSoundKey, StringComparison.Ordinal)
+                ? DefaultLoudSoundAlertCueVolumePercent
+                : DefaultSoundAlertCueVolumePercent;
         }
 
         public static int NormalizeSoundAlertThresholdSeconds(int? thresholdSeconds)
