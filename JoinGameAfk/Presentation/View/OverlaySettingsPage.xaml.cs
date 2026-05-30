@@ -5,7 +5,7 @@ using System.Windows.Threading;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class OverlaySettingsPage : Page
     {

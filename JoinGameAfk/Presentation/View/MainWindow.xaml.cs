@@ -14,7 +14,7 @@ using JoinGameAfk.Presentation.Controller;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class MainWindow : Window
     {

@@ -1,7 +1,7 @@
-<Page x:Class="JoinGameAfk.View.PhaseProgressionPage"
+<Page x:Class="JoinGameAfk.Presentation.View.PhaseProgressionPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:viewControls="clr-namespace:JoinGameAfk.View.Controls"
+      xmlns:viewControls="clr-namespace:JoinGameAfk.Presentation.View.Controls"
       Background="Transparent"
       SizeChanged="Page_SizeChanged">
     <Page.Resources>

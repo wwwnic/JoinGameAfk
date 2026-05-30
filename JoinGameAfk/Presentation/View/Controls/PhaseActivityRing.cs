@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace JoinGameAfk.View.Controls
+namespace JoinGameAfk.Presentation.View.Controls
 {
     public enum PhaseActivityRingMode
     {

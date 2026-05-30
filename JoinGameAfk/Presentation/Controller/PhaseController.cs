@@ -7,7 +7,7 @@ using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using JoinGameAfk.Phase;
 using JoinGameAfk.Services;
-using JoinGameAfk.View;
+using JoinGameAfk.Presentation.View;
 using LcuClient;
 
 namespace JoinGameAfk.Presentation.Controller

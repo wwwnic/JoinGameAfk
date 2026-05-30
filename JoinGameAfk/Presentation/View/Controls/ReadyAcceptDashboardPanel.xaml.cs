@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
-namespace JoinGameAfk.View.Controls
+namespace JoinGameAfk.Presentation.View.Controls
 {
     public partial class ReadyAcceptDashboardPanel : UserControl
     {

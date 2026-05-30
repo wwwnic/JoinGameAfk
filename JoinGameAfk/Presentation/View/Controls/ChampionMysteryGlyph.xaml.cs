@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace JoinGameAfk.View.Controls
+namespace JoinGameAfk.Presentation.View.Controls
 {
     public partial class ChampionMysteryGlyph : UserControl
     {

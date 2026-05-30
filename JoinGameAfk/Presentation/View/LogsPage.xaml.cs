@@ -2,7 +2,7 @@ using System;
 using System.Windows.Controls;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class LogsPage : Page
     {

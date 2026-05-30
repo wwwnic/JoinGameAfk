@@ -5,7 +5,7 @@ using System.Windows.Media.Animation;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Theme;
 
-namespace JoinGameAfk.View.Controls
+namespace JoinGameAfk.Presentation.View.Controls
 {
     public partial class PhaseStatusIndicator : UserControl
     {

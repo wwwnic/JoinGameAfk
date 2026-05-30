@@ -4,7 +4,7 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class QueueMicroOverlayWindow : Window
     {

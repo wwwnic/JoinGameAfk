@@ -12,7 +12,7 @@ using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 using JoinGameAfk.Validation;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class SettingsPage : Page
     {

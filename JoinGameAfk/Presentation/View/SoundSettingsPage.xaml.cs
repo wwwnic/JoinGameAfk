@@ -9,7 +9,7 @@ using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 using JoinGameAfk.Validation;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class SoundSettingsPage : Page
     {

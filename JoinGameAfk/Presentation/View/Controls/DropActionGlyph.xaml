@@ -1,7 +1,7 @@
-<UserControl x:Class="JoinGameAfk.View.Controls.DropActionGlyph"
+<UserControl x:Class="JoinGameAfk.Presentation.View.Controls.DropActionGlyph"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:JoinGameAfk.View.Controls"
+             xmlns:local="clr-namespace:JoinGameAfk.Presentation.View.Controls"
              Foreground="{DynamicResource AccentBlueTextBrush}"
              IsHitTestVisible="False"
              SnapsToDevicePixels="True">

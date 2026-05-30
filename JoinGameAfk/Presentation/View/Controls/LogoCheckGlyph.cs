@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 
-namespace JoinGameAfk.View.Controls
+namespace JoinGameAfk.Presentation.View.Controls
 {
     public sealed class LogoCheckGlyph : FrameworkElement
     {

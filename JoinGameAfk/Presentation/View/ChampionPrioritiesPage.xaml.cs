@@ -16,9 +16,9 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
-using JoinGameAfk.View.Controls;
+using JoinGameAfk.Presentation.View.Controls;
 
-namespace JoinGameAfk.View
+namespace JoinGameAfk.Presentation.View
 {
     public partial class ChampionPrioritiesPage : Page
     {

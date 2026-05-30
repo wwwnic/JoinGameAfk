@@ -6,7 +6,7 @@ using JoinGameAfk.Presentation.Controller;
 using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
-using JoinGameAfk.View;
+using JoinGameAfk.Presentation.View;
 
 namespace JoinGameAfk
 {
