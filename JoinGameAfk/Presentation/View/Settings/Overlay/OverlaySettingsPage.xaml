@@ -39,11 +39,13 @@
                             Style="{StaticResource SecondaryButtonStyle}"
                             Padding="18,10"
                             ToolTip="Restore default overlay settings." />
-                    <Button Content="Cancel Changes"
+                    <Button x:Name="CancelOverlayChangesButton"
+                            Content="Cancel Changes"
                             Click="CancelChangesButton_Click"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Padding="18,10"
                             Margin="8,0,0,0"
+                            IsEnabled="False"
                             ToolTip="Discard unsaved overlay changes." />
                     <Button Content="Save Overlays"
                             Click="SaveButton_Click"

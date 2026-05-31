@@ -51,6 +51,7 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
 
             bool hasDirtySettings = CaptureCurrentSnapshot() != CaptureSavedSnapshot();
             DirtyOverlayBar.Visibility = hasDirtySettings ? Visibility.Visible : Visibility.Collapsed;
+            CancelOverlayChangesButton.IsEnabled = hasDirtySettings;
             if (hasDirtySettings)
             {
                 _savedMessageTimer.Stop();
