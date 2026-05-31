@@ -79,8 +79,8 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Check champion data updates on startup?\n\nWhen this is on, JoinGameAfk uses your internet connection at app startup to contact Riot Data Dragon at ddragon.leagueoflegends.com and fetch only the latest version first.\n\nIf your local champion list version is different, it downloads Riot's public champion-name data and updates champions.json. If your local picture cache version is different, it downloads the Data Dragon dragontail archive, extracts champion tiles, then deletes the archive.\n\nIf everything is already current, no champion list or image archive is downloaded.\n\nIf a request fails, the app keeps your existing local champion data and continues normally.",
-                "Allow Startup Champion Data Update Check",
+                "Check champion list updates on app startup?\n\nThis helps JoinGameAfk notice new champions automatically. At app startup, it checks Riot Data Dragon version and downloads the champion-name list when your local list is out of date.\n\nChampion pictures are not downloaded automatically. Use the manual picture options if you want to add or refresh images.",
+                "Allow Startup Champion List Update Check",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
                 MessageBoxResult.Cancel);
@@ -96,7 +96,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                $"This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be large.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
+                $"This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be very large.\n\nThis is not recommended for normal picture changes. Use it only if you really want to refresh the entire local champion image cache.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
                 "Download Data Dragon Archive",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,

@@ -61,7 +61,7 @@ namespace JoinGameAfk
                     fPhaseController?.Start();
 
                 LogChampionTileArchiveCleanup(ChampionTileCatalog.DeleteDownloadedArchives());
-                _ = AutoSyncChampionDataOnStartupAsync(generalSettings);
+                _ = AutoSyncChampionListOnStartupAsync(generalSettings);
             }
             catch (Exception ex)
             {
@@ -137,7 +137,7 @@ namespace JoinGameAfk
             return mainWindow;
         }
 
-        private async Task AutoSyncChampionDataOnStartupAsync(GeneralSettings generalSettings)
+        private async Task AutoSyncChampionListOnStartupAsync(GeneralSettings generalSettings)
         {
             if (!generalSettings.AutoUpdateChampionCatalogOnStartup)
                 return;
@@ -145,7 +145,7 @@ namespace JoinGameAfk
             var remoteService = new DataDragonChampionCatalogService();
             string latestDataDragonVersion;
 
-            fLogsPage?.WriteLine("Champion data startup update check is enabled. Checking the latest Riot Data Dragon version.");
+            fLogsPage?.WriteLine("Champion list startup update check is enabled. Checking the latest Riot Data Dragon version.");
 
             try
             {
@@ -153,7 +153,7 @@ namespace JoinGameAfk
             }
             catch (Exception ex)
             {
-                fLogsPage?.WriteErrorLine($"Champion data startup update check failed. Existing local champion data was kept. {FormatException(ex)}");
+                fLogsPage?.WriteErrorLine($"Champion list startup update check failed. Existing local champion list was kept. {FormatException(ex)}");
                 return;
             }
 
@@ -177,33 +177,6 @@ namespace JoinGameAfk
             {
                 fLogsPage?.WriteLine($"Champion list is already current with Riot Data Dragon {latestDataDragonVersion}.");
             }
-
-            var tileSyncInfo = ChampionTileCatalog.GetCacheSyncInfo();
-            bool championPicturesNeedUpdate = tileSyncInfo.CachedTileCount <= 0
-                || !IsDataDragonVersionCurrent(tileSyncInfo.DataDragonVersion, latestDataDragonVersion);
-            if (championPicturesNeedUpdate)
-            {
-                try
-                {
-                    fLogsPage?.WriteLine($"Champion picture update available. Local version: {FormatDataDragonVersion(tileSyncInfo.DataDragonVersion)}; cached files: {tileSyncInfo.CachedTileCount}; latest version: {latestDataDragonVersion}. Installing the archive because the version changed or the picture cache is empty.");
-                    var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(
-                        latestDataDragonVersion,
-                        CreateChampionTileArchiveLogProgress(),
-                        optimizeForLocalCache: !generalSettings.DownloadRawChampionPictures);
-                    string archiveCleanupText = result.ArchiveDeleted
-                        ? "archive removed after extraction"
-                        : $"archive cleanup failed ({result.ArchiveDeleteError})";
-                    fLogsPage?.WriteLine($"Champion pictures updated to Riot Data Dragon {result.DataDragonVersion}. Downloaded archive: {FormatMegabytes(result.ArchiveSizeBytes)}; {archiveCleanupText}. Checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; cache now has {result.CachedTileCount} jpg files.");
-                }
-                catch (Exception ex)
-                {
-                    fLogsPage?.WriteErrorLine($"Champion picture update failed. Existing local picture cache was kept. {FormatException(ex)}");
-                }
-            }
-            else
-            {
-                fLogsPage?.WriteLine($"Champion pictures are already current with Riot Data Dragon {latestDataDragonVersion}.");
-            }
         }
 
         private static bool IsDataDragonVersionCurrent(string? localVersion, string latestVersion)
@@ -219,31 +192,6 @@ namespace JoinGameAfk
                 : dataDragonVersion.Trim();
         }
 
-        private static string FormatMegabytes(long bytes)
-        {
-            return $"{bytes / 1024d / 1024d:0.0} MB";
-        }
-
-        private IProgress<ChampionTileArchiveProgress> CreateChampionTileArchiveLogProgress()
-        {
-            string? lastLoggedMessage = null;
-
-            return new Progress<ChampionTileArchiveProgress>(snapshot =>
-            {
-                if (!ShouldLogChampionTileArchiveProgress(snapshot.Message)
-                    || string.Equals(snapshot.Message, lastLoggedMessage, StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                lastLoggedMessage = snapshot.Message;
-                if (IsChampionTileArchiveWarning(snapshot.Message))
-                    fLogsPage?.WriteErrorLine(snapshot.Message);
-                else
-                    fLogsPage?.WriteLine(snapshot.Message);
-            });
-        }
-
         private void LogChampionTileArchiveCleanup(ChampionTileArchiveCleanupResult cleanupResult)
         {
             if (cleanupResult.DeletedFileCount > 0)
@@ -251,17 +199,6 @@ namespace JoinGameAfk
 
             foreach (var failure in cleanupResult.Failures)
                 fLogsPage?.WriteErrorLine($"Unable to remove stale Data Dragon archive file '{failure.FilePath}'. {failure.ErrorMessage}");
-        }
-
-        private static bool ShouldLogChampionTileArchiveProgress(string message)
-        {
-            return !string.IsNullOrWhiteSpace(message)
-                && !message.StartsWith("Downloading Data Dragon archive:", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsChampionTileArchiveWarning(string message)
-        {
-            return message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FormatException(Exception ex)

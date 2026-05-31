@@ -346,6 +346,39 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal"
                                         VerticalAlignment="Center">
+                                <TextBlock Text="Check champion list updates on app launch"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <Button Style="{StaticResource InfoIndicatorStyle}"
+                                        Content="?"
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        ToolTip="Checks for new champions at app startup and updates only the local name list. Picture downloads never run automatically." />
+                            </StackPanel>
+                            <TextBlock Text="Keeps new champions available."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       Margin="0,3,0,0" />
+                        </StackPanel>
+
+                        <CheckBox x:Name="AutoUpdateChampionCatalogOnStartupCheckBox"
+                                  Grid.Column="2"
+                                  Style="{StaticResource AppCheckBoxStyle}"
+                                  VerticalAlignment="Center"
+                                  Checked="AutoUpdateChampionCatalogOnStartupCheckBox_Checked"
+                                  ToolTip="When enabled, startup compares the local champion data version with the latest Riot Data Dragon version before downloading updates." />
+                    </Grid>
+                </Border>
+
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal"
+                                        VerticalAlignment="Center">
                                 <TextBlock Text="Start watcher on app launch"
                                            Style="{StaticResource FieldLabelStyle}" />
                                 <Button Style="{StaticResource InfoIndicatorStyle}"
@@ -992,48 +1025,15 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal"
                                         VerticalAlignment="Center">
-                                <TextBlock Text="Check champion data updates on startup"
-                                           Style="{StaticResource FieldLabelStyle}" />
-                                <Button Style="{StaticResource InfoIndicatorStyle}"
-                                        Content="?"
-                                        Margin="8,0,0,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="When enabled, startup checks Riot Data Dragon's latest version, then downloads champion names or picture assets only when the local version is different." />
-                            </StackPanel>
-                            <TextBlock Text="Fetches the latest version first; champion names and picture archive download only when an update is available."
-                                       Style="{StaticResource FieldHintStyle}"
-                                       Margin="0,3,0,0" />
-                        </StackPanel>
-
-                        <CheckBox x:Name="AutoUpdateChampionCatalogOnStartupCheckBox"
-                                  Grid.Column="2"
-                                  Style="{StaticResource AppCheckBoxStyle}"
-                                  VerticalAlignment="Center"
-                                  Checked="AutoUpdateChampionCatalogOnStartupCheckBox_Checked"
-                                  ToolTip="When enabled, startup compares the local champion data version with the latest Riot Data Dragon version before downloading updates." />
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <StackPanel Orientation="Horizontal"
-                                        VerticalAlignment="Center">
                                 <TextBlock Text="Download raw champion pictures"
                                            Style="{StaticResource FieldLabelStyle}" />
                                 <Button Style="{StaticResource InfoIndicatorStyle}"
                                         Content="?"
                                         Margin="8,0,0,0"
                                         VerticalAlignment="Center"
-                                        ToolTip="When enabled, future manual Data Dragon picture downloads keep Riot's original full-resolution jpg files. Existing compact files stay compact until downloaded again." />
+                                        ToolTip="When enabled, manual picture downloads keep Riot's original JPG files and skip the compact resize step." />
                             </StackPanel>
-                            <TextBlock Text="Leave off to save disk space with compact 96px cache pictures. Turn on only when you want full-resolution Riot JPGs, then manually download the pictures again. Release-bundled pictures stay compact either way."
+                            <TextBlock Text="Leave off to save disk space and ram. Turn on if you want Riot's original full-resolution JPGs. Expect 500mb+ difference for all images."
                                        Style="{StaticResource FieldHintStyle}"
                                        Margin="0,3,0,0" />
                         </StackPanel>
@@ -1110,6 +1110,9 @@
                                            Style="{StaticResource FieldLabelStyle}" />
                                 <TextBlock Text="Download Riot Data Dragon's dragontail archive, extract champion tile jpg files, then remove the archive."
                                            Style="{StaticResource FieldHintStyle}" />
+                                <TextBlock Text="Not recommended for normal picture changes. Use only to refresh the entire local champion image cache."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       Margin="0,4,0,0" />
                                 <TextBlock Text="The archive is deleted after extraction so only champion tiles stay on disk."
                                            Style="{StaticResource FieldHintStyle}"
                                            Margin="0,4,0,0" />
@@ -1124,7 +1127,7 @@
                                     MinWidth="168"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
-                                    ToolTip="Download the latest Riot Data Dragon dragontail archive, extract champion tiles into the local cache, then delete the archive." />
+                                    ToolTip="Heavy manual refresh for the entire local champion image cache. Downloads the latest Riot Data Dragon dragontail archive, extracts champion tiles, then deletes the archive." />
                         </Grid>
 
                         <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"

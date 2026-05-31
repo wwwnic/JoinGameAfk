@@ -786,10 +786,10 @@
                                         Margin="0,0,6,0"
                                         Padding="0"
                                         VerticalAlignment="Center"
-                                        AutomationProperties.Name="Edit champion pictures"
+                                        AutomationProperties.Name="Edit or download champion images"
                                         Click="ToggleChampionPictureEditModeButton_Click"
                                         IsEnabled="{Binding ElementName=RootPage, Path=IsPriorityEditingEnabled}"
-                                        ToolTip="Edit champion pictures">
+                                        ToolTip="Edit or download champion images">
                                     <Button.Style>
                                         <Style TargetType="Button"
                                                BasedOn="{StaticResource SecondaryButtonStyle}">
@@ -855,6 +855,8 @@
                                         <StackPanel Width="320">
                                             <TextBlock Text="Role plan controls"
                                                        Style="{StaticResource ChampionHelpTooltipTitleStyle}" />
+                                            <TextBlock Text="- Use the pencil on this page to download any missing champion images."
+                                                       Style="{StaticResource ChampionHelpTooltipLineStyle}" />
 
                                             <TextBlock Text="Add champions"
                                                        Style="{StaticResource ChampionHelpTooltipSectionStyle}" />
