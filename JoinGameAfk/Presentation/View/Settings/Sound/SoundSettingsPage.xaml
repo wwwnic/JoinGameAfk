@@ -426,9 +426,9 @@
               Grid.Row="2"
               ClipToBounds="True">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="7*" MinWidth="520" />
+                        <ColumnDefinition Width="28*" MinWidth="500" />
                         <ColumnDefinition Width="8" />
-                        <ColumnDefinition Width="300" MinWidth="260" />
+                        <ColumnDefinition Width="15*" MinWidth="300" />
                     </Grid.ColumnDefinitions>
 
                     <Border x:Name="SoundPickerPanel"

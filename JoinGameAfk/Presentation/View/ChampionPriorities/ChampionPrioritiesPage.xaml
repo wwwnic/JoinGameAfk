@@ -388,9 +388,9 @@
           Margin="0"
           ClipToBounds="True">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="7*" MinWidth="360" />
+            <ColumnDefinition Width="28*" MinWidth="370" />
             <ColumnDefinition Width="8" />
-            <ColumnDefinition Width="300" MinWidth="230" />
+            <ColumnDefinition Width="15*" MinWidth="210" />
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0"
