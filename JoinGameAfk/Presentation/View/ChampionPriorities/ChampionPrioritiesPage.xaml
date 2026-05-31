@@ -144,6 +144,35 @@
             <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
         </Style>
 
+        <Style x:Key="ChampionPicturePickerListBoxStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Padding" Value="8" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <Border Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
+                                CornerRadius="8"
+                                Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <ScrollViewer Focusable="False"
+                                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}"
+                                          VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                                <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                            </ScrollViewer>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ChampionPictureEditBadgeStyle" TargetType="Border">
             <Setter Property="Visibility" Value="Collapsed" />
             <Setter Property="Width" Value="18" />
@@ -1265,122 +1294,174 @@
                             </StackPanel>
                         </Grid>
 
-                        <ListBox x:Name="ChampionPicturePickerTileListBox"
-                                 Grid.Row="4"
-                                 MinHeight="170"
-                                 MaxHeight="330"
-                                 Padding="8"
-                                 Background="{DynamicResource AppInputBrush}"
-                                 BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                                 BorderThickness="1"
-                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 SelectionChanged="ChampionPicturePickerTileListBox_SelectionChanged"
-                                 SelectionMode="Single"
-                                 KeyboardNavigation.DirectionalNavigation="Contained"
-                                 ToolTip="Available pictures for the selected champion.">
-                            <ListBox.Resources>
-                                <Style TargetType="ScrollBar"
-                                       BasedOn="{StaticResource SlimVerticalScrollBarStyle}" />
-                            </ListBox.Resources>
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem">
-                                    <Setter Property="Width" Value="86" />
-                                    <Setter Property="Height" Value="94" />
-                                    <Setter Property="Margin" Value="0,0,8,8" />
-                                    <Setter Property="Padding" Value="4" />
-                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
-                                    <Setter Property="BorderThickness" Value="2" />
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                    <Setter Property="VerticalContentAlignment" Value="Stretch" />
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="ListBoxItem">
-                                                <Border x:Name="TileBorder"
-                                                        Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                                        BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
-                                                        BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
-                                                        CornerRadius="6"
-                                                        Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
-                                                        TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
-                                                    <ContentPresenter HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
-                                                                      VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}" />
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
-                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                    </Trigger>
-                                                    <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
-                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                    </Trigger>
-                                                    <Trigger Property="IsSelected" Value="True">
-                                                        <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
-                                                        <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
-                                                    </Trigger>
-                                                    <Trigger Property="IsEnabled" Value="False">
-                                                        <Setter TargetName="TileBorder" Property="Opacity" Value="0.55" />
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
-                                                    </Trigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Width="76"
-                                          ToolTip="{Binding FileName}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="4" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="4"
+                              MinHeight="170"
+                              MaxHeight="330">
+                            <ListBox x:Name="ChampionPicturePickerTileListBox"
+                                     Style="{StaticResource ChampionPicturePickerListBoxStyle}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     SelectionChanged="ChampionPicturePickerTileListBox_SelectionChanged"
+                                     SelectionMode="Single"
+                                     KeyboardNavigation.DirectionalNavigation="Contained"
+                                     ToolTip="Available pictures for the selected champion.">
+                                <ListBox.Resources>
+                                    <Style TargetType="ScrollBar"
+                                           BasedOn="{StaticResource SlimVerticalScrollBarStyle}" />
+                                </ListBox.Resources>
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Width" Value="86" />
+                                        <Setter Property="Height" Value="94" />
+                                        <Setter Property="Margin" Value="0,0,8,8" />
+                                        <Setter Property="Padding" Value="4" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+                                        <Setter Property="BorderThickness" Value="2" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="TileBorder"
+                                                            Background="{Binding Background, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=Transparent}"
+                                                            BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=1}"
+                                                            CornerRadius="6"
+                                                            Padding="{Binding Padding, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=0}"
+                                                            TextElement.Foreground="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}, FallbackValue=#E2E8F0}">
+                                                        <ContentPresenter HorizontalAlignment="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}"
+                                                                          VerticalAlignment="{Binding VerticalContentAlignment, RelativeSource={RelativeSource TemplatedParent}}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                                                            <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                            <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                                            <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="TileBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                                                            <Setter TargetName="TileBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="TileBorder" Property="Opacity" Value="0.55" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource TextSubtleBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="76"
+                                              ToolTip="{Binding FileName}">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="4" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
 
-                                        <Border Grid.Row="0"
-                                                Width="62"
-                                                Height="62"
-                                                HorizontalAlignment="Center"
-                                                Background="{DynamicResource AppSurfaceRaisedBrush}"
-                                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
-                                                BorderThickness="1"
-                                                CornerRadius="4"
-                                                ClipToBounds="True">
-                                            <Grid>
-                                                <viewControls:ChampionMysteryGlyph Width="44"
-                                                                                   Height="44"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"
-                                                                                   Foreground="{DynamicResource TextSubtleBrush}" />
-                                                <Image Source="{Binding ImageSource}"
-                                                       Stretch="UniformToFill"
-                                                       SnapsToDevicePixels="True" />
-                                            </Grid>
-                                        </Border>
+                                            <Border Grid.Row="0"
+                                                    Width="62"
+                                                    Height="62"
+                                                    HorizontalAlignment="Center"
+                                                    Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                                    BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    ClipToBounds="True">
+                                                <Grid>
+                                                    <viewControls:ChampionMysteryGlyph Width="44"
+                                                                                       Height="44"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"
+                                                                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                                                    <Image Source="{Binding ImageSource}"
+                                                           Stretch="UniformToFill"
+                                                           SnapsToDevicePixels="True" />
+                                                </Grid>
+                                            </Border>
 
-                                        <TextBlock Grid.Row="2"
-                                                   Text="{Binding ShortDisplayName}"
-                                                   FontSize="10"
-                                                   FontWeight="SemiBold"
-                                                   TextAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                            <TextBlock Grid.Row="2"
+                                                       Text="{Binding ShortDisplayName}"
+                                                       FontSize="10"
+                                                       FontWeight="SemiBold"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Border Padding="18"
+                                    Background="{DynamicResource AppInputBrush}"
+                                    BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    IsHitTestVisible="False">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ElementName=ChampionPicturePickerTileListBox, Path=HasItems}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <StackPanel Width="360"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                    <Border Width="40"
+                                            Height="40"
+                                            HorizontalAlignment="Center"
+                                            Background="{DynamicResource AppInputFocusBrush}"
+                                            BorderBrush="{DynamicResource AccentBlueSoftBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                        <Path Width="18"
+                                              Height="18"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Data="M12,3 V15 M7,10 L12,15 L17,10 M5,19 H19"
+                                              Stretch="Uniform"
+                                              Stroke="{DynamicResource AccentBluePaleBrush}"
+                                              StrokeThickness="2"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round" />
+                                    </Border>
+                                    <TextBlock Text="No local pictures yet"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               TextAlignment="Center"
+                                               Margin="0,10,0,0" />
+                                    <TextBlock Text="Use Download All Images to fetch this champion's Riot Data Dragon pictures."
+                                               Foreground="{DynamicResource TextSubtleBrush}"
+                                               FontSize="11.5"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               LineHeight="15"
+                                               Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
 
                         <Border Grid.Row="6"
                                 Background="{DynamicResource AppInputBrush}"

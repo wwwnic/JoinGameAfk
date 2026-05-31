@@ -311,7 +311,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (optionCount == 0)
             {
                 SetChampionPicturePickerStatus(
-                    $"No local pictures found for {champion.Name}. Use Settings to download or reload champion pictures.",
+                    $"No local pictures found for {champion.Name}. Use Download All Images to fetch this champion's pictures.",
                     "TextSoftBrush",
                     Brushes.SlateGray);
                 return;
