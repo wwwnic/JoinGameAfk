@@ -60,7 +60,7 @@ namespace JoinGameAfk.Presentation.Controller
 
                         if (http == null || !http.HasAuthToken())
                         {
-                            var auth = _processManager.GetLeagueAuth();
+                            var auth = GetLeagueAuth();
                             if (auth == null)
                             {
                                 if (!_isWaitingForClient)
@@ -93,7 +93,7 @@ namespace JoinGameAfk.Presentation.Controller
                             }
                         }
 
-                        var activeAuth = _processManager.GetLeagueAuth();
+                        var activeAuth = GetLeagueAuth();
                         if (activeAuth is null)
                         {
                             DisconnectCurrentClient(

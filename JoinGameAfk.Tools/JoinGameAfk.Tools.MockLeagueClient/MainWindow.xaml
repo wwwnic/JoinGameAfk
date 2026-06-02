@@ -1,0 +1,1169 @@
+<Window x:Class="JoinGameAfk.Tools.MockLeagueClient.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MockLeagueClient"
+        Width="1920"
+        Height="1080"
+        MinWidth="1280"
+        MinHeight="720"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <Window.Resources>
+        <Style x:Key="PanelBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="DarkScrollTrackButtonStyle" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="{TemplateBinding Background}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkScrollThumbStyle" TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppHoverBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Margin="2"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource AccentBlueSoftBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="Width" Value="12" />
+            <Setter Property="MinWidth" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Root"
+                              Width="{TemplateBinding Width}"
+                              Background="{TemplateBinding Background}">
+                            <Track x:Name="PART_Track"
+                                   IsDirectionReversed="True">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}"
+                                                  Style="{StaticResource DarkScrollTrackButtonStyle}" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource DarkScrollThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}"
+                                                  Style="{StaticResource DarkScrollTrackButtonStyle}" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter Property="Width" Value="Auto" />
+                                <Setter Property="MinWidth" Value="0" />
+                                <Setter Property="Height" Value="12" />
+                                <Setter Property="MinHeight" Value="12" />
+                                <Setter TargetName="Root" Property="Width" Value="Auto" />
+                                <Setter TargetName="Root" Property="Height" Value="12" />
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="MaxDropDownHeight" Value="260" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="ComboBorder"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="28" />
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0"
+                                                      Margin="{TemplateBinding Padding}"
+                                                      HorizontalAlignment="Left"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      IsHitTestVisible="False" />
+                                    <Path Grid.Column="1"
+                                          Width="9"
+                                          Height="5"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Data="M0,0 L4.5,5 L9,0 Z"
+                                          Fill="{DynamicResource TextMutedBrush}"
+                                          Stretch="Uniform" />
+                                </Grid>
+                            </Border>
+
+                            <ToggleButton Background="Transparent"
+                                          BorderThickness="0"
+                                          ClickMode="Press"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Opacity="0" />
+
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Fade">
+                                <Grid MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border Margin="0,4,0,0"
+                                            Background="{DynamicResource AppSurfaceBrush}"
+                                            BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="6">
+                                        <ScrollViewer Padding="0,4"
+                                                      CanContentScroll="True"
+                                                      SnapsToDevicePixels="True">
+                                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ComboBorder" Property="Background" Value="{DynamicResource AppInputHoverBrush}" />
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ComboBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="ComboBorder" Property="Background" Value="{DynamicResource AppInputFocusBrush}" />
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ComboBorder" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentBlueActionBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="GridLinesVisibility" Value="Horizontal" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="RowHeight" Value="30" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="RowBackground" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
+            <Setter Property="Padding" Value="6,3" />
+        </Style>
+
+        <Style x:Key="ChampionChipFrameStyle" TargetType="Border">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="54" />
+            <Setter Property="Margin" Value="0,0,5,5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+        </Style>
+
+        <Style x:Key="ChampionChipGlyphStyle" TargetType="Border">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="40" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+        </Style>
+
+        <Style x:Key="ChampionTileLabelViewboxStyle" TargetType="Viewbox">
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StretchDirection" Value="DownOnly" />
+        </Style>
+
+        <Style x:Key="ChampionChipTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSoftBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextDecorations" Value="{x:Null}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="LineHeight" Value="9.5" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+        </Style>
+
+        <Style x:Key="ChipRemoveButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="MinHeight" Value="16" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
+        </Style>
+
+        <DataTemplate x:Key="ChampionComboItemTemplate">
+            <Grid MinWidth="170"
+                  Margin="0,1"
+                  ToolTip="{Binding ToolTipText}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="26" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Width="24"
+                        Height="24"
+                        Background="{DynamicResource AppSurfaceRaisedBrush}"
+                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                        BorderThickness="1"
+                        ClipToBounds="True"
+                        CornerRadius="3">
+                    <Grid>
+                        <TextBlock Text="{Binding Initials}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="9"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextSubtleBrush}" />
+                        <Image Source="{Binding PortraitImageSource}"
+                               Stretch="UniformToFill"
+                               SnapsToDevicePixels="True" />
+                    </Grid>
+                </Border>
+
+                <TextBlock Grid.Column="2"
+                           Text="{Binding Name}"
+                           VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis" />
+
+                <TextBlock Grid.Column="3"
+                           Text="{Binding DetailText}"
+                           Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+            </Grid>
+        </DataTemplate>
+
+        <Style x:Key="ChampionComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="IsTextSearchEnabled" Value="True" />
+            <Setter Property="TextSearch.TextPath" Value="Name" />
+            <Setter Property="ItemTemplate" Value="{StaticResource ChampionComboItemTemplate}" />
+        </Style>
+
+        <DataTemplate x:Key="ChampionBanChipTemplate">
+            <Border Style="{StaticResource ChampionChipFrameStyle}"
+                    ToolTip="{Binding ToolTipText}"
+                    AutomationProperties.Name="{Binding ToolTipText}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="0" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0"
+                            Style="{StaticResource ChampionChipGlyphStyle}">
+                        <Grid>
+                            <TextBlock Text="{Binding Initials}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                            <Image Source="{Binding PortraitImageSource}"
+                                   Margin="2"
+                                   Stretch="UniformToFill"
+                                   SnapsToDevicePixels="True" />
+                            <Button Content="x"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    Tag="{Binding}"
+                                    ToolTip="{Binding DisplayName, StringFormat=Remove {0}}"
+                                    AutomationProperties.Name="{Binding DisplayName, StringFormat=Remove {0} ban}"
+                                    Click="RemoveBanChampionButton_Click"
+                                    Style="{StaticResource ChipRemoveButtonStyle}" />
+                        </Grid>
+                    </Border>
+                    <Viewbox Grid.Row="2"
+                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                        <TextBlock Text="{Binding ChipDisplayText}"
+                                   FontSize="{Binding ChipDisplayFontSize}"
+                                   Style="{StaticResource ChampionChipTextStyle}" />
+                    </Viewbox>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <Style TargetType="GroupBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="{DynamicResource TabInactiveBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TabInactiveBorderBrush}" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+    </Window.Resources>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  CanContentScroll="False">
+    <Grid Width="1880"
+          Height="1010"
+          Margin="14">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="335" />
+            <ColumnDefinition Width="14" />
+            <ColumnDefinition Width="1531" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0"
+                      VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="MockLeagueClient"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"
+                           Margin="0,0,0,3" />
+                <TextBlock Text="Local League Client API simulator for JoinGameAfk Debug builds."
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           Margin="0,0,0,14" />
+
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Server"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="8" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="Port"
+                                       VerticalAlignment="Center" />
+                            <TextBox x:Name="PortBox"
+                                     Grid.Row="0"
+                                     Grid.Column="1"
+                                     Text="2999" />
+
+                            <TextBlock Grid.Row="2"
+                                       Grid.Column="0"
+                                       Text="Token"
+                                       VerticalAlignment="Center" />
+                            <TextBox x:Name="TokenBox"
+                                     Grid.Row="2"
+                                     Grid.Column="1"
+                                     Text="mock-league-client" />
+
+                            <WrapPanel Grid.Row="4"
+                                       Grid.ColumnSpan="2">
+                                <Button x:Name="StartButton"
+                                        Content="Start"
+                                        Click="StartButton_Click" />
+                                <Button x:Name="StopButton"
+                                        Content="Stop"
+                                        Click="StopButton_Click"
+                                        IsEnabled="False" />
+                                <Button Content="Launch app"
+                                        Click="LaunchAppButton_Click" />
+                                <Button Content="Copy env"
+                                        Click="CopyEnvButton_Click" />
+                            </WrapPanel>
+                        </Grid>
+                        <TextBlock x:Name="ServerStatusText"
+                                   Text="Stopped"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Scenario Presets"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <WrapPanel>
+                            <Button Content="Client offline"
+                                    Tag="ClientOffline"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Lobby"
+                                    Tag="Lobby"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Matchmaking"
+                                    Tag="Matchmaking"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Ready check"
+                                    Tag="ReadyCheck"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Planning"
+                                    Tag="Planning"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Ban"
+                                    Tag="Ban"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Pick"
+                                    Tag="Pick"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Finalization"
+                                    Tag="Finalization"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="In game"
+                                    Tag="InGame"
+                                    Click="ScenarioButton_Click" />
+                            <Button Content="Unsupported Quickplay"
+                                    Tag="UnsupportedQuickplay"
+                                    Click="ScenarioButton_Click" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Queue"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="8" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="8" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="Mode"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="QueueModeBox"
+                                      Grid.Row="0"
+                                      Grid.Column="1"
+                                      SelectionChanged="QueueModeBox_SelectionChanged">
+                                <ComboBoxItem Content="Draft Pick"
+                                              Tag="DraftPick" />
+                                <ComboBoxItem Content="Blind Pick"
+                                              Tag="BlindPick" />
+                            </ComboBox>
+                            <TextBox x:Name="QueueIdBox"
+                                     Grid.Row="2"
+                                     Grid.Column="1" />
+                            <TextBlock Grid.Row="2"
+                                       Grid.Column="0"
+                                       Text="Queue ID"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="4"
+                                       Grid.Column="0"
+                                       Text="Name"
+                                       VerticalAlignment="Center" />
+                            <TextBox x:Name="QueueNameBox"
+                                     Grid.Row="4"
+                                     Grid.Column="1" />
+                            <WrapPanel Grid.Row="6"
+                                       Grid.ColumnSpan="2">
+                                <Button Content="Normal Draft"
+                                        Click="NormalDraftButton_Click" />
+                                <Button Content="Blind Pick"
+                                        Click="BlindPickButton_Click" />
+                                <Button Content="Quickplay"
+                                        Click="QuickplayButton_Click" />
+                                <Button Content="Apply queue"
+                                        Click="ApplyQueueButton_Click" />
+                            </WrapPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Ready Check"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="8" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="10" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       Grid.Column="0"
+                                       Text="State"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="ReadyStateBox"
+                                      Grid.Row="0"
+                                      Grid.Column="1">
+                                <ComboBoxItem Content="InProgress" />
+                                <ComboBoxItem Content="EveryoneReady" />
+                                <ComboBoxItem Content="Invalid" />
+                            </ComboBox>
+                            <TextBlock Grid.Row="2"
+                                       Grid.Column="0"
+                                       Text="Response"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="ReadyResponseBox"
+                                      Grid.Row="2"
+                                      Grid.Column="1">
+                                <ComboBoxItem Content="None" />
+                                <ComboBoxItem Content="Accepted" />
+                                <ComboBoxItem Content="Declined" />
+                            </ComboBox>
+                            <Button Grid.Row="4"
+                                    Grid.ColumnSpan="2"
+                                    Content="Apply ready check"
+                                    HorizontalAlignment="Left"
+                                    Click="ApplyReadyButton_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="12" />
+                <RowDefinition Height="190" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0"
+                    Style="{StaticResource PanelBorderStyle}"
+                    Margin="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Phase"
+                                   Foreground="{DynamicResource TextMutedBrush}" />
+                        <TextBlock x:Name="CurrentPhaseText"
+                                   Text="Unknown"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Timer phase"
+                                   Foreground="{DynamicResource TextMutedBrush}" />
+                        <TextBlock x:Name="CurrentTimerText"
+                                   Text="BAN_PICK"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="Queue"
+                                   Foreground="{DynamicResource TextMutedBrush}" />
+                        <TextBlock x:Name="CurrentQueueText"
+                                   Text="Normal Draft"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                    <Button Grid.Column="6"
+                            Content="Emit current state"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Click="EmitStateButton_Click" />
+                </Grid>
+            </Border>
+
+            <TabControl Grid.Row="2">
+                <TabItem Header="Guided Draft">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="85" />
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Local slot"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="LocalPlayerCellBox"
+                                      Grid.Column="1"
+                                      SelectionChanged="LocalPlayerCellBox_SelectionChanged">
+                                <ComboBoxItem Content="Blue 1"
+                                              Tag="1" />
+                                <ComboBoxItem Content="Blue 2"
+                                              Tag="2" />
+                                <ComboBoxItem Content="Blue 3"
+                                              Tag="3" />
+                                <ComboBoxItem Content="Blue 4"
+                                              Tag="4" />
+                                <ComboBoxItem Content="Blue 5"
+                                              Tag="5" />
+                            </ComboBox>
+                            <TextBlock Grid.Column="3"
+                                       Text="Local role"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="LocalPlayerRoleBox"
+                                      Grid.Column="4"
+                                      SelectionChanged="LocalPlayerRoleBox_SelectionChanged">
+                                <ComboBoxItem Content="Top"
+                                              Tag="top" />
+                                <ComboBoxItem Content="Jungle"
+                                              Tag="jungle" />
+                                <ComboBoxItem Content="Mid"
+                                              Tag="mid" />
+                                <ComboBoxItem Content="ADC"
+                                              Tag="adc" />
+                                <ComboBoxItem Content="Support"
+                                              Tag="support" />
+                            </ComboBox>
+                            <TextBlock x:Name="DraftStepStatusText"
+                                       Grid.Column="6"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="1289" />
+                            </Grid.ColumnDefinitions>
+                            <GroupBox Grid.Column="0"
+                                      Header="Draft Timeline">
+                                <ListBox x:Name="DraftStepList"
+                                         SelectionChanged="DraftStepList_SelectionChanged"
+                                         BorderThickness="0">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="2">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                <TextBlock Text="{Binding DetailText}"
+                                                           FontSize="11"
+                                                           Foreground="{DynamicResource TextMutedBrush}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </GroupBox>
+
+                            <Grid Grid.Column="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="640" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="640" />
+                                </Grid.ColumnDefinitions>
+                                <GroupBox Header="Blue Team"
+                                          Grid.Column="0">
+                                    <DataGrid x:Name="DraftMyTeamGrid">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
+                                            <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
+                                            <DataGridComboBoxColumn x:Name="DraftMyTeamIntentColumn"
+                                                                    Header="Hover"
+                                                                    SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                            <DataGridComboBoxColumn x:Name="DraftMyTeamChampionColumn"
+                                                                    Header="Locked"
+                                                                    SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                            <DataGridComboBoxColumn x:Name="DraftMyTeamBanColumn"
+                                                                    Header="Ban"
+                                                                    SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </GroupBox>
+                                <GroupBox Header="Red Team"
+                                          Grid.Column="2">
+                                    <DataGrid x:Name="DraftTheirTeamGrid">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
+                                            <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
+                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamIntentColumn"
+                                                                    Header="Hover"
+                                                                    SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamChampionColumn"
+                                                                    Header="Locked"
+                                                                    SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamBanColumn"
+                                                                    Header="Ban"
+                                                                    SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="170"
+                                                                    MinWidth="145" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </GroupBox>
+                            </Grid>
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock x:Name="EnemyBanRevealText"
+                                           Foreground="{DynamicResource TextMutedBrush}" />
+                                <TextBlock Text="Blue bans emit immediately. Red bans are staged until the ban step completes."
+                                           FontSize="11"
+                                           Foreground="{DynamicResource TextMutedBrush}" />
+                            </StackPanel>
+                            <WrapPanel Grid.Column="1"
+                                       HorizontalAlignment="Right">
+                                <Button Content="Back"
+                                        Click="DraftBackButton_Click" />
+                                <Button Content="Next"
+                                        Click="DraftNextButton_Click" />
+                                <Button Content="Reset Draft"
+                                        Click="DraftResetButton_Click" />
+                                <Button Content="Apply guided state"
+                                        Click="ApplyChampSelectButton_Click" />
+                            </WrapPanel>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="Advanced Raw Editor">
+                    <Grid Margin="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="Timer phase"
+                                       VerticalAlignment="Center" />
+                            <ComboBox x:Name="TimerPhaseBox"
+                                      Grid.Column="1">
+                                <ComboBoxItem Content="PLANNING" />
+                                <ComboBoxItem Content="BAN_PICK" />
+                                <ComboBoxItem Content="FINALIZATION" />
+                            </ComboBox>
+                            <TextBlock Grid.Column="3"
+                                       Text="Time left"
+                                       VerticalAlignment="Center" />
+                            <TextBox x:Name="TimeLeftBox"
+                                     Grid.Column="4" />
+                            <Button Grid.Column="5"
+                                    Content="Apply champion select"
+                                    HorizontalAlignment="Right"
+                                    Click="ApplyChampSelectButton_Click" />
+                        </Grid>
+
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="740" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="740" />
+                            </Grid.ColumnDefinitions>
+                            <GroupBox Header="Your Team"
+                                      Grid.Column="0">
+                                <DataGrid x:Name="MyTeamGrid">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="54" />
+                                        <DataGridTextColumn Header="Position" Binding="{Binding AssignedPosition}" Width="76" />
+                                        <DataGridComboBoxColumn x:Name="MyTeamChampionColumn"
+                                                                Header="Champion"
+                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="190"
+                                                                MinWidth="140" />
+                                        <DataGridComboBoxColumn x:Name="MyTeamIntentColumn"
+                                                                Header="Intent"
+                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="160"
+                                                                MinWidth="140" />
+                                        <DataGridComboBoxColumn x:Name="MyTeamBanColumn"
+                                                                Header="Ban"
+                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="160"
+                                                                MinWidth="140" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                            <GroupBox Header="Enemy Team"
+                                      Grid.Column="2">
+                                <DataGrid x:Name="TheirTeamGrid">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="54" />
+                                        <DataGridTextColumn Header="Position" Binding="{Binding AssignedPosition}" Width="76" />
+                                        <DataGridComboBoxColumn x:Name="TheirTeamChampionColumn"
+                                                                Header="Champion"
+                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="190"
+                                                                MinWidth="140" />
+                                        <DataGridComboBoxColumn x:Name="TheirTeamIntentColumn"
+                                                                Header="Intent"
+                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="160"
+                                                                MinWidth="140" />
+                                        <DataGridComboBoxColumn x:Name="TheirTeamBanColumn"
+                                                                Header="Ban"
+                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="160"
+                                                                MinWidth="140" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                        </Grid>
+
+                        <Grid Grid.Row="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="740" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="740" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Bans"
+                                           Margin="0,0,0,6" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="85" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Your team"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox x:Name="MyTeamBanPicker"
+                                              Grid.Column="1"
+                                              Style="{StaticResource ChampionComboBoxStyle}" />
+                                    <Button Grid.Column="2"
+                                            Content="Add"
+                                            Click="AddMyTeamBanButton_Click" />
+                                </Grid>
+                                <ItemsControl x:Name="MyTeamBanChipList"
+                                              Margin="85,8,0,2"
+                                              ItemTemplate="{StaticResource ChampionBanChipTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="85" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Enemy team"
+                                               VerticalAlignment="Center" />
+                                    <ComboBox x:Name="TheirTeamBanPicker"
+                                              Grid.Column="1"
+                                              Style="{StaticResource ChampionComboBoxStyle}" />
+                                    <Button Grid.Column="2"
+                                            Content="Add"
+                                            Click="AddTheirTeamBanButton_Click" />
+                                </Grid>
+                                <ItemsControl x:Name="TheirTeamBanChipList"
+                                              Margin="85,8,0,0"
+                                              ItemTemplate="{StaticResource ChampionBanChipTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                            </StackPanel>
+                            <GroupBox Grid.Column="2"
+                                      Header="Actions">
+                                <DataGrid x:Name="ActionsGrid"
+                                          Height="132">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="42" />
+                                        <DataGridTextColumn Header="Actor" Binding="{Binding ActorCellId}" Width="55" />
+                                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="95" />
+                                        <DataGridComboBoxColumn x:Name="ActionChampionColumn"
+                                                                Header="Champion"
+                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="160" />
+                                        <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsInProgress}" Width="70" />
+                                        <DataGridCheckBoxColumn Header="Done" Binding="{Binding Completed}" Width="62" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+
+            <Border Grid.Row="4"
+                    Style="{StaticResource PanelBorderStyle}"
+                    Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Event Log"
+                                   Style="{StaticResource SectionTitleStyle}"
+                                   Margin="0" />
+                        <Button Grid.Column="1"
+                                Content="Clear"
+                                Click="ClearLogButton_Click" />
+                    </Grid>
+                    <ListBox x:Name="LogList"
+                             Grid.Row="2"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             Background="{DynamicResource AppSurfaceInsetBrush}"
+                             Foreground="{DynamicResource TextSoftBrush}"
+                             BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                             BorderThickness="1" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+    </ScrollViewer>
+</Window>

@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "JoinGameAfk.MockLeagueClient": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "JOIN_GAME_AFK_MOCK_LEAGUE_CLIENT_PORT": "2999",
+        "JOIN_GAME_AFK_MOCK_LEAGUE_CLIENT_TOKEN": "mock-league-client"
+      }
+    },
+    "JoinGameAfk": {
+      "commandName": "Project"
+    }
+  }
+}

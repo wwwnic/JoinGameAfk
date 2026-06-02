@@ -106,7 +106,7 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void ScheduleEventStreamRetry(string reason)
         {
-            if (_processManager.GetLeagueAuth() is null)
+            if (GetLeagueAuth() is null)
             {
                 RequestClientDisconnect("League Client process closed. Waiting for League Client process...");
                 return;

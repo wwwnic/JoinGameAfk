@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Include="..\..\JoinGameAfk\Styles\Themes\DraftDesk.xaml"
+          Link="Styles\Themes\DraftDesk.xaml" />
+  </ItemGroup>
+
+</Project>

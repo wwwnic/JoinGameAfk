@@ -1,3 +1,4 @@
+using System.Text;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
@@ -155,5 +156,38 @@ namespace JoinGameAfk.Presentation.Controller
             _generalSettings.Saved -= OnSettingsSaved;
             _rolePlanSettings.Saved -= OnSettingsSaved;
         }
+
+        private AuthModel? GetLeagueAuth()
+        {
+#if DEBUG
+            if (TryGetMockLeagueClientAuth(out var mockAuth))
+                return mockAuth;
+#endif
+
+            return _processManager.GetLeagueAuth();
+        }
+
+#if DEBUG
+        private static bool TryGetMockLeagueClientAuth(out AuthModel? auth)
+        {
+            auth = null;
+
+            string? portText = Environment.GetEnvironmentVariable("JOIN_GAME_AFK_MOCK_LEAGUE_CLIENT_PORT");
+            if (string.IsNullOrWhiteSpace(portText)
+                || !int.TryParse(portText.Trim(), out int port)
+                || port is <= 0 or > 65535)
+            {
+                return false;
+            }
+
+            string? token = Environment.GetEnvironmentVariable("JOIN_GAME_AFK_MOCK_LEAGUE_CLIENT_TOKEN");
+            if (string.IsNullOrWhiteSpace(token))
+                token = "mock-league-client";
+
+            string encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes($"riot:{token.Trim()}"));
+            auth = new AuthModel(port.ToString(), encodedToken);
+            return true;
+        }
+#endif
     }
 }
