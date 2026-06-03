@@ -106,6 +106,14 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             await BroadcastEventAsync("/lol-champ-select/v1/session", _state.GetChampSelectSessionPayload());
     }
 
+    public async Task EmitChampSelectSessionAsync()
+    {
+        if (_app is null || !_state.HasChampSelectSession())
+            return;
+
+        await BroadcastEventAsync("/lol-champ-select/v1/session", _state.GetChampSelectSessionPayload());
+    }
+
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
@@ -165,10 +173,30 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
                 : Results.NotFound();
         });
 
+        app.MapGet("/lol-champ-select/v1/session/timer", () =>
+        {
+            LogRequest("GET", "/lol-champ-select/v1/session/timer");
+            return _state.HasChampSelectSession()
+                ? Results.Json(_state.GetChampSelectTimerPayload(), JsonOptions)
+                : Results.NotFound();
+        });
+
         app.MapPatch("/lol-champ-select/v1/session/actions/{actionId:int}", async (int actionId, HttpContext context) =>
         {
             var patch = await ReadActionPatchAsync(context);
             LogRequest("PATCH", $"/lol-champ-select/v1/session/actions/{actionId}", patch.Description);
+
+            if (!_state.PatchAction(actionId, patch.ChampionId, patch.Completed))
+                return Results.NotFound();
+
+            await BroadcastEventAsync("/lol-champ-select/v1/session", _state.GetChampSelectSessionPayload());
+            return Results.Json(new { updated = true }, JsonOptions);
+        });
+
+        app.MapPost("/lol-champ-select/v1/session/actions/{actionId:int}/complete", async (int actionId, HttpContext context) =>
+        {
+            var patch = await ReadActionPatchAsync(context, defaultCompleted: true);
+            LogRequest("POST", $"/lol-champ-select/v1/session/actions/{actionId}/complete", patch.Description);
 
             if (!_state.PatchAction(actionId, patch.ChampionId, patch.Completed))
                 return Results.NotFound();
@@ -324,8 +352,14 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         }
     }
 
-    private static async Task<ActionPatch> ReadActionPatchAsync(HttpContext context)
+    private static async Task<ActionPatch> ReadActionPatchAsync(HttpContext context, bool? defaultCompleted = null)
     {
+        if (context.Request.ContentLength == 0)
+        {
+            string emptyDescription = FormatActionPatchDescription(null, defaultCompleted);
+            return new ActionPatch(null, defaultCompleted, emptyDescription);
+        }
+
         using var document = await JsonDocument.ParseAsync(context.Request.Body);
         var root = document.RootElement;
         int? championId = root.TryGetProperty("championId", out var championIdProperty)
@@ -336,7 +370,7 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         bool? completed = root.TryGetProperty("completed", out var completedProperty)
                           && completedProperty.ValueKind is JsonValueKind.True or JsonValueKind.False
             ? completedProperty.GetBoolean()
-            : null;
+            : defaultCompleted;
 
         string description = FormatActionPatchDescription(championId, completed);
         return new ActionPatch(championId, completed, description);

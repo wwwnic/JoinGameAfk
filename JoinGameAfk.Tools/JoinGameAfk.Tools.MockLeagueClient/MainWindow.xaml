@@ -417,49 +417,6 @@
             <Setter Property="ItemTemplate" Value="{StaticResource ChampionComboItemTemplate}" />
         </Style>
 
-        <DataTemplate x:Key="ChampionBanChipTemplate">
-            <Border Style="{StaticResource ChampionChipFrameStyle}"
-                    ToolTip="{Binding ToolTipText}"
-                    AutomationProperties.Name="{Binding ToolTipText}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="0" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Border Grid.Row="0"
-                            Style="{StaticResource ChampionChipGlyphStyle}">
-                        <Grid>
-                            <TextBlock Text="{Binding Initials}"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontSize="16"
-                                       FontWeight="Bold"
-                                       Foreground="{DynamicResource TextSubtleBrush}" />
-                            <Image Source="{Binding PortraitImageSource}"
-                                   Margin="2"
-                                   Stretch="UniformToFill"
-                                   SnapsToDevicePixels="True" />
-                            <Button Content="x"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Top"
-                                    Tag="{Binding}"
-                                    ToolTip="{Binding DisplayName, StringFormat=Remove {0}}"
-                                    AutomationProperties.Name="{Binding DisplayName, StringFormat=Remove {0} ban}"
-                                    Click="RemoveBanChampionButton_Click"
-                                    Style="{StaticResource ChipRemoveButtonStyle}" />
-                        </Grid>
-                    </Border>
-                    <Viewbox Grid.Row="2"
-                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                        <TextBlock Text="{Binding ChipDisplayText}"
-                                   FontSize="{Binding ChipDisplayFontSize}"
-                                   Style="{StaticResource ChampionChipTextStyle}" />
-                    </Viewbox>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
         <Style TargetType="GroupBox">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
@@ -716,8 +673,6 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="12" />
                 <RowDefinition Height="*" />
-                <RowDefinition Height="12" />
-                <RowDefinition Height="190" />
             </Grid.RowDefinitions>
 
             <Border Grid.Row="0"
@@ -770,74 +725,110 @@
 
             <TabControl Grid.Row="2">
                 <TabItem Header="Guided Draft">
-                    <Grid Margin="10">
+                    <Grid Margin="10"
+                          HorizontalAlignment="Left"
+                          VerticalAlignment="Top">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="12" />
-                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="12" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="85" />
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="90" />
-                                <ColumnDefinition Width="130" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="Local slot"
-                                       VerticalAlignment="Center" />
-                            <ComboBox x:Name="LocalPlayerCellBox"
-                                      Grid.Column="1"
-                                      SelectionChanged="LocalPlayerCellBox_SelectionChanged">
-                                <ComboBoxItem Content="Blue 1"
-                                              Tag="1" />
-                                <ComboBoxItem Content="Blue 2"
-                                              Tag="2" />
-                                <ComboBoxItem Content="Blue 3"
-                                              Tag="3" />
-                                <ComboBoxItem Content="Blue 4"
-                                              Tag="4" />
-                                <ComboBoxItem Content="Blue 5"
-                                              Tag="5" />
-                            </ComboBox>
-                            <TextBlock Grid.Column="3"
-                                       Text="Local role"
-                                       VerticalAlignment="Center" />
-                            <ComboBox x:Name="LocalPlayerRoleBox"
-                                      Grid.Column="4"
-                                      SelectionChanged="LocalPlayerRoleBox_SelectionChanged">
-                                <ComboBoxItem Content="Top"
-                                              Tag="top" />
-                                <ComboBoxItem Content="Jungle"
-                                              Tag="jungle" />
-                                <ComboBoxItem Content="Mid"
-                                              Tag="mid" />
-                                <ComboBoxItem Content="ADC"
-                                              Tag="adc" />
-                                <ComboBoxItem Content="Support"
-                                              Tag="support" />
-                            </ComboBox>
+                        <DockPanel Grid.Row="0"
+                                   LastChildFill="True">
                             <TextBlock x:Name="DraftStepStatusText"
-                                       Grid.Column="6"
-                                       HorizontalAlignment="Right"
+                                       DockPanel.Dock="Right"
+                                       Margin="16,0,0,0"
                                        VerticalAlignment="Center"
                                        FontWeight="SemiBold"
                                        Foreground="{DynamicResource TextPrimaryBrush}" />
-                        </Grid>
+                            <WrapPanel VerticalAlignment="Center">
+                                <TextBlock Width="75"
+                                           Text="Local slot"
+                                           VerticalAlignment="Center" />
+                                <ComboBox x:Name="LocalPlayerCellBox"
+                                          Width="100"
+                                          Margin="0,0,16,0"
+                                          SelectionChanged="LocalPlayerCellBox_SelectionChanged">
+                                    <ComboBoxItem Content="Blue 1"
+                                                  Tag="1" />
+                                    <ComboBoxItem Content="Blue 2"
+                                                  Tag="2" />
+                                    <ComboBoxItem Content="Blue 3"
+                                                  Tag="3" />
+                                    <ComboBoxItem Content="Blue 4"
+                                                  Tag="4" />
+                                    <ComboBoxItem Content="Blue 5"
+                                                  Tag="5" />
+                                </ComboBox>
+                                <TextBlock Width="75"
+                                           Text="Local role"
+                                           VerticalAlignment="Center" />
+                                <ComboBox x:Name="LocalPlayerRoleBox"
+                                          Width="130"
+                                          Margin="0,0,18,0"
+                                          SelectionChanged="LocalPlayerRoleBox_SelectionChanged">
+                                    <ComboBoxItem Content="Top"
+                                                  Tag="top" />
+                                    <ComboBoxItem Content="Jungle"
+                                                  Tag="jungle" />
+                                    <ComboBoxItem Content="Mid"
+                                                  Tag="mid" />
+                                    <ComboBoxItem Content="ADC"
+                                                  Tag="adc" />
+                                    <ComboBoxItem Content="Support"
+                                                  Tag="support" />
+                                </ComboBox>
+                                <TextBlock Width="82"
+                                           Text="Timer phase"
+                                           VerticalAlignment="Center" />
+                                <ComboBox x:Name="TimerPhaseBox"
+                                          Width="140"
+                                          Margin="0,0,16,0">
+                                    <ComboBoxItem Content="PLANNING" />
+                                    <ComboBoxItem Content="BAN_PICK" />
+                                    <ComboBoxItem Content="FINALIZATION" />
+                                </ComboBox>
+                                <TextBlock Width="65"
+                                           Text="Time left"
+                                           VerticalAlignment="Center" />
+                                <TextBox x:Name="TimeLeftBox"
+                                         Width="70"
+                                         Margin="0,0,12,0" />
+                                <Button Content="Start countdown"
+                                        Click="DraftStartTimerButton_Click" />
+                                <Button Content="Pause"
+                                        Click="DraftPauseTimerButton_Click" />
+                                <Button Content="Stop"
+                                        Click="DraftStopTimerButton_Click" />
+                                <TextBlock x:Name="DraftTimerStatusText"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextMutedBrush}" />
+                            </WrapPanel>
+                        </DockPanel>
 
-                        <Grid Grid.Row="2">
+                        <Grid Grid.Row="2"
+                              HorizontalAlignment="Left"
+                              VerticalAlignment="Top">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="210" />
                                 <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="1289" />
+                                <ColumnDefinition Width="640" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="640" />
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
                             <GroupBox Grid.Column="0"
+                                      Grid.RowSpan="5"
                                       Header="Draft Timeline">
                                 <ListBox x:Name="DraftStepList"
                                          SelectionChanged="DraftStepList_SelectionChanged"
@@ -858,311 +849,143 @@
                                 </ListBox>
                             </GroupBox>
 
-                            <Grid Grid.Column="2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="640" />
-                                    <ColumnDefinition Width="12" />
-                                    <ColumnDefinition Width="640" />
-                                </Grid.ColumnDefinitions>
-                                <GroupBox Header="Blue Team"
-                                          Grid.Column="0">
-                                    <DataGrid x:Name="DraftMyTeamGrid">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
-                                            <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
-                                            <DataGridComboBoxColumn x:Name="DraftMyTeamIntentColumn"
-                                                                    Header="Hover"
-                                                                    SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                            <DataGridComboBoxColumn x:Name="DraftMyTeamChampionColumn"
-                                                                    Header="Locked"
-                                                                    SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                            <DataGridComboBoxColumn x:Name="DraftMyTeamBanColumn"
-                                                                    Header="Ban"
-                                                                    SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </GroupBox>
-                                <GroupBox Header="Red Team"
-                                          Grid.Column="2">
-                                    <DataGrid x:Name="DraftTheirTeamGrid">
-                                        <DataGrid.Columns>
-                                            <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
-                                            <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
-                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamIntentColumn"
-                                                                    Header="Hover"
-                                                                    SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamChampionColumn"
-                                                                    Header="Locked"
-                                                                    SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                            <DataGridComboBoxColumn x:Name="DraftTheirTeamBanColumn"
-                                                                    Header="Ban"
-                                                                    SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    SelectedValuePath="ChampionId"
-                                                                    Width="170"
-                                                                    MinWidth="145" />
-                                        </DataGrid.Columns>
-                                    </DataGrid>
-                                </GroupBox>
-                            </Grid>
-                        </Grid>
-
-                        <Grid Grid.Row="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock x:Name="EnemyBanRevealText"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
-                                <TextBlock Text="Blue bans emit immediately. Red bans are staged until the ban step completes."
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextMutedBrush}" />
-                            </StackPanel>
-                            <WrapPanel Grid.Column="1"
-                                       HorizontalAlignment="Right">
-                                <Button Content="Back"
-                                        Click="DraftBackButton_Click" />
-                                <Button Content="Next"
-                                        Click="DraftNextButton_Click" />
-                                <Button Content="Reset Draft"
-                                        Click="DraftResetButton_Click" />
-                                <Button Content="Apply guided state"
-                                        Click="ApplyChampSelectButton_Click" />
-                            </WrapPanel>
-                        </Grid>
-                    </Grid>
-                </TabItem>
-
-                <TabItem Header="Advanced Raw Editor">
-                    <Grid Margin="10">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="12" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="12" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="90" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0"
-                                       Text="Timer phase"
-                                       VerticalAlignment="Center" />
-                            <ComboBox x:Name="TimerPhaseBox"
-                                      Grid.Column="1">
-                                <ComboBoxItem Content="PLANNING" />
-                                <ComboBoxItem Content="BAN_PICK" />
-                                <ComboBoxItem Content="FINALIZATION" />
-                            </ComboBox>
-                            <TextBlock Grid.Column="3"
-                                       Text="Time left"
-                                       VerticalAlignment="Center" />
-                            <TextBox x:Name="TimeLeftBox"
-                                     Grid.Column="4" />
-                            <Button Grid.Column="5"
-                                    Content="Apply champion select"
-                                    HorizontalAlignment="Right"
-                                    Click="ApplyChampSelectButton_Click" />
-                        </Grid>
-
-                        <Grid Grid.Row="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="740" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="740" />
-                            </Grid.ColumnDefinitions>
-                            <GroupBox Header="Your Team"
-                                      Grid.Column="0">
-                                <DataGrid x:Name="MyTeamGrid">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="54" />
-                                        <DataGridTextColumn Header="Position" Binding="{Binding AssignedPosition}" Width="76" />
-                                        <DataGridComboBoxColumn x:Name="MyTeamChampionColumn"
-                                                                Header="Champion"
-                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="190"
-                                                                MinWidth="140" />
-                                        <DataGridComboBoxColumn x:Name="MyTeamIntentColumn"
-                                                                Header="Intent"
-                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="160"
-                                                                MinWidth="140" />
-                                        <DataGridComboBoxColumn x:Name="MyTeamBanColumn"
-                                                                Header="Ban"
-                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="160"
-                                                                MinWidth="140" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </GroupBox>
-                            <GroupBox Header="Enemy Team"
-                                      Grid.Column="2">
-                                <DataGrid x:Name="TheirTeamGrid">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="54" />
-                                        <DataGridTextColumn Header="Position" Binding="{Binding AssignedPosition}" Width="76" />
-                                        <DataGridComboBoxColumn x:Name="TheirTeamChampionColumn"
-                                                                Header="Champion"
-                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="190"
-                                                                MinWidth="140" />
-                                        <DataGridComboBoxColumn x:Name="TheirTeamIntentColumn"
-                                                                Header="Intent"
-                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="160"
-                                                                MinWidth="140" />
-                                        <DataGridComboBoxColumn x:Name="TheirTeamBanColumn"
-                                                                Header="Ban"
-                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="160"
-                                                                MinWidth="140" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </GroupBox>
-                        </Grid>
-
-                        <Grid Grid.Row="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="740" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="740" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Bans"
-                                           Margin="0,0,0,6" />
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="85" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Your team"
-                                               VerticalAlignment="Center" />
-                                    <ComboBox x:Name="MyTeamBanPicker"
-                                              Grid.Column="1"
-                                              Style="{StaticResource ChampionComboBoxStyle}" />
-                                    <Button Grid.Column="2"
-                                            Content="Add"
-                                            Click="AddMyTeamBanButton_Click" />
-                                </Grid>
-                                <ItemsControl x:Name="MyTeamBanChipList"
-                                              Margin="85,8,0,2"
-                                              ItemTemplate="{StaticResource ChampionBanChipTemplate}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                                <Grid Margin="0,8,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="85" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0"
-                                               Text="Enemy team"
-                                               VerticalAlignment="Center" />
-                                    <ComboBox x:Name="TheirTeamBanPicker"
-                                              Grid.Column="1"
-                                              Style="{StaticResource ChampionComboBoxStyle}" />
-                                    <Button Grid.Column="2"
-                                            Content="Add"
-                                            Click="AddTheirTeamBanButton_Click" />
-                                </Grid>
-                                <ItemsControl x:Name="TheirTeamBanChipList"
-                                              Margin="85,8,0,0"
-                                              ItemTemplate="{StaticResource ChampionBanChipTemplate}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                </ItemsControl>
-                            </StackPanel>
                             <GroupBox Grid.Column="2"
-                                      Header="Actions">
-                                <DataGrid x:Name="ActionsGrid"
-                                          Height="132">
+                                      Grid.Row="0"
+                                      Header="Blue Team 1-5">
+                                <DataGrid x:Name="DraftMyTeamGrid">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="42" />
-                                        <DataGridTextColumn Header="Actor" Binding="{Binding ActorCellId}" Width="55" />
-                                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="95" />
-                                        <DataGridComboBoxColumn x:Name="ActionChampionColumn"
-                                                                Header="Champion"
+                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
+                                        <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
+                                        <DataGridComboBoxColumn x:Name="DraftMyTeamIntentColumn"
+                                                                Header="Hover"
+                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="170"
+                                                                MinWidth="145" />
+                                        <DataGridComboBoxColumn x:Name="DraftMyTeamChampionColumn"
+                                                                Header="Locked"
                                                                 SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="160" />
-                                        <DataGridCheckBoxColumn Header="Active" Binding="{Binding IsInProgress}" Width="70" />
-                                        <DataGridCheckBoxColumn Header="Done" Binding="{Binding Completed}" Width="62" />
+                                                                Width="170"
+                                                                MinWidth="145" />
+                                        <DataGridComboBoxColumn x:Name="DraftMyTeamBanColumn"
+                                                                Header="Ban"
+                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="170"
+                                                                MinWidth="145" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </GroupBox>
+
+                            <GroupBox Grid.Column="2"
+                                      Grid.Row="2"
+                                      Header="Red Team 6-10">
+                                <DataGrid x:Name="DraftTheirTeamGrid">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
+                                        <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
+                                        <DataGridComboBoxColumn x:Name="DraftTheirTeamIntentColumn"
+                                                                Header="Hover"
+                                                                SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="170"
+                                                                MinWidth="145" />
+                                        <DataGridComboBoxColumn x:Name="DraftTheirTeamChampionColumn"
+                                                                Header="Locked"
+                                                                SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="170"
+                                                                MinWidth="145" />
+                                        <DataGridComboBoxColumn x:Name="DraftTheirTeamBanColumn"
+                                                                Header="Ban"
+                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="170"
+                                                                MinWidth="145" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+
+                            <GroupBox Grid.Column="4"
+                                      Grid.RowSpan="5"
+                                      Header="Timed Actions">
+                                <DataGrid x:Name="ActionsGrid">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn x:Name="ActionCellColumn"
+                                                            Header="Cell"
+                                                            Binding="{Binding CellId}"
+                                                            Width="48" />
+                                        <DataGridComboBoxColumn x:Name="ActionPickChampionColumn"
+                                                                Header="Pick target"
+                                                                SelectedValueBinding="{Binding PickChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="145" />
+                                        <DataGridTextColumn x:Name="ActionPickHoverColumn"
+                                                            Header="Hover pick &lt;=s"
+                                                            Binding="{Binding PickHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                            Width="95" />
+                                        <DataGridTextColumn x:Name="ActionPickLockColumn"
+                                                            Header="Lock pick &lt;=s"
+                                                            Binding="{Binding PickLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                            Width="90" />
+                                        <DataGridComboBoxColumn x:Name="ActionBanChampionColumn"
+                                                                Header="Ban target"
+                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="145" />
+                                        <DataGridTextColumn x:Name="ActionBanHoverColumn"
+                                                            Header="Hover ban &lt;=s"
+                                                            Binding="{Binding BanHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                            Width="95" />
+                                        <DataGridTextColumn x:Name="ActionBanLockColumn"
+                                                            Header="Lock ban &lt;=s"
+                                                            Binding="{Binding BanLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                            Width="90" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </GroupBox>
+
+                            <GroupBox Grid.Column="2"
+                                      Grid.Row="4"
+                                      Header="Console">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="8" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Button Grid.Row="0"
+                                            Content="Clear"
+                                            HorizontalAlignment="Right"
+                                            Click="ClearLogButton_Click" />
+                                    <ListBox x:Name="LogList"
+                                             Grid.Row="2"
+                                             Height="160"
+                                             FontFamily="Consolas"
+                                             FontSize="12"
+                                             Background="{DynamicResource AppSurfaceInsetBrush}"
+                                             Foreground="{DynamicResource TextSoftBrush}"
+                                             BorderBrush="{DynamicResource AppStrongBorderBrush}"
+                                             BorderThickness="1" />
+                                </Grid>
+                            </GroupBox>
                         </Grid>
+
+                        <WrapPanel Grid.Row="4"
+                                   HorizontalAlignment="Left">
+                            <Button Content="Back"
+                                    Click="DraftBackButton_Click" />
+                            <Button Content="Next"
+                                    Click="DraftNextButton_Click" />
+                            <Button Content="Reset Draft"
+                                    Click="DraftResetButton_Click" />
+                            <Button Content="Apply guided state"
+                                    Click="ApplyChampSelectButton_Click" />
+                        </WrapPanel>
                     </Grid>
                 </TabItem>
             </TabControl>
-
-            <Border Grid.Row="4"
-                    Style="{StaticResource PanelBorderStyle}"
-                    Margin="0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="8" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-                    <Grid Grid.Row="0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Event Log"
-                                   Style="{StaticResource SectionTitleStyle}"
-                                   Margin="0" />
-                        <Button Grid.Column="1"
-                                Content="Clear"
-                                Click="ClearLogButton_Click" />
-                    </Grid>
-                    <ListBox x:Name="LogList"
-                             Grid.Row="2"
-                             FontFamily="Consolas"
-                             FontSize="12"
-                             Background="{DynamicResource AppSurfaceInsetBrush}"
-                             Foreground="{DynamicResource TextSoftBrush}"
-                             BorderBrush="{DynamicResource AppStrongBorderBrush}"
-                             BorderThickness="1" />
-                </Grid>
-            </Border>
         </Grid>
     </Grid>
     </ScrollViewer>

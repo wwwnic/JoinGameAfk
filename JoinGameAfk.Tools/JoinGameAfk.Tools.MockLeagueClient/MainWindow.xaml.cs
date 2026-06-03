@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace JoinGameAfk.Tools.MockLeagueClient;
 
@@ -13,50 +14,38 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<TeamSlot> _myTeamSlots = [];
     private readonly ObservableCollection<TeamSlot> _theirTeamSlots = [];
     private readonly ObservableCollection<ChampSelectAction> _actions = [];
+    private readonly ObservableCollection<TimedActionPlan> _timedActionPlans = [];
     private readonly IReadOnlyList<ChampionOption> _champions = ChampionOption.LoadAll();
-    private readonly IReadOnlyList<ChampionOption> _selectableChampions;
-    private readonly Dictionary<int, ChampionOption> _championsById;
-    private readonly ObservableCollection<ChampionChipItem> _myTeamBanChips = [];
-    private readonly ObservableCollection<ChampionChipItem> _theirTeamBanChips = [];
+    private readonly DispatcherTimer _draftCountdownTimer = new();
+    private MockLeagueClientSnapshot? _draftPlaybackEditSnapshot;
     private bool _isRefreshingUi;
+    private bool _isDraftCountdownTicking;
     private MockLeagueClientServer? _server;
 
     public MainWindow()
     {
-        _selectableChampions = _champions.Where(champion => champion.ChampionId > 0).ToList();
-        _championsById = _champions.ToDictionary(champion => champion.ChampionId);
-
         InitializeComponent();
         LogList.ItemsSource = _logs;
         DraftStepList.ItemsSource = DraftPickSteps.All;
         DraftMyTeamGrid.ItemsSource = _myTeamSlots;
         DraftTheirTeamGrid.ItemsSource = _theirTeamSlots;
-        MyTeamGrid.ItemsSource = _myTeamSlots;
-        TheirTeamGrid.ItemsSource = _theirTeamSlots;
-        ActionsGrid.ItemsSource = _actions;
-        MyTeamBanChipList.ItemsSource = _myTeamBanChips;
-        TheirTeamBanChipList.ItemsSource = _theirTeamBanChips;
+        ActionsGrid.ItemsSource = _timedActionPlans;
         ConfigureChampionColumn(DraftMyTeamChampionColumn);
         ConfigureChampionColumn(DraftMyTeamIntentColumn);
         ConfigureChampionColumn(DraftMyTeamBanColumn);
         ConfigureChampionColumn(DraftTheirTeamChampionColumn);
         ConfigureChampionColumn(DraftTheirTeamIntentColumn);
         ConfigureChampionColumn(DraftTheirTeamBanColumn);
-        ConfigureChampionColumn(MyTeamChampionColumn);
-        ConfigureChampionColumn(MyTeamIntentColumn);
-        ConfigureChampionColumn(MyTeamBanColumn);
-        ConfigureChampionColumn(TheirTeamChampionColumn);
-        ConfigureChampionColumn(TheirTeamIntentColumn);
-        ConfigureChampionColumn(TheirTeamBanColumn);
-        ConfigureChampionColumn(ActionChampionColumn);
-        ConfigureChampionPicker(MyTeamBanPicker);
-        ConfigureChampionPicker(TheirTeamBanPicker);
+        ConfigureChampionColumn(ActionPickChampionColumn);
+        ConfigureChampionColumn(ActionBanChampionColumn);
         SetRoleBoxFromValue(LocalPlayerRoleBox, MockLeagueClientRoles.DefaultRole);
         SetQueueModeBoxFromValue(QueueModeBox, MockQueueMode.DraftPick);
         SetLocalPlayerCellBoxFromValue(LocalPlayerCellBox, 1);
         ReadyStateBox.SelectedIndex = 0;
         ReadyResponseBox.SelectedIndex = 0;
         TimerPhaseBox.SelectedIndex = 1;
+        _draftCountdownTimer.Interval = TimeSpan.FromSeconds(1);
+        _draftCountdownTimer.Tick += DraftCountdownTimer_Tick;
         _state.Changed += State_Changed;
         RefreshUiFromState();
     }
@@ -267,10 +256,80 @@ public partial class MainWindow : Window
 
     private async void DraftResetButton_Click(object sender, RoutedEventArgs e)
     {
+        StopDraftCountdown();
+        _draftPlaybackEditSnapshot = null;
         _state.UpdateQueueMode(MockQueueMode.DraftPick);
         _state.ResetGuidedChampSelect();
         AddLog("Draft Pick state reset.");
         await EmitSnapshotIfRunningAsync();
+    }
+
+    private async void DraftStartTimerButton_Click(object sender, RoutedEventArgs e)
+    {
+        CommitChampionSelectEditorsToState();
+        bool isNewPlayback = _draftPlaybackEditSnapshot is null;
+        _draftPlaybackEditSnapshot ??= _state.GetSnapshot();
+
+        if (!_state.BeginChampionSelectPlayback())
+        {
+            if (isNewPlayback)
+                _draftPlaybackEditSnapshot = null;
+
+            DraftTimerStatusText.Text = "Playback stopped";
+            AddLog("Draft playback not started. Select a draft step with time left above 0s.");
+            return;
+        }
+
+        var dueResult = _state.ApplyDueScheduledActions();
+        foreach (string appliedAction in dueResult.AppliedActions)
+            AddLog(appliedAction);
+
+        _draftCountdownTimer.Start();
+        DraftTimerStatusText.Text = "Countdown running";
+        AddLog(isNewPlayback ? "Draft playback started." : "Draft playback resumed.");
+        await EmitChampSelectSessionIfRunningAsync();
+    }
+
+    private void DraftPauseTimerButton_Click(object sender, RoutedEventArgs e)
+    {
+        StopDraftCountdown("Draft countdown paused.");
+    }
+
+    private async void DraftStopTimerButton_Click(object sender, RoutedEventArgs e)
+    {
+        await StopDraftPlaybackAsync("Draft playback stopped. Restored edit state.");
+    }
+
+    private async void DraftCountdownTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_isDraftCountdownTicking)
+            return;
+
+        _isDraftCountdownTicking = true;
+        try
+        {
+            var result = _state.TickChampionSelectTimer();
+            if (!result.StateChanged)
+            {
+                await StopDraftPlaybackAsync("Draft playback stopped. Restored edit state.");
+                return;
+            }
+
+            foreach (string appliedAction in result.AppliedActions)
+                AddLog(appliedAction);
+
+            if (result.AppliedActions.Count > 0)
+                await EmitChampSelectSessionIfRunningAsync(logWhenStopped: false);
+
+            if (result.TimeLeftSeconds <= 0)
+            {
+                await StopDraftPlaybackAsync("Draft countdown reached 0s. Restored edit state.");
+            }
+        }
+        finally
+        {
+            _isDraftCountdownTicking = false;
+        }
     }
 
     private void ClearLogButton_Click(object sender, RoutedEventArgs e)
@@ -289,28 +348,6 @@ public partial class MainWindow : Window
         await EmitSnapshotIfRunningAsync();
     }
 
-    private async void AddMyTeamBanButton_Click(object sender, RoutedEventArgs e)
-    {
-        await AddBanChampionAsync(MyTeamBanPicker, _myTeamBanChips, "your team");
-    }
-
-    private async void AddTheirTeamBanButton_Click(object sender, RoutedEventArgs e)
-    {
-        await AddBanChampionAsync(TheirTeamBanPicker, _theirTeamBanChips, "enemy team");
-    }
-
-    private async void RemoveBanChampionButton_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.Tag is not ChampionChipItem item)
-            return;
-
-        bool removed = _myTeamBanChips.Remove(item) || _theirTeamBanChips.Remove(item);
-        if (!removed)
-            return;
-
-        await ApplyChampionSelectStateAsync($"Removed ban {item.DisplayName}.");
-    }
-
     private async Task ApplyQueueAsync()
     {
         if (!int.TryParse(QueueIdBox.Text.Trim(), out int queueId))
@@ -325,27 +362,22 @@ public partial class MainWindow : Window
     {
         CommitChampionSelectEditorsToState();
         AddLog(logMessage);
-        await EmitSnapshotIfRunningAsync();
+        await EmitChampSelectSessionIfRunningAsync();
     }
 
     private void CommitChampionSelectEditorsToState()
     {
         CommitGridEdits(DraftMyTeamGrid);
         CommitGridEdits(DraftTheirTeamGrid);
-        CommitGridEdits(MyTeamGrid);
-        CommitGridEdits(TheirTeamGrid);
         CommitGridEdits(ActionsGrid);
         ApplyLocalPlayerRoleToGrid();
+        ApplyTimedActionPlansToActions();
 
         if (!int.TryParse(TimeLeftBox.Text.Trim(), out int timeLeftSeconds))
             timeLeftSeconds = 0;
 
-        var myTeamBanIds = _myTeamBanChips
-            .Select(champion => champion.ChampionId)
-            .Concat(_myTeamSlots.Select(slot => slot.BanChampionId));
-        var theirTeamBanIds = _theirTeamBanChips
-            .Select(champion => champion.ChampionId)
-            .Concat(_theirTeamSlots.Select(slot => slot.BanChampionId));
+        var myTeamBanIds = _myTeamSlots.Select(slot => slot.BanChampionId);
+        var theirTeamBanIds = _theirTeamSlots.Select(slot => slot.BanChampionId);
 
         _state.UpdateChampionSelect(
             GetComboText(TimerPhaseBox),
@@ -371,36 +403,30 @@ public partial class MainWindow : Window
         await EmitSnapshotIfRunningAsync();
     }
 
-    private async Task AddBanChampionAsync(
-        ComboBox picker,
-        ObservableCollection<ChampionChipItem> target,
-        string teamLabel)
-    {
-        if (picker.SelectedItem is not ChampionOption { ChampionId: > 0 } champion)
-        {
-            AddLog($"Select a champion before adding a {teamLabel} ban.");
-            return;
-        }
-
-        if (target.Any(item => item.ChampionId == champion.ChampionId))
-        {
-            AddLog($"{champion.DisplayName} is already in {teamLabel} bans.");
-            return;
-        }
-
-        target.Add(new ChampionChipItem(champion));
-        await ApplyChampionSelectStateAsync($"Added {champion.DisplayName} to {teamLabel} bans.");
-    }
-
-    private async Task EmitSnapshotIfRunningAsync()
+    private async Task EmitSnapshotIfRunningAsync(bool logWhenStopped = true)
     {
         if (_server is null)
         {
-            AddLog("State updated. Start the server to emit websocket events.");
+            if (logWhenStopped)
+                AddLog("State updated. Start the server to emit websocket events.");
+
             return;
         }
 
         await _server.EmitSnapshotAsync();
+    }
+
+    private async Task EmitChampSelectSessionIfRunningAsync(bool logWhenStopped = true)
+    {
+        if (_server is null)
+        {
+            if (logWhenStopped)
+                AddLog("State updated. Start the server to emit websocket events.");
+
+            return;
+        }
+
+        await _server.EmitChampSelectSessionAsync();
     }
 
     private void State_Changed(object? sender, EventArgs e)
@@ -416,6 +442,13 @@ public partial class MainWindow : Window
             var snapshot = _state.GetSnapshot();
             CurrentPhaseText.Text = snapshot.Phase.ToString();
             CurrentTimerText.Text = $"{snapshot.TimerPhase} / {snapshot.TimeLeftSeconds}s";
+            DraftTimerStatusText.Text = _draftCountdownTimer.IsEnabled
+                ? "Countdown running"
+                : _draftPlaybackEditSnapshot is not null
+                    ? "Playback paused"
+                : snapshot.TimeLeftSeconds == 0
+                    ? "Timer at 0s"
+                    : "Countdown paused";
             CurrentQueueText.Text = $"{snapshot.QueueName} ({snapshot.QueueId})";
             QueueIdBox.Text = snapshot.QueueId.ToString();
             QueueNameBox.Text = snapshot.QueueName;
@@ -431,14 +464,11 @@ public partial class MainWindow : Window
                 snapshot.MyTeam.FirstOrDefault(slot => slot.CellId == snapshot.LocalPlayerCellId)?.AssignedPosition
                 ?? MockLeagueClientRoles.DefaultRole);
             DraftStepStatusText.Text = $"{DraftPickSteps.GetDisplayName(snapshot.DraftStep)} / Local Blue {snapshot.LocalPlayerCellId}";
-            EnemyBanRevealText.Text = snapshot.EnemyBansRevealed
-                ? "Red bans are revealed in emitted LCU payloads."
-                : "Red bans are staged locally and hidden from emitted LCU payloads.";
-            ReplaceCollection(_myTeamBanChips, CreateChampionChips(snapshot.MyTeamBans));
-            ReplaceCollection(_theirTeamBanChips, CreateChampionChips(snapshot.TheirTeamBans));
             ReplaceCollection(_myTeamSlots, snapshot.MyTeam);
             ReplaceCollection(_theirTeamSlots, snapshot.TheirTeam);
             ReplaceCollection(_actions, snapshot.Actions);
+            UpdateTimedActionColumnVisibility(snapshot);
+            ReplaceCollection(_timedActionPlans, CreateTimedActionPlans(snapshot));
         }
         finally
         {
@@ -490,11 +520,140 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ConfigureChampionPicker(ComboBox picker)
+    private static IReadOnlyList<TimedActionPlan> CreateTimedActionPlans(MockLeagueClientSnapshot snapshot)
     {
-        picker.ItemsSource = _selectableChampions;
-        picker.SelectedValuePath = nameof(ChampionOption.ChampionId);
-        picker.SelectedIndex = 0;
+        var actionList = snapshot.Actions.ToList();
+        var mode = GetTimedActionMode(snapshot);
+        var visibleCellIds = GetTimedActionCellIds(snapshot, mode);
+
+        return visibleCellIds
+            .Order()
+            .Select(cellId =>
+            {
+                var pickAction = mode is TimedActionMode.Pick or TimedActionMode.PlanningPickHover
+                    ? FindAction(actionList, cellId, "pick")
+                    : null;
+                var banAction = mode == TimedActionMode.Ban
+                    ? FindAction(actionList, cellId, "ban")
+                    : null;
+
+                return new TimedActionPlan
+                {
+                    CellId = cellId,
+                    PickActionId = pickAction?.Id,
+                    PickChampionId = pickAction?.TargetChampionId ?? 0,
+                    PickHoverAtSeconds = pickAction?.HoverAtSeconds,
+                    PickLockAtSeconds = pickAction?.LockAtSeconds,
+                    BanActionId = banAction?.Id,
+                    BanChampionId = banAction?.TargetChampionId ?? 0,
+                    BanHoverAtSeconds = banAction?.HoverAtSeconds,
+                    BanLockAtSeconds = banAction?.LockAtSeconds
+                };
+            })
+            .ToList();
+    }
+
+    private void UpdateTimedActionColumnVisibility(MockLeagueClientSnapshot snapshot)
+    {
+        var mode = GetTimedActionMode(snapshot);
+        bool showPick = mode is TimedActionMode.Pick or TimedActionMode.PlanningPickHover;
+        bool showPickLock = mode == TimedActionMode.Pick;
+        bool showBan = mode == TimedActionMode.Ban;
+
+        ActionPickChampionColumn.Visibility = showPick ? Visibility.Visible : Visibility.Collapsed;
+        ActionPickHoverColumn.Visibility = showPick ? Visibility.Visible : Visibility.Collapsed;
+        ActionPickLockColumn.Visibility = showPickLock ? Visibility.Visible : Visibility.Collapsed;
+        ActionBanChampionColumn.Visibility = showBan ? Visibility.Visible : Visibility.Collapsed;
+        ActionBanHoverColumn.Visibility = showBan ? Visibility.Visible : Visibility.Collapsed;
+        ActionBanLockColumn.Visibility = showBan ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static TimedActionMode GetTimedActionMode(MockLeagueClientSnapshot snapshot)
+    {
+        if (snapshot.Actions.Any(action => action.IsInProgress && IsActionType(action, "ban")))
+            return TimedActionMode.Ban;
+
+        if (snapshot.Actions.Any(action => action.IsInProgress && IsActionType(action, "pick")))
+            return TimedActionMode.Pick;
+
+        if (string.Equals(snapshot.TimerPhase, "PLANNING", StringComparison.OrdinalIgnoreCase))
+            return TimedActionMode.PlanningPickHover;
+
+        if (string.Equals(snapshot.TimerPhase, "FINALIZATION", StringComparison.OrdinalIgnoreCase))
+            return TimedActionMode.Finalization;
+
+        return TimedActionMode.None;
+    }
+
+    private static HashSet<int> GetTimedActionCellIds(MockLeagueClientSnapshot snapshot, TimedActionMode mode)
+    {
+        return mode switch
+        {
+            TimedActionMode.Ban => snapshot.Actions
+                .Where(action => action.IsInProgress && IsActionType(action, "ban"))
+                .Select(action => action.ActorCellId)
+                .ToHashSet(),
+            TimedActionMode.Pick => snapshot.Actions
+                .Where(action => action.IsInProgress && IsActionType(action, "pick"))
+                .Select(action => action.ActorCellId)
+                .ToHashSet(),
+            TimedActionMode.PlanningPickHover or TimedActionMode.Finalization => GetAllTeamCellIds(snapshot),
+            _ => []
+        };
+    }
+
+    private static HashSet<int> GetAllTeamCellIds(MockLeagueClientSnapshot snapshot)
+    {
+        return snapshot.MyTeam
+            .Concat(snapshot.TheirTeam)
+            .Select(slot => slot.CellId)
+            .Where(cellId => cellId > 0)
+            .ToHashSet();
+    }
+
+    private void ApplyTimedActionPlansToActions()
+    {
+        foreach (var plan in _timedActionPlans)
+        {
+            if (plan.PickActionId.HasValue)
+                ApplyTimedActionPlanToAction(plan.PickActionId, plan.CellId, "pick", plan.PickChampionId, plan.PickHoverAtSeconds, plan.PickLockAtSeconds);
+
+            if (plan.BanActionId.HasValue)
+                ApplyTimedActionPlanToAction(plan.BanActionId, plan.CellId, "ban", plan.BanChampionId, plan.BanHoverAtSeconds, plan.BanLockAtSeconds);
+        }
+    }
+
+    private void ApplyTimedActionPlanToAction(
+        int? actionId,
+        int cellId,
+        string type,
+        int championId,
+        int? hoverAtSeconds,
+        int? lockAtSeconds)
+    {
+        var action = actionId is int id
+            ? _actions.FirstOrDefault(candidate => candidate.Id == id)
+            : null;
+
+        action ??= FindAction(_actions, cellId, type);
+        if (action is null)
+            return;
+
+        action.TargetChampionId = Math.Max(0, championId);
+        action.HoverAtSeconds = hoverAtSeconds is int hoverSeconds ? Math.Max(0, hoverSeconds) : null;
+        action.LockAtSeconds = lockAtSeconds is int lockSeconds ? Math.Max(0, lockSeconds) : null;
+    }
+
+    private static ChampSelectAction? FindAction(IEnumerable<ChampSelectAction> actions, int cellId, string type)
+    {
+        return actions.FirstOrDefault(action =>
+            action.ActorCellId == cellId
+            && IsActionType(action, type));
+    }
+
+    private static bool IsActionType(ChampSelectAction action, string type)
+    {
+        return string.Equals(action.Type, type, StringComparison.OrdinalIgnoreCase);
     }
 
     private void ApplyLocalPlayerRoleToGrid()
@@ -633,22 +792,6 @@ public partial class MainWindow : Window
         return style;
     }
 
-    private IReadOnlyList<ChampionChipItem> CreateChampionChips(IEnumerable<int> championIds)
-    {
-        return championIds
-            .Where(championId => championId > 0)
-            .Distinct()
-            .Select(championId => new ChampionChipItem(GetChampionOption(championId)))
-            .ToList();
-    }
-
-    private ChampionOption GetChampionOption(int championId)
-    {
-        return _championsById.TryGetValue(championId, out var champion)
-            ? champion
-            : new ChampionOption(championId, $"Champion {championId}");
-    }
-
     private void AddLog(string message)
     {
         if (!Dispatcher.CheckAccess())
@@ -663,6 +806,36 @@ public partial class MainWindow : Window
 
         if (_logs.Count > 0)
             LogList.ScrollIntoView(_logs[^1]);
+    }
+
+    private void StopDraftCountdown(string? logMessage = null)
+    {
+        if (_draftCountdownTimer.IsEnabled)
+            _draftCountdownTimer.Stop();
+
+        DraftTimerStatusText.Text = "Countdown paused";
+
+        if (!string.IsNullOrWhiteSpace(logMessage))
+            AddLog(logMessage);
+    }
+
+    private async Task StopDraftPlaybackAsync(string logMessage)
+    {
+        if (_draftCountdownTimer.IsEnabled)
+            _draftCountdownTimer.Stop();
+
+        if (_draftPlaybackEditSnapshot is { } editSnapshot)
+        {
+            _draftPlaybackEditSnapshot = null;
+            _state.RestoreSnapshot(editSnapshot);
+            DraftTimerStatusText.Text = "Playback stopped";
+            AddLog(logMessage);
+            await EmitChampSelectSessionIfRunningAsync(logWhenStopped: false);
+            return;
+        }
+
+        DraftTimerStatusText.Text = "Playback stopped";
+        AddLog("Draft playback stopped.");
     }
 
     private async Task StopServerAsync()
@@ -681,6 +854,8 @@ public partial class MainWindow : Window
 
     protected override async void OnClosed(EventArgs e)
     {
+        _draftCountdownTimer.Stop();
+        _draftCountdownTimer.Tick -= DraftCountdownTimer_Tick;
         _state.Changed -= State_Changed;
         await StopServerAsync();
         base.OnClosed(e);
@@ -708,4 +883,26 @@ public partial class MainWindow : Window
             "net10.0-windows",
             "JoinGameAfk.exe"));
     }
+}
+
+internal sealed class TimedActionPlan
+{
+    public int CellId { get; set; }
+    public int? PickActionId { get; set; }
+    public int PickChampionId { get; set; }
+    public int? PickHoverAtSeconds { get; set; }
+    public int? PickLockAtSeconds { get; set; }
+    public int? BanActionId { get; set; }
+    public int BanChampionId { get; set; }
+    public int? BanHoverAtSeconds { get; set; }
+    public int? BanLockAtSeconds { get; set; }
+}
+
+internal enum TimedActionMode
+{
+    None,
+    PlanningPickHover,
+    Ban,
+    Pick,
+    Finalization
 }

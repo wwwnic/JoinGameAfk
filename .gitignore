@@ -63,6 +63,7 @@ nunit-*.xml
 
 # Visual Studio
 .vs/
+.codex/
 *.suo
 *.csproj.user
 .dotnet-home/

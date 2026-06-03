@@ -304,7 +304,15 @@ public partial class ChampSelect
         var activeOrCompletedBanChampionIds = GetBanChampionIdsFromActions(root, teamCellIds, includeInProgress: true);
         var championIds = GetBanChampionIdsFromBans(root, bansPropertyName);
         if (championIds.Count == 0)
-            championIds = GetBanChampionIdsFromActions(root, teamCellIds, includeInProgress: false);
+            championIds = activeOrCompletedBanChampionIds;
+        else
+        {
+            foreach (int championId in activeOrCompletedBanChampionIds)
+            {
+                if (!championIds.Contains(championId))
+                    championIds.Add(championId);
+            }
+        }
 
         var actionBanChampionIds = activeOrCompletedBanChampionIds.ToHashSet();
 

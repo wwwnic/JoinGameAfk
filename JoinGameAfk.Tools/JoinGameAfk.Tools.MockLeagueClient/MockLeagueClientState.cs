@@ -52,6 +52,7 @@ internal sealed class MockLeagueClientState
     private string _readyCheckResponse = "None";
     private string _timerPhase = "PLANNING";
     private int _timeLeftSeconds = 30;
+    private int _totalTimeInPhaseSeconds = 30;
     private string _sessionId = "mock-champ-select-1";
     private int _localPlayerCellId = 1;
     private string _localPlayerAssignedPosition = MockLeagueClientRoles.DefaultRole;
@@ -94,6 +95,37 @@ internal sealed class MockLeagueClientState
         }
     }
 
+    public void RestoreSnapshot(MockLeagueClientSnapshot snapshot)
+    {
+        lock (_lock)
+        {
+            _phase = snapshot.Phase;
+            _queueMode = snapshot.QueueMode;
+            _draftStep = snapshot.DraftStep;
+            _localPlayerCellId = Math.Clamp(snapshot.LocalPlayerCellId, 1, 5);
+            SetQueueCore(snapshot.QueueId, snapshot.QueueName);
+            _readyCheckState = NormalizeText(snapshot.ReadyCheckState, "InProgress");
+            _readyCheckResponse = NormalizeText(snapshot.ReadyCheckResponse, "None");
+            _timerPhase = NormalizeText(snapshot.TimerPhase, "BAN_PICK");
+            _timeLeftSeconds = Math.Max(0, snapshot.TimeLeftSeconds);
+            _totalTimeInPhaseSeconds = Math.Max(_timeLeftSeconds, GetDefaultTotalTimeInPhaseSeconds(_timerPhase));
+            ReplaceList(_myTeam, snapshot.MyTeam.Select(CloneWithNormalizedPosition));
+            ReplaceList(_theirTeam, snapshot.TheirTeam.Select(CloneWithNormalizedPosition));
+            _localPlayerAssignedPosition = FindTeamSlot(_localPlayerCellId)?.AssignedPosition
+                                           ?? _localPlayerAssignedPosition;
+            ReplaceList(_myTeamBans, snapshot.MyTeamBans.Where(id => id > 0).Distinct());
+            ReplaceList(_theirTeamBans, snapshot.TheirTeamBans.Where(id => id > 0).Distinct());
+            ApplyBanListToSlots(_myTeam, _myTeamBans);
+            ApplyBanListToSlots(_theirTeam, _theirTeamBans);
+            ReplaceList(_actions, snapshot.Actions.Select(CloneWithNormalizedSchedule));
+
+            if (_queueMode == MockQueueMode.DraftPick)
+                SaveCurrentDraftStepStateCore();
+        }
+
+        OnChanged();
+    }
+
     public void ApplyScenario(MockLeagueClientScenario scenario, string? localPlayerAssignedPosition = null)
     {
         lock (_lock)
@@ -109,6 +141,7 @@ internal sealed class MockLeagueClientState
                     _phase = MockClientPhase.Unknown;
                     _timerPhase = "BAN_PICK";
                     _timeLeftSeconds = 0;
+                    _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
                     break;
 
                 case MockLeagueClientScenario.Lobby:
@@ -152,6 +185,7 @@ internal sealed class MockLeagueClientState
                     SetQueueCore(490, "Quickplay");
                     _timerPhase = "BAN_PICK";
                     _timeLeftSeconds = 25;
+                    _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
                     SetActionProgress("pick", isInProgress: true);
                     break;
             }
@@ -253,6 +287,7 @@ internal sealed class MockLeagueClientState
         {
             _timerPhase = NormalizeText(timerPhase, "BAN_PICK");
             _timeLeftSeconds = Math.Max(0, timeLeftSeconds);
+            _totalTimeInPhaseSeconds = Math.Max(_timeLeftSeconds, GetDefaultTotalTimeInPhaseSeconds(_timerPhase));
             ReplaceList(_myTeam, myTeam.Select(CloneWithNormalizedPosition));
             ReplaceList(_theirTeam, theirTeam.Select(CloneWithNormalizedPosition));
             _localPlayerAssignedPosition = FindTeamSlot(_localPlayerCellId)?.AssignedPosition
@@ -261,12 +296,80 @@ internal sealed class MockLeagueClientState
             ReplaceList(_theirTeamBans, theirTeamBans.Where(id => id > 0).Distinct());
             ApplyBanListToSlots(_myTeam, _myTeamBans);
             ApplyBanListToSlots(_theirTeam, _theirTeamBans);
-            ReplaceList(_actions, actions.Select(action => action.Clone()));
+            ReplaceList(_actions, actions.Select(CloneWithNormalizedSchedule));
             if (_queueMode == MockQueueMode.DraftPick)
                 SaveCurrentDraftStepStateCore();
         }
 
         OnChanged();
+    }
+
+    public DraftTimerTickResult TickChampionSelectTimer()
+    {
+        DraftTimerTickResult result;
+        lock (_lock)
+        {
+            if (_phase is not (MockClientPhase.Planning or MockClientPhase.ChampSelect)
+                || _timeLeftSeconds <= 0)
+            {
+                return new DraftTimerTickResult(false, _timeLeftSeconds, []);
+            }
+
+            _timeLeftSeconds--;
+            var appliedActions = ApplyScheduledActionsCore();
+
+            if (_queueMode == MockQueueMode.DraftPick)
+                SaveCurrentDraftStepStateCore();
+
+            result = new DraftTimerTickResult(true, _timeLeftSeconds, appliedActions);
+        }
+
+        OnChanged();
+        return result;
+    }
+
+    public DraftTimerTickResult ApplyDueScheduledActions()
+    {
+        DraftTimerTickResult result;
+        lock (_lock)
+        {
+            if (_phase is not (MockClientPhase.Planning or MockClientPhase.ChampSelect))
+                return new DraftTimerTickResult(false, _timeLeftSeconds, []);
+
+            var appliedActions = ApplyScheduledActionsCore();
+            if (appliedActions.Count == 0)
+                return new DraftTimerTickResult(false, _timeLeftSeconds, []);
+
+            if (_queueMode == MockQueueMode.DraftPick)
+                SaveCurrentDraftStepStateCore();
+
+            result = new DraftTimerTickResult(true, _timeLeftSeconds, appliedActions);
+        }
+
+        OnChanged();
+        return result;
+    }
+
+    public bool BeginChampionSelectPlayback()
+    {
+        bool changed;
+        lock (_lock)
+        {
+            if (_timeLeftSeconds <= 0
+                || (_queueMode == MockQueueMode.DraftPick && _draftStep == DraftPickStep.InGame))
+            {
+                return false;
+            }
+
+            var playbackPhase = GetPlaybackPhaseCore();
+            changed = _phase != playbackPhase;
+            _phase = playbackPhase;
+        }
+
+        if (changed)
+            OnChanged();
+
+        return true;
     }
 
     public void UpdateLocalPlayerRole(string assignedPosition)
@@ -416,14 +519,7 @@ internal sealed class MockLeagueClientState
             {
                 localPlayerCellId = _localPlayerCellId,
                 multiUserChatId = _sessionId,
-                timer = new
-                {
-                    phase = _timerPhase,
-                    adjustedTimeLeftInPhase = _timeLeftSeconds * 1000L,
-                    totalTimeInPhase = Math.Max(_timeLeftSeconds, 1) * 1000L,
-                    internalNowInEpochMs = nowMs,
-                    isInfinite = false
-                },
+                timer = CreateTimerPayload(nowMs),
                 myTeam = _myTeam.Select(CreateTeamMemberPayload).ToArray(),
                 theirTeam = _theirTeam.Select(CreateTeamMemberPayload).ToArray(),
                 bans = new
@@ -436,6 +532,14 @@ internal sealed class MockLeagueClientState
                     _actions.Select(action => CreateActionPayload(action, revealEnemyBans)).ToArray()
                 }
             };
+        }
+    }
+
+    public object GetChampSelectTimerPayload()
+    {
+        lock (_lock)
+        {
+            return CreateTimerPayload(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         }
     }
 
@@ -473,6 +577,7 @@ internal sealed class MockLeagueClientState
         _phase = MockClientPhase.Planning;
         _timerPhase = "PLANNING";
         _timeLeftSeconds = 30;
+        _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
         SetActionProgress("pick", isInProgress: true);
     }
 
@@ -489,6 +594,7 @@ internal sealed class MockLeagueClientState
         _phase = MockClientPhase.ChampSelect;
         _timerPhase = "BAN_PICK";
         _timeLeftSeconds = 25;
+        _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
         SetActionProgress("ban", isInProgress: true);
     }
 
@@ -505,6 +611,7 @@ internal sealed class MockLeagueClientState
         _phase = MockClientPhase.ChampSelect;
         _timerPhase = "BAN_PICK";
         _timeLeftSeconds = 25;
+        _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
         CompleteActionCore(1, 122);
         SetActionProgress("pick", isInProgress: true);
     }
@@ -522,6 +629,7 @@ internal sealed class MockLeagueClientState
         _phase = MockClientPhase.ChampSelect;
         _timerPhase = "FINALIZATION";
         _timeLeftSeconds = 10;
+        _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
         CompleteActionCore(1, 122);
         CompleteActionCore(2, 103);
     }
@@ -618,6 +726,7 @@ internal sealed class MockLeagueClientState
         _sessionId = $"mock-champ-select-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
         _timerPhase = "PLANNING";
         _timeLeftSeconds = 30;
+        _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
         _myTeamBans.Clear();
         _theirTeamBans.Clear();
         _myTeam.Clear();
@@ -664,6 +773,7 @@ internal sealed class MockLeagueClientState
         _phase = GetDefaultPhase(step);
         _timerPhase = state.TimerPhase;
         _timeLeftSeconds = state.TimeLeftSeconds;
+        _totalTimeInPhaseSeconds = Math.Max(_timeLeftSeconds, GetDefaultTimeLeftSeconds(step));
         ReplaceList(_myTeam, state.MyTeam.Select(slot => slot.Clone()));
         ReplaceList(_theirTeam, state.TheirTeam.Select(slot => slot.Clone()));
         ReplaceList(_myTeamBans, state.MyTeamBans);
@@ -762,6 +872,16 @@ internal sealed class MockLeagueClientState
                 : MockClientPhase.ChampSelect;
     }
 
+    private MockClientPhase GetPlaybackPhaseCore()
+    {
+        if (_queueMode == MockQueueMode.DraftPick)
+            return GetDefaultPhase(_draftStep);
+
+        return string.Equals(_timerPhase, "PLANNING", StringComparison.OrdinalIgnoreCase)
+            ? MockClientPhase.Planning
+            : MockClientPhase.ChampSelect;
+    }
+
     private static string GetDefaultTimerPhase(DraftPickStep step)
     {
         return step switch
@@ -779,6 +899,16 @@ internal sealed class MockLeagueClientState
             DraftPickStep.Planning => 30,
             DraftPickStep.Finalization => 10,
             DraftPickStep.InGame => 0,
+            _ => 25
+        };
+    }
+
+    private static int GetDefaultTotalTimeInPhaseSeconds(string timerPhase)
+    {
+        return timerPhase.ToUpperInvariant() switch
+        {
+            "PLANNING" => 30,
+            "FINALIZATION" => 10,
             _ => 25
         };
     }
@@ -901,6 +1031,24 @@ internal sealed class MockLeagueClientState
         };
     }
 
+    private object CreateTimerPayload(long internalNowInEpochMs)
+    {
+        long adjustedTimeLeftMs = Math.Max(0, _timeLeftSeconds) * 1000L;
+        long totalTimeMs = Math.Max(Math.Max(_totalTimeInPhaseSeconds, _timeLeftSeconds), 1) * 1000L;
+
+        return new
+        {
+            phase = _timerPhase,
+            adjustedTimeLeftInPhase = adjustedTimeLeftMs,
+            timeLeftInPhase = adjustedTimeLeftMs,
+            adjustedTimeLeftInPhaseInSec = Math.Max(0, _timeLeftSeconds),
+            timeLeftInPhaseInSec = Math.Max(0, _timeLeftSeconds),
+            totalTimeInPhase = totalTimeMs,
+            internalNowInEpochMs,
+            isInfinite = false
+        };
+    }
+
     private static object CreateActionPayload(ChampSelectAction action, bool revealEnemyBans)
     {
         int championId = action.ChampionId;
@@ -922,11 +1070,172 @@ internal sealed class MockLeagueClientState
         };
     }
 
+    private List<string> ApplyScheduledActionsCore()
+    {
+        var appliedActions = new List<string>();
+        foreach (var action in _actions)
+        {
+            if (IsTimerTriggerDue(action.HoverAtSeconds)
+                && TryHoverActionCore(action))
+            {
+                appliedActions.Add(FormatScheduledAction(action, "hovered"));
+            }
+
+            if (IsTimerTriggerDue(action.LockAtSeconds)
+                && TryLockActionCore(action))
+            {
+                appliedActions.Add(FormatScheduledAction(action, "locked"));
+            }
+        }
+
+        return appliedActions;
+    }
+
+    private bool TryHoverActionCore(ChampSelectAction action)
+    {
+        if (!CanApplyScheduledHoverCore(action))
+            return false;
+
+        int championId = GetScheduledChampionId(action);
+        if (championId <= 0)
+            return false;
+
+        bool actionAlreadySelected = action.ChampionId == championId;
+        bool slotChanged = TryApplyHoveredChampionToSlotCore(action, championId);
+        if (actionAlreadySelected && !slotChanged)
+            return false;
+
+        action.ChampionId = championId;
+        return true;
+    }
+
+    private bool TryLockActionCore(ChampSelectAction action)
+    {
+        if (!CanApplyScheduledLockCore(action))
+            return false;
+
+        int championId = GetScheduledChampionId(action);
+        if (championId <= 0)
+            return false;
+
+        CompleteActionCore(action.Id, championId);
+        return true;
+    }
+
+    private bool CanApplyScheduledHoverCore(ChampSelectAction action)
+    {
+        if (action.Completed)
+            return false;
+
+        if (action.IsInProgress)
+            return true;
+
+        return IsPlanningTimerPhase()
+               && IsPickAction(action);
+    }
+
+    private static bool CanApplyScheduledLockCore(ChampSelectAction action)
+    {
+        return !action.Completed && action.IsInProgress;
+    }
+
+    private bool TryApplyHoveredChampionToSlotCore(ChampSelectAction action, int championId)
+    {
+        var slot = FindTeamSlot(action.ActorCellId);
+        if (slot is null)
+            return false;
+
+        if (IsPickAction(action))
+        {
+            if (slot.ChampionPickIntent == championId)
+                return false;
+
+            slot.ChampionPickIntent = championId;
+            return true;
+        }
+
+        if (IsBanAction(action))
+        {
+            if (slot.BanChampionId == championId)
+                return false;
+
+            slot.BanChampionId = championId;
+            return true;
+        }
+
+        return false;
+    }
+
+    private int GetScheduledChampionId(ChampSelectAction action)
+    {
+        if (action.TargetChampionId > 0)
+            return action.TargetChampionId;
+
+        if (action.ChampionId > 0)
+            return action.ChampionId;
+
+        var slot = FindTeamSlot(action.ActorCellId);
+        if (slot is null)
+            return 0;
+
+        if (IsPickAction(action))
+        {
+            if (slot.ChampionPickIntent > 0)
+                return slot.ChampionPickIntent;
+
+            return slot.ChampionId;
+        }
+
+        return IsBanAction(action)
+            ? slot.BanChampionId
+            : 0;
+    }
+
+    private bool IsPlanningTimerPhase()
+    {
+        return string.Equals(_timerPhase, "PLANNING", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsPickAction(ChampSelectAction action)
+    {
+        return string.Equals(action.Type, "pick", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBanAction(ChampSelectAction action)
+    {
+        return string.Equals(action.Type, "ban", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsTimerTriggerDue(int? triggerSeconds)
+    {
+        return triggerSeconds is int seconds
+               && _timeLeftSeconds <= Math.Max(0, seconds);
+    }
+
+    private string FormatScheduledAction(ChampSelectAction action, string verb)
+    {
+        return $"Action {action.Id} {action.Type} for cell {action.ActorCellId} {verb} at {_timeLeftSeconds}s.";
+    }
+
     private static TeamSlot CloneWithNormalizedPosition(TeamSlot slot)
     {
         var clone = slot.Clone();
         clone.AssignedPosition = MockLeagueClientRoles.NormalizeDisplayRole(clone.AssignedPosition);
         return clone;
+    }
+
+    private static ChampSelectAction CloneWithNormalizedSchedule(ChampSelectAction action)
+    {
+        var clone = action.Clone();
+        clone.TargetChampionId = Math.Max(0, clone.TargetChampionId);
+        clone.HoverAtSeconds = NormalizeTriggerSeconds(clone.HoverAtSeconds);
+        clone.LockAtSeconds = NormalizeTriggerSeconds(clone.LockAtSeconds);
+        return clone;
+    }
+
+    private static int? NormalizeTriggerSeconds(int? seconds)
+    {
+        return seconds is int value ? Math.Max(0, value) : null;
     }
 
     private static void ApplyBanListToSlots(IReadOnlyList<TeamSlot> slots, IReadOnlyList<int> banChampionIds)
@@ -985,6 +1294,11 @@ internal sealed record MockLeagueClientSnapshot(
     IReadOnlyList<int> TheirTeamBans,
     IReadOnlyList<ChampSelectAction> Actions);
 
+internal sealed record DraftTimerTickResult(
+    bool StateChanged,
+    int TimeLeftSeconds,
+    IReadOnlyList<string> AppliedActions);
+
 internal sealed record DraftStepState(
     string TimerPhase,
     int TimeLeftSeconds,
@@ -1027,7 +1341,16 @@ internal sealed class ChampSelectAction
     {
     }
 
-    public ChampSelectAction(int id, int actorCellId, string type, int championId, bool IsInProgress, bool Completed)
+    public ChampSelectAction(
+        int id,
+        int actorCellId,
+        string type,
+        int championId,
+        bool IsInProgress,
+        bool Completed,
+        int targetChampionId = 0,
+        int? hoverAtSeconds = null,
+        int? lockAtSeconds = null)
     {
         Id = id;
         ActorCellId = actorCellId;
@@ -1035,6 +1358,9 @@ internal sealed class ChampSelectAction
         ChampionId = championId;
         this.IsInProgress = IsInProgress;
         this.Completed = Completed;
+        TargetChampionId = targetChampionId;
+        HoverAtSeconds = hoverAtSeconds;
+        LockAtSeconds = lockAtSeconds;
     }
 
     public int Id { get; set; }
@@ -1043,9 +1369,21 @@ internal sealed class ChampSelectAction
     public int ChampionId { get; set; }
     public bool IsInProgress { get; set; }
     public bool Completed { get; set; }
+    public int TargetChampionId { get; set; }
+    public int? HoverAtSeconds { get; set; }
+    public int? LockAtSeconds { get; set; }
 
     public ChampSelectAction Clone()
     {
-        return new ChampSelectAction(Id, ActorCellId, Type, ChampionId, IsInProgress, Completed);
+        return new ChampSelectAction(
+            Id,
+            ActorCellId,
+            Type,
+            ChampionId,
+            IsInProgress,
+            Completed,
+            TargetChampionId,
+            HoverAtSeconds,
+            LockAtSeconds);
     }
 }
