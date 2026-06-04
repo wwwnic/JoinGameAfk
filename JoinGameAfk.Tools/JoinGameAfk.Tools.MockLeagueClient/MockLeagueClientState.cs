@@ -27,6 +27,10 @@ internal enum MockLeagueClientScenario
 
 internal sealed class MockLeagueClientState
 {
+    private const int FirstPlayerCellId = 1;
+    private const int LastBluePlayerCellId = 5;
+    private const int LastPlayerCellId = 10;
+
     private static readonly int[] OwnedChampionIds =
     [
         1, 12, 22, 24, 25, 40, 51, 53, 64, 81, 86, 89, 99, 103, 122, 157, 202, 222, 412, 517
@@ -99,28 +103,28 @@ internal sealed class MockLeagueClientState
     {
         lock (_lock)
         {
-            _phase = snapshot.Phase;
-            _queueMode = snapshot.QueueMode;
-            _draftStep = snapshot.DraftStep;
-            _localPlayerCellId = Math.Clamp(snapshot.LocalPlayerCellId, 1, 5);
-            SetQueueCore(snapshot.QueueId, snapshot.QueueName);
-            _readyCheckState = NormalizeText(snapshot.ReadyCheckState, "InProgress");
-            _readyCheckResponse = NormalizeText(snapshot.ReadyCheckResponse, "None");
-            _timerPhase = NormalizeText(snapshot.TimerPhase, "BAN_PICK");
-            _timeLeftSeconds = Math.Max(0, snapshot.TimeLeftSeconds);
-            _totalTimeInPhaseSeconds = Math.Max(_timeLeftSeconds, GetDefaultTotalTimeInPhaseSeconds(_timerPhase));
-            ReplaceList(_myTeam, snapshot.MyTeam.Select(CloneWithNormalizedPosition));
-            ReplaceList(_theirTeam, snapshot.TheirTeam.Select(CloneWithNormalizedPosition));
-            _localPlayerAssignedPosition = FindTeamSlot(_localPlayerCellId)?.AssignedPosition
-                                           ?? _localPlayerAssignedPosition;
-            ReplaceList(_myTeamBans, snapshot.MyTeamBans.Where(id => id > 0).Distinct());
-            ReplaceList(_theirTeamBans, snapshot.TheirTeamBans.Where(id => id > 0).Distinct());
-            ApplyBanListToSlots(_myTeam, _myTeamBans);
-            ApplyBanListToSlots(_theirTeam, _theirTeamBans);
-            ReplaceList(_actions, snapshot.Actions.Select(CloneWithNormalizedSchedule));
+            RestoreSnapshotCore(snapshot);
+        }
 
-            if (_queueMode == MockQueueMode.DraftPick)
-                SaveCurrentDraftStepStateCore();
+        OnChanged();
+    }
+
+    public void RestoreSnapshotAsNewChampSelectSession(MockLeagueClientSnapshot snapshot)
+    {
+        lock (_lock)
+        {
+            RestoreSnapshotCore(snapshot);
+            _sessionId = CreateSessionId();
+        }
+
+        OnChanged();
+    }
+
+    public void EnterChampSelectRestartExitPhase()
+    {
+        lock (_lock)
+        {
+            _phase = MockClientPhase.Lobby;
         }
 
         OnChanged();
@@ -233,7 +237,7 @@ internal sealed class MockLeagueClientState
     {
         lock (_lock)
         {
-            _localPlayerCellId = Math.Clamp(localPlayerCellId, 1, 5);
+            _localPlayerCellId = NormalizeLocalPlayerCellId(localPlayerCellId);
             var localPlayer = FindTeamSlot(_localPlayerCellId);
             _localPlayerAssignedPosition = localPlayer?.AssignedPosition ?? _localPlayerAssignedPosition;
 
@@ -372,6 +376,40 @@ internal sealed class MockLeagueClientState
         return true;
     }
 
+    public DraftPlaybackAdvanceResult AdvanceDraftStepPlayback()
+    {
+        DraftPlaybackAdvanceResult result;
+        lock (_lock)
+        {
+            if (_queueMode != MockQueueMode.DraftPick || _draftStep == DraftPickStep.InGame)
+            {
+                return new DraftPlaybackAdvanceResult(
+                    Advanced: false,
+                    Step: _draftStep,
+                    TimeLeftSeconds: _timeLeftSeconds,
+                    ContinuesPlayback: false);
+            }
+
+            RebuildBanListsFromSlots();
+            var currentState = CaptureCurrentDraftStepStateCore();
+            _draftStepStates[_draftStep] = currentState;
+
+            DraftPickStep nextStep = DraftPickSteps.Next(_draftStep);
+            _draftStepStates[nextStep] = CreatePlaybackAdvanceState(nextStep, currentState);
+            LoadDraftStepStateCore(nextStep);
+
+            result = new DraftPlaybackAdvanceResult(
+                Advanced: true,
+                Step: _draftStep,
+                TimeLeftSeconds: _timeLeftSeconds,
+                ContinuesPlayback: _phase is MockClientPhase.Planning or MockClientPhase.ChampSelect
+                                   && _timeLeftSeconds > 0);
+        }
+
+        OnChanged();
+        return result;
+    }
+
     public void UpdateLocalPlayerRole(string assignedPosition)
     {
         lock (_lock)
@@ -415,12 +453,9 @@ internal sealed class MockLeagueClientState
             {
                 CompleteActionCore(actionId, action.ChampionId);
             }
-            else if (string.Equals(action.Type, "pick", StringComparison.OrdinalIgnoreCase)
-                     && action.ActorCellId == _localPlayerCellId)
+            else if (championId.HasValue)
             {
-                var localPlayer = FindTeamSlot(_localPlayerCellId);
-                if (localPlayer is not null)
-                    localPlayer.ChampionPickIntent = action.ChampionId;
+                TryApplyHoveredChampionToSlotCore(action, action.ChampionId);
             }
 
             changed = true;
@@ -515,21 +550,27 @@ internal sealed class MockLeagueClientState
         {
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             bool revealEnemyBans = AreEnemyBansRevealedCore();
+            bool localPlayerOnBlueSide = IsBlueTeamCellId(_localPlayerCellId);
+            var localTeam = localPlayerOnBlueSide ? _myTeam : _theirTeam;
+            var enemyTeam = localPlayerOnBlueSide ? _theirTeam : _myTeam;
+            var localTeamBans = localPlayerOnBlueSide ? _myTeamBans : _theirTeamBans;
+            var enemyTeamBans = localPlayerOnBlueSide ? _theirTeamBans : _myTeamBans;
+
             return new
             {
                 localPlayerCellId = _localPlayerCellId,
                 multiUserChatId = _sessionId,
                 timer = CreateTimerPayload(nowMs),
-                myTeam = _myTeam.Select(CreateTeamMemberPayload).ToArray(),
-                theirTeam = _theirTeam.Select(CreateTeamMemberPayload).ToArray(),
+                myTeam = localTeam.Select(CreateTeamMemberPayload).ToArray(),
+                theirTeam = enemyTeam.Select(CreateTeamMemberPayload).ToArray(),
                 bans = new
                 {
-                    myTeamBans = _myTeamBans.ToArray(),
-                    theirTeamBans = revealEnemyBans ? _theirTeamBans.ToArray() : Array.Empty<int>()
+                    myTeamBans = localTeamBans.ToArray(),
+                    theirTeamBans = revealEnemyBans ? enemyTeamBans.ToArray() : Array.Empty<int>()
                 },
                 actions = new[]
                 {
-                    _actions.Select(action => CreateActionPayload(action, revealEnemyBans)).ToArray()
+                    _actions.Select(action => CreateActionPayload(action, revealEnemyBans, _localPlayerCellId)).ToArray()
                 }
             };
         }
@@ -679,7 +720,7 @@ internal sealed class MockLeagueClientState
         _queueMode = MockQueueMode.DraftPick;
         _draftStep = DraftPickStep.Planning;
         SetQueueCore(400, "Normal Draft");
-        _sessionId = $"mock-champ-select-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        _sessionId = CreateSessionId();
         _draftStepStates.Clear();
         foreach (var step in DraftPickSteps.All.Select(option => option.Step))
             _draftStepStates[step] = CreateDefaultDraftStepState(step);
@@ -697,20 +738,20 @@ internal sealed class MockLeagueClientState
 
         _myTeam.AddRange(
         [
-            new TeamSlot(1, "top", 0, 0, 0),
-            new TeamSlot(2, "jungle", 64, 0, 0),
-            new TeamSlot(3, "mid", 99, 0, 0),
-            new TeamSlot(4, "adc", 222, 0, 0),
-            new TeamSlot(5, "support", 412, 0, 0)
+            new TeamSlot(1, "top", 0, 0, 0, 0),
+            new TeamSlot(2, "jungle", 64, 0, 0, 0),
+            new TeamSlot(3, "mid", 99, 0, 0, 0),
+            new TeamSlot(4, "adc", 222, 0, 0, 0),
+            new TeamSlot(5, "support", 412, 0, 0, 0)
         ]);
 
         _theirTeam.AddRange(
         [
-            new TeamSlot(6, "top", 86, 0, 0),
-            new TeamSlot(7, "jungle", 0, 0, 0),
-            new TeamSlot(8, "mid", 0, 0, 0),
-            new TeamSlot(9, "adc", 0, 0, 0),
-            new TeamSlot(10, "support", 0, 0, 0)
+            new TeamSlot(6, "top", 86, 0, 0, 0),
+            new TeamSlot(7, "jungle", 0, 0, 0, 0),
+            new TeamSlot(8, "mid", 0, 0, 0, 0),
+            new TeamSlot(9, "adc", 0, 0, 0, 0),
+            new TeamSlot(10, "support", 0, 0, 0, 0)
         ]);
 
         var localPlayer = FindTeamSlot(_localPlayerCellId);
@@ -723,7 +764,7 @@ internal sealed class MockLeagueClientState
 
     private void ResetSessionCore()
     {
-        _sessionId = $"mock-champ-select-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        _sessionId = CreateSessionId();
         _timerPhase = "PLANNING";
         _timeLeftSeconds = 30;
         _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
@@ -732,6 +773,32 @@ internal sealed class MockLeagueClientState
         _myTeam.Clear();
         _theirTeam.Clear();
         _actions.Clear();
+    }
+
+    private void RestoreSnapshotCore(MockLeagueClientSnapshot snapshot)
+    {
+        _phase = snapshot.Phase;
+        _queueMode = snapshot.QueueMode;
+        _draftStep = snapshot.DraftStep;
+        _localPlayerCellId = NormalizeLocalPlayerCellId(snapshot.LocalPlayerCellId);
+        SetQueueCore(snapshot.QueueId, snapshot.QueueName);
+        _readyCheckState = NormalizeText(snapshot.ReadyCheckState, "InProgress");
+        _readyCheckResponse = NormalizeText(snapshot.ReadyCheckResponse, "None");
+        _timerPhase = NormalizeText(snapshot.TimerPhase, "BAN_PICK");
+        _timeLeftSeconds = Math.Max(0, snapshot.TimeLeftSeconds);
+        _totalTimeInPhaseSeconds = Math.Max(_timeLeftSeconds, GetDefaultTotalTimeInPhaseSeconds(_timerPhase));
+        ReplaceList(_myTeam, snapshot.MyTeam.Select(CloneWithNormalizedPosition));
+        ReplaceList(_theirTeam, snapshot.TheirTeam.Select(CloneWithNormalizedPosition));
+        _localPlayerAssignedPosition = FindTeamSlot(_localPlayerCellId)?.AssignedPosition
+                                       ?? _localPlayerAssignedPosition;
+        ReplaceList(_myTeamBans, snapshot.MyTeamBans.Where(id => id > 0).Distinct());
+        ReplaceList(_theirTeamBans, snapshot.TheirTeamBans.Where(id => id > 0).Distinct());
+        ApplyBanListToSlots(_myTeam, _myTeamBans);
+        ApplyBanListToSlots(_theirTeam, _theirTeamBans);
+        ReplaceList(_actions, snapshot.Actions.Select(CloneWithNormalizedSchedule));
+
+        if (_queueMode == MockQueueMode.DraftPick)
+            SaveCurrentDraftStepStateCore();
     }
 
     private void SwitchDraftStepCore(DraftPickStep step)
@@ -788,29 +855,111 @@ internal sealed class MockLeagueClientState
     private DraftStepState CreateDefaultDraftStepState(DraftPickStep step)
     {
         var myTeam = CreateDefaultMyTeamSlots();
-        var localPlayer = myTeam.FirstOrDefault(slot => slot.CellId == _localPlayerCellId);
-        if (localPlayer is not null)
-            localPlayer.AssignedPosition = _localPlayerAssignedPosition;
+        var theirTeam = CreateDefaultTheirTeamSlots();
+        ApplyLocalPlayerAssignedPosition(myTeam, theirTeam);
 
         return new DraftStepState(
             GetDefaultTimerPhase(step),
             GetDefaultTimeLeftSeconds(step),
             myTeam,
-            CreateDefaultTheirTeamSlots(),
+            theirTeam,
             [],
             [],
             CreateDefaultDraftActions(step));
+    }
+
+    private DraftStepState CreatePlaybackAdvanceState(DraftPickStep nextStep, DraftStepState currentState)
+    {
+        var defaultNextState = CreateDefaultDraftStepState(nextStep);
+        var myTeam = MergePlaybackSlots(defaultNextState.MyTeam, currentState.MyTeam);
+        var theirTeam = MergePlaybackSlots(defaultNextState.TheirTeam, currentState.TheirTeam);
+        var actions = MergePlaybackActions(defaultNextState.Actions, currentState.Actions);
+        var myTeamBans = MergePlaybackBans(currentState.MyTeamBans, myTeam);
+        var theirTeamBans = MergePlaybackBans(currentState.TheirTeamBans, theirTeam);
+
+        ApplyBanListToSlots(myTeam, myTeamBans);
+        ApplyBanListToSlots(theirTeam, theirTeamBans);
+
+        return new DraftStepState(
+            defaultNextState.TimerPhase,
+            defaultNextState.TimeLeftSeconds,
+            myTeam,
+            theirTeam,
+            myTeamBans,
+            theirTeamBans,
+            actions);
+    }
+
+    private static List<TeamSlot> MergePlaybackSlots(
+        IReadOnlyList<TeamSlot> defaultSlots,
+        IReadOnlyList<TeamSlot> currentSlots)
+    {
+        return defaultSlots
+            .Select(defaultSlot =>
+            {
+                var slot = defaultSlot.Clone();
+                var currentSlot = currentSlots.FirstOrDefault(candidate => candidate.CellId == slot.CellId);
+                if (currentSlot is null)
+                    return slot;
+
+                slot.AssignedPosition = currentSlot.AssignedPosition;
+                slot.ChampionId = currentSlot.ChampionId;
+                slot.ChampionPickIntent = currentSlot.ChampionId > 0 ? 0 : currentSlot.ChampionPickIntent;
+                slot.BanChampionIntent = currentSlot.BanChampionId > 0 ? 0 : currentSlot.BanChampionIntent;
+                slot.BanChampionId = currentSlot.BanChampionId;
+                return slot;
+            })
+            .ToList();
+    }
+
+    private static List<int> MergePlaybackBans(
+        IReadOnlyList<int> currentBans,
+        IReadOnlyList<TeamSlot> slots)
+    {
+        return currentBans
+            .Concat(slots.Select(slot => slot.BanChampionId))
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+    }
+
+    private static List<ChampSelectAction> MergePlaybackActions(
+        IReadOnlyList<ChampSelectAction> defaultActions,
+        IReadOnlyList<ChampSelectAction> currentActions)
+    {
+        return defaultActions
+            .Select(defaultAction =>
+            {
+                var action = defaultAction.Clone();
+                var currentAction = currentActions.FirstOrDefault(candidate => candidate.Id == action.Id);
+                if (currentAction is null)
+                    return action;
+
+                action.ChampionId = currentAction.ChampionId;
+                action.TargetChampionId = currentAction.TargetChampionId;
+                action.HoverAtSeconds = currentAction.HoverAtSeconds;
+                action.LockAtSeconds = currentAction.LockAtSeconds;
+
+                if (currentAction.Completed)
+                {
+                    action.Completed = true;
+                    action.IsInProgress = false;
+                }
+
+                return action;
+            })
+            .ToList();
     }
 
     private static List<TeamSlot> CreateDefaultMyTeamSlots()
     {
         return
         [
-            new TeamSlot(1, "top", 0, 0, 0),
-            new TeamSlot(2, "jungle", 0, 0, 0),
-            new TeamSlot(3, "mid", 0, 0, 0),
-            new TeamSlot(4, "adc", 0, 0, 0),
-            new TeamSlot(5, "support", 0, 0, 0)
+            new TeamSlot(1, "top", 0, 0, 0, 0),
+            new TeamSlot(2, "jungle", 0, 0, 0, 0),
+            new TeamSlot(3, "mid", 0, 0, 0, 0),
+            new TeamSlot(4, "adc", 0, 0, 0, 0),
+            new TeamSlot(5, "support", 0, 0, 0, 0)
         ];
     }
 
@@ -818,11 +967,11 @@ internal sealed class MockLeagueClientState
     {
         return
         [
-            new TeamSlot(6, "top", 0, 0, 0),
-            new TeamSlot(7, "jungle", 0, 0, 0),
-            new TeamSlot(8, "mid", 0, 0, 0),
-            new TeamSlot(9, "adc", 0, 0, 0),
-            new TeamSlot(10, "support", 0, 0, 0)
+            new TeamSlot(6, "top", 0, 0, 0, 0),
+            new TeamSlot(7, "jungle", 0, 0, 0, 0),
+            new TeamSlot(8, "mid", 0, 0, 0, 0),
+            new TeamSlot(9, "adc", 0, 0, 0, 0),
+            new TeamSlot(10, "support", 0, 0, 0, 0)
         ];
     }
 
@@ -957,10 +1106,7 @@ internal sealed class MockLeagueClientState
     private void EnsureBlindPickActionActorsCore()
     {
         foreach (var action in _actions)
-        {
-            if (action.ActorCellId is >= 1 and <= 5)
-                action.ActorCellId = _localPlayerCellId;
-        }
+            action.ActorCellId = _localPlayerCellId;
     }
 
     private void SetActionProgress(string type, bool isInProgress)
@@ -996,7 +1142,10 @@ internal sealed class MockLeagueClientState
         else if (string.Equals(action.Type, "ban", StringComparison.OrdinalIgnoreCase) && championId > 0)
         {
             if (slot is not null)
+            {
                 slot.BanChampionId = championId;
+                slot.BanChampionIntent = 0;
+            }
 
             var bans = IsMyTeamCellId(action.ActorCellId) ? _myTeamBans : _theirTeamBans;
             if (!bans.Contains(championId))
@@ -1049,12 +1198,12 @@ internal sealed class MockLeagueClientState
         };
     }
 
-    private static object CreateActionPayload(ChampSelectAction action, bool revealEnemyBans)
+    private static object CreateActionPayload(ChampSelectAction action, bool revealEnemyBans, int localPlayerCellId)
     {
         int championId = action.ChampionId;
         if (!revealEnemyBans
             && string.Equals(action.Type, "ban", StringComparison.OrdinalIgnoreCase)
-            && action.ActorCellId >= 6)
+            && IsEnemyTeamCellId(action.ActorCellId, localPlayerCellId))
         {
             championId = 0;
         }
@@ -1156,10 +1305,10 @@ internal sealed class MockLeagueClientState
 
         if (IsBanAction(action))
         {
-            if (slot.BanChampionId == championId)
+            if (slot.BanChampionIntent == championId)
                 return false;
 
-            slot.BanChampionId = championId;
+            slot.BanChampionIntent = championId;
             return true;
         }
 
@@ -1186,9 +1335,15 @@ internal sealed class MockLeagueClientState
             return slot.ChampionId;
         }
 
-        return IsBanAction(action)
-            ? slot.BanChampionId
-            : 0;
+        if (IsBanAction(action))
+        {
+            if (slot.BanChampionIntent > 0)
+                return slot.BanChampionIntent;
+
+            return slot.BanChampionId;
+        }
+
+        return 0;
     }
 
     private bool IsPlanningTimerPhase()
@@ -1244,6 +1399,9 @@ internal sealed class MockLeagueClientState
         {
             if (slots[index].BanChampionId <= 0 && index < banChampionIds.Count)
                 slots[index].BanChampionId = banChampionIds[index];
+
+            if (slots[index].BanChampionId > 0)
+                slots[index].BanChampionIntent = 0;
         }
     }
 
@@ -1262,6 +1420,36 @@ internal sealed class MockLeagueClientState
         return string.IsNullOrWhiteSpace(text)
             ? fallback
             : text.Trim();
+    }
+
+    private static string CreateSessionId()
+    {
+        return $"mock-champ-select-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+    }
+
+    private void ApplyLocalPlayerAssignedPosition(IReadOnlyList<TeamSlot> myTeam, IReadOnlyList<TeamSlot> theirTeam)
+    {
+        var localPlayer = myTeam
+            .Concat(theirTeam)
+            .FirstOrDefault(slot => slot.CellId == _localPlayerCellId);
+
+        if (localPlayer is not null)
+            localPlayer.AssignedPosition = _localPlayerAssignedPosition;
+    }
+
+    private static int NormalizeLocalPlayerCellId(int cellId)
+    {
+        return Math.Clamp(cellId, FirstPlayerCellId, LastPlayerCellId);
+    }
+
+    private static bool IsBlueTeamCellId(int cellId)
+    {
+        return cellId is >= FirstPlayerCellId and <= LastBluePlayerCellId;
+    }
+
+    private static bool IsEnemyTeamCellId(int cellId, int localPlayerCellId)
+    {
+        return IsBlueTeamCellId(cellId) != IsBlueTeamCellId(localPlayerCellId);
     }
 
     private static void ReplaceList<T>(List<T> target, IEnumerable<T> values)
@@ -1299,6 +1487,12 @@ internal sealed record DraftTimerTickResult(
     int TimeLeftSeconds,
     IReadOnlyList<string> AppliedActions);
 
+internal sealed record DraftPlaybackAdvanceResult(
+    bool Advanced,
+    DraftPickStep Step,
+    int TimeLeftSeconds,
+    bool ContinuesPlayback);
+
 internal sealed record DraftStepState(
     string TimerPhase,
     int TimeLeftSeconds,
@@ -1314,12 +1508,19 @@ internal sealed class TeamSlot
     {
     }
 
-    public TeamSlot(int cellId, string assignedPosition, int championId, int championPickIntent, int banChampionId)
+    public TeamSlot(
+        int cellId,
+        string assignedPosition,
+        int championId,
+        int championPickIntent,
+        int banChampionIntent,
+        int banChampionId)
     {
         CellId = cellId;
         AssignedPosition = assignedPosition;
         ChampionId = championId;
         ChampionPickIntent = championPickIntent;
+        BanChampionIntent = banChampionIntent;
         BanChampionId = banChampionId;
     }
 
@@ -1327,11 +1528,12 @@ internal sealed class TeamSlot
     public string AssignedPosition { get; set; } = string.Empty;
     public int ChampionId { get; set; }
     public int ChampionPickIntent { get; set; }
+    public int BanChampionIntent { get; set; }
     public int BanChampionId { get; set; }
 
     public TeamSlot Clone()
     {
-        return new TeamSlot(CellId, AssignedPosition, ChampionId, ChampionPickIntent, BanChampionId);
+        return new TeamSlot(CellId, AssignedPosition, ChampionId, ChampionPickIntent, BanChampionIntent, BanChampionId);
     }
 }
 

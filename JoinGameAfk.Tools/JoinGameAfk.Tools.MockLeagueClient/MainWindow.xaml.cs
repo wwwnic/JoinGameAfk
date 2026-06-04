@@ -9,6 +9,8 @@ namespace JoinGameAfk.Tools.MockLeagueClient;
 
 public partial class MainWindow : Window
 {
+    private static readonly TimeSpan ChampionSelectRestartExitDelay = TimeSpan.FromMilliseconds(500);
+
     private readonly MockLeagueClientState _state = new();
     private readonly ObservableCollection<string> _logs = [];
     private readonly ObservableCollection<TeamSlot> _myTeamSlots = [];
@@ -20,6 +22,8 @@ public partial class MainWindow : Window
     private MockLeagueClientSnapshot? _draftPlaybackEditSnapshot;
     private bool _isRefreshingUi;
     private bool _isDraftCountdownTicking;
+    private volatile bool _acceptChampSelectInput;
+    private DraftPlaybackMode _draftPlaybackMode = DraftPlaybackMode.StopAtZero;
     private MockLeagueClientServer? _server;
 
     public MainWindow()
@@ -32,9 +36,11 @@ public partial class MainWindow : Window
         ActionsGrid.ItemsSource = _timedActionPlans;
         ConfigureChampionColumn(DraftMyTeamChampionColumn);
         ConfigureChampionColumn(DraftMyTeamIntentColumn);
+        ConfigureChampionColumn(DraftMyTeamBanIntentColumn);
         ConfigureChampionColumn(DraftMyTeamBanColumn);
         ConfigureChampionColumn(DraftTheirTeamChampionColumn);
         ConfigureChampionColumn(DraftTheirTeamIntentColumn);
+        ConfigureChampionColumn(DraftTheirTeamBanIntentColumn);
         ConfigureChampionColumn(DraftTheirTeamBanColumn);
         ConfigureChampionColumn(ActionPickChampionColumn);
         ConfigureChampionColumn(ActionBanChampionColumn);
@@ -65,7 +71,7 @@ public partial class MainWindow : Window
             ? "mock-league-client"
             : TokenBox.Text.Trim();
 
-        _server = new MockLeagueClientServer(_state, port, token, AddLog);
+        _server = new MockLeagueClientServer(_state, port, token, AddLog, CanAcceptChampSelectInput);
         try
         {
             await _server.StartAsync();
@@ -176,7 +182,7 @@ public partial class MainWindow : Window
 
         int localPlayerCellId = GetLocalPlayerCellBoxValue(LocalPlayerCellBox);
         _state.UpdateLocalPlayerCellId(localPlayerCellId);
-        AddLog($"Local player slot applied: Blue {localPlayerCellId}.");
+        AddLog($"Local player slot applied: {FormatLocalPlayerSlot(localPlayerCellId)}.");
         await EmitSnapshotIfRunningAsync();
     }
 
@@ -266,15 +272,27 @@ public partial class MainWindow : Window
 
     private async void DraftStartTimerButton_Click(object sender, RoutedEventArgs e)
     {
+        await StartDraftPlaybackAsync(DraftPlaybackMode.StopAtZero);
+    }
+
+    private async void DraftPlayPhasesButton_Click(object sender, RoutedEventArgs e)
+    {
+        await StartDraftPlaybackAsync(DraftPlaybackMode.AdvanceAtZero);
+    }
+
+    private async Task StartDraftPlaybackAsync(DraftPlaybackMode playbackMode)
+    {
         CommitChampionSelectEditorsToState();
         bool isNewPlayback = _draftPlaybackEditSnapshot is null;
         _draftPlaybackEditSnapshot ??= _state.GetSnapshot();
+        _draftPlaybackMode = playbackMode;
 
         if (!_state.BeginChampionSelectPlayback())
         {
             if (isNewPlayback)
                 _draftPlaybackEditSnapshot = null;
 
+            SetChampSelectInputAcceptance(false);
             DraftTimerStatusText.Text = "Playback stopped";
             AddLog("Draft playback not started. Select a draft step with time left above 0s.");
             return;
@@ -285,8 +303,12 @@ public partial class MainWindow : Window
             AddLog(appliedAction);
 
         _draftCountdownTimer.Start();
-        DraftTimerStatusText.Text = "Countdown running";
-        AddLog(isNewPlayback ? "Draft playback started." : "Draft playback resumed.");
+        SetChampSelectInputAcceptance(true);
+        DraftTimerStatusText.Text = GetRunningDraftPlaybackStatus();
+        string playbackLabel = GetDraftPlaybackModeLogLabel(playbackMode);
+        AddLog(isNewPlayback
+            ? $"Draft playback started ({playbackLabel})."
+            : $"Draft playback resumed ({playbackLabel}).");
         await EmitChampSelectSessionIfRunningAsync();
     }
 
@@ -298,6 +320,11 @@ public partial class MainWindow : Window
     private async void DraftStopTimerButton_Click(object sender, RoutedEventArgs e)
     {
         await StopDraftPlaybackAsync("Draft playback stopped. Restored edit state.");
+    }
+
+    private async void RestartChampSelectButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RestartChampSelectAsync();
     }
 
     private async void DraftCountdownTimer_Tick(object? sender, EventArgs e)
@@ -323,13 +350,85 @@ public partial class MainWindow : Window
 
             if (result.TimeLeftSeconds <= 0)
             {
-                await StopDraftPlaybackAsync("Draft countdown reached 0s. Restored edit state.");
+                if (_draftPlaybackMode == DraftPlaybackMode.AdvanceAtZero)
+                {
+                    await AdvanceDraftPlaybackAsync();
+                }
+                else
+                {
+                    await StopDraftPlaybackAsync("Draft countdown reached 0s. Restored edit state.");
+                }
             }
         }
         finally
         {
             _isDraftCountdownTicking = false;
         }
+    }
+
+    private async Task AdvanceDraftPlaybackAsync()
+    {
+        var advanceResult = _state.AdvanceDraftStepPlayback();
+        if (!advanceResult.Advanced)
+        {
+            await StopDraftPlaybackAsync("Draft playback could not advance. Restored edit state.");
+            return;
+        }
+
+        if (advanceResult.ContinuesPlayback)
+        {
+            var dueResult = _state.ApplyDueScheduledActions();
+            foreach (string appliedAction in dueResult.AppliedActions)
+                AddLog(appliedAction);
+        }
+
+        await EmitSnapshotIfRunningAsync(logWhenStopped: false);
+
+        if (advanceResult.ContinuesPlayback)
+        {
+            SetChampSelectInputAcceptance(true);
+            DraftTimerStatusText.Text = GetRunningDraftPlaybackStatus();
+            AddLog($"Draft playback advanced to {DraftPickSteps.GetDisplayName(advanceResult.Step)}.");
+            return;
+        }
+
+        if (_draftCountdownTimer.IsEnabled)
+            _draftCountdownTimer.Stop();
+
+        SetChampSelectInputAcceptance(false);
+        _draftPlaybackEditSnapshot = null;
+        DraftTimerStatusText.Text = "Playback completed";
+        AddLog($"Draft playback completed at {DraftPickSteps.GetDisplayName(advanceResult.Step)}.");
+    }
+
+    private async Task RestartChampSelectAsync()
+    {
+        bool wasRunning = _draftCountdownTimer.IsEnabled;
+        if (wasRunning)
+            StopDraftCountdown("Draft countdown paused for champ-select restart.");
+        else
+            SetChampSelectInputAcceptance(false);
+
+        CommitChampionSelectEditorsToState();
+        var targetSnapshot = _state.GetSnapshot();
+        if (targetSnapshot.Phase is not (MockClientPhase.Planning or MockClientPhase.ChampSelect))
+        {
+            AddLog("Champ-select restart skipped. Select a Planning or Champion Select draft step first.");
+            return;
+        }
+
+        _state.EnterChampSelectRestartExitPhase();
+        AddLog("Champ-select restart: emitted Lobby exit.");
+
+        if (_server is not null)
+            await _server.EmitChampSelectSessionDeletedAsync();
+
+        await EmitSnapshotIfRunningAsync(logWhenStopped: false);
+        await Task.Delay(ChampionSelectRestartExitDelay);
+
+        _state.RestoreSnapshotAsNewChampSelectSession(targetSnapshot);
+        AddLog($"Champ-select restarted at {DraftPickSteps.GetDisplayName(targetSnapshot.DraftStep)} with a new session.");
+        await EmitSnapshotIfRunningAsync(logWhenStopped: false);
     }
 
     private void ClearLogButton_Click(object sender, RoutedEventArgs e)
@@ -443,9 +542,9 @@ public partial class MainWindow : Window
             CurrentPhaseText.Text = snapshot.Phase.ToString();
             CurrentTimerText.Text = $"{snapshot.TimerPhase} / {snapshot.TimeLeftSeconds}s";
             DraftTimerStatusText.Text = _draftCountdownTimer.IsEnabled
-                ? "Countdown running"
+                ? GetRunningDraftPlaybackStatus()
                 : _draftPlaybackEditSnapshot is not null
-                    ? "Playback paused"
+                    ? GetPausedDraftPlaybackStatus()
                 : snapshot.TimeLeftSeconds == 0
                     ? "Timer at 0s"
                     : "Countdown paused";
@@ -459,11 +558,11 @@ public partial class MainWindow : Window
             SetComboText(ReadyResponseBox, snapshot.ReadyCheckResponse);
             SetComboText(TimerPhaseBox, snapshot.TimerPhase);
             TimeLeftBox.Text = snapshot.TimeLeftSeconds.ToString();
+            var localPlayer = FindTeamSlot(snapshot, snapshot.LocalPlayerCellId);
             SetRoleBoxFromValue(
                 LocalPlayerRoleBox,
-                snapshot.MyTeam.FirstOrDefault(slot => slot.CellId == snapshot.LocalPlayerCellId)?.AssignedPosition
-                ?? MockLeagueClientRoles.DefaultRole);
-            DraftStepStatusText.Text = $"{DraftPickSteps.GetDisplayName(snapshot.DraftStep)} / Local Blue {snapshot.LocalPlayerCellId}";
+                localPlayer?.AssignedPosition ?? MockLeagueClientRoles.DefaultRole);
+            DraftStepStatusText.Text = $"{DraftPickSteps.GetDisplayName(snapshot.DraftStep)} / Local {FormatLocalPlayerSlot(snapshot.LocalPlayerCellId)}";
             ReplaceCollection(_myTeamSlots, snapshot.MyTeam);
             ReplaceCollection(_theirTeamSlots, snapshot.TheirTeam);
             ReplaceCollection(_actions, snapshot.Actions);
@@ -659,7 +758,7 @@ public partial class MainWindow : Window
     private void ApplyLocalPlayerRoleToGrid()
     {
         int localPlayerCellId = GetLocalPlayerCellBoxValue(LocalPlayerCellBox);
-        var localPlayer = _myTeamSlots.FirstOrDefault(slot => slot.CellId == localPlayerCellId);
+        var localPlayer = _myTeamSlots.Concat(_theirTeamSlots).FirstOrDefault(slot => slot.CellId == localPlayerCellId);
         if (localPlayer is not null)
             localPlayer.AssignedPosition = GetRoleBoxValue(LocalPlayerRoleBox);
     }
@@ -707,7 +806,7 @@ public partial class MainWindow : Window
         if (comboBox.SelectedItem is ComboBoxItem { Tag: string cellText }
             && int.TryParse(cellText, out int cellId))
         {
-            return Math.Clamp(cellId, 1, 5);
+            return Math.Clamp(cellId, 1, 10);
         }
 
         return 1;
@@ -715,7 +814,7 @@ public partial class MainWindow : Window
 
     private static void SetLocalPlayerCellBoxFromValue(ComboBox comboBox, int localPlayerCellId)
     {
-        string cellText = Math.Clamp(localPlayerCellId, 1, 5).ToString();
+        string cellText = Math.Clamp(localPlayerCellId, 1, 10).ToString();
         foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
         {
             if (item.Tag is string itemCellText
@@ -727,6 +826,21 @@ public partial class MainWindow : Window
         }
 
         comboBox.SelectedIndex = 0;
+    }
+
+    private static TeamSlot? FindTeamSlot(MockLeagueClientSnapshot snapshot, int cellId)
+    {
+        return snapshot.MyTeam
+            .Concat(snapshot.TheirTeam)
+            .FirstOrDefault(slot => slot.CellId == cellId);
+    }
+
+    private static string FormatLocalPlayerSlot(int localPlayerCellId)
+    {
+        int normalizedCellId = Math.Clamp(localPlayerCellId, 1, 10);
+        return normalizedCellId <= 5
+            ? $"Blue {normalizedCellId}"
+            : $"Red {normalizedCellId}";
     }
 
     private void SetSelectedDraftStep(DraftPickStep step)
@@ -808,11 +922,43 @@ public partial class MainWindow : Window
             LogList.ScrollIntoView(_logs[^1]);
     }
 
+    private bool CanAcceptChampSelectInput()
+    {
+        return _acceptChampSelectInput;
+    }
+
+    private void SetChampSelectInputAcceptance(bool enabled)
+    {
+        _acceptChampSelectInput = enabled;
+    }
+
+    private string GetRunningDraftPlaybackStatus()
+    {
+        return _draftPlaybackMode == DraftPlaybackMode.AdvanceAtZero
+            ? "Countdown running (advances phases)"
+            : "Countdown running (stops at 0)";
+    }
+
+    private string GetPausedDraftPlaybackStatus()
+    {
+        return _draftPlaybackMode == DraftPlaybackMode.AdvanceAtZero
+            ? "Playback paused (advances phases)"
+            : "Playback paused (stops at 0)";
+    }
+
+    private static string GetDraftPlaybackModeLogLabel(DraftPlaybackMode playbackMode)
+    {
+        return playbackMode == DraftPlaybackMode.AdvanceAtZero
+            ? "advances phases"
+            : "stops at 0";
+    }
+
     private void StopDraftCountdown(string? logMessage = null)
     {
         if (_draftCountdownTimer.IsEnabled)
             _draftCountdownTimer.Stop();
 
+        SetChampSelectInputAcceptance(false);
         DraftTimerStatusText.Text = "Countdown paused";
 
         if (!string.IsNullOrWhiteSpace(logMessage))
@@ -824,6 +970,7 @@ public partial class MainWindow : Window
         if (_draftCountdownTimer.IsEnabled)
             _draftCountdownTimer.Stop();
 
+        SetChampSelectInputAcceptance(false);
         if (_draftPlaybackEditSnapshot is { } editSnapshot)
         {
             _draftPlaybackEditSnapshot = null;
@@ -843,6 +990,7 @@ public partial class MainWindow : Window
         if (_server is null)
             return;
 
+        SetChampSelectInputAcceptance(false);
         await _server.DisposeAsync();
         _server = null;
         StartButton.IsEnabled = true;
@@ -905,4 +1053,10 @@ internal enum TimedActionMode
     Ban,
     Pick,
     Finalization
+}
+
+internal enum DraftPlaybackMode
+{
+    StopAtZero,
+    AdvanceAtZero
 }

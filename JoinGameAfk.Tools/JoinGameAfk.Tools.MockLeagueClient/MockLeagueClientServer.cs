@@ -24,15 +24,22 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
     private readonly int _port;
     private readonly string _token;
     private readonly Action<string> _log;
+    private readonly Func<bool> _canAcceptChampSelectInput;
     private readonly ConcurrentDictionary<Guid, WebSocketConnection> _webSockets = new();
     private WebApplication? _app;
 
-    public MockLeagueClientServer(MockLeagueClientState state, int port, string token, Action<string> log)
+    public MockLeagueClientServer(
+        MockLeagueClientState state,
+        int port,
+        string token,
+        Action<string> log,
+        Func<bool>? canAcceptChampSelectInput = null)
     {
         _state = state;
         _port = port;
         _token = token;
         _log = log;
+        _canAcceptChampSelectInput = canAcceptChampSelectInput ?? (() => true);
     }
 
     public bool IsRunning => _app is not null;
@@ -114,6 +121,14 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         await BroadcastEventAsync("/lol-champ-select/v1/session", _state.GetChampSelectSessionPayload());
     }
 
+    public async Task EmitChampSelectSessionDeletedAsync()
+    {
+        if (_app is null)
+            return;
+
+        await BroadcastEventAsync("/lol-champ-select/v1/session", new { }, eventType: "Delete");
+    }
+
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
@@ -184,7 +199,11 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         app.MapPatch("/lol-champ-select/v1/session/actions/{actionId:int}", async (int actionId, HttpContext context) =>
         {
             var patch = await ReadActionPatchAsync(context);
-            LogRequest("PATCH", $"/lol-champ-select/v1/session/actions/{actionId}", patch.Description);
+            string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}";
+            LogRequest("PATCH", endpoint, patch.Description);
+
+            if (!CanAcceptChampSelectInput("PATCH", endpoint, patch.Description))
+                return CreateIgnoredInputResult();
 
             if (!_state.PatchAction(actionId, patch.ChampionId, patch.Completed))
                 return Results.NotFound();
@@ -196,7 +215,11 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         app.MapPost("/lol-champ-select/v1/session/actions/{actionId:int}/complete", async (int actionId, HttpContext context) =>
         {
             var patch = await ReadActionPatchAsync(context, defaultCompleted: true);
-            LogRequest("POST", $"/lol-champ-select/v1/session/actions/{actionId}/complete", patch.Description);
+            string endpoint = $"/lol-champ-select/v1/session/actions/{actionId}/complete";
+            LogRequest("POST", endpoint, patch.Description);
+
+            if (!CanAcceptChampSelectInput("POST", endpoint, patch.Description))
+                return CreateIgnoredInputResult();
 
             if (!_state.PatchAction(actionId, patch.ChampionId, patch.Completed))
                 return Results.NotFound();
@@ -289,9 +312,9 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             await SendEventToSocketAsync(connection, "/lol-champ-select/v1/session", _state.GetChampSelectSessionPayload());
     }
 
-    private async Task BroadcastEventAsync(string uri, object data)
+    private async Task BroadcastEventAsync(string uri, object data, string eventType = "Update")
     {
-        string json = CreateEventJson(uri, data);
+        string json = CreateEventJson(uri, data, eventType);
         foreach (var pair in _webSockets.ToArray())
         {
             try
@@ -314,7 +337,7 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         await SendTextAsync(connection, CreateEventJson(uri, data));
     }
 
-    private static string CreateEventJson(string uri, object data)
+    private static string CreateEventJson(string uri, object data, string eventType = "Update")
     {
         object envelope = new object[]
         {
@@ -323,7 +346,7 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             new
             {
                 uri,
-                eventType = "Update",
+                eventType,
                 data
             }
         };
@@ -396,6 +419,29 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         return ChampionCatalog.TryGetById(championId, out var champion) && champion is not null
             ? champion.Name
             : $"Champion {championId}";
+    }
+
+    private bool CanAcceptChampSelectInput(string method, string endpoint, string detail)
+    {
+        if (_canAcceptChampSelectInput())
+            return true;
+
+        LogRequest(
+            method,
+            endpoint,
+            $"ignored because draft playback is paused or stopped {detail}");
+        return false;
+    }
+
+    private static IResult CreateIgnoredInputResult()
+    {
+        return Results.Json(
+            new
+            {
+                ignored = true,
+                reason = "Draft playback is paused or stopped."
+            },
+            statusCode: StatusCodes.Status423Locked);
     }
 
     private void LogRequest(string method, string endpoint, string? detail = null)

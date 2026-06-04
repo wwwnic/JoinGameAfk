@@ -749,7 +749,7 @@
                                            Text="Local slot"
                                            VerticalAlignment="Center" />
                                 <ComboBox x:Name="LocalPlayerCellBox"
-                                          Width="100"
+                                          Width="120"
                                           Margin="0,0,16,0"
                                           SelectionChanged="LocalPlayerCellBox_SelectionChanged">
                                     <ComboBoxItem Content="Blue 1"
@@ -762,6 +762,16 @@
                                                   Tag="4" />
                                     <ComboBoxItem Content="Blue 5"
                                                   Tag="5" />
+                                    <ComboBoxItem Content="Red 6"
+                                                  Tag="6" />
+                                    <ComboBoxItem Content="Red 7"
+                                                  Tag="7" />
+                                    <ComboBoxItem Content="Red 8"
+                                                  Tag="8" />
+                                    <ComboBoxItem Content="Red 9"
+                                                  Tag="9" />
+                                    <ComboBoxItem Content="Red 10"
+                                                  Tag="10" />
                                 </ComboBox>
                                 <TextBlock Width="75"
                                            Text="Local role"
@@ -797,12 +807,16 @@
                                 <TextBox x:Name="TimeLeftBox"
                                          Width="70"
                                          Margin="0,0,12,0" />
-                                <Button Content="Start countdown"
+                                <Button Content="Play to 0"
                                         Click="DraftStartTimerButton_Click" />
+                                <Button Content="Play phases"
+                                        Click="DraftPlayPhasesButton_Click" />
                                 <Button Content="Pause"
                                         Click="DraftPauseTimerButton_Click" />
                                 <Button Content="Stop"
                                         Click="DraftStopTimerButton_Click" />
+                                <Button Content="Restart champ select"
+                                        Click="RestartChampSelectButton_Click" />
                                 <TextBlock x:Name="DraftTimerStatusText"
                                            Margin="8,0,0,0"
                                            VerticalAlignment="Center"
@@ -816,9 +830,9 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="210" />
                                 <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="640" />
+                                <ColumnDefinition Width="670" />
                                 <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="640" />
+                                <ColumnDefinition Width="500" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -857,23 +871,29 @@
                                         <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
                                         <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
                                         <DataGridComboBoxColumn x:Name="DraftMyTeamIntentColumn"
-                                                                Header="Hover"
+                                                                Header="Hover pick"
                                                                 SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
                                         <DataGridComboBoxColumn x:Name="DraftMyTeamChampionColumn"
-                                                                Header="Locked"
+                                                                Header="Pick locked"
                                                                 SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
+                                        <DataGridComboBoxColumn x:Name="DraftMyTeamBanIntentColumn"
+                                                                Header="Hover ban"
+                                                                SelectedValueBinding="{Binding BanChampionIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="135"
+                                                                MinWidth="120" />
                                         <DataGridComboBoxColumn x:Name="DraftMyTeamBanColumn"
-                                                                Header="Ban"
+                                                                Header="Ban locked"
                                                                 SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </GroupBox>
@@ -886,23 +906,29 @@
                                         <DataGridTextColumn Header="Cell" Binding="{Binding CellId}" Width="48" />
                                         <DataGridTextColumn Header="Role" Binding="{Binding AssignedPosition}" Width="68" />
                                         <DataGridComboBoxColumn x:Name="DraftTheirTeamIntentColumn"
-                                                                Header="Hover"
+                                                                Header="Hover pick"
                                                                 SelectedValueBinding="{Binding ChampionPickIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
                                         <DataGridComboBoxColumn x:Name="DraftTheirTeamChampionColumn"
-                                                                Header="Locked"
+                                                                Header="Pick locked"
                                                                 SelectedValueBinding="{Binding ChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
+                                        <DataGridComboBoxColumn x:Name="DraftTheirTeamBanIntentColumn"
+                                                                Header="Hover ban"
+                                                                SelectedValueBinding="{Binding BanChampionIntent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                SelectedValuePath="ChampionId"
+                                                                Width="135"
+                                                                MinWidth="120" />
                                         <DataGridComboBoxColumn x:Name="DraftTheirTeamBanColumn"
-                                                                Header="Ban"
+                                                                Header="Ban locked"
                                                                 SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                 SelectedValuePath="ChampionId"
-                                                                Width="170"
-                                                                MinWidth="145" />
+                                                                Width="135"
+                                                                MinWidth="120" />
                                     </DataGrid.Columns>
                                 </DataGrid>
                             </GroupBox>
