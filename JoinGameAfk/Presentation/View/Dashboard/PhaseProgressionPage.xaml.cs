@@ -460,8 +460,25 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
         private void UpdatePlanDisplay(DashboardStatus status)
         {
+            UpdateTargetChampionCell(PickTargetChampionCell, PickTargetChampionImage, status.PickChampionPriority, "No available pick");
+            UpdateTargetChampionCell(BanTargetChampionCell, BanTargetChampionImage, status.BanChampionPriority, "No available ban");
             PickPlanLockText.ToolTip = GetPlanLockText(status.PickLockText);
             BanPlanLockText.ToolTip = GetPlanLockText(status.BanLockText);
+        }
+
+        private void UpdateTargetChampionCell(FrameworkElement targetCell, Image targetImage, IReadOnlyList<DashboardChampionPlanItem> champions, string unavailableText)
+        {
+            var targetChampion = champions.FirstOrDefault(champion => champion.IsAvailable);
+            if (targetChampion is null)
+            {
+                targetImage.Source = null;
+                targetCell.ToolTip = champions.Count > 0 ? unavailableText : null;
+                return;
+            }
+
+            string championName = GetChampionDisplayName(targetChampion.ChampionId, targetChampion.Name);
+            targetImage.Source = GetChampionPortrait(targetChampion.ChampionId, championName);
+            targetCell.ToolTip = championName;
         }
 
         private static string GetPlanLockText(string lockText)

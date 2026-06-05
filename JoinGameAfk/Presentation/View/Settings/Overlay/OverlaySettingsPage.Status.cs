@@ -11,7 +11,6 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
                 return;
 
             QueueOverlayScaleValueText.Text = $"{GetQueueOverlayScalePercent()}%";
-            PickBanScaleValueText.Text = $"{GetPickBanScalePercent()}%";
             PickBanOpacityValueText.Text = $"{GetPickBanOpacityPercent()}%";
         }
 

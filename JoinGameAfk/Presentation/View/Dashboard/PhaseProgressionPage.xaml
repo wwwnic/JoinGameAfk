@@ -212,11 +212,166 @@
             <Setter Property="Padding" Value="12" />
         </Style>
 
+        <Style x:Key="PlannerHorizontalScrollBarThumbStyle" TargetType="Thumb">
+            <Setter Property="MinWidth" Value="26" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Grid Height="8"
+                              Background="Transparent"
+                              SnapsToDevicePixels="True">
+                            <Border x:Name="ThumbRail"
+                                    Height="4"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource AppStrongBorderBrush}"
+                                    CornerRadius="2"
+                                    Opacity="0.58" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbRail" Property="Height" Value="6" />
+                                <Setter TargetName="ThumbRail" Property="Background" Value="{DynamicResource AccentBlueBrush}" />
+                                <Setter TargetName="ThumbRail" Property="Opacity" Value="0.9" />
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbRail" Property="Height" Value="6" />
+                                <Setter TargetName="ThumbRail" Property="Background" Value="{DynamicResource AccentBlueSoftBrush}" />
+                                <Setter TargetName="ThumbRail" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ThumbRail" Property="Opacity" Value="0.25" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlannerHorizontalScrollBarStyle" TargetType="ScrollBar">
+            <Setter Property="Height" Value="8" />
+            <Setter Property="MinHeight" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid Height="8"
+                              Background="Transparent"
+                              SnapsToDevicePixels="True">
+                            <Border x:Name="ScrollRail"
+                                    Height="2"
+                                    Margin="3,0"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource AppSurfaceInsetBrush}"
+                                    CornerRadius="1"
+                                    Opacity="0.65" />
+
+                            <Track x:Name="PART_Track"
+                                   Margin="3,0"
+                                   Minimum="{TemplateBinding Minimum}"
+                                   Maximum="{TemplateBinding Maximum}"
+                                   Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                   ViewportSize="{TemplateBinding ViewportSize}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageLeftCommand"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Style="{StaticResource SlimScrollBarRepeatButtonStyle}" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource PlannerHorizontalScrollBarThumbStyle}" />
+                                </Track.Thumb>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="ScrollBar.PageRightCommand"
+                                                  CommandTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                                                  Style="{StaticResource SlimScrollBarRepeatButtonStyle}" />
+                                </Track.IncreaseRepeatButton>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ScrollRail" Property="Background" Value="{DynamicResource AppMutedBorderBrush}" />
+                                <Setter TargetName="ScrollRail" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ScrollRail" Property="Opacity" Value="0.25" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="PlannerPlanTileScrollViewerStyle"
-               TargetType="ScrollViewer"
-               BasedOn="{StaticResource StableVerticalScrollViewerStyle}">
-            <Setter Property="MaxHeight" Value="128" />
+               TargetType="ScrollViewer">
+            <Setter Property="MinHeight" Value="72" />
+            <Setter Property="MaxHeight" Value="72" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="PanningMode" Value="HorizontalOnly" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
             <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollViewer">
+                        <Grid Background="{TemplateBinding Background}"
+                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="8" />
+                            </Grid.RowDefinitions>
+
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                    Grid.Row="0"
+                                                    CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                    CanHorizontallyScroll="False"
+                                                    CanVerticallyScroll="False"
+                                                    Content="{TemplateBinding Content}"
+                                                    ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                                    Margin="{TemplateBinding Padding}"
+                                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+
+                            <ScrollBar x:Name="PART_HorizontalScrollBar"
+                                       Grid.Row="1"
+                                       AutomationProperties.AutomationId="HorizontalScrollBar"
+                                       Maximum="{TemplateBinding ScrollableWidth}"
+                                       Orientation="Horizontal"
+                                       Style="{StaticResource PlannerHorizontalScrollBarStyle}"
+                                       Value="{Binding HorizontalOffset, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"
+                                       ViewportSize="{TemplateBinding ViewportWidth}"
+                                       Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PlannerTargetCellStyle" TargetType="Border">
+            <Setter Property="Width" Value="74" />
+            <Setter Property="MinWidth" Value="74" />
+            <Setter Property="Height" Value="74" />
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
+        </Style>
+
+        <Style x:Key="PlannerTargetPortraitFrameStyle" TargetType="Border">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="UseLayoutRounding" Value="True" />
         </Style>
 
         <Style x:Key="DashboardViewSwitchButtonStyle"
@@ -539,7 +694,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="10" />
+                                    <RowDefinition Height="8" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
@@ -576,79 +731,170 @@
                                                VerticalAlignment="Center" />
                                 </Grid>
 
-                                <Border Grid.Row="2"
-                                        Style="{StaticResource PlannerChampionChipListFrameStyle}"
-                                        Margin="0,5,0,5">
-                                    <Grid>
-                                        <TextBlock x:Name="PickChampionPlaceholderText"
-                                                   Text="Waiting for champion select."
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSubtleBrush}"
-                                                   FontStyle="Italic"
-                                                   TextWrapping="Wrap"
-                                                   VerticalAlignment="Center"
-                                                   Visibility="Visible" />
-                                        <ScrollViewer Style="{StaticResource PlannerPlanTileScrollViewerStyle}">
-                                            <ItemsControl x:Name="PickChampionPriorityList"
-                                                          VerticalAlignment="Top">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
-                                                                ToolTip="{Binding ToolTipText}">
-                                                            <Grid Width="48"
-                                                                  Height="64"
-                                                                  ClipToBounds="True">
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="0" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="2"
+                                      Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                                                <Border Grid.Row="0"
-                                                                        ClipToBounds="True"
-                                                                        Style="{StaticResource PlannerChampionPortraitSlotStyle}">
-                                                                    <Grid>
-                                                                        <viewControls:ChampionMysteryGlyph Width="30"
-                                                                                                           Height="30"
-                                                                                                           HorizontalAlignment="Center"
-                                                                                                           VerticalAlignment="Center"
-                                                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
-                                                                        <Image Source="{Binding PortraitImageSource}"
-                                                                               Stretch="UniformToFill"
-                                                                               SnapsToDevicePixels="True" />
-                                                                    </Grid>
-                                                                </Border>
+                                    <Border x:Name="PickTargetChampionCell"
+                                            Grid.Column="0"
+                                            VerticalAlignment="Top"
+                                            Style="{StaticResource PlannerTargetCellStyle}">
+                                        <Grid Width="64"
+                                              Height="64">
+                                            <Border Style="{StaticResource PlannerTargetPortraitFrameStyle}">
+                                                <Grid>
+                                                    <viewControls:ChampionMysteryGlyph Width="34"
+                                                                                       Height="34"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"
+                                                                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                                                    <Image x:Name="PickTargetChampionImage"
+                                                           Stretch="UniformToFill"
+                                                           SnapsToDevicePixels="True" />
+                                                </Grid>
+                                            </Border>
 
-                                                                <Viewbox Grid.Row="2"
-                                                                         Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                                    <TextBlock Text="{Binding ChipDisplayText}"
-                                                                               FontSize="{Binding ChipDisplayFontSize}"
-                                                                               Style="{StaticResource PlannerChampionChipTextStyle}" />
-                                                                </Viewbox>
+                                            <Viewbox IsHitTestVisible="False"
+                                                     Stretch="Fill">
+                                                <Canvas Width="200"
+                                                        Height="200">
+                                                    <Rectangle Canvas.Left="12"
+                                                               Canvas.Top="12"
+                                                               Width="176"
+                                                               Height="176"
+                                                               RadiusX="8"
+                                                               RadiusY="8"
+                                                               Fill="Transparent"
+                                                               Stroke="{DynamicResource AppStrongBorderBrush}"
+                                                               StrokeThickness="2" />
+                                                    <Path Data="M 28 62 L 28 28 L 62 28"
+                                                          Stroke="{DynamicResource AccentBlueSoftBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 138 28 L 172 28 L 172 62"
+                                                          Stroke="{DynamicResource AccentBlueSoftBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 172 138 L 172 172 L 138 172"
+                                                          Stroke="{DynamicResource AccentBlueSoftBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 62 172 L 28 172 L 28 138"
+                                                          Stroke="{DynamicResource AccentBlueSoftBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 100 12 L 100 25"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 100 188 L 100 175"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 12 100 L 25 100"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 188 100 L 175 100"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                        </Grid>
+                                    </Border>
 
-                                                                <Border Grid.Row="0"
-                                                                        Panel.ZIndex="10"
-                                                                        HorizontalAlignment="Right"
-                                                                        VerticalAlignment="Top"
-                                                                        Margin="0,2,2,0"
-                                                                        Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
-                                                                        ToolTip="{Binding StatusText}">
-                                                                    <TextBlock Text="?"
-                                                                               Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
-                                                                </Border>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
-                                    </Grid>
-                                </Border>
+                                    <Border Grid.Column="2"
+                                            Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                            Padding="10,0">
+                                        <Grid ClipToBounds="True">
+                                            <TextBlock x:Name="PickChampionPlaceholderText"
+                                                       Text="Waiting for champion select."
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextSubtleBrush}"
+                                                       FontStyle="Italic"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="Visible" />
+                                            <ScrollViewer Style="{StaticResource PlannerPlanTileScrollViewerStyle}">
+                                                <ItemsControl x:Name="PickChampionPriorityList"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
+                                                                    ToolTip="{Binding ToolTipText}">
+                                                                <Grid Width="48"
+                                                                      Height="64"
+                                                                      ClipToBounds="True">
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto" />
+                                                                        <RowDefinition Height="0" />
+                                                                        <RowDefinition Height="Auto" />
+                                                                    </Grid.RowDefinitions>
+
+                                                                    <Border Grid.Row="0"
+                                                                            ClipToBounds="True"
+                                                                            Style="{StaticResource PlannerChampionPortraitSlotStyle}">
+                                                                        <Grid>
+                                                                            <viewControls:ChampionMysteryGlyph Width="30"
+                                                                                                               Height="30"
+                                                                                                               HorizontalAlignment="Center"
+                                                                                                               VerticalAlignment="Center"
+                                                                                                               Foreground="{DynamicResource TextSubtleBrush}" />
+                                                                            <Image Source="{Binding PortraitImageSource}"
+                                                                                   Stretch="UniformToFill"
+                                                                                   SnapsToDevicePixels="True" />
+                                                                        </Grid>
+                                                                    </Border>
+
+                                                                    <Viewbox Grid.Row="2"
+                                                                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                                                        <TextBlock Text="{Binding ChipDisplayText}"
+                                                                                   FontSize="{Binding ChipDisplayFontSize}"
+                                                                                   Style="{StaticResource PlannerChampionChipTextStyle}" />
+                                                                    </Viewbox>
+
+                                                                    <Border Grid.Row="0"
+                                                                            Panel.ZIndex="10"
+                                                                            HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Top"
+                                                                            Margin="0,2,2,0"
+                                                                            Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
+                                                                            ToolTip="{Binding StatusText}">
+                                                                        <TextBlock Text="?"
+                                                                                   Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
+                                                                    </Border>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
                             </Grid>
                         </Border>
 
@@ -658,7 +904,7 @@
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="10" />
+                                    <RowDefinition Height="8" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
@@ -695,79 +941,170 @@
                                                VerticalAlignment="Center" />
                                 </Grid>
 
-                                <Border Grid.Row="2"
-                                        Style="{StaticResource PlannerChampionChipListFrameStyle}"
-                                        Margin="0,5,0,5">
-                                    <Grid>
-                                        <TextBlock x:Name="BanChampionPlaceholderText"
-                                                   Text="Waiting for champion select."
-                                                   FontSize="12"
-                                                   Foreground="{DynamicResource TextSubtleBrush}"
-                                                   FontStyle="Italic"
-                                                   TextWrapping="Wrap"
-                                                   VerticalAlignment="Center"
-                                                   Visibility="Visible" />
-                                        <ScrollViewer Style="{StaticResource PlannerPlanTileScrollViewerStyle}">
-                                            <ItemsControl x:Name="BanChampionPriorityList"
-                                                          VerticalAlignment="Top">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
-                                                                ToolTip="{Binding ToolTipText}">
-                                                            <Grid Width="48"
-                                                                  Height="64"
-                                                                  ClipToBounds="True">
-                                                                <Grid.RowDefinitions>
-                                                                    <RowDefinition Height="Auto" />
-                                                                    <RowDefinition Height="0" />
-                                                                    <RowDefinition Height="Auto" />
-                                                                </Grid.RowDefinitions>
+                                <Grid Grid.Row="2"
+                                      Margin="0,5,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                                                                <Border Grid.Row="0"
-                                                                        ClipToBounds="True"
-                                                                        Style="{StaticResource PlannerChampionPortraitSlotStyle}">
-                                                                    <Grid>
-                                                                        <viewControls:ChampionMysteryGlyph Width="30"
-                                                                                                           Height="30"
-                                                                                                           HorizontalAlignment="Center"
-                                                                                                           VerticalAlignment="Center"
-                                                                                                           Foreground="{DynamicResource TextSubtleBrush}" />
-                                                                        <Image Source="{Binding PortraitImageSource}"
-                                                                               Stretch="UniformToFill"
-                                                                               SnapsToDevicePixels="True" />
-                                                                    </Grid>
-                                                                </Border>
+                                    <Border x:Name="BanTargetChampionCell"
+                                            Grid.Column="0"
+                                            VerticalAlignment="Top"
+                                            Style="{StaticResource PlannerTargetCellStyle}">
+                                        <Grid Width="64"
+                                              Height="64">
+                                            <Border Style="{StaticResource PlannerTargetPortraitFrameStyle}">
+                                                <Grid>
+                                                    <viewControls:ChampionMysteryGlyph Width="34"
+                                                                                       Height="34"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"
+                                                                                       Foreground="{DynamicResource TextSubtleBrush}" />
+                                                    <Image x:Name="BanTargetChampionImage"
+                                                           Stretch="UniformToFill"
+                                                           SnapsToDevicePixels="True" />
+                                                </Grid>
+                                            </Border>
 
-                                                                <Viewbox Grid.Row="2"
-                                                                         Style="{StaticResource ChampionTileLabelViewboxStyle}">
-                                                                    <TextBlock Text="{Binding ChipDisplayText}"
-                                                                               FontSize="{Binding ChipDisplayFontSize}"
-                                                                               Style="{StaticResource PlannerChampionChipTextStyle}" />
-                                                                </Viewbox>
+                                            <Viewbox IsHitTestVisible="False"
+                                                     Stretch="Fill">
+                                                <Canvas Width="200"
+                                                        Height="200">
+                                                    <Rectangle Canvas.Left="12"
+                                                               Canvas.Top="12"
+                                                               Width="176"
+                                                               Height="176"
+                                                               RadiusX="8"
+                                                               RadiusY="8"
+                                                               Fill="Transparent"
+                                                               Stroke="{DynamicResource AppStrongBorderBrush}"
+                                                               StrokeThickness="2" />
+                                                    <Path Data="M 28 62 L 28 28 L 62 28"
+                                                          Stroke="{DynamicResource DangerAccentBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 138 28 L 172 28 L 172 62"
+                                                          Stroke="{DynamicResource DangerAccentBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 172 138 L 172 172 L 138 172"
+                                                          Stroke="{DynamicResource DangerAccentBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 62 172 L 28 172 L 28 138"
+                                                          Stroke="{DynamicResource DangerAccentBrush}"
+                                                          StrokeThickness="4"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round"
+                                                          StrokeLineJoin="Round" />
+                                                    <Path Data="M 100 12 L 100 25"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 100 188 L 100 175"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 12 100 L 25 100"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                    <Path Data="M 188 100 L 175 100"
+                                                          Stroke="{DynamicResource AppMutedBorderBrush}"
+                                                          StrokeThickness="2"
+                                                          StrokeStartLineCap="Round"
+                                                          StrokeEndLineCap="Round" />
+                                                </Canvas>
+                                            </Viewbox>
+                                        </Grid>
+                                    </Border>
 
-                                                                <Border Grid.Row="0"
-                                                                        Panel.ZIndex="10"
-                                                                        HorizontalAlignment="Right"
-                                                                        VerticalAlignment="Top"
-                                                                        Margin="0,2,2,0"
-                                                                        Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
-                                                                        ToolTip="{Binding StatusText}">
-                                                                    <TextBlock Text="?"
-                                                                               Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
-                                                                </Border>
-                                                            </Grid>
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </ScrollViewer>
-                                    </Grid>
-                                </Border>
+                                    <Border Grid.Column="2"
+                                            Style="{StaticResource PlannerChampionChipListFrameStyle}"
+                                            Padding="10,0">
+                                        <Grid ClipToBounds="True">
+                                            <TextBlock x:Name="BanChampionPlaceholderText"
+                                                       Text="Waiting for champion select."
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource TextSubtleBrush}"
+                                                       FontStyle="Italic"
+                                                       TextWrapping="Wrap"
+                                                       VerticalAlignment="Center"
+                                                       Visibility="Visible" />
+                                            <ScrollViewer Style="{StaticResource PlannerPlanTileScrollViewerStyle}">
+                                                <ItemsControl x:Name="BanChampionPriorityList"
+                                                              HorizontalAlignment="Left"
+                                                              VerticalAlignment="Top">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Style="{StaticResource PlannerPortraitChampionChipStyle}"
+                                                                    ToolTip="{Binding ToolTipText}">
+                                                                <Grid Width="48"
+                                                                      Height="64"
+                                                                      ClipToBounds="True">
+                                                                    <Grid.RowDefinitions>
+                                                                        <RowDefinition Height="Auto" />
+                                                                        <RowDefinition Height="0" />
+                                                                        <RowDefinition Height="Auto" />
+                                                                    </Grid.RowDefinitions>
+
+                                                                    <Border Grid.Row="0"
+                                                                            ClipToBounds="True"
+                                                                            Style="{StaticResource PlannerChampionPortraitSlotStyle}">
+                                                                        <Grid>
+                                                                            <viewControls:ChampionMysteryGlyph Width="30"
+                                                                                                               Height="30"
+                                                                                                               HorizontalAlignment="Center"
+                                                                                                               VerticalAlignment="Center"
+                                                                                                               Foreground="{DynamicResource TextSubtleBrush}" />
+                                                                            <Image Source="{Binding PortraitImageSource}"
+                                                                                   Stretch="UniformToFill"
+                                                                                   SnapsToDevicePixels="True" />
+                                                                        </Grid>
+                                                                    </Border>
+
+                                                                    <Viewbox Grid.Row="2"
+                                                                             Style="{StaticResource ChampionTileLabelViewboxStyle}">
+                                                                        <TextBlock Text="{Binding ChipDisplayText}"
+                                                                                   FontSize="{Binding ChipDisplayFontSize}"
+                                                                                   Style="{StaticResource PlannerChampionChipTextStyle}" />
+                                                                    </Viewbox>
+
+                                                                    <Border Grid.Row="0"
+                                                                            Panel.ZIndex="10"
+                                                                            HorizontalAlignment="Right"
+                                                                            VerticalAlignment="Top"
+                                                                            Margin="0,2,2,0"
+                                                                            Style="{StaticResource PlannerUnavailableHelpBadgeStyle}"
+                                                                            ToolTip="{Binding StatusText}">
+                                                                        <TextBlock Text="?"
+                                                                                   Style="{StaticResource PlannerUnavailableHelpTextStyle}" />
+                                                                    </Border>
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
                             </Grid>
                         </Border>
                     </Grid>

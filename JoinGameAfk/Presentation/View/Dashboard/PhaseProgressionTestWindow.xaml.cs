@@ -250,6 +250,55 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             AddChampionPlanItem(BanPlanBox.Text, _banPlan, "Ban");
         }
 
+        private void PreviewPlannerLayout_Click(object sender, RoutedEventArgs e)
+        {
+            _myTeamBans.Clear();
+            _enemyTeamBans.Clear();
+            _myTeamSlots.Clear();
+            _enemyTeamSlots.Clear();
+            _pickPlan.Clear();
+            _banPlan.Clear();
+
+            _myTeamSlots.Add(CreateTeamSlotItem("Lux", "Mid"));
+            _enemyTeamSlots.Add(CreateTeamSlotItem("Yasuo", "Mid"));
+            _myTeamBans.Add(CreateChampionPlanItem("Zed", string.Empty));
+            _enemyTeamBans.Add(CreateChampionPlanItem("Blitzcrank", string.Empty));
+
+            AddChampionPlanItems(
+                _pickPlan,
+                "Pick",
+                "Ahri",
+                "Lux",
+                "Jinx",
+                "Kai'Sa",
+                "Lee Sin",
+                "Thresh",
+                "Orianna",
+                "Ezreal",
+                "Morgana",
+                "Caitlyn",
+                "Ashe",
+                "Syndra");
+
+            AddChampionPlanItems(
+                _banPlan,
+                "Ban",
+                "Yasuo",
+                "Zed",
+                "Blitzcrank",
+                "Master Yi",
+                "Samira",
+                "Pyke",
+                "Draven",
+                "Katarina",
+                "Darius",
+                "Vayne",
+                "Akali",
+                "Irelia");
+
+            ApplyDashboardStatus();
+        }
+
         private void AddLog_Click(object sender, RoutedEventArgs e)
         {
             string message = NormalizeText(LogLineBox.Text);
@@ -336,16 +385,29 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             if (string.IsNullOrWhiteSpace(championName))
                 return;
 
-            target.Add(new DashboardChampionPlanItem
+            target.Add(CreateChampionPlanItem(championName, statusText));
+
+            ApplyDashboardStatus();
+        }
+
+        private static void AddChampionPlanItems(List<DashboardChampionPlanItem> target, string statusText, params string[] championNames)
+        {
+            foreach (string championName in championNames)
+                target.Add(CreateChampionPlanItem(championName, statusText));
+        }
+
+        private static DashboardChampionPlanItem CreateChampionPlanItem(string championName, string statusText)
+        {
+            championName = NormalizeText(championName);
+
+            return new DashboardChampionPlanItem
             {
                 ChampionId = ResolveChampionId(championName),
                 Name = championName,
                 SourcePosition = Position.Default,
                 IsAvailable = true,
                 StatusText = statusText
-            });
-
-            ApplyDashboardStatus();
+            };
         }
 
         private void AddTeamChampion(string championText, string roleText, List<DashboardTeamSlotItem> target)
@@ -355,15 +417,21 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 return;
 
             string roleName = NormalizeText(roleText);
-            int championId = ResolveChampionId(championName);
-            target.Add(new DashboardTeamSlotItem
-            {
-                ChampionId = championId,
-                ChampionName = championName,
-                RoleName = string.IsNullOrWhiteSpace(roleName) ? "Manual test" : roleName
-            });
+            target.Add(CreateTeamSlotItem(championName, string.IsNullOrWhiteSpace(roleName) ? "Manual test" : roleName));
 
             ApplyDashboardStatus();
+        }
+
+        private static DashboardTeamSlotItem CreateTeamSlotItem(string championName, string roleName)
+        {
+            championName = NormalizeText(championName);
+
+            return new DashboardTeamSlotItem
+            {
+                ChampionId = ResolveChampionId(championName),
+                ChampionName = championName,
+                RoleName = roleName
+            };
         }
 
         private void ApplyDashboardStatus()

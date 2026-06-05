@@ -387,6 +387,11 @@
                                     Click="AddBanPlan_Click"
                                     Style="{StaticResource TesterActionButtonStyle}" />
                         </Grid>
+                        <Button Content="Preview planner layout"
+                                Click="PreviewPlannerLayout_Click"
+                                Style="{StaticResource TesterActionButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Margin="0,10,0,0" />
                     </StackPanel>
                 </Border>
 

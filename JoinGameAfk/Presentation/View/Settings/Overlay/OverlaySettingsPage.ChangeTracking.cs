@@ -17,7 +17,8 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
                 PickBanOpenOnStartupCheckBox,
                 PickBanTopmostCheckBox,
                 PickBanShowPhaseSummaryCheckBox,
-                PickBanShowTimersCheckBox,
+                PickBanShowPhaseTimerCheckBox,
+                PickBanShowLockTimerCheckBox,
                 PickBanShowPickPlanCheckBox,
                 PickBanShowBanPlanCheckBox
             ];
@@ -29,7 +30,6 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
             }
 
             QueueOverlayScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
-            PickBanScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
             PickBanOpacitySlider.ValueChanged += OverlaySlider_ValueChanged;
         }
 
@@ -70,10 +70,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
                 PickBanOpenOnStartupCheckBox.IsChecked == true,
                 PickBanTopmostCheckBox.IsChecked == true,
                 PickBanShowPhaseSummaryCheckBox.IsChecked == true,
-                PickBanShowTimersCheckBox.IsChecked == true,
+                PickBanShowPhaseTimerCheckBox.IsChecked == true,
+                PickBanShowLockTimerCheckBox.IsChecked == true,
                 PickBanShowPickPlanCheckBox.IsChecked == true,
                 PickBanShowBanPlanCheckBox.IsChecked == true,
-                GetPickBanScalePercent(),
                 GetPickBanOpacityPercent());
         }
 
@@ -88,10 +88,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
                 _settings.PickBanOverlayOpenOnStartup,
                 _settings.PickBanOverlayTopmostEnabled,
                 _settings.PickBanOverlayShowPhaseSummary,
-                _settings.PickBanOverlayShowTimers,
+                _settings.PickBanOverlayShowPhaseTimer,
+                _settings.PickBanOverlayShowLockTimer,
                 _settings.PickBanOverlayShowPickPlan,
                 _settings.PickBanOverlayShowBanPlan,
-                OverlaySettings.NormalizePickBanOverlayScalePercent(_settings.PickBanOverlayScalePercent),
                 OverlaySettings.NormalizePickBanOverlayOpacityPercent(_settings.PickBanOverlayOpacityPercent));
         }
     }

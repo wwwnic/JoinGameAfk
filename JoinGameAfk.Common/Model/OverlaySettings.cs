@@ -11,6 +11,9 @@ namespace JoinGameAfk.Model
         public const int MinPickBanOverlayOpacityPercent = 55;
         public const int MaxPickBanOverlayOpacityPercent = 100;
         public const int DefaultPickBanOverlayOpacityPercent = 94;
+        public const double DefaultPickBanOverlayTargetsLockWidth = 288;
+        public const double DefaultPickBanOverlayEverythingWidth = 360;
+        public const double DefaultPickBanOverlayCompactScrollHeight = 172;
         public const int MinQueueMicroOverlayScalePercent = 80;
         public const int MaxQueueMicroOverlayScalePercent = 180;
         public const int DefaultQueueMicroOverlayScalePercent = 100;
@@ -29,14 +32,16 @@ namespace JoinGameAfk.Model
         public double? PickBanOverlayLeft { get; set; }
         public double? PickBanOverlayTop { get; set; }
         public int PickBanOverlayScalePercent { get; set; } = DefaultPickBanOverlayScalePercent;
-        public double? PickBanOverlayWidth { get; set; }
+        public double? PickBanOverlayWidth { get; set; } = DefaultPickBanOverlayTargetsLockWidth;
         public double? PickBanOverlayHeight { get; set; }
         public int PickBanOverlayOpacityPercent { get; set; } = DefaultPickBanOverlayOpacityPercent;
         public bool PickBanOverlayTopmostEnabled { get; set; } = true;
         public bool PickBanOverlayShowPhaseSummary { get; set; } = true;
         public bool PickBanOverlayShowTimers { get; set; } = true;
-        public bool PickBanOverlayShowPickPlan { get; set; } = true;
-        public bool PickBanOverlayShowBanPlan { get; set; } = true;
+        public bool PickBanOverlayShowPhaseTimer { get; set; }
+        public bool PickBanOverlayShowLockTimer { get; set; } = true;
+        public bool PickBanOverlayShowPickPlan { get; set; }
+        public bool PickBanOverlayShowBanPlan { get; set; }
 
         public event Action? Saved;
 
@@ -73,8 +78,62 @@ namespace JoinGameAfk.Model
             PickBanOverlayTopmostEnabled = defaults.PickBanOverlayTopmostEnabled;
             PickBanOverlayShowPhaseSummary = defaults.PickBanOverlayShowPhaseSummary;
             PickBanOverlayShowTimers = defaults.PickBanOverlayShowTimers;
+            PickBanOverlayShowPhaseTimer = defaults.PickBanOverlayShowPhaseTimer;
+            PickBanOverlayShowLockTimer = defaults.PickBanOverlayShowLockTimer;
             PickBanOverlayShowPickPlan = defaults.PickBanOverlayShowPickPlan;
             PickBanOverlayShowBanPlan = defaults.PickBanOverlayShowBanPlan;
+        }
+
+        public void ApplyPickBanTargetsLockPreset()
+        {
+            PickBanOverlayScalePercent = DefaultPickBanOverlayScalePercent;
+            PickBanOverlayWidth = DefaultPickBanOverlayTargetsLockWidth;
+            PickBanOverlayHeight = null;
+            PickBanOverlayShowPhaseSummary = true;
+            PickBanOverlayShowTimers = true;
+            PickBanOverlayShowPhaseTimer = false;
+            PickBanOverlayShowLockTimer = true;
+            PickBanOverlayShowPickPlan = false;
+            PickBanOverlayShowBanPlan = false;
+        }
+
+        public void ApplyPickBanEverythingPreset()
+        {
+            PickBanOverlayScalePercent = DefaultPickBanOverlayScalePercent;
+            PickBanOverlayWidth = DefaultPickBanOverlayEverythingWidth;
+            PickBanOverlayHeight = null;
+            PickBanOverlayShowPhaseSummary = true;
+            PickBanOverlayShowTimers = true;
+            PickBanOverlayShowPhaseTimer = true;
+            PickBanOverlayShowLockTimer = true;
+            PickBanOverlayShowPickPlan = true;
+            PickBanOverlayShowBanPlan = true;
+        }
+
+        public void ApplyPickBanTargetsEverythingCompactPreset()
+        {
+            PickBanOverlayScalePercent = DefaultPickBanOverlayScalePercent;
+            PickBanOverlayWidth = DefaultPickBanOverlayTargetsLockWidth;
+            PickBanOverlayHeight = DefaultPickBanOverlayCompactScrollHeight;
+            PickBanOverlayShowPhaseSummary = true;
+            PickBanOverlayShowTimers = true;
+            PickBanOverlayShowPhaseTimer = false;
+            PickBanOverlayShowLockTimer = true;
+            PickBanOverlayShowPickPlan = true;
+            PickBanOverlayShowBanPlan = true;
+        }
+
+        public void ApplyPickBanEverythingCompactPreset()
+        {
+            PickBanOverlayScalePercent = DefaultPickBanOverlayScalePercent;
+            PickBanOverlayWidth = DefaultPickBanOverlayEverythingWidth;
+            PickBanOverlayHeight = DefaultPickBanOverlayCompactScrollHeight;
+            PickBanOverlayShowPhaseSummary = true;
+            PickBanOverlayShowTimers = true;
+            PickBanOverlayShowPhaseTimer = true;
+            PickBanOverlayShowLockTimer = true;
+            PickBanOverlayShowPickPlan = true;
+            PickBanOverlayShowBanPlan = true;
         }
 
         public void NormalizeOptions()
@@ -89,13 +148,15 @@ namespace JoinGameAfk.Model
             PickBanOverlayOpacityPercent = NormalizePickBanOverlayOpacityPercent(PickBanOverlayOpacityPercent);
             PickBanOverlayLeft = NormalizeNullableScreenCoordinate(PickBanOverlayLeft);
             PickBanOverlayTop = NormalizeNullableScreenCoordinate(PickBanOverlayTop);
+            NormalizePickBanOverlayTimerOptions();
             EnsurePickBanOverlayHasVisibleSection();
         }
 
         public void EnsurePickBanOverlayHasVisibleSection()
         {
             if (PickBanOverlayShowPhaseSummary
-                || PickBanOverlayShowTimers
+                || PickBanOverlayShowPhaseTimer
+                || PickBanOverlayShowLockTimer
                 || PickBanOverlayShowPickPlan
                 || PickBanOverlayShowBanPlan)
             {
@@ -103,6 +164,17 @@ namespace JoinGameAfk.Model
             }
 
             PickBanOverlayShowPhaseSummary = true;
+        }
+
+        private void NormalizePickBanOverlayTimerOptions()
+        {
+            if (!PickBanOverlayShowTimers)
+            {
+                PickBanOverlayShowPhaseTimer = false;
+                PickBanOverlayShowLockTimer = false;
+            }
+
+            PickBanOverlayShowTimers = PickBanOverlayShowPhaseTimer || PickBanOverlayShowLockTimer;
         }
 
         public static int NormalizePickBanOverlayScalePercent(int scalePercent)

@@ -11,10 +11,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
             PickBanOpenOnStartupCheckBox.IsChecked = _settings.PickBanOverlayOpenOnStartup;
             PickBanTopmostCheckBox.IsChecked = _settings.PickBanOverlayTopmostEnabled;
             PickBanShowPhaseSummaryCheckBox.IsChecked = _settings.PickBanOverlayShowPhaseSummary;
-            PickBanShowTimersCheckBox.IsChecked = _settings.PickBanOverlayShowTimers;
+            PickBanShowPhaseTimerCheckBox.IsChecked = _settings.PickBanOverlayShowPhaseTimer;
+            PickBanShowLockTimerCheckBox.IsChecked = _settings.PickBanOverlayShowLockTimer;
             PickBanShowPickPlanCheckBox.IsChecked = _settings.PickBanOverlayShowPickPlan;
             PickBanShowBanPlanCheckBox.IsChecked = _settings.PickBanOverlayShowBanPlan;
-            PickBanScaleSlider.Value = OverlaySettings.NormalizePickBanOverlayScalePercent(_settings.PickBanOverlayScalePercent);
             PickBanOpacitySlider.Value = OverlaySettings.NormalizePickBanOverlayOpacityPercent(_settings.PickBanOverlayOpacityPercent);
         }
 
@@ -26,25 +26,19 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
             _settings.PickBanOverlayTopmostEnabled = PickBanTopmostCheckBox.IsChecked == true;
             EnsureVisiblePickBanSection();
             _settings.PickBanOverlayShowPhaseSummary = PickBanShowPhaseSummaryCheckBox.IsChecked == true;
-            _settings.PickBanOverlayShowTimers = PickBanShowTimersCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowPhaseTimer = PickBanShowPhaseTimerCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowLockTimer = PickBanShowLockTimerCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowTimers = _settings.PickBanOverlayShowPhaseTimer || _settings.PickBanOverlayShowLockTimer;
             _settings.PickBanOverlayShowPickPlan = PickBanShowPickPlanCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowBanPlan = PickBanShowBanPlanCheckBox.IsChecked == true;
-
-            int pickBanScalePercent = GetPickBanScalePercent();
-            if (_settings.PickBanOverlayScalePercent != pickBanScalePercent)
-            {
-                _settings.PickBanOverlayWidth = null;
-                _settings.PickBanOverlayHeight = null;
-            }
-
-            _settings.PickBanOverlayScalePercent = pickBanScalePercent;
             _settings.PickBanOverlayOpacityPercent = GetPickBanOpacityPercent();
         }
 
         private void EnsureVisiblePickBanSection()
         {
             if (PickBanShowPhaseSummaryCheckBox.IsChecked == true
-                || PickBanShowTimersCheckBox.IsChecked == true
+                || PickBanShowPhaseTimerCheckBox.IsChecked == true
+                || PickBanShowLockTimerCheckBox.IsChecked == true
                 || PickBanShowPickPlanCheckBox.IsChecked == true
                 || PickBanShowBanPlanCheckBox.IsChecked == true)
             {
@@ -52,11 +46,6 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
             }
 
             PickBanShowPhaseSummaryCheckBox.IsChecked = true;
-        }
-
-        private int GetPickBanScalePercent()
-        {
-            return OverlaySettings.NormalizePickBanOverlayScalePercent((int)Math.Round(PickBanScaleSlider.Value));
         }
 
         private int GetPickBanOpacityPercent()

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
@@ -12,7 +13,7 @@ namespace JoinGameAfk.Presentation.View.Overlays
 {
     public partial class PickBanOverlayWindow : Window
     {
-        private const double FullLayoutBaseWidth = 360;
+        private const double FullLayoutBaseWidth = OverlaySettings.DefaultPickBanOverlayEverythingWidth;
         private const double FullLayoutBaseHeight = 435;
         private const double ScreenPadding = 8;
         private const double SettingsPopupWidth = 332;
@@ -42,7 +43,6 @@ namespace JoinGameAfk.Presentation.View.Overlays
             _settings = settings;
             _settings.NormalizeOptions();
             InitializeComponent();
-            ScaleSlider.ValueChanged += OverlaySlider_ValueChanged;
             OpacitySlider.ValueChanged += OverlaySlider_ValueChanged;
 
             _overlaySettingsSaveTimer = new DispatcherTimer
@@ -152,7 +152,8 @@ namespace JoinGameAfk.Presentation.View.Overlays
 
             PickLockText.Text = GetPlanLockText(status.PickLockText);
             BanLockText.Text = GetPlanLockText(status.BanLockText);
-            PositionText.Text = GetPositionText(status.CurrentPosition);
+            UpdateTargetChampionCell(OverlayPickTargetChampionCell, OverlayPickTargetChampionImage, status.PickChampionPriority, "No available pick");
+            UpdateTargetChampionCell(OverlayBanTargetChampionCell, OverlayBanTargetChampionImage, status.BanChampionPriority, "No available ban");
             _draftCountdownTimer.Update(status);
         }
 
@@ -194,7 +195,6 @@ namespace JoinGameAfk.Presentation.View.Overlays
         private void RefreshStatusDisplay()
         {
             StatusText.Text = GetStatusLine(_currentPhase);
-            PhaseText.Text = GetPhaseText(_currentPhase);
             OverlayPhaseIndicator.Update(
                 _currentPhase,
                 _isWatcherRunning,
@@ -229,31 +229,46 @@ namespace JoinGameAfk.Presentation.View.Overlays
             };
         }
 
-        private string GetPhaseText(ClientPhase phase)
-        {
-            if (phase is ClientPhase.ChampSelect or ClientPhase.Planning)
-            {
-                string subPhase = string.IsNullOrWhiteSpace(_champSelectSubPhase)
-                    ? "Idle"
-                    : _champSelectSubPhase;
-                return subPhase;
-            }
-
-            return GetStatusLine(phase);
-        }
-
-        private static string GetPositionText(Position position)
-        {
-            return position is Position.None or Position.Default
-                ? "No role"
-                : position.ToString();
-        }
-
         private static string GetPlanLockText(string lockText)
         {
             return string.IsNullOrWhiteSpace(lockText)
                 ? "Lock timing unavailable."
                 : lockText;
+        }
+
+        private void UpdateTargetChampionCell(FrameworkElement targetCell, Image targetImage, IReadOnlyList<DashboardChampionPlanItem> champions, string unavailableText)
+        {
+            var targetChampion = champions.FirstOrDefault(champion => champion.IsAvailable);
+            if (targetChampion is null)
+            {
+                targetImage.Source = null;
+                targetCell.ToolTip = champions.Count > 0 ? unavailableText : null;
+                return;
+            }
+
+            string championName = GetChampionDisplayName(targetChampion.ChampionId, targetChampion.Name);
+            targetImage.Source = GetChampionPortrait(targetChampion.ChampionId, championName);
+            targetCell.ToolTip = championName;
+        }
+
+        private ImageSource? GetChampionPortrait(int championId, string championName)
+        {
+            if (championId > 0)
+                return ChampionTileCatalog.GetSelectedImageSource(championId);
+
+            return ChampionCatalog.TryGetByName(championName, out var champion)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id)
+                : null;
+        }
+
+        private static string GetChampionDisplayName(int championId, string fallbackName)
+        {
+            if (championId > 0 && ChampionCatalog.TryGetById(championId, out var champion))
+                return champion!.Name;
+
+            return string.IsNullOrWhiteSpace(fallbackName)
+                ? "No champion"
+                : fallbackName;
         }
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
@@ -284,24 +299,40 @@ namespace JoinGameAfk.Presentation.View.Overlays
             QueueOverlaySettingsSave();
         }
 
+        private void TargetsLockPresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyPickBanOverlayPreset(_settings.ApplyPickBanTargetsLockPreset);
+        }
+
+        private void TargetsEverythingCompactPresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyPickBanOverlayPreset(_settings.ApplyPickBanTargetsEverythingCompactPreset);
+        }
+
+        private void EverythingPresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyPickBanOverlayPreset(_settings.ApplyPickBanEverythingPreset);
+        }
+
+        private void EverythingCompactPresetButton_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyPickBanOverlayPreset(_settings.ApplyPickBanEverythingCompactPreset);
+        }
+
         private void ResetOverlayViewButton_Click(object sender, RoutedEventArgs e)
         {
-            ResetOverlayDisplayDefaults();
+            _settings.ApplyPickBanTargetsLockPreset();
             _settings.PickBanOverlayOpacityPercent = OverlaySettings.DefaultPickBanOverlayOpacityPercent;
             _settings.PickBanOverlayTopmostEnabled = true;
             ApplyOverlaySettings(updateControls: true);
-            QueueOverlaySettingsSave();
+            QueueOverlaySettingsPersist();
         }
 
-        private void ResetOverlayDisplayDefaults()
+        private void ApplyPickBanOverlayPreset(Action applyPreset)
         {
-            _settings.PickBanOverlayScalePercent = OverlaySettings.DefaultPickBanOverlayScalePercent;
-            _settings.PickBanOverlayWidth = null;
-            _settings.PickBanOverlayHeight = null;
-            _settings.PickBanOverlayShowPhaseSummary = true;
-            _settings.PickBanOverlayShowTimers = true;
-            _settings.PickBanOverlayShowPickPlan = true;
-            _settings.PickBanOverlayShowBanPlan = true;
+            applyPreset();
+            ApplyOverlaySettings(updateControls: true);
+            QueueOverlaySettingsPersist();
         }
 
         private void ApplyOverlaySettings(bool updateControls)
@@ -330,11 +361,11 @@ namespace JoinGameAfk.Presentation.View.Overlays
 
         private void ApplySettingsToOverlayControls()
         {
-            ScaleSlider.Value = _settings.PickBanOverlayScalePercent;
             OpacitySlider.Value = _settings.PickBanOverlayOpacityPercent;
             TopmostCheckBox.IsChecked = _settings.PickBanOverlayTopmostEnabled;
             ShowPhaseSummaryCheckBox.IsChecked = _settings.PickBanOverlayShowPhaseSummary;
-            ShowTimersCheckBox.IsChecked = _settings.PickBanOverlayShowTimers;
+            ShowPhaseTimerCheckBox.IsChecked = _settings.PickBanOverlayShowPhaseTimer;
+            ShowLockTimerCheckBox.IsChecked = _settings.PickBanOverlayShowLockTimer;
             ShowPickPlanCheckBox.IsChecked = _settings.PickBanOverlayShowPickPlan;
             ShowBanPlanCheckBox.IsChecked = _settings.PickBanOverlayShowBanPlan;
             RefreshSliderValueText();
@@ -345,18 +376,12 @@ namespace JoinGameAfk.Presentation.View.Overlays
             if (_isApplyingOverlaySettings)
                 return;
 
-            int scalePercent = OverlaySettings.NormalizePickBanOverlayScalePercent((int)Math.Round(ScaleSlider.Value));
-            if (_settings.PickBanOverlayScalePercent != scalePercent)
-            {
-                _settings.PickBanOverlayWidth = null;
-                _settings.PickBanOverlayHeight = null;
-            }
-
-            _settings.PickBanOverlayScalePercent = scalePercent;
             _settings.PickBanOverlayOpacityPercent = OverlaySettings.NormalizePickBanOverlayOpacityPercent((int)Math.Round(OpacitySlider.Value));
             _settings.PickBanOverlayTopmostEnabled = TopmostCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowPhaseSummary = ShowPhaseSummaryCheckBox.IsChecked == true;
-            _settings.PickBanOverlayShowTimers = ShowTimersCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowPhaseTimer = ShowPhaseTimerCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowLockTimer = ShowLockTimerCheckBox.IsChecked == true;
+            _settings.PickBanOverlayShowTimers = _settings.PickBanOverlayShowPhaseTimer || _settings.PickBanOverlayShowLockTimer;
             _settings.PickBanOverlayShowPickPlan = ShowPickPlanCheckBox.IsChecked == true;
             _settings.PickBanOverlayShowBanPlan = ShowBanPlanCheckBox.IsChecked == true;
             EnsureAtLeastOneOverlaySection();
@@ -393,12 +418,13 @@ namespace JoinGameAfk.Presentation.View.Overlays
         private void ApplyOverlaySectionVisibility()
         {
             bool showPhaseSummary = _settings.PickBanOverlayShowPhaseSummary;
-            bool showTimers = _settings.PickBanOverlayShowTimers;
+            bool showPhaseTimer = _settings.PickBanOverlayShowPhaseTimer;
+            bool showLockTimer = _settings.PickBanOverlayShowLockTimer;
 
-            PhaseTimerSection.Visibility = ToVisibility(showPhaseSummary || showTimers);
-            PhaseSummaryPanel.Visibility = ToVisibility(showPhaseSummary);
-            PhaseTimerCard.Visibility = ToVisibility(showTimers);
-            LockTimerCard.Visibility = ToVisibility(showTimers);
+            PhaseTimerSection.Visibility = ToVisibility(showPhaseSummary || showPhaseTimer || showLockTimer);
+            TargetSelectionPanel.Visibility = ToVisibility(showPhaseSummary);
+            PhaseTimerCard.Visibility = ToVisibility(showPhaseTimer);
+            LockTimerCard.Visibility = ToVisibility(showLockTimer);
             PickPlanSection.Visibility = ToVisibility(_settings.PickBanOverlayShowPickPlan);
             BanPlanSection.Visibility = ToVisibility(_settings.PickBanOverlayShowBanPlan);
             ContentPanel.Margin = new Thickness(12, 12, 18, 18);
@@ -422,7 +448,7 @@ namespace JoinGameAfk.Presentation.View.Overlays
             MaxWidth = GetMaxOverlayWidth();
             MaxHeight = GetMaxOverlayHeight();
             Height = Math.Round(ClampToRange(requestedHeight, MinHeight, maxHeight));
-            OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
             RefreshOpenSettingsPopupPlacement();
         }
 
@@ -461,7 +487,6 @@ namespace JoinGameAfk.Presentation.View.Overlays
 
         private void RefreshSliderValueText()
         {
-            ScaleValueText.Text = $"{_settings.PickBanOverlayScalePercent}%";
             OpacityValueText.Text = $"{_settings.PickBanOverlayOpacityPercent}%";
         }
 
@@ -525,7 +550,7 @@ namespace JoinGameAfk.Presentation.View.Overlays
                 maxHeight);
 
             Height = Math.Round(targetHeight);
-            OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+            OverlayScrollViewer.VerticalScrollBarVisibility = ScrollBarVisibility.Visible;
             RefreshOpenSettingsPopupPlacement();
             e.Handled = true;
         }

@@ -11,10 +11,10 @@ namespace JoinGameAfk.Presentation.View.Settings.Overlay
             bool PickBanOverlayOpenOnStartup,
             bool PickBanOverlayTopmostEnabled,
             bool PickBanOverlayShowPhaseSummary,
-            bool PickBanOverlayShowTimers,
+            bool PickBanOverlayShowPhaseTimer,
+            bool PickBanOverlayShowLockTimer,
             bool PickBanOverlayShowPickPlan,
             bool PickBanOverlayShowBanPlan,
-            int PickBanOverlayScalePercent,
             int PickBanOverlayOpacityPercent);
     }
 }
