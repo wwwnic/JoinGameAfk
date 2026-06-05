@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace JoinGameAfk.Tools.MockLeagueClient;
@@ -10,6 +11,13 @@ namespace JoinGameAfk.Tools.MockLeagueClient;
 public partial class MainWindow : Window
 {
     private static readonly TimeSpan ChampionSelectRestartExitDelay = TimeSpan.FromMilliseconds(500);
+    private static readonly IReadOnlyList<int> TimedCustomActionCellIds = Enumerable.Range(1, 10).ToList();
+    private static readonly IReadOnlyList<TimedCustomActionTypeOption> TimedCustomActionTypeOptions =
+    [
+        new(TimedCustomActionType.RoleSwap, MockLeagueClientState.GetCustomTimedActionTypeDisplayName(TimedCustomActionType.RoleSwap)),
+        new(TimedCustomActionType.ChampionSwap, MockLeagueClientState.GetCustomTimedActionTypeDisplayName(TimedCustomActionType.ChampionSwap)),
+        new(TimedCustomActionType.PickOrderSwap, MockLeagueClientState.GetCustomTimedActionTypeDisplayName(TimedCustomActionType.PickOrderSwap))
+    ];
 
     private readonly MockLeagueClientState _state = new();
     private readonly ObservableCollection<string> _logs = [];
@@ -17,6 +25,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<TeamSlot> _theirTeamSlots = [];
     private readonly ObservableCollection<ChampSelectAction> _actions = [];
     private readonly ObservableCollection<TimedActionPlan> _timedActionPlans = [];
+    private readonly ObservableCollection<TimedCustomAction> _customTimedActions = [];
     private readonly IReadOnlyList<ChampionOption> _champions = ChampionOption.LoadAll();
     private readonly DispatcherTimer _draftCountdownTimer = new();
     private MockLeagueClientSnapshot? _draftPlaybackEditSnapshot;
@@ -34,6 +43,11 @@ public partial class MainWindow : Window
         DraftMyTeamGrid.ItemsSource = _myTeamSlots;
         DraftTheirTeamGrid.ItemsSource = _theirTeamSlots;
         ActionsGrid.ItemsSource = _timedActionPlans;
+        CustomTimedActionsGrid.ItemsSource = _customTimedActions;
+        ConfigureComboBoxGridEditing(DraftMyTeamGrid);
+        ConfigureComboBoxGridEditing(DraftTheirTeamGrid);
+        ConfigureComboBoxGridEditing(ActionsGrid);
+        ConfigureComboBoxGridEditing(CustomTimedActionsGrid);
         ConfigureChampionColumn(DraftMyTeamChampionColumn);
         ConfigureChampionColumn(DraftMyTeamIntentColumn);
         ConfigureChampionColumn(DraftMyTeamBanIntentColumn);
@@ -44,6 +58,7 @@ public partial class MainWindow : Window
         ConfigureChampionColumn(DraftTheirTeamBanColumn);
         ConfigureChampionColumn(ActionPickChampionColumn);
         ConfigureChampionColumn(ActionBanChampionColumn);
+        ConfigureCustomTimedActionControls();
         SetRoleBoxFromValue(LocalPlayerRoleBox, MockLeagueClientRoles.DefaultRole);
         SetQueueModeBoxFromValue(QueueModeBox, MockQueueMode.DraftPick);
         SetLocalPlayerCellBoxFromValue(LocalPlayerCellBox, 1);
@@ -327,6 +342,35 @@ public partial class MainWindow : Window
         await RestartChampSelectAsync();
     }
 
+    private void AddCustomTimedActionButton_Click(object sender, RoutedEventArgs e)
+    {
+        CommitGridEdits(CustomTimedActionsGrid);
+        var type = GetSelectedCustomTimedActionType();
+        int nextId = _customTimedActions.Count == 0
+            ? 1
+            : _customTimedActions.Max(action => action.Id) + 1;
+
+        _customTimedActions.Add(new TimedCustomAction
+        {
+            Id = nextId,
+            Type = type,
+            SourceCellId = 1,
+            TargetCellId = 2,
+            TriggerAtSeconds = 0
+        });
+        AddLog($"Optional timed action added: {MockLeagueClientState.GetCustomTimedActionTypeDisplayName(type)}.");
+    }
+
+    private void RemoveCustomTimedActionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not TimedCustomAction action)
+            return;
+
+        CommitGridEdits(CustomTimedActionsGrid);
+        _customTimedActions.Remove(action);
+        AddLog($"Optional timed action removed: {MockLeagueClientState.GetCustomTimedActionTypeDisplayName(action.Type)}.");
+    }
+
     private async void DraftCountdownTimer_Tick(object? sender, EventArgs e)
     {
         if (_isDraftCountdownTicking)
@@ -469,6 +513,7 @@ public partial class MainWindow : Window
         CommitGridEdits(DraftMyTeamGrid);
         CommitGridEdits(DraftTheirTeamGrid);
         CommitGridEdits(ActionsGrid);
+        CommitGridEdits(CustomTimedActionsGrid);
         ApplyLocalPlayerRoleToGrid();
         ApplyTimedActionPlansToActions();
 
@@ -485,13 +530,84 @@ public partial class MainWindow : Window
             _theirTeamSlots,
             myTeamBanIds,
             theirTeamBanIds,
-            _actions);
+            _actions,
+            _customTimedActions);
     }
 
     private static void CommitGridEdits(DataGrid grid)
     {
         grid.CommitEdit(DataGridEditingUnit.Cell, true);
         grid.CommitEdit(DataGridEditingUnit.Row, true);
+    }
+
+    private static void ConfigureComboBoxGridEditing(DataGrid grid)
+    {
+        grid.PreviewMouseLeftButtonDown += DataGrid_PreviewMouseLeftButtonDown;
+    }
+
+    private static void DataGrid_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not DataGrid grid)
+            return;
+
+        var cell = FindVisualParent<DataGridCell>(e.OriginalSource as DependencyObject);
+        if (cell is null || cell.Column is not DataGridComboBoxColumn || cell.IsEditing)
+            return;
+
+        if (FindVisualParent<ComboBox>(e.OriginalSource as DependencyObject) is not null)
+            return;
+
+        if (!cell.IsFocused)
+            cell.Focus();
+
+        grid.CurrentCell = new DataGridCellInfo(cell.DataContext, cell.Column);
+        if (cell.DataContext is not null)
+            grid.SelectedItem = cell.DataContext;
+
+        grid.BeginEdit(e);
+        e.Handled = true;
+
+        grid.Dispatcher.BeginInvoke(() =>
+        {
+            var comboBox = FindVisualChild<ComboBox>(cell);
+            if (comboBox is null || !comboBox.IsEnabled)
+                return;
+
+            comboBox.Focus();
+            comboBox.IsDropDownOpen = true;
+        }, DispatcherPriority.Input);
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child)
+        where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T match)
+                return match;
+
+            child = VisualTreeHelper.GetParent(child);
+        }
+
+        return null;
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        int childCount = VisualTreeHelper.GetChildrenCount(parent);
+        for (int index = 0; index < childCount; index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is T match)
+                return match;
+
+            var descendant = FindVisualChild<T>(child);
+            if (descendant is not null)
+                return descendant;
+        }
+
+        return null;
     }
 
     private async Task ApplyDraftStepAsync(DraftPickStep step)
@@ -566,6 +682,7 @@ public partial class MainWindow : Window
             ReplaceCollection(_myTeamSlots, snapshot.MyTeam);
             ReplaceCollection(_theirTeamSlots, snapshot.TheirTeam);
             ReplaceCollection(_actions, snapshot.Actions);
+            ReplaceCollection(_customTimedActions, snapshot.CustomTimedActions);
             UpdateTimedActionColumnVisibility(snapshot);
             ReplaceCollection(_timedActionPlans, CreateTimedActionPlans(snapshot));
         }
@@ -617,6 +734,25 @@ public partial class MainWindow : Window
             column.ElementStyle = CreateChampionColumnComboBoxStyle(championComboBoxStyle, isReadOnly: true);
             column.EditingElementStyle = CreateChampionColumnComboBoxStyle(championComboBoxStyle, isReadOnly: false);
         }
+    }
+
+    private void ConfigureCustomTimedActionControls()
+    {
+        CustomTimedActionTypeBox.ItemsSource = TimedCustomActionTypeOptions;
+        CustomTimedActionTypeBox.DisplayMemberPath = nameof(TimedCustomActionTypeOption.DisplayName);
+        CustomTimedActionTypeBox.SelectedValuePath = nameof(TimedCustomActionTypeOption.Type);
+        CustomTimedActionTypeBox.SelectedIndex = 0;
+
+        CustomTimedActionTypeColumn.ItemsSource = TimedCustomActionTypeOptions;
+        CustomTimedActionSourceCellColumn.ItemsSource = TimedCustomActionCellIds;
+        CustomTimedActionTargetCellColumn.ItemsSource = TimedCustomActionCellIds;
+    }
+
+    private TimedCustomActionType GetSelectedCustomTimedActionType()
+    {
+        return CustomTimedActionTypeBox.SelectedValue is TimedCustomActionType type
+            ? type
+            : TimedCustomActionType.RoleSwap;
     }
 
     private static IReadOnlyList<TimedActionPlan> CreateTimedActionPlans(MockLeagueClientSnapshot snapshot)
@@ -1044,6 +1180,23 @@ internal sealed class TimedActionPlan
     public int BanChampionId { get; set; }
     public int? BanHoverAtSeconds { get; set; }
     public int? BanLockAtSeconds { get; set; }
+}
+
+internal sealed class TimedCustomActionTypeOption
+{
+    public TimedCustomActionTypeOption(TimedCustomActionType type, string displayName)
+    {
+        Type = type;
+        DisplayName = displayName;
+    }
+
+    public TimedCustomActionType Type { get; }
+    public string DisplayName { get; }
+
+    public override string ToString()
+    {
+        return DisplayName;
+    }
 }
 
 internal enum TimedActionMode

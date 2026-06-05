@@ -65,6 +65,7 @@ internal sealed class MockLeagueClientState
     private readonly List<int> _myTeamBans = [];
     private readonly List<int> _theirTeamBans = [];
     private readonly List<ChampSelectAction> _actions = [];
+    private readonly List<TimedCustomAction> _customTimedActions = [];
     private readonly Dictionary<DraftPickStep, DraftStepState> _draftStepStates = [];
 
     public event EventHandler? Changed;
@@ -95,7 +96,8 @@ internal sealed class MockLeagueClientState
                 _theirTeam.Select(slot => slot.Clone()).ToList(),
                 _myTeamBans.ToList(),
                 _theirTeamBans.ToList(),
-                _actions.Select(action => action.Clone()).ToList());
+                _actions.Select(action => action.Clone()).ToList(),
+                _customTimedActions.Select(action => action.Clone()).ToList());
         }
     }
 
@@ -285,7 +287,8 @@ internal sealed class MockLeagueClientState
         IEnumerable<TeamSlot> theirTeam,
         IEnumerable<int> myTeamBans,
         IEnumerable<int> theirTeamBans,
-        IEnumerable<ChampSelectAction> actions)
+        IEnumerable<ChampSelectAction> actions,
+        IEnumerable<TimedCustomAction> customTimedActions)
     {
         lock (_lock)
         {
@@ -301,6 +304,7 @@ internal sealed class MockLeagueClientState
             ApplyBanListToSlots(_myTeam, _myTeamBans);
             ApplyBanListToSlots(_theirTeam, _theirTeamBans);
             ReplaceList(_actions, actions.Select(CloneWithNormalizedSchedule));
+            ReplaceList(_customTimedActions, customTimedActions.Select(CloneWithNormalizedCustomAction));
             if (_queueMode == MockQueueMode.DraftPick)
                 SaveCurrentDraftStepStateCore();
         }
@@ -773,6 +777,7 @@ internal sealed class MockLeagueClientState
         _myTeam.Clear();
         _theirTeam.Clear();
         _actions.Clear();
+        _customTimedActions.Clear();
     }
 
     private void RestoreSnapshotCore(MockLeagueClientSnapshot snapshot)
@@ -796,6 +801,7 @@ internal sealed class MockLeagueClientState
         ApplyBanListToSlots(_myTeam, _myTeamBans);
         ApplyBanListToSlots(_theirTeam, _theirTeamBans);
         ReplaceList(_actions, snapshot.Actions.Select(CloneWithNormalizedSchedule));
+        ReplaceList(_customTimedActions, snapshot.CustomTimedActions.Select(CloneWithNormalizedCustomAction));
 
         if (_queueMode == MockQueueMode.DraftPick)
             SaveCurrentDraftStepStateCore();
@@ -825,7 +831,8 @@ internal sealed class MockLeagueClientState
             _theirTeam.Select(slot => slot.Clone()).ToList(),
             _myTeamBans.ToList(),
             _theirTeamBans.ToList(),
-            _actions.Select(action => action.Clone()).ToList());
+            _actions.Select(action => action.Clone()).ToList(),
+            _customTimedActions.Select(action => action.Clone()).ToList());
     }
 
     private void LoadDraftStepStateCore(DraftPickStep step)
@@ -846,6 +853,7 @@ internal sealed class MockLeagueClientState
         ReplaceList(_myTeamBans, state.MyTeamBans);
         ReplaceList(_theirTeamBans, state.TheirTeamBans);
         ReplaceList(_actions, state.Actions.Select(action => action.Clone()));
+        ReplaceList(_customTimedActions, state.CustomTimedActions.Select(action => action.Clone()));
 
         var localPlayer = FindTeamSlot(_localPlayerCellId);
         if (localPlayer is not null)
@@ -865,12 +873,16 @@ internal sealed class MockLeagueClientState
             theirTeam,
             [],
             [],
-            CreateDefaultDraftActions(step));
+            CreateDefaultDraftActions(step),
+            []);
     }
 
     private DraftStepState CreatePlaybackAdvanceState(DraftPickStep nextStep, DraftStepState currentState)
     {
         var defaultNextState = CreateDefaultDraftStepState(nextStep);
+        var configuredNextState = _draftStepStates.TryGetValue(nextStep, out var existingNextState)
+            ? existingNextState
+            : defaultNextState;
         var myTeam = MergePlaybackSlots(defaultNextState.MyTeam, currentState.MyTeam);
         var theirTeam = MergePlaybackSlots(defaultNextState.TheirTeam, currentState.TheirTeam);
         var actions = MergePlaybackActions(defaultNextState.Actions, currentState.Actions);
@@ -887,7 +899,8 @@ internal sealed class MockLeagueClientState
             theirTeam,
             myTeamBans,
             theirTeamBans,
-            actions);
+            actions,
+            configuredNextState.CustomTimedActions.Select(action => action.Clone()).ToList());
     }
 
     private static List<TeamSlot> MergePlaybackSlots(
@@ -935,6 +948,7 @@ internal sealed class MockLeagueClientState
                 if (currentAction is null)
                     return action;
 
+                action.ActorCellId = currentAction.ActorCellId;
                 action.ChampionId = currentAction.ChampionId;
                 action.TargetChampionId = currentAction.TargetChampionId;
                 action.HoverAtSeconds = currentAction.HoverAtSeconds;
@@ -1221,7 +1235,7 @@ internal sealed class MockLeagueClientState
 
     private List<string> ApplyScheduledActionsCore()
     {
-        var appliedActions = new List<string>();
+        var appliedActions = ApplyCustomTimedActionsCore();
         foreach (var action in _actions)
         {
             if (IsTimerTriggerDue(action.HoverAtSeconds)
@@ -1238,6 +1252,121 @@ internal sealed class MockLeagueClientState
         }
 
         return appliedActions;
+    }
+
+    private List<string> ApplyCustomTimedActionsCore()
+    {
+        var appliedActions = new List<string>();
+        foreach (var action in _customTimedActions)
+        {
+            if (action.Applied || action.Skipped || !IsTimerTriggerDue(action.TriggerAtSeconds))
+                continue;
+
+            appliedActions.Add(ApplyCustomTimedActionCore(action));
+        }
+
+        return appliedActions;
+    }
+
+    private string ApplyCustomTimedActionCore(TimedCustomAction action)
+    {
+        if (!IsValidCellId(action.SourceCellId) || !IsValidCellId(action.TargetCellId))
+            return MarkCustomTimedActionSkipped(action, "source and target cells must be between 1 and 10");
+
+        if (action.SourceCellId == action.TargetCellId)
+            return MarkCustomTimedActionSkipped(action, "source and target cells must be different");
+
+        return action.Type switch
+        {
+            TimedCustomActionType.RoleSwap => ApplyRoleSwapCore(action),
+            TimedCustomActionType.ChampionSwap => ApplyChampionSwapCore(action),
+            TimedCustomActionType.PickOrderSwap => ApplyPickOrderSwapCore(action),
+            _ => MarkCustomTimedActionSkipped(action, "unsupported optional action type")
+        };
+    }
+
+    private string ApplyRoleSwapCore(TimedCustomAction action)
+    {
+        var sourceSlot = FindTeamSlot(action.SourceCellId);
+        var targetSlot = FindTeamSlot(action.TargetCellId);
+        if (sourceSlot is null || targetSlot is null)
+            return MarkCustomTimedActionSkipped(action, "source or target cell was not found");
+
+        (sourceSlot.AssignedPosition, targetSlot.AssignedPosition) = (targetSlot.AssignedPosition, sourceSlot.AssignedPosition);
+        RefreshLocalPlayerAssignedPositionCore();
+        return MarkCustomTimedActionApplied(action, "swapped assigned roles");
+    }
+
+    private string ApplyChampionSwapCore(TimedCustomAction action)
+    {
+        var sourceSlot = FindTeamSlot(action.SourceCellId);
+        var targetSlot = FindTeamSlot(action.TargetCellId);
+        if (sourceSlot is null || targetSlot is null)
+            return MarkCustomTimedActionSkipped(action, "source or target cell was not found");
+
+        (sourceSlot.ChampionId, targetSlot.ChampionId) = (targetSlot.ChampionId, sourceSlot.ChampionId);
+        if (sourceSlot.ChampionId > 0)
+            sourceSlot.ChampionPickIntent = 0;
+
+        if (targetSlot.ChampionId > 0)
+            targetSlot.ChampionPickIntent = 0;
+
+        SyncCompletedPickActionChampion(action.SourceCellId, sourceSlot.ChampionId);
+        SyncCompletedPickActionChampion(action.TargetCellId, targetSlot.ChampionId);
+        return MarkCustomTimedActionApplied(action, "swapped locked champions");
+    }
+
+    private string ApplyPickOrderSwapCore(TimedCustomAction action)
+    {
+        var sourceAction = FindPickActionByCellId(action.SourceCellId);
+        var targetAction = FindPickActionByCellId(action.TargetCellId);
+        if (sourceAction is null || targetAction is null)
+            return MarkCustomTimedActionSkipped(action, "source or target pick action was not found");
+
+        var sourceSchedule = TimedPickSchedule.FromAction(sourceAction);
+        var targetSchedule = TimedPickSchedule.FromAction(targetAction);
+
+        sourceAction.ActorCellId = action.TargetCellId;
+        targetAction.ActorCellId = action.SourceCellId;
+        sourceSchedule.ApplyTo(targetAction);
+        targetSchedule.ApplyTo(sourceAction);
+
+        return MarkCustomTimedActionApplied(action, "swapped pick action ownership");
+    }
+
+    private void SyncCompletedPickActionChampion(int cellId, int championId)
+    {
+        foreach (var action in _actions.Where(action =>
+                     action.Completed
+                     && action.ActorCellId == cellId
+                     && IsPickAction(action)))
+        {
+            action.ChampionId = championId;
+        }
+    }
+
+    private ChampSelectAction? FindPickActionByCellId(int cellId)
+    {
+        return _actions.FirstOrDefault(action => action.ActorCellId == cellId && IsPickAction(action));
+    }
+
+    private string MarkCustomTimedActionApplied(TimedCustomAction action, string detail)
+    {
+        action.Applied = true;
+        action.Skipped = false;
+        return FormatCustomTimedAction(action, detail);
+    }
+
+    private string MarkCustomTimedActionSkipped(TimedCustomAction action, string reason)
+    {
+        action.Applied = false;
+        action.Skipped = true;
+        return FormatCustomTimedAction(action, $"skipped: {reason}");
+    }
+
+    private string FormatCustomTimedAction(TimedCustomAction action, string detail)
+    {
+        return $"Optional action {action.Id} {GetCustomTimedActionTypeDisplayName(action.Type)} cells {action.SourceCellId}<->{action.TargetCellId} {detail} at {_timeLeftSeconds}s.";
     }
 
     private bool TryHoverActionCore(ChampSelectAction action)
@@ -1388,6 +1517,16 @@ internal sealed class MockLeagueClientState
         return clone;
     }
 
+    private static TimedCustomAction CloneWithNormalizedCustomAction(TimedCustomAction action)
+    {
+        var clone = action.Clone();
+        clone.Id = Math.Max(0, clone.Id);
+        clone.SourceCellId = Math.Clamp(clone.SourceCellId, FirstPlayerCellId, LastPlayerCellId);
+        clone.TargetCellId = Math.Clamp(clone.TargetCellId, FirstPlayerCellId, LastPlayerCellId);
+        clone.TriggerAtSeconds = Math.Max(0, clone.TriggerAtSeconds);
+        return clone;
+    }
+
     private static int? NormalizeTriggerSeconds(int? seconds)
     {
         return seconds is int value ? Math.Max(0, value) : null;
@@ -1437,9 +1576,32 @@ internal sealed class MockLeagueClientState
             localPlayer.AssignedPosition = _localPlayerAssignedPosition;
     }
 
+    private void RefreshLocalPlayerAssignedPositionCore()
+    {
+        var localPlayer = FindTeamSlot(_localPlayerCellId);
+        if (localPlayer is not null)
+            _localPlayerAssignedPosition = localPlayer.AssignedPosition;
+    }
+
+    internal static string GetCustomTimedActionTypeDisplayName(TimedCustomActionType type)
+    {
+        return type switch
+        {
+            TimedCustomActionType.RoleSwap => "Role swap",
+            TimedCustomActionType.ChampionSwap => "Champion swap",
+            TimedCustomActionType.PickOrderSwap => "Pick order swap",
+            _ => "Optional action"
+        };
+    }
+
     private static int NormalizeLocalPlayerCellId(int cellId)
     {
         return Math.Clamp(cellId, FirstPlayerCellId, LastPlayerCellId);
+    }
+
+    private static bool IsValidCellId(int cellId)
+    {
+        return cellId is >= FirstPlayerCellId and <= LastPlayerCellId;
     }
 
     private static bool IsBlueTeamCellId(int cellId)
@@ -1462,6 +1624,27 @@ internal sealed class MockLeagueClientState
     {
         Changed?.Invoke(this, EventArgs.Empty);
     }
+
+    private readonly record struct TimedPickSchedule(
+        int TargetChampionId,
+        int? HoverAtSeconds,
+        int? LockAtSeconds)
+    {
+        public static TimedPickSchedule FromAction(ChampSelectAction action)
+        {
+            return new TimedPickSchedule(
+                action.TargetChampionId,
+                action.HoverAtSeconds,
+                action.LockAtSeconds);
+        }
+
+        public void ApplyTo(ChampSelectAction action)
+        {
+            action.TargetChampionId = TargetChampionId;
+            action.HoverAtSeconds = HoverAtSeconds;
+            action.LockAtSeconds = LockAtSeconds;
+        }
+    }
 }
 
 internal sealed record MockLeagueClientSnapshot(
@@ -1480,7 +1663,8 @@ internal sealed record MockLeagueClientSnapshot(
     IReadOnlyList<TeamSlot> TheirTeam,
     IReadOnlyList<int> MyTeamBans,
     IReadOnlyList<int> TheirTeamBans,
-    IReadOnlyList<ChampSelectAction> Actions);
+    IReadOnlyList<ChampSelectAction> Actions,
+    IReadOnlyList<TimedCustomAction> CustomTimedActions);
 
 internal sealed record DraftTimerTickResult(
     bool StateChanged,
@@ -1500,7 +1684,8 @@ internal sealed record DraftStepState(
     IReadOnlyList<TeamSlot> TheirTeam,
     IReadOnlyList<int> MyTeamBans,
     IReadOnlyList<int> TheirTeamBans,
-    IReadOnlyList<ChampSelectAction> Actions);
+    IReadOnlyList<ChampSelectAction> Actions,
+    IReadOnlyList<TimedCustomAction> CustomTimedActions);
 
 internal sealed class TeamSlot
 {
@@ -1587,5 +1772,58 @@ internal sealed class ChampSelectAction
             TargetChampionId,
             HoverAtSeconds,
             LockAtSeconds);
+    }
+}
+
+internal enum TimedCustomActionType
+{
+    RoleSwap,
+    ChampionSwap,
+    PickOrderSwap
+}
+
+internal sealed class TimedCustomAction
+{
+    public TimedCustomAction()
+    {
+    }
+
+    public TimedCustomAction(
+        int id,
+        TimedCustomActionType type,
+        int sourceCellId,
+        int targetCellId,
+        int triggerAtSeconds,
+        bool applied,
+        bool skipped)
+    {
+        Id = id;
+        Type = type;
+        SourceCellId = sourceCellId;
+        TargetCellId = targetCellId;
+        TriggerAtSeconds = triggerAtSeconds;
+        Applied = applied;
+        Skipped = skipped;
+    }
+
+    public int Id { get; set; }
+    public TimedCustomActionType Type { get; set; } = TimedCustomActionType.RoleSwap;
+    public int SourceCellId { get; set; } = 1;
+    public int TargetCellId { get; set; } = 2;
+    public int TriggerAtSeconds { get; set; }
+    public bool Applied { get; set; }
+    public bool Skipped { get; set; }
+    public string StatusText => Skipped ? "Skipped" : Applied ? "Applied" : "Pending";
+
+    public TimedCustomAction Clone()
+    {
+        return new TimedCustomAction(
+            Id,
+            Type,
+            SourceCellId,
+            TargetCellId,
+            TriggerAtSeconds,
+            Applied,
+            Skipped);
     }
 }

@@ -936,40 +936,117 @@
                             <GroupBox Grid.Column="4"
                                       Grid.RowSpan="5"
                                       Header="Timed Actions">
-                                <DataGrid x:Name="ActionsGrid">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn x:Name="ActionCellColumn"
-                                                            Header="Cell"
-                                                            Binding="{Binding CellId}"
-                                                            Width="48" />
-                                        <DataGridComboBoxColumn x:Name="ActionPickChampionColumn"
-                                                                Header="Pick target"
-                                                                SelectedValueBinding="{Binding PickChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="145" />
-                                        <DataGridTextColumn x:Name="ActionPickHoverColumn"
-                                                            Header="Hover pick &lt;=s"
-                                                            Binding="{Binding PickHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                            Width="95" />
-                                        <DataGridTextColumn x:Name="ActionPickLockColumn"
-                                                            Header="Lock pick &lt;=s"
-                                                            Binding="{Binding PickLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                            Width="90" />
-                                        <DataGridComboBoxColumn x:Name="ActionBanChampionColumn"
-                                                                Header="Ban target"
-                                                                SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                SelectedValuePath="ChampionId"
-                                                                Width="145" />
-                                        <DataGridTextColumn x:Name="ActionBanHoverColumn"
-                                                            Header="Hover ban &lt;=s"
-                                                            Binding="{Binding BanHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                            Width="95" />
-                                        <DataGridTextColumn x:Name="ActionBanLockColumn"
-                                                            Header="Lock ban &lt;=s"
-                                                            Binding="{Binding BanLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
-                                                            Width="90" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
+                                <Grid MinHeight="590">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="340" />
+                                        <RowDefinition Height="10" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="8" />
+                                        <RowDefinition Height="*"
+                                                       MinHeight="190" />
+                                    </Grid.RowDefinitions>
+
+                                    <DataGrid x:Name="ActionsGrid"
+                                              Grid.Row="0"
+                                              VerticalScrollBarVisibility="Disabled">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn x:Name="ActionCellColumn"
+                                                                Header="Cell"
+                                                                Binding="{Binding CellId}"
+                                                                Width="48" />
+                                            <DataGridComboBoxColumn x:Name="ActionPickChampionColumn"
+                                                                    Header="Pick target"
+                                                                    SelectedValueBinding="{Binding PickChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="145" />
+                                            <DataGridTextColumn x:Name="ActionPickHoverColumn"
+                                                                Header="Hover pick &lt;=s"
+                                                                Binding="{Binding PickHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                                Width="95" />
+                                            <DataGridTextColumn x:Name="ActionPickLockColumn"
+                                                                Header="Lock pick &lt;=s"
+                                                                Binding="{Binding PickLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                                Width="90" />
+                                            <DataGridComboBoxColumn x:Name="ActionBanChampionColumn"
+                                                                    Header="Ban target"
+                                                                    SelectedValueBinding="{Binding BanChampionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="ChampionId"
+                                                                    Width="145" />
+                                            <DataGridTextColumn x:Name="ActionBanHoverColumn"
+                                                                Header="Hover ban &lt;=s"
+                                                                Binding="{Binding BanHoverAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                                Width="95" />
+                                            <DataGridTextColumn x:Name="ActionBanLockColumn"
+                                                                Header="Lock ban &lt;=s"
+                                                                Binding="{Binding BanLockAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                                                Width="90" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <Grid Grid.Row="2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Optional timed actions"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        <ComboBox x:Name="CustomTimedActionTypeBox"
+                                                  Grid.Column="2"
+                                                  Margin="0,0,8,0" />
+                                        <Button Grid.Column="3"
+                                                Content="Add"
+                                                Margin="0,0,0,0"
+                                                Click="AddCustomTimedActionButton_Click" />
+                                    </Grid>
+
+                                    <DataGrid x:Name="CustomTimedActionsGrid"
+                                              Grid.Row="4"
+                                              VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.Columns>
+                                            <DataGridComboBoxColumn x:Name="CustomTimedActionTypeColumn"
+                                                                    Header="Type"
+                                                                    SelectedValueBinding="{Binding Type, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedValuePath="Type"
+                                                                    DisplayMemberPath="DisplayName"
+                                                                    Width="135" />
+                                            <DataGridComboBoxColumn x:Name="CustomTimedActionSourceCellColumn"
+                                                                    Header="Source"
+                                                                    SelectedItemBinding="{Binding SourceCellId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Width="68" />
+                                            <DataGridComboBoxColumn x:Name="CustomTimedActionTargetCellColumn"
+                                                                    Header="Target"
+                                                                    SelectedItemBinding="{Binding TargetCellId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Width="68" />
+                                            <DataGridTextColumn Header="Trigger &lt;=s"
+                                                                Binding="{Binding TriggerAtSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Width="86" />
+                                            <DataGridTextColumn Header="Status"
+                                                                Binding="{Binding StatusText}"
+                                                                IsReadOnly="True"
+                                                                Width="*" />
+                                            <DataGridTemplateColumn Header=""
+                                                                    Width="32">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="X"
+                                                                Width="20"
+                                                                Height="20"
+                                                                MinHeight="20"
+                                                                Padding="0"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                ToolTip="Remove optional action"
+                                                                Click="RemoveCustomTimedActionButton_Click" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
                             </GroupBox>
 
                             <GroupBox Grid.Column="2"
