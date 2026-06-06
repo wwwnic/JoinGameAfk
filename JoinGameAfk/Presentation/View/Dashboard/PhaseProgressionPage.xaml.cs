@@ -22,7 +22,11 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private Button[] _dashboardViewButtons = [];
         private FrameworkElement[] _dashboardTabContents = [];
         private DashboardStatus _lastDashboardStatus = new();
+        private DashboardStatus _lastRenderedDashboardStatus = new();
         private ClientPhase _currentPhase = ClientPhase.Unknown;
+        private string _currentPhaseTimeText = "--";
+        private string _currentLockTimeText = string.Empty;
+        private string _currentActiveLockActionType = string.Empty;
         private bool _isWatcherRunning;
         private bool _isClientConnected;
         private int _activeDashboardViewIndex;
@@ -205,11 +209,11 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private void RenderDashboardStatus(DashboardStatus status)
         {
             status = ApplyPlanBlockerHighlights(status);
+            _lastRenderedDashboardStatus = status;
 
             UpdateChampionPriorityList(MyTeamBansList, MyTeamBansPlaceholderText, status.MyTeamBans, "Your team bans");
             UpdateChampionPriorityList(TheirTeamBansList, TheirTeamBansPlaceholderText, status.TheirTeamBans, "Enemy team bans");
-            UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
-            UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
+            RefreshTeamSlotLists(status);
             UpdateChampionPriorityList(PickChampionPriorityList, PickChampionPlaceholderText, status.PickChampionPriority, status.PickChampionText);
             UpdateChampionPriorityList(BanChampionPriorityList, BanChampionPlaceholderText, status.BanChampionPriority, status.BanChampionText);
             UpdatePlanDisplay(status);
@@ -226,7 +230,11 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
         private void RenderCountdownTimers(DraftCountdownTimerSnapshot snapshot)
         {
+            _currentPhaseTimeText = snapshot.PhaseTimeText;
+            _currentLockTimeText = snapshot.HasActiveLockTimer ? snapshot.LockTimeText : string.Empty;
+            _currentActiveLockActionType = snapshot.ActiveLockActionType;
             ChampSelectTimerText.Text = snapshot.PhaseTimeText;
+            RefreshTeamSlotLists(_lastRenderedDashboardStatus);
 
             if (!snapshot.HasActiveLockTimer)
             {
@@ -260,6 +268,12 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
             PickPlanLockText.Text = "--";
             BanPlanLockText.Text = "--";
+        }
+
+        private void RefreshTeamSlotLists(DashboardStatus status)
+        {
+            UpdateTeamSlotList(MyTeamSlotList, status.MyTeamSlots);
+            UpdateTeamSlotList(TheirTeamSlotList, status.TheirTeamSlots);
         }
 
         private static DashboardStatus ApplyPlanBlockerHighlights(DashboardStatus status)
@@ -336,9 +350,9 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                         : slot.IsLocalPlayer
                             ? slot with
                             {
-                                IsPlanReference = true,
+                                IsPlanReference = false,
                                 PlanReferenceText = $"In {FormatLabelList(planLabels)}",
-                                PlanReferenceReasonKind = DashboardChampionAvailabilityReason.Selected,
+                                PlanReferenceReasonKind = DashboardChampionAvailabilityReason.None,
                                 IsOwnAction = true
                             }
                         : slot with
@@ -468,17 +482,31 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
         private void UpdateTargetChampionCell(FrameworkElement targetCell, Image targetImage, IReadOnlyList<DashboardChampionPlanItem> champions, string unavailableText)
         {
-            var targetChampion = champions.FirstOrDefault(champion => champion.IsAvailable);
+            var targetChampion = champions.FirstOrDefault(champion => champion.IsAvailable)
+                ?? champions.FirstOrDefault(champion => champion.ChampionId > 0);
             if (targetChampion is null)
             {
                 targetImage.Source = null;
+                targetImage.Opacity = 1;
                 targetCell.ToolTip = champions.Count > 0 ? unavailableText : null;
                 return;
             }
 
             string championName = GetChampionDisplayName(targetChampion.ChampionId, targetChampion.Name);
             targetImage.Source = GetChampionPortrait(targetChampion.ChampionId, championName);
-            targetCell.ToolTip = championName;
+            targetImage.Opacity = targetChampion.IsAvailable ? 1 : 0.72;
+            targetCell.ToolTip = BuildTargetChampionToolTip(targetChampion, championName, unavailableText);
+        }
+
+        private static string BuildTargetChampionToolTip(DashboardChampionPlanItem targetChampion, string championName, string unavailableText)
+        {
+            if (targetChampion.IsAvailable)
+                return championName;
+
+            string statusText = string.IsNullOrWhiteSpace(targetChampion.StatusText)
+                ? unavailableText
+                : targetChampion.StatusText;
+            return $"{championName}{Environment.NewLine}{statusText}";
         }
 
         private static string GetPlanLockText(string lockText)
@@ -506,9 +534,18 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private DashboardTeamSlotViewItem CreateTeamSlotViewItem(DashboardTeamSlotItem slot)
         {
             string championName = GetChampionDisplayName(slot.ChampionId, slot.ChampionName);
+            string actionBadgeText = GetTeamSlotActionBadgeText(slot);
+            bool hasLockTimer = ShouldShowTeamSlotLockTimer(slot);
+            bool isActivePick = IsDraftAction(slot, DashboardDraftActionType.Pick) && slot.IsActionInProgress;
+            bool isActiveBan = IsDraftAction(slot, DashboardDraftActionType.Ban) && slot.IsActionInProgress;
+            bool isPickHover = IsDraftSelection(slot, DashboardDraftActionType.Pick, DashboardDraftSelectionState.Hover);
+            bool isBanHover = IsDraftSelection(slot, DashboardDraftActionType.Ban, DashboardDraftSelectionState.Hover) && slot.IsActionInProgress;
+            bool isLockedPick = IsDraftSelection(slot, DashboardDraftActionType.Pick, DashboardDraftSelectionState.Locked);
+            bool isLockedBan = IsDraftSelection(slot, DashboardDraftActionType.Ban, DashboardDraftSelectionState.Locked) && slot.IsActionInProgress;
 
             return new DashboardTeamSlotViewItem
             {
+                CellId = slot.CellId,
                 ChampionId = slot.ChampionId,
                 ChampionName = championName,
                 RoleName = slot.RoleName,
@@ -517,8 +554,89 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 PlanReferenceText = slot.PlanReferenceText,
                 PlanReferenceReasonKind = slot.PlanReferenceReasonKind,
                 IsOwnAction = slot.IsOwnAction,
+                ActionType = slot.ActionType,
+                SelectionState = slot.SelectionState,
+                IsActionInProgress = slot.IsActionInProgress,
+                IsActivePick = isActivePick,
+                IsActiveBan = isActiveBan,
+                IsPickHover = isPickHover,
+                IsBanHover = isBanHover,
+                IsLockedPick = isLockedPick,
+                IsLockedBan = isLockedBan,
+                LockTimerText = hasLockTimer ? _currentLockTimeText : string.Empty,
+                IsBanTimer = hasLockTimer && isActiveBan,
+                ActionBadgeText = actionBadgeText,
+                ToolTipText = BuildTeamSlotToolTip(slot.PlanReferenceText, actionBadgeText),
                 PortraitImageSource = GetChampionPortrait(slot.ChampionId, championName)
             };
+        }
+
+        private static bool IsDraftAction(DashboardTeamSlotItem slot, string actionType)
+        {
+            return string.Equals(slot.ActionType, actionType, StringComparison.Ordinal);
+        }
+
+        private static bool IsDraftSelection(DashboardTeamSlotItem slot, string actionType, string selectionState)
+        {
+            return IsDraftAction(slot, actionType)
+                && string.Equals(slot.SelectionState, selectionState, StringComparison.Ordinal);
+        }
+
+        private bool ShouldShowTeamSlotLockTimer(DashboardTeamSlotItem slot)
+        {
+            if (!slot.IsLocalPlayer || !HasTimerText(_currentLockTimeText))
+                return false;
+
+            if (string.Equals(_currentActiveLockActionType, "Hover", StringComparison.Ordinal))
+                return true;
+
+            if (string.Equals(_currentActiveLockActionType, "Ban", StringComparison.Ordinal))
+                return true;
+
+            return string.Equals(_currentActiveLockActionType, "Pick", StringComparison.Ordinal)
+                && slot.IsActionInProgress
+                && string.Equals(slot.ActionType, DashboardDraftActionType.Pick, StringComparison.Ordinal);
+        }
+
+        private static bool HasTimerText(string timerText)
+        {
+            return !string.IsNullOrWhiteSpace(timerText)
+                && !string.Equals(timerText, "--", StringComparison.Ordinal);
+        }
+
+        private static string GetTeamSlotActionBadgeText(DashboardTeamSlotItem slot)
+        {
+            if (slot.SelectionState == DashboardDraftSelectionState.Hover)
+            {
+                return string.Equals(slot.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal)
+                    ? "HOVER BAN"
+                    : "HOVER";
+            }
+
+            if (slot.SelectionState == DashboardDraftSelectionState.Locked)
+            {
+                return string.Equals(slot.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal)
+                    ? "BANNED"
+                    : "PICKED";
+            }
+
+            if (!slot.IsActionInProgress)
+                return string.Empty;
+
+            return string.Equals(slot.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal)
+                ? "BANNING"
+                : "PICKING";
+        }
+
+        private static string BuildTeamSlotToolTip(string planReferenceText, string actionBadgeText)
+        {
+            if (string.IsNullOrWhiteSpace(planReferenceText))
+                return actionBadgeText;
+
+            if (string.IsNullOrWhiteSpace(actionBadgeText))
+                return planReferenceText;
+
+            return $"{actionBadgeText}{Environment.NewLine}{planReferenceText}";
         }
 
         private ImageSource? GetChampionPortrait(int championId, string championName)
@@ -567,6 +685,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
         private sealed class DashboardTeamSlotViewItem
         {
+            public int CellId { get; init; }
             public int ChampionId { get; init; }
             public string ChampionName { get; init; } = "No champion";
             public string RoleName { get; init; } = "None";
@@ -575,6 +694,21 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             public string PlanReferenceText { get; init; } = string.Empty;
             public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
             public bool IsOwnAction { get; init; }
+            public string ActionType { get; init; } = DashboardDraftActionType.None;
+            public string SelectionState { get; init; } = DashboardDraftSelectionState.None;
+            public bool IsActionInProgress { get; init; }
+            public bool IsActivePick { get; init; }
+            public bool IsActiveBan { get; init; }
+            public bool IsPickHover { get; init; }
+            public bool IsBanHover { get; init; }
+            public bool IsLockedPick { get; init; }
+            public bool IsLockedBan { get; init; }
+            public string LockTimerText { get; init; } = string.Empty;
+            public bool HasLockTimer => !string.IsNullOrWhiteSpace(LockTimerText);
+            public bool IsBanTimer { get; init; }
+            public string ActionBadgeText { get; init; } = string.Empty;
+            public bool HasActionBadge => !string.IsNullOrWhiteSpace(ActionBadgeText);
+            public string ToolTipText { get; init; } = string.Empty;
             public ImageSource? PortraitImageSource { get; init; }
         }
 

@@ -18,6 +18,13 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         public string PlanReferenceText { get; init; } = string.Empty;
         public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsOwnAction { get; init; }
+        public string ActionType { get; init; } = DashboardDraftActionType.None;
+        public string SelectionState { get; init; } = DashboardDraftSelectionState.None;
+        public bool IsActionInProgress { get; init; }
+        public bool IsBanHover { get; init; }
+        public bool IsLockedBan { get; init; }
+        public string ActionBadgeText { get; init; } = string.Empty;
+        public bool HasActionBadge => !string.IsNullOrWhiteSpace(ActionBadgeText);
         public ImageSource? PortraitImageSource { get; init; }
         public string ChipDisplayText { get; init; } = string.Empty;
         public double ChipDisplayFontSize { get; init; } = ChampionChipLabelFormatter.DefaultFontSize;
@@ -51,6 +58,12 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 PlanReferenceText = champion.PlanReferenceText,
                 PlanReferenceReasonKind = champion.PlanReferenceReasonKind,
                 IsOwnAction = champion.IsOwnAction,
+                ActionType = champion.ActionType,
+                SelectionState = champion.SelectionState,
+                IsActionInProgress = champion.IsActionInProgress,
+                IsBanHover = IsBanSelection(champion, DashboardDraftSelectionState.Hover),
+                IsLockedBan = IsBanSelection(champion, DashboardDraftSelectionState.Locked),
+                ActionBadgeText = GetActionBadgeText(champion.ActionType, champion.SelectionState),
                 PortraitImageSource = GetChampionPortrait(champion.ChampionId, championName),
                 ChipDisplayText = chipLabel.Text,
                 ChipDisplayFontSize = chipLabel.FontSize,
@@ -76,6 +89,25 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             return string.IsNullOrWhiteSpace(fallbackName)
                 ? "No champion"
                 : fallbackName;
+        }
+
+        private static string GetActionBadgeText(string actionType, string selectionState)
+        {
+            if (!string.Equals(actionType, DashboardDraftActionType.Ban, StringComparison.Ordinal))
+                return string.Empty;
+
+            return selectionState switch
+            {
+                DashboardDraftSelectionState.Hover => "HOVER",
+                DashboardDraftSelectionState.Locked => "BAN",
+                _ => string.Empty
+            };
+        }
+
+        private static bool IsBanSelection(DashboardChampionPlanItem champion, string selectionState)
+        {
+            return string.Equals(champion.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal)
+                && string.Equals(champion.SelectionState, selectionState, StringComparison.Ordinal);
         }
 
         private static string BuildToolTip(string championName, string statusText, string planReferenceText)

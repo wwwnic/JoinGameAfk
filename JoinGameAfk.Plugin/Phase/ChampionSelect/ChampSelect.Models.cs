@@ -28,4 +28,12 @@ public partial class ChampSelect
         string ActionType,
         long TimeLeftMilliseconds,
         DateTime ObservedAtUtc);
+
+    private sealed record DraftActionDisplayState(
+        int ActorCellId,
+        int ChampionId,
+        string ActionType,
+        string SelectionState,
+        bool IsActionInProgress,
+        bool IsCompleted);
 }

@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace LcuClient
 {
     internal sealed record ChampionOwnershipSnapshot(
-        IReadOnlySet<int> OwnedChampionIds,
+        IReadOnlySet<int> SelectableChampionIds,
         IReadOnlySet<int> KnownChampionIds,
         DateTime RefreshedAtUtc,
         string Source)
@@ -20,7 +20,7 @@ namespace LcuClient
         {
             return championId > 0
                 && KnownChampionIds.Contains(championId)
-                && !OwnedChampionIds.Contains(championId);
+                && !SelectableChampionIds.Contains(championId);
         }
     }
 
@@ -59,7 +59,7 @@ namespace LcuClient
 
                 if (_snapshot.HasReliableOwnershipData)
                 {
-                    _log?.Invoke($"Champion ownership loaded from {_snapshot.Source}. Owned={_snapshot.OwnedChampionIds.Count}, known={_snapshot.KnownChampionIds.Count}.");
+                    _log?.Invoke($"Champion ownership loaded from {_snapshot.Source}. Selectable={_snapshot.SelectableChampionIds.Count}, known={_snapshot.KnownChampionIds.Count}.");
                 }
                 else
                 {
@@ -151,7 +151,7 @@ namespace LcuClient
             if (root.ValueKind != JsonValueKind.Array)
                 return ChampionOwnershipSnapshot.Unknown;
 
-            var ownedChampionIds = new HashSet<int>();
+            var selectableChampionIds = new HashSet<int>();
             var knownChampionIds = new HashSet<int>();
 
             foreach (var champion in root.EnumerateArray())
@@ -163,33 +163,50 @@ namespace LcuClient
                     continue;
                 }
 
-                if (!TryGetOwnership(champion, out bool owned))
+                if (!TryGetSelectable(champion, out bool selectable))
                     continue;
 
                 knownChampionIds.Add(championId);
-                if (owned)
-                    ownedChampionIds.Add(championId);
+                if (selectable)
+                    selectableChampionIds.Add(championId);
             }
 
             return new ChampionOwnershipSnapshot(
-                ownedChampionIds,
+                selectableChampionIds,
                 knownChampionIds,
                 DateTime.UtcNow,
                 source);
         }
 
-        private static bool TryGetOwnership(JsonElement champion, out bool owned)
+        private static bool TryGetSelectable(JsonElement champion, out bool selectable)
         {
-            owned = false;
+            selectable = false;
+            bool hasSelectionSignal = false;
 
             if (champion.TryGetProperty("ownership", out var ownership)
-                && ownership.ValueKind == JsonValueKind.Object
-                && TryGetBool(ownership, "owned", out owned))
+                && ownership.ValueKind == JsonValueKind.Object)
             {
-                return true;
+                hasSelectionSignal |= TryIncludeSelectableFlag(ownership, "owned", ref selectable);
+                hasSelectionSignal |= TryIncludeSelectableFlag(ownership, "freeToPlayReward", ref selectable);
+                hasSelectionSignal |= TryIncludeSelectableFlag(ownership, "xboxGPReward", ref selectable);
             }
 
-            return TryGetBool(champion, "owned", out owned);
+            hasSelectionSignal |= TryIncludeSelectableFlag(champion, "owned", ref selectable);
+            hasSelectionSignal |= TryIncludeSelectableFlag(champion, "freeToPlay", ref selectable);
+            hasSelectionSignal |= TryIncludeSelectableFlag(champion, "freeToPlayForQueue", ref selectable);
+            hasSelectionSignal |= TryIncludeSelectableFlag(champion, "freeToPlayReward", ref selectable);
+            hasSelectionSignal |= TryIncludeSelectableFlag(champion, "xboxGPReward", ref selectable);
+
+            return hasSelectionSignal;
+        }
+
+        private static bool TryIncludeSelectableFlag(JsonElement element, string propertyName, ref bool selectable)
+        {
+            if (!TryGetBool(element, propertyName, out bool value))
+                return false;
+
+            selectable |= value;
+            return true;
         }
 
         private static bool TryGetInt32(JsonElement element, string propertyName, out int value)

@@ -17,6 +17,7 @@ namespace JoinGameAfk.Services
         private const double TimerRenderBoundaryPaddingMs = 10;
         private const double MinimumTimerRenderDelayMs = 25;
         private const double MaximumTimerRenderDelayMs = 1000;
+        private const double TimerBaselineRefreshToleranceMs = 50;
 
         private readonly DispatcherTimer _renderTimer;
         private readonly Action<DraftCountdownTimerSnapshot> _renderSnapshot;
@@ -45,10 +46,15 @@ namespace JoinGameAfk.Services
             }
             else
             {
-                _activeLockActionType = status.ActiveLockActionType;
-                _lockTimer = new CountdownBaseline(
+                string activeLockActionType = status.ActiveLockActionType;
+                var lockTimer = new CountdownBaseline(
                     Math.Max(0, status.ActiveLockTimeLeftMilliseconds),
                     NormalizeObservedAtUtc(status.ActiveLockTimeLeftObservedAtUtc));
+
+                if (!ShouldKeepExistingLockBaseline(activeLockActionType, lockTimer))
+                    _lockTimer = lockTimer;
+
+                _activeLockActionType = activeLockActionType;
             }
 
             RenderAndSchedule();
@@ -126,6 +132,22 @@ namespace JoinGameAfk.Services
             return timeLeftMs < 0
                 ? CountdownBaseline.Empty
                 : new CountdownBaseline(Math.Max(0, timeLeftMs), NormalizeObservedAtUtc(status.TimeLeftObservedAtUtc));
+        }
+
+        private bool ShouldKeepExistingLockBaseline(string activeLockActionType, CountdownBaseline lockTimer)
+        {
+            if (!_lockTimer.HasValue || !lockTimer.HasValue)
+                return false;
+
+            if (!string.Equals(_activeLockActionType, activeLockActionType, StringComparison.Ordinal))
+                return false;
+
+            double currentRemainingMs = _lockTimer.GetRemainingMilliseconds();
+            if (currentRemainingMs <= 0)
+                return false;
+
+            double nextRemainingMs = lockTimer.GetRemainingMilliseconds();
+            return nextRemainingMs > currentRemainingMs + TimerBaselineRefreshToleranceMs;
         }
 
         private static DateTime NormalizeObservedAtUtc(DateTime observedAtUtc)

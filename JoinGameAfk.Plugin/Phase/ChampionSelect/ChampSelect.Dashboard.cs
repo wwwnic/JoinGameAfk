@@ -26,15 +26,17 @@ public partial class ChampSelect
         bool localPlayerBanCompleted,
         bool localPlayerPlanningHoverCompleted)
     {
+        bool isPlanningPhase = IsPlanningPhase(champSelectPhase);
         var activeLockCountdown = GetActiveLockCountdownStatus(champSelectPhase, localPlayerActiveActionType, timeLeftMs, timeLeftObservedAtUtc);
+        var draftActionStates = BuildDraftActionDisplayStates(root, suppressInProgress: isPlanningPhase);
 
         return new DashboardStatus
         {
             CurrentPosition = assignedPosition,
-            MyTeamSlots = BuildTeamSlotItems(root, "myTeam", localPlayerCellId),
-            TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId),
-            MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam"),
-            TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam"),
+            MyTeamSlots = BuildTeamSlotItems(root, "myTeam", localPlayerCellId, draftActionStates, suppressPickIntentActionState: isPlanningPhase),
+            TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId, draftActionStates, suppressPickIntentActionState: isPlanningPhase),
+            MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam", draftActionStates),
+            TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam", draftActionStates),
             PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds, ownershipSnapshot, requiresOwnedChampion: true, availableStatusText: "Pick"),
             BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, requiresOwnedChampion: false, availableStatusText: "Ban"),
             PickChampionText = "No picks configured",
@@ -247,7 +249,12 @@ public partial class ChampSelect
             : position;
     }
 
-    private static IReadOnlyList<DashboardTeamSlotItem> BuildTeamSlotItems(JsonElement root, string teamPropertyName, int localPlayerCellId)
+    private static IReadOnlyList<DashboardTeamSlotItem> BuildTeamSlotItems(
+        JsonElement root,
+        string teamPropertyName,
+        int localPlayerCellId,
+        IReadOnlyList<DraftActionDisplayState> draftActionStates,
+        bool suppressPickIntentActionState)
     {
         if (!root.TryGetProperty(teamPropertyName, out var teamMembers)
             || teamMembers.ValueKind != JsonValueKind.Array)
@@ -259,30 +266,105 @@ public partial class ChampSelect
         foreach (var member in teamMembers.EnumerateArray())
         {
             Position position = GetAssignedPosition(member);
-            int championId = GetCurrentChampionId(member);
-            bool isLocalPlayer = TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId;
+            int lockedPickChampionId = GetLockedPickChampionId(member);
+            int hoverPickChampionId = GetHoverPickChampionId(member);
+            bool hasCellId = TryGetInt32(member, "cellId", out int cellId);
+            bool isLocalPlayer = hasCellId && cellId == localPlayerCellId;
+            var activeAction = hasCellId ? GetActiveActionForCell(draftActionStates, cellId) : null;
+            int championId = GetTeamSlotChampionId(lockedPickChampionId, hoverPickChampionId, activeAction);
+            string actionType = GetTeamSlotActionType(lockedPickChampionId, hoverPickChampionId, activeAction, suppressPickIntentActionState);
+            string selectionState = GetTeamSlotSelectionState(lockedPickChampionId, hoverPickChampionId, activeAction, suppressPickIntentActionState);
             string championName = championId > 0 ? FormatChampion(championId) : "No champion";
 
             slots.Add(new DashboardTeamSlotItem
             {
+                CellId = cellId,
                 ChampionId = championId,
                 ChampionName = championName,
                 RoleName = GetPositionDisplayName(position),
-                IsLocalPlayer = isLocalPlayer
+                IsLocalPlayer = isLocalPlayer,
+                ActionType = actionType,
+                SelectionState = selectionState,
+                IsActionInProgress = activeAction is not null
             });
         }
 
         return slots;
     }
 
-    private static int GetCurrentChampionId(JsonElement member)
+    private static int GetLockedPickChampionId(JsonElement member)
     {
         if (TryGetInt32(member, "championId", out int championId) && championId > 0)
             return championId;
 
+        return 0;
+    }
+
+    private static int GetHoverPickChampionId(JsonElement member)
+    {
         return TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent > 0
             ? championPickIntent
             : 0;
+    }
+
+    private static int GetTeamSlotChampionId(
+        int lockedPickChampionId,
+        int hoverPickChampionId,
+        DraftActionDisplayState? activeAction)
+    {
+        if (lockedPickChampionId > 0)
+            return lockedPickChampionId;
+
+        if (hoverPickChampionId > 0)
+            return hoverPickChampionId;
+
+        return activeAction is not null
+               && string.Equals(activeAction.ActionType, DashboardDraftActionType.Pick, StringComparison.Ordinal)
+               && activeAction.ChampionId > 0
+            ? activeAction.ChampionId
+            : 0;
+    }
+
+    private static string GetTeamSlotActionType(
+        int lockedPickChampionId,
+        int hoverPickChampionId,
+        DraftActionDisplayState? activeAction,
+        bool suppressPickIntentActionState)
+    {
+        if (activeAction is not null)
+            return activeAction.ActionType;
+
+        if (lockedPickChampionId > 0)
+            return DashboardDraftActionType.Pick;
+
+        if (!suppressPickIntentActionState && hoverPickChampionId > 0)
+            return DashboardDraftActionType.Pick;
+
+        return DashboardDraftActionType.None;
+    }
+
+    private static string GetTeamSlotSelectionState(
+        int lockedPickChampionId,
+        int hoverPickChampionId,
+        DraftActionDisplayState? activeAction,
+        bool suppressPickIntentActionState)
+    {
+        if (activeAction is not null
+            && string.Equals(activeAction.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal))
+        {
+            return activeAction.SelectionState;
+        }
+
+        if (lockedPickChampionId > 0)
+            return DashboardDraftSelectionState.Locked;
+
+        if (!suppressPickIntentActionState && hoverPickChampionId > 0)
+            return DashboardDraftSelectionState.Hover;
+
+        if (activeAction is not null)
+            return activeAction.SelectionState;
+
+        return DashboardDraftSelectionState.None;
     }
 
     private static string GetPositionDisplayName(Position position)
@@ -298,32 +380,79 @@ public partial class ChampSelect
         };
     }
 
-    private static IReadOnlyList<DashboardChampionPlanItem> BuildTeamBanItems(JsonElement root, string bansPropertyName, string teamPropertyName)
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildTeamBanItems(
+        JsonElement root,
+        string bansPropertyName,
+        string teamPropertyName,
+        IReadOnlyList<DraftActionDisplayState> draftActionStates)
     {
         var teamCellIds = GetTeamCellIds(root, teamPropertyName);
-        var activeOrCompletedBanChampionIds = GetBanChampionIdsFromActions(root, teamCellIds, includeInProgress: true);
-        var championIds = GetBanChampionIdsFromBans(root, bansPropertyName);
-        if (championIds.Count == 0)
-            championIds = activeOrCompletedBanChampionIds;
-        else
+        var actionBanStates = draftActionStates
+            .Where(action =>
+                string.Equals(action.ActionType, DashboardDraftActionType.Ban, StringComparison.Ordinal)
+                && teamCellIds.Contains(action.ActorCellId)
+                && action.ChampionId > 0
+                && (action.IsCompleted || action.IsActionInProgress))
+            .ToList();
+
+        var championIdsFromBans = GetBanChampionIdsFromBans(root, bansPropertyName);
+        var championIdsFromActions = actionBanStates.Select(action => action.ChampionId).ToHashSet();
+        var items = new List<DashboardChampionPlanItem>();
+        var seenChampionIds = new HashSet<int>();
+
+        foreach (int championId in championIdsFromBans)
         {
-            foreach (int championId in activeOrCompletedBanChampionIds)
+            if (!seenChampionIds.Add(championId)
+                || !ShouldShowBanChampion(championId, championIdsFromActions))
             {
-                if (!championIds.Contains(championId))
-                    championIds.Add(championId);
+                continue;
             }
+
+            items.Add(CreateTeamBanItem(
+                championId,
+                DashboardDraftSelectionState.Locked,
+                isActionInProgress: false));
         }
 
-        var actionBanChampionIds = activeOrCompletedBanChampionIds.ToHashSet();
-
-        return championIds
-            .Where(championId => ChampionCatalog.TryGetById(championId, out _) || actionBanChampionIds.Contains(championId))
-            .Select(championId => new DashboardChampionPlanItem
+        foreach (var action in actionBanStates)
+        {
+            if (!seenChampionIds.Add(action.ChampionId)
+                || !ShouldShowBanChampion(action.ChampionId, championIdsFromActions))
             {
-                ChampionId = championId,
-                Name = FormatChampion(championId)
-            })
-            .ToList();
+                continue;
+            }
+
+            items.Add(CreateTeamBanItem(
+                action.ChampionId,
+                action.SelectionState == DashboardDraftSelectionState.Locked
+                    ? DashboardDraftSelectionState.Locked
+                    : DashboardDraftSelectionState.Hover,
+                action.IsActionInProgress));
+        }
+
+        return items;
+    }
+
+    private static bool ShouldShowBanChampion(int championId, IReadOnlySet<int> actionBanChampionIds)
+    {
+        return ChampionCatalog.TryGetById(championId, out _)
+            || actionBanChampionIds.Contains(championId);
+    }
+
+    private static DashboardChampionPlanItem CreateTeamBanItem(
+        int championId,
+        string selectionState,
+        bool isActionInProgress)
+    {
+        return new DashboardChampionPlanItem
+        {
+            ChampionId = championId,
+            Name = FormatChampion(championId),
+            StatusText = selectionState == DashboardDraftSelectionState.Hover ? "Hover ban" : "Banned",
+            ActionType = DashboardDraftActionType.Ban,
+            SelectionState = selectionState,
+            IsActionInProgress = isActionInProgress
+        };
     }
 
     private static List<int> GetBanChampionIdsFromBans(JsonElement root, string propertyName)
@@ -340,17 +469,15 @@ public partial class ChampSelect
             : [];
     }
 
-    private static List<int> GetBanChampionIdsFromActions(JsonElement root, IReadOnlySet<int> teamCellIds, bool includeInProgress)
+    private static IReadOnlyList<DraftActionDisplayState> BuildDraftActionDisplayStates(JsonElement root, bool suppressInProgress)
     {
-        if (teamCellIds.Count == 0
-            || !root.TryGetProperty("actions", out var actions)
+        if (!root.TryGetProperty("actions", out var actions)
             || actions.ValueKind != JsonValueKind.Array)
         {
             return [];
         }
 
-        var championIds = new List<int>();
-        var seenChampionIds = new HashSet<int>();
+        var actionStates = new List<DraftActionDisplayState>();
 
         foreach (var actionGroup in actions.EnumerateArray())
         {
@@ -359,37 +486,62 @@ public partial class ChampSelect
 
             foreach (var action in actionGroup.EnumerateArray())
             {
-                if (!TryGetInt32(action, "actorCellId", out int actorCellId)
-                    || !teamCellIds.Contains(actorCellId)
-                    || !TryGetInt32(action, "championId", out int championId)
-                    || championId <= 0)
-                {
-                    continue;
-                }
-
-                bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
-                bool inProgress = includeInProgress
-                    && TryGetBool(action, "isInProgress", out bool inProgressValue)
-                    && inProgressValue;
-
-                if (!completed && !inProgress)
+                if (!TryGetInt32(action, "actorCellId", out int actorCellId))
                     continue;
 
                 string type = action.TryGetProperty("type", out var typeProperty)
                     ? typeProperty.GetString() ?? string.Empty
                     : string.Empty;
+                string actionType = GetDashboardActionType(type);
 
-                if (!string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase)
-                    || !seenChampionIds.Add(championId))
-                {
+                if (string.IsNullOrWhiteSpace(actionType))
                     continue;
-                }
 
-                championIds.Add(championId);
+                int championId = TryGetInt32(action, "championId", out int actionChampionId)
+                    ? Math.Max(0, actionChampionId)
+                    : 0;
+                bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
+                bool inProgress = TryGetBool(action, "isInProgress", out bool inProgressValue) && inProgressValue;
+
+                actionStates.Add(new DraftActionDisplayState(
+                    actorCellId,
+                    championId,
+                    actionType,
+                    GetActionSelectionState(championId, completed),
+                    !suppressInProgress && inProgress && !completed,
+                    completed));
             }
         }
 
-        return championIds;
+        return actionStates;
+    }
+
+    private static DraftActionDisplayState? GetActiveActionForCell(
+        IEnumerable<DraftActionDisplayState> draftActionStates,
+        int cellId)
+    {
+        return draftActionStates.FirstOrDefault(action => action.ActorCellId == cellId && action.IsActionInProgress);
+    }
+
+    private static string GetDashboardActionType(string type)
+    {
+        if (string.Equals(type, "pick", StringComparison.OrdinalIgnoreCase))
+            return DashboardDraftActionType.Pick;
+
+        if (string.Equals(type, "ban", StringComparison.OrdinalIgnoreCase))
+            return DashboardDraftActionType.Ban;
+
+        return DashboardDraftActionType.None;
+    }
+
+    private static string GetActionSelectionState(int championId, bool completed)
+    {
+        if (completed)
+            return DashboardDraftSelectionState.Locked;
+
+        return championId > 0
+            ? DashboardDraftSelectionState.Hover
+            : DashboardDraftSelectionState.None;
     }
 
     private static HashSet<int> GetTeamCellIds(JsonElement root, string teamPropertyName)

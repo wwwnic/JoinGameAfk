@@ -51,9 +51,20 @@
                     <Setter Property="Background" Value="{StaticResource UnavailableSelectedSurfaceBrush}" />
                     <Setter Property="BorderBrush" Value="{StaticResource UnavailableSelectedAccentBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                <DataTrigger Binding="{Binding IsActivePick}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+                    <Setter Property="BorderThickness" Value="3,0,3,1" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsActiveBan}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="BorderThickness" Value="3,0,3,1" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLockedPick}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueDeepBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueStrongBrush}" />
+                    <Setter Property="BorderThickness" Value="5,0,0,1" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -65,6 +76,7 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="SnapsToDevicePixels" Value="True" />
             <Setter Property="UseLayoutRounding" Value="True" />
@@ -80,12 +92,70 @@
                     <Setter Property="BorderBrush" Value="{StaticResource UnavailableSelectedAccentBrush}" />
                     <Setter Property="TextElement.Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                <DataTrigger Binding="{Binding IsPickHover}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="Padding" Value="0" />
                     <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding IsBanHover}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource DangerSurfaceRaisedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLockedPick}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentBlueDeepBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueStrongBrush}" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextInverseBrush}" />
+                </DataTrigger>
             </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DraftAvatarPortraitStyle" TargetType="Image">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Stretch" Value="UniformToFill" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+        </Style>
+
+        <Style x:Key="DraftLockTimerBadgeStyle" TargetType="Border">
+            <Setter Property="Width" Value="58" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueSoftBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasLockTimer}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsBanTimer}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DraftActionTimerTextStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="LineHeight" Value="14" />
+            <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
         </Style>
 
         <Style x:Key="DraftRoleTextStyle" TargetType="TextBlock">
@@ -100,8 +170,14 @@
                 <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Selected">
                     <Setter Property="Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                <DataTrigger Binding="{Binding IsActivePick}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsActiveBan}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLockedPick}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -118,8 +194,14 @@
                 <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Selected">
                     <Setter Property="Foreground" Value="{StaticResource UnavailableSelectedTextBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
+                <DataTrigger Binding="{Binding IsActivePick}" Value="True">
                     <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsActiveBan}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLockedPick}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -167,17 +249,24 @@
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsPlanReference}" Value="True">
                     <Setter Property="Background" Value="{DynamicResource DangerSurfaceBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource DangerAccentBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Banned">
                     <Setter Property="Background" Value="{StaticResource UnavailableBannedSurfaceBrush}" />
-                    <Setter Property="BorderBrush" Value="{StaticResource UnavailableBannedAccentBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource AccentBlueInfoBrush}" />
-                    <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                <DataTrigger Binding="{Binding IsLockedBan}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AppSurfaceRaisedBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AppMutedBorderBrush}" />
+                    <Setter Property="Padding" Value="0" />
                 </DataTrigger>
             </Style.Triggers>
+        </Style>
+
+        <Style x:Key="HeaderBanPortraitImageStyle" TargetType="Image">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="Stretch" Value="UniformToFill" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
         </Style>
 
         <Style x:Key="HeaderBanChampionChipTextStyle"
@@ -190,8 +279,11 @@
                 <DataTrigger Binding="{Binding PlanReferenceReasonKind}" Value="Banned">
                     <Setter Property="Foreground" Value="{StaticResource UnavailableBannedTextBrush}" />
                 </DataTrigger>
-                <DataTrigger Binding="{Binding IsOwnAction}" Value="True">
-                    <Setter Property="Foreground" Value="{DynamicResource AccentBlueTextBrush}" />
+                <DataTrigger Binding="{Binding IsBanHover}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextSoftBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLockedBan}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -428,8 +520,7 @@
                                                                VerticalAlignment="Center"
                                                                Foreground="{DynamicResource TextSubtleBrush}" />
                             <Image Source="{Binding PortraitImageSource}"
-                                   Stretch="UniformToFill"
-                                   SnapsToDevicePixels="True" />
+                                   Style="{StaticResource HeaderBanPortraitImageStyle}" />
                         </Grid>
                     </Border>
 
@@ -627,11 +718,11 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource DraftSlotStyle}"
-                                            ToolTip="{Binding PlanReferenceText}">
+                                            ToolTip="{Binding ToolTipText}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="9" />
+                                                <ColumnDefinition Width="10" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
                                             <Border Grid.Column="0"
@@ -643,8 +734,7 @@
                                                                                        VerticalAlignment="Center"
                                                                                        Foreground="{DynamicResource TextSubtleBrush}" />
                                                     <Image Source="{Binding PortraitImageSource}"
-                                                           Stretch="UniformToFill"
-                                                           SnapsToDevicePixels="True" />
+                                                           Style="{StaticResource DraftAvatarPortraitStyle}" />
                                                 </Grid>
                                             </Border>
                                             <StackPanel Grid.Column="2"
@@ -655,6 +745,14 @@
                                                            MinHeight="17"
                                                            Style="{StaticResource DraftChampionTextStyle}" />
                                             </StackPanel>
+                                            <Border Grid.ColumnSpan="3"
+                                                    HorizontalAlignment="Right"
+                                                    Margin="0,0,2,0"
+                                                    Panel.ZIndex="5"
+                                                    Style="{StaticResource DraftLockTimerBadgeStyle}">
+                                                <TextBlock Text="{Binding LockTimerText}"
+                                                           Style="{StaticResource DraftActionTimerTextStyle}" />
+                                            </Border>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -1143,13 +1241,21 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Style="{StaticResource DraftSlotStyle}"
-                                            ToolTip="{Binding PlanReferenceText}">
+                                            ToolTip="{Binding ToolTipText}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="9" />
+                                                <ColumnDefinition Width="10" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
+                                            <Border Grid.ColumnSpan="3"
+                                                    HorizontalAlignment="Left"
+                                                    Margin="2,0,0,0"
+                                                    Panel.ZIndex="5"
+                                                    Style="{StaticResource DraftLockTimerBadgeStyle}">
+                                                <TextBlock Text="{Binding LockTimerText}"
+                                                           Style="{StaticResource DraftActionTimerTextStyle}" />
+                                            </Border>
                                             <StackPanel Grid.Column="0"
                                                         VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding ChampionName}"
@@ -1169,8 +1275,7 @@
                                                                                        VerticalAlignment="Center"
                                                                                        Foreground="{DynamicResource TextSubtleBrush}" />
                                                     <Image Source="{Binding PortraitImageSource}"
-                                                           Stretch="UniformToFill"
-                                                           SnapsToDevicePixels="True" />
+                                                           Style="{StaticResource DraftAvatarPortraitStyle}" />
                                                 </Grid>
                                             </Border>
                                         </Grid>

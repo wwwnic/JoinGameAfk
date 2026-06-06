@@ -12,6 +12,20 @@ namespace JoinGameAfk.Model
         public const string Blocked = "Blocked";
     }
 
+    public static class DashboardDraftActionType
+    {
+        public const string None = "";
+        public const string Pick = "Pick";
+        public const string Ban = "Ban";
+    }
+
+    public static class DashboardDraftSelectionState
+    {
+        public const string None = "";
+        public const string Hover = "Hover";
+        public const string Locked = "Locked";
+    }
+
     public sealed record DashboardChampionPlanItem
     {
         public int ChampionId { get; init; }
@@ -24,10 +38,14 @@ namespace JoinGameAfk.Model
         public string PlanReferenceText { get; init; } = string.Empty;
         public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsOwnAction { get; init; }
+        public string ActionType { get; init; } = DashboardDraftActionType.None;
+        public string SelectionState { get; init; } = DashboardDraftSelectionState.None;
+        public bool IsActionInProgress { get; init; }
     }
 
     public sealed record DashboardTeamSlotItem
     {
+        public int CellId { get; init; }
         public int ChampionId { get; init; }
         public string ChampionName { get; init; } = "No champion";
         public string RoleName { get; init; } = "None";
@@ -36,6 +54,9 @@ namespace JoinGameAfk.Model
         public string PlanReferenceText { get; init; } = string.Empty;
         public string PlanReferenceReasonKind { get; init; } = DashboardChampionAvailabilityReason.None;
         public bool IsOwnAction { get; init; }
+        public string ActionType { get; init; } = DashboardDraftActionType.None;
+        public string SelectionState { get; init; } = DashboardDraftSelectionState.None;
+        public bool IsActionInProgress { get; init; }
     }
 
     public sealed record DashboardStatus
