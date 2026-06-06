@@ -152,8 +152,8 @@ namespace JoinGameAfk.Presentation.View.Overlays
 
             PickLockText.Text = GetPlanLockText(status.PickLockText);
             BanLockText.Text = GetPlanLockText(status.BanLockText);
-            UpdateTargetChampionCell(OverlayPickTargetChampionCell, OverlayPickTargetChampionImage, status.PickChampionPriority, "No available pick");
-            UpdateTargetChampionCell(OverlayBanTargetChampionCell, OverlayBanTargetChampionImage, status.BanChampionPriority, "No available ban");
+            UpdateTargetChampionCell(OverlayPickTargetChampionCell, OverlayPickTargetChampionImage, status.PickChampionPriority, "No available pick", DashboardDraftActionType.Pick);
+            UpdateTargetChampionCell(OverlayBanTargetChampionCell, OverlayBanTargetChampionImage, status.BanChampionPriority, "No available ban", DashboardDraftActionType.Ban);
             _draftCountdownTimer.Update(status);
         }
 
@@ -236,19 +236,47 @@ namespace JoinGameAfk.Presentation.View.Overlays
                 : lockText;
         }
 
-        private void UpdateTargetChampionCell(FrameworkElement targetCell, Image targetImage, IReadOnlyList<DashboardChampionPlanItem> champions, string unavailableText)
+        private void UpdateTargetChampionCell(FrameworkElement targetCell, Image targetImage, IReadOnlyList<DashboardChampionPlanItem> champions, string unavailableText, string preferredLockedActionType)
         {
-            var targetChampion = champions.FirstOrDefault(champion => champion.IsAvailable);
+            var targetChampion = GetTargetChampion(champions, preferredLockedActionType)
+                ?? champions.FirstOrDefault(champion => champion.IsAvailable)
+                ?? champions.FirstOrDefault(champion => champion.ChampionId > 0);
             if (targetChampion is null)
             {
                 targetImage.Source = null;
+                targetImage.Opacity = 1;
                 targetCell.ToolTip = champions.Count > 0 ? unavailableText : null;
                 return;
             }
 
             string championName = GetChampionDisplayName(targetChampion.ChampionId, targetChampion.Name);
             targetImage.Source = GetChampionPortrait(targetChampion.ChampionId, championName);
-            targetCell.ToolTip = championName;
+            targetImage.Opacity = targetChampion.IsAvailable ? 1 : 0.72;
+            targetCell.ToolTip = BuildTargetChampionToolTip(targetChampion, championName, unavailableText);
+        }
+
+        private static DashboardChampionPlanItem? GetTargetChampion(IReadOnlyList<DashboardChampionPlanItem> champions, string preferredLockedActionType)
+        {
+            return string.IsNullOrWhiteSpace(preferredLockedActionType)
+                ? null
+                : champions.FirstOrDefault(champion => IsLockedPlanItem(champion, preferredLockedActionType));
+        }
+
+        private static bool IsLockedPlanItem(DashboardChampionPlanItem champion, string actionType)
+        {
+            return string.Equals(champion.ActionType, actionType, StringComparison.Ordinal)
+                && string.Equals(champion.SelectionState, DashboardDraftSelectionState.Locked, StringComparison.Ordinal);
+        }
+
+        private static string BuildTargetChampionToolTip(DashboardChampionPlanItem targetChampion, string championName, string unavailableText)
+        {
+            if (targetChampion.IsAvailable)
+                return championName;
+
+            string statusText = string.IsNullOrWhiteSpace(targetChampion.StatusText)
+                ? unavailableText
+                : targetChampion.StatusText;
+            return $"{championName}{Environment.NewLine}{statusText}";
         }
 
         private ImageSource? GetChampionPortrait(int championId, string championName)

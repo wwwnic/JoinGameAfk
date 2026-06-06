@@ -37,8 +37,28 @@ public partial class ChampSelect
             TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId, draftActionStates, suppressPickIntentActionState: isPlanningPhase),
             MyTeamBans = BuildTeamBanItems(root, "myTeamBans", "myTeam", draftActionStates),
             TheirTeamBans = BuildTeamBanItems(root, "theirTeamBans", "theirTeam", draftActionStates),
-            PickChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, pickActionId, pickChoices, _failedPickChampionIds, ownershipSnapshot, requiresOwnedChampion: true, availableStatusText: "Pick"),
-            BanChampionPriority = BuildChampionPlanItems(root, localPlayerCellId, banActionId, banChoices, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, requiresOwnedChampion: false, availableStatusText: "Ban"),
+            PickChampionPriority = BuildChampionPlanItems(
+                root,
+                localPlayerCellId,
+                pickActionId,
+                pickChoices,
+                _failedPickChampionIds,
+                ownershipSnapshot,
+                requiresOwnedChampion: true,
+                availableStatusText: "Pick",
+                completedActionType: DashboardDraftActionType.Pick,
+                completedActionChampionId: localPlayerPickCompleted ? _hoveredPickChampionId : 0),
+            BanChampionPriority = BuildChampionPlanItems(
+                root,
+                localPlayerCellId,
+                banActionId,
+                banChoices,
+                _failedBanChampionIds,
+                ChampionOwnershipSnapshot.Unknown,
+                requiresOwnedChampion: false,
+                availableStatusText: "Ban",
+                completedActionType: DashboardDraftActionType.Ban,
+                completedActionChampionId: localPlayerBanCompleted ? _hoveredBanChampionId : 0),
             PickChampionText = "No picks configured",
             BanChampionText = "No bans configured",
             PickLockText = BuildLockText(_settings.PickLockDelaySeconds, _manualPickSelectionOverride),
@@ -156,7 +176,17 @@ public partial class ChampSelect
             && _settings.AutoLockSelectionEnabled;
     }
 
-    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyList<ChampionPlanChoice> championChoices, IReadOnlySet<int> failedChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, bool requiresOwnedChampion, string availableStatusText)
+    private static IReadOnlyList<DashboardChampionPlanItem> BuildChampionPlanItems(
+        JsonElement root,
+        int localPlayerCellId,
+        int actionId,
+        IReadOnlyList<ChampionPlanChoice> championChoices,
+        IReadOnlySet<int> failedChampionIds,
+        ChampionOwnershipSnapshot ownershipSnapshot,
+        bool requiresOwnedChampion,
+        string availableStatusText,
+        string completedActionType = DashboardDraftActionType.None,
+        int completedActionChampionId = 0)
     {
         return championChoices
             .Select(choice =>
@@ -188,7 +218,13 @@ public partial class ChampSelect
                     SourcePosition = choice.SourcePosition,
                     IsAvailable = unavailableStatus is null,
                     StatusText = unavailableStatus ?? availableStatusText,
-                    UnavailableReasonKind = unavailableReasonKind
+                    UnavailableReasonKind = unavailableReasonKind,
+                    ActionType = choice.ChampionId == completedActionChampionId
+                        ? completedActionType
+                        : DashboardDraftActionType.None,
+                    SelectionState = choice.ChampionId == completedActionChampionId
+                        ? DashboardDraftSelectionState.Locked
+                        : DashboardDraftSelectionState.None
                 };
             })
             .ToList();
