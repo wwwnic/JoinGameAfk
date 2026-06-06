@@ -91,11 +91,27 @@ namespace JoinGameAfk.Presentation.View
 
         private void SetApplicationVersion()
         {
-            string version = GetDisplayVersion();
+            ApplyApplicationVersion(GetDisplayVersion());
+        }
+
+        private void ApplyApplicationVersion(string version)
+        {
             AppVersionText.Text = version;
             Title = $"JoinGameAfk {version}";
             AutomationProperties.SetName(AppVersionText, $"Application version {version}");
         }
+
+#if DEBUG
+        private string GetApplicationVersionText()
+        {
+            return AppVersionText.Text;
+        }
+
+        private void SetManualApplicationVersion(string version)
+        {
+            ApplyApplicationVersion(FormatDisplayVersion(version));
+        }
+#endif
 
         private static string GetDisplayVersion()
         {
@@ -316,7 +332,13 @@ namespace JoinGameAfk.Presentation.View
                 return;
             }
 
-            _phaseProgressionTestWindow = new PhaseProgressionTestWindow(_dashboardPage, _logsPage, () => !_isWatcherRunning)
+            _phaseProgressionTestWindow = new PhaseProgressionTestWindow(
+                _dashboardPage,
+                _logsPage,
+                () => !_isWatcherRunning,
+                GetApplicationVersionText,
+                SetManualApplicationVersion,
+                SetApplicationVersion)
             {
                 Owner = this
             };

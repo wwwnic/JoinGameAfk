@@ -10,6 +10,9 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private readonly PhaseProgressionPage _phaseProgressionPage;
         private readonly LogsPage _logsPage;
         private readonly Func<bool> _canApply;
+        private readonly Func<string> _getAppVersion;
+        private readonly Action<string> _applyAppVersion;
+        private readonly Action _resetAppVersion;
         private readonly List<DashboardChampionPlanItem> _myTeamBans = [];
         private readonly List<DashboardChampionPlanItem> _enemyTeamBans = [];
         private readonly List<DashboardTeamSlotItem> _myTeamSlots = [];
@@ -17,12 +20,22 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private readonly List<DashboardChampionPlanItem> _pickPlan = [];
         private readonly List<DashboardChampionPlanItem> _banPlan = [];
 
-        public PhaseProgressionTestWindow(PhaseProgressionPage phaseProgressionPage, LogsPage logsPage, Func<bool> canApply)
+        public PhaseProgressionTestWindow(
+            PhaseProgressionPage phaseProgressionPage,
+            LogsPage logsPage,
+            Func<bool> canApply,
+            Func<string> getAppVersion,
+            Action<string> applyAppVersion,
+            Action resetAppVersion)
         {
             InitializeComponent();
             _phaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
             _canApply = canApply;
+            _getAppVersion = getAppVersion;
+            _applyAppVersion = applyAppVersion;
+            _resetAppVersion = resetAppVersion;
+            AppVersionBox.Text = _getAppVersion();
             PreviewStoppedIndicator();
             PreviewReadyAccept(ClientPhase.Unknown, isWatcherRunning: false, isClientConnected: false);
         }
@@ -220,6 +233,27 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             _logsPage.WriteLine($"Unsupported queue detected: {unsupportedModeText}");
         }
 
+        private void ApplyVersion_Click(object sender, RoutedEventArgs e)
+        {
+            if (!EnsureCanApply())
+                return;
+
+            string version = NormalizeText(AppVersionBox.Text);
+            if (string.IsNullOrWhiteSpace(version))
+            {
+                ResetAppVersion();
+                return;
+            }
+
+            _applyAppVersion(version);
+            AppVersionBox.Text = _getAppVersion();
+        }
+
+        private void ResetVersion_Click(object sender, RoutedEventArgs e)
+        {
+            ResetAppVersion();
+        }
+
         private void AddMyBan_Click(object sender, RoutedEventArgs e)
         {
             AddChampionPlanItem(MyBanBox.Text, _myTeamBans, string.Empty);
@@ -328,6 +362,15 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private void Close_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void ResetAppVersion()
+        {
+            if (!EnsureCanApply())
+                return;
+
+            _resetAppVersion();
+            AppVersionBox.Text = _getAppVersion();
         }
 
         private void PreviewChampionSelectIndicator(string champSelectSubPhase, bool showChampionWarningGlyph = false)

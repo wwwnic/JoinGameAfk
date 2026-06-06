@@ -75,6 +75,33 @@
             <StackPanel Grid.Row="1">
                 <Border Style="{StaticResource TesterSectionStyle}">
                     <StackPanel>
+                        <TextBlock Text="App Version"
+                                   Style="{StaticResource TesterLabelStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="AppVersionBox"
+                                     Grid.Column="0"
+                                     Style="{StaticResource TesterInputStyle}" />
+                            <Button Grid.Column="1"
+                                    Content="Apply version"
+                                    Click="ApplyVersion_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}"
+                                    Margin="0,0,8,0" />
+                            <Button Grid.Column="2"
+                                    Content="Reset"
+                                    Click="ResetVersion_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource TesterSectionStyle}">
+                    <StackPanel>
                         <TextBlock Text="Phase Indicator"
                                    Style="{StaticResource TesterLabelStyle}" />
                         <Grid>

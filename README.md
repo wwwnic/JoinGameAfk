@@ -28,9 +28,9 @@
 
 ### Dashboard
 
-![JoinGameAfk dashboard demo](docs/images/dashboard-demo.gif)
+![JoinGameAfk full flow demo with ready check popup](docs/images/dashboard-demo.gif)
 
-JoinGameAfk keeps champion select readable at a glance: current phase, draft timer, team picks, bans, pick/ban priorities, lock timing, and live watcher output are all in one place.
+JoinGameAfk keeps the queue-to-draft flow readable at a glance: ready check popup, current phase, draft timer, team picks, bans, pick/ban priorities, lock timing, and live watcher output are all in one place.
 
 ### Role Plans
 
@@ -40,17 +40,9 @@ Build role-specific pick and ban plans before queue. Drag champions into the rig
 
 ### Pick/Ban Overlay
 
-![JoinGameAfk pick ban overlay demo](docs/images/pick-ban-overlay-demo.gif)
+![JoinGameAfk pick ban overlay demo](docs/images/pick-ban-overlay-demo.jpg)
 
 Keep the important decisions visible without leaving the League Client. The compact overlay shows your current pick or ban plan, the remaining timer, and the lock countdown.
-
-### Queue Overlay
-
-![JoinGameAfk queue overlay demo](docs/images/in-queue-overlay-demo.gif)
-
-![JoinGameAfk ready check indicator](docs/images/in-queue-overlay-ready-check-indicator.gif)
-
-Use a tiny always-on-top queue indicator when you do not want the full dashboard open. It gives you a quick visual signal that the watcher is running, then highlights the moment a ready check appears.
 
 ### Champion Pictures
 
