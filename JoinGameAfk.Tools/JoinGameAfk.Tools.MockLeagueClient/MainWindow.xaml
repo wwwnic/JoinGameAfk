@@ -715,11 +715,18 @@
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}" />
                     </StackPanel>
-                    <Button Grid.Column="6"
-                            Content="Emit current state"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Click="EmitStateButton_Click" />
+                    <WrapPanel Grid.Column="6"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                        <Button Content="Import YAML"
+                                Click="ImportDraftYamlButton_Click" />
+                        <Button Content="Export YAML"
+                                Click="ExportDraftYamlButton_Click" />
+                        <Button Content="Open samples"
+                                Click="OpenDraftYamlSamplesButton_Click" />
+                        <Button Content="Emit current state"
+                                Click="EmitStateButton_Click" />
+                    </WrapPanel>
                 </Grid>
             </Border>
 
@@ -790,16 +797,6 @@
                                                   Tag="adc" />
                                     <ComboBoxItem Content="Support"
                                                   Tag="support" />
-                                </ComboBox>
-                                <TextBlock Width="82"
-                                           Text="Timer phase"
-                                           VerticalAlignment="Center" />
-                                <ComboBox x:Name="TimerPhaseBox"
-                                          Width="140"
-                                          Margin="0,0,16,0">
-                                    <ComboBoxItem Content="PLANNING" />
-                                    <ComboBoxItem Content="BAN_PICK" />
-                                    <ComboBoxItem Content="FINALIZATION" />
                                 </ComboBox>
                                 <TextBlock Width="65"
                                            Text="Time left"

@@ -15,12 +15,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Page Include="..\..\JoinGameAfk\Styles\Themes\DraftDesk.xaml"
           Link="Styles\Themes\DraftDesk.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Samples\*.yaml;Samples\*.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

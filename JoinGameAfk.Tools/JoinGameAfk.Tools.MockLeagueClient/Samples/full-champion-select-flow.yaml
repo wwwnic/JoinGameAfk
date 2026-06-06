@@ -1,0 +1,249 @@
+Version: 1
+QueueId: 400
+QueueName: Normal Draft
+LocalSlot: 1
+LocalRole: top
+ActivePhase: Planning
+BlueTeam:
+- Cell: 1
+  Role: top
+- Cell: 2
+  Role: jungle
+- Cell: 3
+  Role: mid
+- Cell: 4
+  Role: adc
+- Cell: 5
+  Role: support
+RedTeam:
+- Cell: 6
+  Role: top
+- Cell: 7
+  Role: jungle
+- Cell: 8
+  Role: mid
+- Cell: 9
+  Role: adc
+- Cell: 10
+  Role: support
+Phases:
+  Planning:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 1
+      Type: pick
+      Champion: Darius
+      HoverAtSeconds: 9
+    - Cell: 2
+      Type: pick
+      Champion: Lee Sin
+      HoverAtSeconds: 9
+    - Cell: 3
+      Type: pick
+      Champion: Ahri
+      HoverAtSeconds: 8
+    - Cell: 4
+      Type: pick
+      Champion: Caitlyn
+      HoverAtSeconds: 8
+    - Cell: 5
+      Type: pick
+      Champion: Thresh
+      HoverAtSeconds: 7
+    - Cell: 6
+      Type: pick
+      Champion: Garen
+      HoverAtSeconds: 7
+    - Cell: 7
+      Type: pick
+      Champion: Jax
+      HoverAtSeconds: 6
+    - Cell: 8
+      Type: pick
+      Champion: Lux
+      HoverAtSeconds: 6
+    - Cell: 9
+      Type: pick
+      Champion: Jhin
+      HoverAtSeconds: 5
+    - Cell: 10
+      Type: pick
+      Champion: Leona
+      HoverAtSeconds: 5
+    OptionalTimedActions:
+    - Id: 1
+      Type: RoleSwap
+      SourceCell: 1
+      TargetCell: 2
+      TriggerAtSeconds: 4
+  Ban:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 1
+      Type: ban
+      Champion: Yasuo
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 2
+      Type: ban
+      Champion: Jinx
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 3
+      Type: ban
+      Champion: Morgana
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    - Cell: 4
+      Type: ban
+      Champion: Blitzcrank
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    - Cell: 5
+      Type: ban
+      Champion: Ezreal
+      HoverAtSeconds: 7
+      LockAtSeconds: 1
+    - Cell: 6
+      Type: ban
+      Champion: Annie
+      HoverAtSeconds: 7
+      LockAtSeconds: 1
+    - Cell: 7
+      Type: ban
+      Champion: Ashe
+      HoverAtSeconds: 6
+      LockAtSeconds: 1
+    - Cell: 8
+      Type: ban
+      Champion: Alistar
+      HoverAtSeconds: 6
+      LockAtSeconds: 1
+    - Cell: 9
+      Type: ban
+      Champion: Janna
+      HoverAtSeconds: 5
+      LockAtSeconds: 1
+    - Cell: 10
+      Type: ban
+      Champion: Sylas
+      HoverAtSeconds: 5
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: RoleSwap
+      SourceCell: 6
+      TargetCell: 7
+      TriggerAtSeconds: 4
+  BlueFirstPick:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 1
+      Type: pick
+      Champion: Darius
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    OptionalTimedActions: []
+  RedFirstRotation:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 6
+      Type: pick
+      Champion: Garen
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 7
+      Type: pick
+      Champion: Jax
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: PickOrderSwap
+      SourceCell: 8
+      TargetCell: 9
+      TriggerAtSeconds: 4
+  BlueSecondRotation:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 2
+      Type: pick
+      Champion: Lee Sin
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 3
+      Type: pick
+      Champion: Ahri
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: PickOrderSwap
+      SourceCell: 4
+      TargetCell: 5
+      TriggerAtSeconds: 4
+  RedSecondRotation:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 8
+      Type: pick
+      Champion: Lux
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 9
+      Type: pick
+      Champion: Jhin
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: ChampionSwap
+      SourceCell: 6
+      TargetCell: 7
+      TriggerAtSeconds: 4
+  BlueFinalRotation:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 4
+      Type: pick
+      Champion: Caitlyn
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    - Cell: 5
+      Type: pick
+      Champion: Thresh
+      HoverAtSeconds: 8
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: ChampionSwap
+      SourceCell: 2
+      TargetCell: 3
+      TriggerAtSeconds: 4
+  RedLastPick:
+    TimeLeftSeconds: 10
+    TimedActions:
+    - Cell: 10
+      Type: pick
+      Champion: Leona
+      HoverAtSeconds: 9
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: ChampionSwap
+      SourceCell: 8
+      TargetCell: 9
+      TriggerAtSeconds: 4
+  Finalization:
+    TimeLeftSeconds: 10
+    TimedActions: []
+    OptionalTimedActions:
+    - Id: 1
+      Type: ChampionSwap
+      SourceCell: 1
+      TargetCell: 4
+      TriggerAtSeconds: 4
+  InGame:
+    TimeLeftSeconds: 0
+    TimedActions: []
+    OptionalTimedActions: []

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -64,9 +65,9 @@ public partial class MainWindow : Window
         SetLocalPlayerCellBoxFromValue(LocalPlayerCellBox, 1);
         ReadyStateBox.SelectedIndex = 0;
         ReadyResponseBox.SelectedIndex = 0;
-        TimerPhaseBox.SelectedIndex = 1;
         _draftCountdownTimer.Interval = TimeSpan.FromSeconds(1);
         _draftCountdownTimer.Tick += DraftCountdownTimer_Tick;
+        LoadDraftYamlConfigurationOnStartup();
         _state.Changed += State_Changed;
         RefreshUiFromState();
     }
@@ -263,6 +264,79 @@ public partial class MainWindow : Window
         await EmitSnapshotIfRunningAsync();
     }
 
+    private async void ImportDraftYamlButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import draft YAML",
+            Filter = "YAML files (*.yaml;*.yml)|*.yaml;*.yml|All files (*.*)|*.*",
+            FileName = DraftYamlConfigurationStore.FileName,
+            InitialDirectory = GetDraftYamlDialogInitialDirectory()
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            StopDraftCountdown("Draft countdown paused for YAML import.");
+            var configuration = DraftYamlConfigurationStore.Load(dialog.FileName);
+            _state.ImportDraftYamlConfiguration(configuration);
+            AddLog($"Draft YAML imported from {dialog.FileName}.");
+            await EmitSnapshotIfRunningAsync();
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Draft YAML import failed: {ex.Message}");
+        }
+    }
+
+    private void ExportDraftYamlButton_Click(object sender, RoutedEventArgs e)
+    {
+        CommitChampionSelectEditorsToState();
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export draft YAML",
+            Filter = "YAML files (*.yaml)|*.yaml|YML files (*.yml)|*.yml|All files (*.*)|*.*",
+            FileName = DraftYamlConfigurationStore.FileName,
+            InitialDirectory = GetDraftYamlDialogInitialDirectory(),
+            DefaultExt = ".yaml",
+            AddExtension = true
+        };
+
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            DraftYamlConfigurationStore.Save(dialog.FileName, _state.ExportDraftYamlConfiguration());
+            AddLog($"Draft YAML exported to {dialog.FileName}.");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Draft YAML export failed: {ex.Message}");
+        }
+    }
+
+    private void OpenDraftYamlSamplesButton_Click(object sender, RoutedEventArgs e)
+    {
+        string sampleDirectoryPath = GetDraftYamlSampleDirectoryPath();
+        try
+        {
+            Directory.CreateDirectory(sampleDirectoryPath);
+            Process.Start(new ProcessStartInfo(sampleDirectoryPath)
+            {
+                UseShellExecute = true
+            });
+            AddLog($"Opened draft YAML samples folder: {sampleDirectoryPath}");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Failed to open draft YAML samples folder: {ex.Message}");
+        }
+    }
+
     private async void DraftBackButton_Click(object sender, RoutedEventArgs e)
     {
         var snapshot = _state.GetSnapshot();
@@ -358,6 +432,7 @@ public partial class MainWindow : Window
             TargetCellId = 2,
             TriggerAtSeconds = 0
         });
+        CommitChampionSelectEditorsToState();
         AddLog($"Optional timed action added: {MockLeagueClientState.GetCustomTimedActionTypeDisplayName(type)}.");
     }
 
@@ -368,6 +443,7 @@ public partial class MainWindow : Window
 
         CommitGridEdits(CustomTimedActionsGrid);
         _customTimedActions.Remove(action);
+        CommitChampionSelectEditorsToState();
         AddLog($"Optional timed action removed: {MockLeagueClientState.GetCustomTimedActionTypeDisplayName(action.Type)}.");
     }
 
@@ -524,7 +600,6 @@ public partial class MainWindow : Window
         var theirTeamBanIds = _theirTeamSlots.Select(slot => slot.BanChampionId);
 
         _state.UpdateChampionSelect(
-            GetComboText(TimerPhaseBox),
             timeLeftSeconds,
             _myTeamSlots,
             _theirTeamSlots,
@@ -532,6 +607,36 @@ public partial class MainWindow : Window
             theirTeamBanIds,
             _actions,
             _customTimedActions);
+    }
+
+    private void LoadDraftYamlConfigurationOnStartup()
+    {
+        string filePath = DraftYamlConfigurationStore.DefaultFilePath;
+        try
+        {
+            if (!File.Exists(filePath))
+                return;
+
+            _state.ImportDraftYamlConfiguration(DraftYamlConfigurationStore.Load(filePath));
+            AddLog($"Draft YAML loaded from {filePath}.");
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Draft YAML load failed. Using built-in defaults. {ex.Message}");
+        }
+    }
+
+    private static string GetDraftYamlDialogInitialDirectory()
+    {
+        string directoryPath = Path.GetDirectoryName(DraftYamlConfigurationStore.DefaultFilePath) ?? string.Empty;
+        return Directory.Exists(directoryPath)
+            ? directoryPath
+            : Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    }
+
+    private static string GetDraftYamlSampleDirectoryPath()
+    {
+        return Path.Combine(AppContext.BaseDirectory, "Samples");
     }
 
     private static void CommitGridEdits(DataGrid grid)
@@ -672,7 +777,6 @@ public partial class MainWindow : Window
             SetSelectedDraftStep(snapshot.DraftStep);
             SetComboText(ReadyStateBox, snapshot.ReadyCheckState);
             SetComboText(ReadyResponseBox, snapshot.ReadyCheckResponse);
-            SetComboText(TimerPhaseBox, snapshot.TimerPhase);
             TimeLeftBox.Text = snapshot.TimeLeftSeconds.ToString();
             var localPlayer = FindTeamSlot(snapshot, snapshot.LocalPlayerCellId);
             SetRoleBoxFromValue(

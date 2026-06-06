@@ -1,0 +1,205 @@
+Version: 1
+QueueId: 400
+QueueName: Normal Draft
+LocalSlot: 1
+LocalRole: top
+ActivePhase: Planning
+BlueTeam:
+- Cell: 1
+  Role: top
+- Cell: 2
+  Role: jungle
+- Cell: 3
+  Role: mid
+- Cell: 4
+  Role: adc
+- Cell: 5
+  Role: support
+RedTeam:
+- Cell: 6
+  Role: jungle
+- Cell: 7
+  Role: top
+- Cell: 8
+  Role: mid
+- Cell: 9
+  Role: adc
+- Cell: 10
+  Role: support
+Phases:
+  Planning:
+    TimeLeftSeconds: 6
+    TimedActions:
+    - Cell: 2
+      Type: pick
+      Champion: Lee Sin
+      HoverAtSeconds: 4
+    - Cell: 3
+      Type: pick
+      Champion: Ahri
+      HoverAtSeconds: 3
+    - Cell: 4
+      Type: pick
+      Champion: Caitlyn
+      HoverAtSeconds: 2
+    - Cell: 5
+      Type: pick
+      Champion: Thresh
+      HoverAtSeconds: 1
+    - Cell: 6
+      Type: pick
+      Champion: Garen
+      HoverAtSeconds: 5
+    - Cell: 7
+      Type: pick
+      Champion: Jax
+      HoverAtSeconds: 4
+    - Cell: 8
+      Type: pick
+      Champion: Lux
+      HoverAtSeconds: 3
+    - Cell: 9
+      Type: pick
+      Champion: Jhin
+      HoverAtSeconds: 2
+    - Cell: 10
+      Type: pick
+      Champion: Leona
+      HoverAtSeconds: 1
+    OptionalTimedActions: []
+  Ban:
+    TimeLeftSeconds: 6
+    TimedActions:
+    - Cell: 2
+      Type: ban
+      Champion: Jinx
+      HoverAtSeconds: 4
+      LockAtSeconds: 1
+    - Cell: 3
+      Type: ban
+      Champion: Morgana
+      HoverAtSeconds: 3
+      LockAtSeconds: 1
+    - Cell: 4
+      Type: ban
+      Champion: Blitzcrank
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 5
+      Type: ban
+      Champion: Ezreal
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 6
+      Type: ban
+      Champion: Annie
+      HoverAtSeconds: 5
+      LockAtSeconds: 1
+    - Cell: 7
+      Type: ban
+      Champion: Ashe
+      HoverAtSeconds: 4
+      LockAtSeconds: 1
+    - Cell: 8
+      Type: ban
+      Champion: Alistar
+      HoverAtSeconds: 3
+      LockAtSeconds: 1
+    - Cell: 9
+      Type: ban
+      Champion: Janna
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 10
+      Type: ban
+      Champion: Sylas
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: RoleSwap
+      SourceCell: 6
+      TargetCell: 7
+      TriggerAtSeconds: 4
+  BlueFirstPick:
+    TimeLeftSeconds: 3
+    TimedActions: []
+    OptionalTimedActions: []
+  RedFirstRotation:
+    TimeLeftSeconds: 3
+    TimedActions:
+    - Cell: 6
+      Type: pick
+      Champion: Garen
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 7
+      Type: pick
+      Champion: Jax
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions: []
+  BlueSecondRotation:
+    TimeLeftSeconds: 3
+    TimedActions:
+    - Cell: 2
+      Type: pick
+      Champion: Lee Sin
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 3
+      Type: pick
+      Champion: Ahri
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions: []
+  RedSecondRotation:
+    TimeLeftSeconds: 3
+    TimedActions:
+    - Cell: 8
+      Type: pick
+      Champion: Lux
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 9
+      Type: pick
+      Champion: Jhin
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions: []
+  BlueFinalRotation:
+    TimeLeftSeconds: 3
+    TimedActions:
+    - Cell: 4
+      Type: pick
+      Champion: Caitlyn
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    - Cell: 5
+      Type: pick
+      Champion: Thresh
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions:
+    - Id: 1
+      Type: ChampionSwap
+      SourceCell: 2
+      TargetCell: 3
+      TriggerAtSeconds: 2
+  RedLastPick:
+    TimeLeftSeconds: 3
+    TimedActions:
+    - Cell: 10
+      Type: pick
+      Champion: Leona
+      HoverAtSeconds: 2
+      LockAtSeconds: 1
+    OptionalTimedActions: []
+  Finalization:
+    TimeLeftSeconds: 5
+    TimedActions: []
+    OptionalTimedActions: []
+  InGame:
+    TimeLeftSeconds: 0
+    TimedActions: []
+    OptionalTimedActions: []
