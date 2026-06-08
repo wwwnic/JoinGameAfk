@@ -5,16 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="google-site-verification" content="9-thqKuCrVBVTaj5RvHswtW9iTH1EDD-yE9y8_oV5GE">
     <meta name="google-site-verification" content="38xjqk1ct0pEiO6oVxTo5b99VLsfyoIhFO9DLhfXQ2k">
-    <meta name="description" content="JoinGameAfk is a free Windows helper for League of Legends ready checks, role plan setup, and champion select pick/ban flow.">
+    <meta name="description" content="JoinGameAfk is an open source Windows fan project on GitHub for League of Legends auto accept queue, ready checks, and champion select pick/ban flow.">
     <meta name="robots" content="index,follow">
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="canonical" href="https://wwwnic.github.io/JoinGameAfk/">
-    <meta property="og:title" content="JoinGameAfk">
-    <meta property="og:description" content="A free Windows helper for League of Legends ready checks, role plan setup, and champion select pick/ban flow.">
+    <meta property="og:title" content="Open Source LoL Auto Accept Queue Helper 2026 | JoinGameAfk">
+    <meta property="og:description" content="An open source Windows fan project on GitHub for League of Legends auto accept queue, ready checks, and champion select pick/ban flow.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://wwwnic.github.io/JoinGameAfk/">
     <meta property="og:image" content="https://wwwnic.github.io/JoinGameAfk/images/champion-picture-selector.jpg">
-    <title>JoinGameAfk - League of Legends ready check and champion select helper</title>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Open Source LoL Auto Accept Queue Helper 2026 | JoinGameAfk">
+    <meta name="twitter:description" content="An open source Windows fan project on GitHub for League of Legends auto accept queue, ready checks, and champion select pick/ban flow.">
+    <meta name="twitter:image" content="https://wwwnic.github.io/JoinGameAfk/images/champion-picture-selector.jpg">
+    <title>Open Source LoL Auto Accept Queue Helper 2026 | JoinGameAfk</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "JoinGameAfk",
+        "alternateName": [
+          "LoL Auto Accept",
+          "League of Legends Auto Accept",
+          "Auto Accept Queue",
+          "Autoaccept",
+          "LoL Auto Accept Queue Helper",
+          "Open Source LoL Auto Accept Queue Helper"
+        ],
+        "description": "JoinGameAfk is an open source Windows fan project on GitHub for League of Legends auto accept queue, ready checks, and champion select pick/ban flow.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Windows",
+        "url": "https://wwwnic.github.io/JoinGameAfk/",
+        "downloadUrl": "https://github.com/wwwnic/JoinGameAfk/releases",
+        "codeRepository": "https://github.com/wwwnic/JoinGameAfk",
+        "license": "https://github.com/wwwnic/JoinGameAfk/blob/main/LICENSE",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
     <style>
       :root {
         color-scheme: dark;
@@ -34,6 +66,7 @@
 
       body {
         margin: 0;
+        overflow-x: hidden;
         background: var(--bg);
         color: var(--text);
         font-family: "Segoe UI", Arial, sans-serif;
@@ -63,6 +96,10 @@
         align-items: center;
       }
 
+      .hero-grid > * {
+        min-width: 0;
+      }
+
       .eyebrow {
         margin: 0 0 10px;
         color: var(--blue);
@@ -82,9 +119,9 @@
 
       .lede {
         max-width: 640px;
-        margin: 22px 0 0;
+        margin: 18px 0 0;
         color: var(--muted);
-        font-size: clamp(1.05rem, 2vw, 1.25rem);
+        font-size: clamp(1rem, 1.6vw, 1.15rem);
       }
 
       .actions {
@@ -116,6 +153,8 @@
 
       .preview {
         overflow: hidden;
+        max-width: 100%;
+        margin: 0;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
@@ -125,6 +164,8 @@
       .preview img {
         display: block;
         width: 100%;
+        max-width: 100%;
+        height: auto;
         aspect-ratio: 1 / 1;
         object-fit: contain;
       }
@@ -177,11 +218,27 @@
 
       @media (max-width: 560px) {
         .shell {
-          width: min(100% - 24px, 1120px);
+          width: calc(100% - 24px);
+          max-width: 1120px;
+        }
+
+        .hero-grid > div,
+        .actions,
+        .preview {
+          width: calc(100vw - 24px);
+          max-width: 100%;
         }
 
         h1 {
           font-size: clamp(2.55rem, 13vw, 3.25rem);
+        }
+
+        .lede {
+          max-width: 100%;
+        }
+
+        .lede span {
+          display: block;
         }
 
         .actions {
@@ -199,15 +256,15 @@
     <main>
       <section class="hero">
         <div class="shell hero-grid">
-          <div>
-            <p class="eyebrow">Free Windows helper for League of Legends</p>
-            <h1>JoinGameAfk</h1>
-            <p class="lede">Automate ready checks, build role plans, and keep overlays close at hand in a local-first Windows app.</p>
-            <div class="actions">
-              <a class="button primary" href="https://github.com/wwwnic/JoinGameAfk/releases">Download latest version</a>
-              <a class="button" href="https://github.com/wwwnic/JoinGameAfk">View source on GitHub</a>
+            <div>
+                <p class="eyebrow">Auto Accept Queue and champion select helper for League of Legends</p>
+                <h1>JoinGameAfk</h1>
+                <p class="lede"><span>Auto-accept queue ready checks.</span> <span>Automate your champion select.</span> <span>Play sound effects.</span> <span>Uses Riot Games' local League Client API.</span></p>
+                <div class="actions">
+                    <a class="button primary" href="https://github.com/wwwnic/JoinGameAfk/releases">Download latest version</a>
+                    <a class="button" href="https://github.com/wwwnic/JoinGameAfk">View source on GitHub</a>
+                </div>
             </div>
-          </div>
           <figure class="preview">
             <img src="images/dashboard-demo.gif" alt="JoinGameAfk full queue-to-draft flow showing the ready check popup and champion select status">
           </figure>
@@ -216,16 +273,16 @@
 
       <section class="shell features" aria-label="Main features">
         <article class="feature">
-          <h2>Ready Checks</h2>
-          <p>Accept ready checks after a configurable delay while the League Client is open.</p>
+          <h2>Auto Accept Ready Checks</h2>
+          <p>Accept ready checks after a configurable delay that can give you enough time to decline.</p>
         </article>
         <article class="feature">
-          <h2>Champion Plans</h2>
-          <p>Build role-specific pick and ban priority lists and keep fallback options visible.</p>
+          <h2>Automate Champion Select</h2>
+          <p>Build role-specific pick and ban plans to join the game while you are away.</p>
         </article>
         <article class="feature">
-          <h2>Draft Overlays</h2>
-          <p>Use compact overlays for queue and champion select without leaving the client.</p>
+          <h2>Focused on doing one thing right.</h2>
+          <p>The scope is modest, but the core queue-to-draft flow is built to be reliable.</p>
         </article>
       </section>
     </main>

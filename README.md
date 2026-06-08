@@ -1,6 +1,6 @@
 # JoinGameAfk
 
-> A free Windows companion that auto-accepts ready checks, handles champion select picks/bans, and plays sound effects.
+An open source Windows fan project for League of Legends, auto accept queue, automate champion select and play sound effects.
 
 [![Download latest version](https://img.shields.io/badge/Download-Latest%20Release-d3ad62?style=for-the-badge&logo=github&logoColor=white)](https://github.com/wwwnic/JoinGameAfk/releases)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
@@ -111,7 +111,7 @@ dotnet publish .\JoinGameAfk\JoinGameAfk.csproj -c Release -r win-x64 -p:Publish
 
 ## License
 
-JoinGameAfk is released under the MIT License. See `LICENSE`.
+JoinGameAfk is released under the MIT License.
 
 ---
 
