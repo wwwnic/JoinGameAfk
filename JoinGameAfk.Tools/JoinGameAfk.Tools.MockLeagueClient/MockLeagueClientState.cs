@@ -1691,6 +1691,7 @@ internal sealed partial class MockLeagueClientState
         return phase switch
         {
             MockClientPhase.Unknown => "None",
+            MockClientPhase.Planning => "ChampSelect",
             MockClientPhase.InGame => "InProgress",
             _ => phase.ToString()
         };
