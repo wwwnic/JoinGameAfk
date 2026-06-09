@@ -18,6 +18,7 @@ internal sealed partial class MockLeagueClientState
                 QueueName = _queueMode == MockQueueMode.DraftPick ? _queueName : "Normal Draft",
                 LocalSlot = _localPlayerCellId,
                 LocalRole = _localPlayerAssignedPosition,
+                RevealEnemyPickIntents = _revealEnemyPickIntents,
                 ActivePhase = _draftStep.ToString(),
                 BlueTeam = CreateYamlTeamSlots(_myTeam),
                 RedTeam = CreateYamlTeamSlots(_theirTeam),
@@ -43,6 +44,7 @@ internal sealed partial class MockLeagueClientState
         SetQueueCore(configuration.QueueId, NormalizeText(configuration.QueueName, "Normal Draft"));
         _localPlayerCellId = NormalizeLocalPlayerCellId(GetYamlLocalSlot(configuration));
         _localPlayerAssignedPosition = MockLeagueClientRoles.NormalizeDisplayRole(GetYamlLocalRole(configuration));
+        _revealEnemyPickIntents = configuration.RevealEnemyPickIntents;
         _sharedDraftPickHoverChampionIds.Clear();
         _sharedDraftBanHoverChampionIds.Clear();
 

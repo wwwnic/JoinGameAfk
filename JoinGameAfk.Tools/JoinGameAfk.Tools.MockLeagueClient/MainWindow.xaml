@@ -804,6 +804,14 @@
                                 <TextBox x:Name="TimeLeftBox"
                                          Width="70"
                                          Margin="0,0,12,0" />
+                                <CheckBox x:Name="EnemyPickIntentsCheckBox"
+                                          Content="Reveal enemy planned picks"
+                                          Margin="0,0,14,0"
+                                          VerticalAlignment="Center"
+                                          Foreground="{DynamicResource TextSecondaryBrush}"
+                                          ToolTip="When disabled, enemy hover picks stay hidden until the pick action is locked."
+                                          Checked="EnemyPickIntentsCheckBox_Changed"
+                                          Unchecked="EnemyPickIntentsCheckBox_Changed" />
                                 <Button Content="Play to 0"
                                         Click="DraftStartTimerButton_Click" />
                                 <Button Content="Play phases"

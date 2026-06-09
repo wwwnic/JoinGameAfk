@@ -567,6 +567,19 @@ public partial class MainWindow : Window
         await EmitSnapshotIfRunningAsync();
     }
 
+    private async void EnemyPickIntentsCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isRefreshingUi || !IsLoaded)
+            return;
+
+        bool revealed = EnemyPickIntentsCheckBox.IsChecked == true;
+        _state.UpdateEnemyPickIntentsRevealed(revealed);
+        AddLog(revealed
+            ? "Enemy planned picks are visible in mock champ-select payloads."
+            : "Enemy planned picks are hidden until lock-in.");
+        await EmitChampSelectSessionIfRunningAsync();
+    }
+
     private async Task ApplyQueueAsync()
     {
         if (!int.TryParse(QueueIdBox.Text.Trim(), out int queueId))
@@ -778,6 +791,7 @@ public partial class MainWindow : Window
             SetComboText(ReadyStateBox, snapshot.ReadyCheckState);
             SetComboText(ReadyResponseBox, snapshot.ReadyCheckResponse);
             TimeLeftBox.Text = snapshot.TimeLeftSeconds.ToString();
+            EnemyPickIntentsCheckBox.IsChecked = snapshot.EnemyPickIntentsRevealed;
             var localPlayer = FindTeamSlot(snapshot, snapshot.LocalPlayerCellId);
             SetRoleBoxFromValue(
                 LocalPlayerRoleBox,

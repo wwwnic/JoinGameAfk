@@ -72,6 +72,7 @@ internal sealed class DraftYamlConfiguration
     public string? LocalRole { get; set; }
     public int? LocalPlayerCellId { get; set; }
     public string? LocalPlayerRole { get; set; }
+    public bool RevealEnemyPickIntents { get; set; }
     public string ActivePhase { get; set; } = DraftPickStep.Planning.ToString();
     public List<DraftYamlTeamSlot> BlueTeam { get; set; } = [];
     public List<DraftYamlTeamSlot> RedTeam { get; set; } = [];

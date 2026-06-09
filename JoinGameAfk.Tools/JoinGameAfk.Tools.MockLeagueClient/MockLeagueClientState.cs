@@ -61,6 +61,7 @@ internal sealed partial class MockLeagueClientState
     private string _sessionId = "mock-champ-select-1";
     private int _localPlayerCellId = 1;
     private string _localPlayerAssignedPosition = MockLeagueClientRoles.DefaultRole;
+    private bool _revealEnemyPickIntents;
     private readonly List<TeamSlot> _myTeam = [];
     private readonly List<TeamSlot> _theirTeam = [];
     private readonly List<int> _myTeamBans = [];
@@ -89,6 +90,7 @@ internal sealed partial class MockLeagueClientState
                 _draftStep,
                 _localPlayerCellId,
                 AreEnemyBansRevealedCore(),
+                AreEnemyPickIntentsRevealedCore(),
                 _queueId,
                 _queueName,
                 _readyCheckState,
@@ -278,6 +280,19 @@ internal sealed partial class MockLeagueClientState
         {
             _readyCheckState = NormalizeText(state, "InProgress");
             _readyCheckResponse = NormalizeText(playerResponse, "None");
+        }
+
+        OnChanged();
+    }
+
+    public void UpdateEnemyPickIntentsRevealed(bool revealed)
+    {
+        lock (_lock)
+        {
+            if (_revealEnemyPickIntents == revealed)
+                return;
+
+            _revealEnemyPickIntents = revealed;
         }
 
         OnChanged();
@@ -556,6 +571,7 @@ internal sealed partial class MockLeagueClientState
         {
             long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             bool revealEnemyBans = AreEnemyBansRevealedCore();
+            bool revealEnemyPickIntents = AreEnemyPickIntentsRevealedCore();
             bool localPlayerOnBlueSide = IsBlueTeamCellId(_localPlayerCellId);
             var localTeam = localPlayerOnBlueSide ? _myTeam : _theirTeam;
             var enemyTeam = localPlayerOnBlueSide ? _theirTeam : _myTeam;
@@ -567,8 +583,8 @@ internal sealed partial class MockLeagueClientState
                 localPlayerCellId = _localPlayerCellId,
                 multiUserChatId = _sessionId,
                 timer = CreateTimerPayload(nowMs),
-                myTeam = localTeam.Select(CreateTeamMemberPayload).ToArray(),
-                theirTeam = enemyTeam.Select(CreateTeamMemberPayload).ToArray(),
+                myTeam = localTeam.Select(slot => CreateTeamMemberPayload(slot, revealPickIntent: true)).ToArray(),
+                theirTeam = enemyTeam.Select(slot => CreateTeamMemberPayload(slot, revealEnemyPickIntents)).ToArray(),
                 bans = new
                 {
                     myTeamBans = localTeamBans.ToArray(),
@@ -576,7 +592,7 @@ internal sealed partial class MockLeagueClientState
                 },
                 actions = new[]
                 {
-                    _actions.Select(action => CreateActionPayload(action, revealEnemyBans, _localPlayerCellId)).ToArray()
+                    _actions.Select(action => CreateActionPayload(action, revealEnemyBans, revealEnemyPickIntents, _localPlayerCellId)).ToArray()
                 }
             };
         }
@@ -1230,6 +1246,11 @@ internal sealed partial class MockLeagueClientState
         return _queueMode != MockQueueMode.DraftPick || _draftStep > DraftPickStep.Ban;
     }
 
+    private bool AreEnemyPickIntentsRevealedCore()
+    {
+        return _revealEnemyPickIntents;
+    }
+
     private void EnsureBlindPickActionActorsCore()
     {
         foreach (var action in _actions)
@@ -1296,14 +1317,14 @@ internal sealed partial class MockLeagueClientState
         _queueName = NormalizeText(queueName, $"Queue {_queueId}");
     }
 
-    private static object CreateTeamMemberPayload(TeamSlot slot)
+    private static object CreateTeamMemberPayload(TeamSlot slot, bool revealPickIntent)
     {
         return new
         {
             cellId = slot.CellId,
             assignedPosition = MockLeagueClientRoles.ToLeagueAssignedPosition(slot.AssignedPosition),
             championId = slot.ChampionId,
-            championPickIntent = slot.ChampionPickIntent
+            championPickIntent = revealPickIntent ? slot.ChampionPickIntent : 0
         };
     }
 
@@ -1325,12 +1346,20 @@ internal sealed partial class MockLeagueClientState
         };
     }
 
-    private static object CreateActionPayload(ChampSelectAction action, bool revealEnemyBans, int localPlayerCellId)
+    private static object CreateActionPayload(
+        ChampSelectAction action,
+        bool revealEnemyBans,
+        bool revealEnemyPickIntents,
+        int localPlayerCellId)
     {
         int championId = action.ChampionId;
-        if (!revealEnemyBans
-            && string.Equals(action.Type, "ban", StringComparison.OrdinalIgnoreCase)
-            && IsEnemyTeamCellId(action.ActorCellId, localPlayerCellId))
+        bool isEnemyAction = IsEnemyTeamCellId(action.ActorCellId, localPlayerCellId);
+        if (isEnemyAction
+            && ((!revealEnemyBans
+                 && string.Equals(action.Type, "ban", StringComparison.OrdinalIgnoreCase))
+                || (!revealEnemyPickIntents
+                    && string.Equals(action.Type, "pick", StringComparison.OrdinalIgnoreCase)
+                    && !action.Completed)))
         {
             championId = 0;
         }
@@ -1766,6 +1795,7 @@ internal sealed record MockLeagueClientSnapshot(
     DraftPickStep DraftStep,
     int LocalPlayerCellId,
     bool EnemyBansRevealed,
+    bool EnemyPickIntentsRevealed,
     int QueueId,
     string QueueName,
     string ReadyCheckState,
