@@ -310,7 +310,7 @@ public partial class ChampSelect
             int championId = GetTeamSlotChampionId(lockedPickChampionId, hoverPickChampionId, activeAction);
             string actionType = GetTeamSlotActionType(lockedPickChampionId, hoverPickChampionId, activeAction, suppressPickIntentActionState);
             string selectionState = GetTeamSlotSelectionState(lockedPickChampionId, hoverPickChampionId, activeAction, suppressPickIntentActionState);
-            string championName = championId > 0 ? FormatChampion(championId) : "No champion";
+            string championName = championId > 0 ? FormatChampion(championId) : "Waiting...";
 
             slots.Add(new DashboardTeamSlotItem
             {
@@ -403,16 +403,16 @@ public partial class ChampSelect
         return DashboardDraftSelectionState.None;
     }
 
-    private static string GetPositionDisplayName(Position position)
+        private static string GetPositionDisplayName(Position position)
     {
-        return position switch
+            return position switch
         {
             Position.Top => "Top",
             Position.Jungle => "Jungle",
             Position.Mid => "Mid",
             Position.Adc => "ADC",
             Position.Support => "Support",
-            _ => "None",
+                _ => string.Empty,
         };
     }
 

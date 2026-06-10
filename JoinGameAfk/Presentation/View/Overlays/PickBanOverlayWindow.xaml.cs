@@ -295,7 +295,7 @@ namespace JoinGameAfk.Presentation.View.Overlays
                 return champion!.Name;
 
             return string.IsNullOrWhiteSpace(fallbackName)
-                ? "No champion"
+                ? "Waiting..."
                 : fallbackName;
         }
 

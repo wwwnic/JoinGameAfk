@@ -422,7 +422,8 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
             string normalizedName = NormalizeChampionName(championName);
             if (!string.IsNullOrEmpty(normalizedName)
-                && !string.Equals(normalizedName, "NOCHAMPION", StringComparison.Ordinal))
+                && !string.Equals(normalizedName, "NOCHAMPION", StringComparison.Ordinal)
+                && !string.Equals(normalizedName, "WAITING", StringComparison.Ordinal))
             {
                 yield return $"name:{normalizedName}";
             }
@@ -669,7 +670,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 return champion!.Name;
 
             return string.IsNullOrWhiteSpace(fallbackName)
-                ? "No champion"
+                ? "Waiting..."
                 : fallbackName;
         }
 
@@ -701,8 +702,8 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         {
             public int CellId { get; init; }
             public int ChampionId { get; init; }
-            public string ChampionName { get; init; } = "No champion";
-            public string RoleName { get; init; } = "None";
+            public string ChampionName { get; init; } = "Waiting...";
+            public string RoleName { get; init; } = "";
             public bool IsLocalPlayer { get; init; }
             public bool IsPlanReference { get; init; }
             public string PlanReferenceText { get; init; } = string.Empty;

@@ -583,8 +583,8 @@ internal sealed partial class MockLeagueClientState
                 localPlayerCellId = _localPlayerCellId,
                 multiUserChatId = _sessionId,
                 timer = CreateTimerPayload(nowMs),
-                myTeam = localTeam.Select(slot => CreateTeamMemberPayload(slot, revealPickIntent: true)).ToArray(),
-                theirTeam = enemyTeam.Select(slot => CreateTeamMemberPayload(slot, revealEnemyPickIntents)).ToArray(),
+                myTeam = localTeam.Select(slot => CreateTeamMemberPayload(slot, revealPickIntent: true, revealAssignedPosition: true)).ToArray(),
+                theirTeam = enemyTeam.Select(slot => CreateTeamMemberPayload(slot, revealEnemyPickIntents, revealAssignedPosition: false)).ToArray(),
                 bans = new
                 {
                     myTeamBans = localTeamBans.ToArray(),
@@ -1317,12 +1317,22 @@ internal sealed partial class MockLeagueClientState
         _queueName = NormalizeText(queueName, $"Queue {_queueId}");
     }
 
-    private static object CreateTeamMemberPayload(TeamSlot slot, bool revealPickIntent)
+    private static object CreateTeamMemberPayload(TeamSlot slot, bool revealPickIntent, bool revealAssignedPosition)
     {
+        if (revealAssignedPosition)
+        {
+            return new
+            {
+                cellId = slot.CellId,
+                assignedPosition = MockLeagueClientRoles.ToLeagueAssignedPosition(slot.AssignedPosition),
+                championId = slot.ChampionId,
+                championPickIntent = revealPickIntent ? slot.ChampionPickIntent : 0
+            };
+        }
+
         return new
         {
             cellId = slot.CellId,
-            assignedPosition = MockLeagueClientRoles.ToLeagueAssignedPosition(slot.AssignedPosition),
             championId = slot.ChampionId,
             championPickIntent = revealPickIntent ? slot.ChampionPickIntent : 0
         };

@@ -47,8 +47,8 @@ namespace JoinGameAfk.Model
     {
         public int CellId { get; init; }
         public int ChampionId { get; init; }
-        public string ChampionName { get; init; } = "No champion";
-        public string RoleName { get; init; } = "None";
+        public string ChampionName { get; init; } = "Waiting...";
+        public string RoleName { get; init; } = "";
         public bool IsLocalPlayer { get; init; }
         public bool IsPlanReference { get; init; }
         public string PlanReferenceText { get; init; } = string.Empty;

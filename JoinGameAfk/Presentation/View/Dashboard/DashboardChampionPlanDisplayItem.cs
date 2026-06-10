@@ -87,7 +87,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 return champion!.Name;
 
             return string.IsNullOrWhiteSpace(fallbackName)
-                ? "No champion"
+                ? "Waiting..."
                 : fallbackName;
         }
 
