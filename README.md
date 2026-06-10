@@ -1,6 +1,6 @@
-# JoinGameAfk
+# Automate queue & champ select for League of Legends
 
-An open source Windows fan project for League of Legends, auto accept queue, automate champion select and play sound effects.
+JoinGameAfk is a fan project that auto accept queue, automate champion select and play sound effects.
 
 [![Download latest version](https://img.shields.io/badge/Download-Latest%20Release-d3ad62?style=for-the-badge&logo=github&logoColor=white)](https://github.com/wwwnic/JoinGameAfk/releases)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
