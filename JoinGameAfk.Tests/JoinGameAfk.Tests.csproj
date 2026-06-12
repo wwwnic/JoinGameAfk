@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JoinGameAfk.Plugin\JoinGameAfk.Plugin.csproj" />
+    <ProjectReference Include="..\JoinGameAfk.Common\JoinGameAfk.Common.csproj" />
+    <ProjectReference Include="..\JoinGameAfk.Tools\JoinGameAfk.Tools.MockLeagueClient\JoinGameAfk.Tools.MockLeagueClient.csproj" />
+  </ItemGroup>
+
+</Project>

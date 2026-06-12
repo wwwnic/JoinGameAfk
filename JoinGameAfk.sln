@@ -22,6 +22,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Éléments de solution", "�
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{7D9FE7B5-8F58-48C7-B856-1A8E2C36F6C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.Tests", "JoinGameAfk.Tests\JoinGameAfk.Tests.csproj", "{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,10 @@ Global
 		{44ED2A1F-4CC4-46B7-B0D3-19D94AB3E358}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{44ED2A1F-4CC4-46B7-B0D3-19D94AB3E358}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{44ED2A1F-4CC4-46B7-B0D3-19D94AB3E358}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
