@@ -43,7 +43,7 @@ namespace JoinGameAfk.Services
             WriteIndented = true
         };
 
-        private static readonly IReadOnlyDictionary<string, string> ChampionKeyAliases =
+        private static readonly IReadOnlyDictionary<string, string> ChampionIdAliases =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["NUNUWILLUMP"] = "NUNU",
@@ -54,7 +54,7 @@ namespace JoinGameAfk.Services
         private static readonly object ImageSourceLock = new();
         private static readonly Dictionary<string, ImageSource?> ImageSourceCache = new(StringComparer.OrdinalIgnoreCase);
         private static readonly object CatalogLock = new();
-        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>>? _optionsByChampionKey;
+        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>>? _optionsByChampionId;
 
         public static event EventHandler? TileCatalogChanged;
 
@@ -62,8 +62,13 @@ namespace JoinGameAfk.Services
 
         public static IReadOnlyList<ChampionTileOption> GetOptions(ChampionInfo champion)
         {
-            string championKey = GetChampionTileKey(champion.Name);
-            return OptionsByChampionKey.TryGetValue(championKey, out var options)
+            string championId = !string.IsNullOrWhiteSpace(champion.Id)
+                ? NormalizeChampionId(champion.Id)
+                : GetChampionTileId(
+                    string.IsNullOrWhiteSpace(champion.EnglishName)
+                        ? champion.Name
+                        : champion.EnglishName);
+            return OptionsByChampionId.TryGetValue(championId, out var options)
                 ? options
                 : [];
         }
@@ -154,16 +159,22 @@ namespace JoinGameAfk.Services
             ChampionInfo champion,
             IProgress<ChampionTileDownloadProgress>? progress = null,
             CancellationToken cancellationToken = default,
-            bool optimizeForLocalCache = true)
+            bool optimizeForLocalCache = true,
+            string? preferredLocale = null)
         {
-            var syncInfo = GetCacheSyncInfo();
+            var cacheSyncInfo = GetCacheSyncInfo();
+            var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
+            string? preferredDataDragonVersion = !string.IsNullOrWhiteSpace(catalogSyncInfo.DataDragonVersion)
+                ? catalogSyncInfo.DataDragonVersion
+                : cacheSyncInfo.DataDragonVersion;
             var result = await DataDragonChampionTileDownloadService.DownloadChampionTilesAsync(
                     champion,
-                    syncInfo.DataDragonVersion,
+                    preferredDataDragonVersion,
                     TileDirectoryPath,
                     progress,
                     cancellationToken,
-                    optimizeForLocalCache)
+                    optimizeForLocalCache,
+                    preferredLocale)
                 .ConfigureAwait(false);
             Reload();
             return result;
@@ -257,7 +268,7 @@ namespace JoinGameAfk.Services
         {
             lock (CatalogLock)
             {
-                _optionsByChampionKey = null;
+                _optionsByChampionId = null;
             }
 
             lock (ImageSourceLock)
@@ -288,7 +299,7 @@ namespace JoinGameAfk.Services
             if (options.Count == 0)
                 return null;
 
-            if (selections.TryGetValue(champion.Id, out string? selectedFileName)
+            if (selections.TryGetValue(champion.Key, out string? selectedFileName)
                 && TryGetSafeFileName(selectedFileName, out selectedFileName))
             {
                 var selectedOption = options.FirstOrDefault(option =>
@@ -301,9 +312,9 @@ namespace JoinGameAfk.Services
             return GetDefaultOption(champion);
         }
 
-        public static ImageSource? GetSelectedImageSource(int championId)
+        public static ImageSource? GetSelectedImageSource(int championKey)
         {
-            return ChampionCatalog.TryGetById(championId, out var champion)
+            return ChampionCatalog.TryGetByKey(championKey, out var champion)
                 ? GetSelectedOption(champion!)?.ImageSource
                 : null;
         }
@@ -354,19 +365,19 @@ namespace JoinGameAfk.Services
             return loadedCount;
         }
 
-        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>> OptionsByChampionKey
+        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>> OptionsByChampionId
         {
             get
             {
                 lock (CatalogLock)
                 {
-                    _optionsByChampionKey ??= LoadOptionsByChampionKey();
-                    return _optionsByChampionKey;
+                    _optionsByChampionId ??= LoadOptionsByChampionId();
+                    return _optionsByChampionId;
                 }
             }
         }
 
-        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>> LoadOptionsByChampionKey()
+        private static IReadOnlyDictionary<string, IReadOnlyList<ChampionTileOption>> LoadOptionsByChampionId()
         {
             if (!Directory.Exists(TileDirectoryPath))
                 return new Dictionary<string, IReadOnlyList<ChampionTileOption>>(StringComparer.OrdinalIgnoreCase);
@@ -379,7 +390,7 @@ namespace JoinGameAfk.Services
                     Prefix = GetTilePrefix(Path.GetFileNameWithoutExtension(path))
                 })
                 .Where(tile => !string.IsNullOrWhiteSpace(tile.FileName) && !string.IsNullOrWhiteSpace(tile.Prefix))
-                .GroupBy(tile => NormalizeKey(tile.Prefix), StringComparer.OrdinalIgnoreCase)
+                .GroupBy(tile => NormalizeChampionId(tile.Prefix), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
                     group => (IReadOnlyList<ChampionTileOption>)group
@@ -453,15 +464,15 @@ namespace JoinGameAfk.Services
             }
         }
 
-        private static string GetChampionTileKey(string championName)
+        private static string GetChampionTileId(string championName)
         {
-            string normalizedKey = NormalizeKey(championName);
-            return ChampionKeyAliases.TryGetValue(normalizedKey, out string? alias)
+            string normalizedId = NormalizeChampionId(championName);
+            return ChampionIdAliases.TryGetValue(normalizedId, out string? alias)
                 ? alias
-                : normalizedKey;
+                : normalizedId;
         }
 
-        private static string NormalizeKey(string value)
+        private static string NormalizeChampionId(string value)
         {
             return new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
         }

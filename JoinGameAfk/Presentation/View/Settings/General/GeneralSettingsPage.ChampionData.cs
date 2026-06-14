@@ -66,7 +66,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "This will use your internet connection to contact Riot Data Dragon at ddragon.leagueoflegends.com.\n\nThe app downloads Riot's public champion version and champion-name data, then updates only your local champions.json file.\n\nContinue?",
+                "This will use your internet connection to contact Riot Data Dragon at ddragon.leagueoflegends.com.\n\nThe app downloads champion keys, names for your selected locale, and canonical IDs, then updates only your local champions.json file.\n\nContinue?",
                 "Update Champion List",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -79,7 +79,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Check champion list updates on app startup?\n\nThis helps JoinGameAfk notice new champions automatically. At app startup, it checks Riot Data Dragon version and downloads the champion-name list when your local list is out of date.\n\nChampion pictures are not downloaded automatically. Use the manual picture options if you want to add or refresh images.",
+                "Check champion list updates on app startup?\n\nThis helps JoinGameAfk notice new champions automatically. At app startup, it checks Riot Data Dragon version and downloads champion keys, names for your selected locale, and canonical IDs when your local list is out of date.\n\nChampion pictures are not downloaded automatically. Use the manual picture options if you want to add or refresh images.",
                 "Allow Startup Champion List Update Check",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -96,7 +96,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                $"This will download the latest Riot Data Dragon dragontail archive into local app storage. The archive can be very large.\n\nThis is not recommended for normal picture changes. Use it only if you really want to refresh the entire local champion image cache.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
+                $"This will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can be very large.\n\nThis is not recommended for normal picture changes. Use it only if you really want to refresh the entire local champion image cache.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
                 "Download Data Dragon Archive",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -306,7 +306,10 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                     }
                 });
 
-                var result = await ChampionTileCatalog.InstallLatestDataDragonArchiveAsync(
+                string regionalDataDragonVersion =
+                    await _championCatalogRemoteService.FetchLatestDataDragonVersionAsync();
+                var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(
+                    regionalDataDragonVersion,
                     progress,
                     optimizeForLocalCache: !IsRawChampionPictureDownloadSelected());
                 RefreshChampionPictureCacheStatus(result);

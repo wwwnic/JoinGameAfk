@@ -49,6 +49,8 @@ namespace JoinGameAfk.Presentation.Controller
         private bool _hasReceivedPhaseResponse;
         private bool _hasPendingChampSelectExitSound;
         private bool _isWaitingForClient;
+        private bool _hasAttemptedRegionLocaleDetectionForConnection;
+        private bool _lastAutoDetectRegionLocaleEnabled;
         private bool _isShutdownRequested;
         private bool _disposed;
 
@@ -69,6 +71,7 @@ namespace JoinGameAfk.Presentation.Controller
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
             _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
+            _lastAutoDetectRegionLocaleEnabled = generalSettings.AutoDetectRegionLocale;
             _generalSettings.Saved += OnSettingsSaved;
             _rolePlanSettings.Saved += OnSettingsSaved;
         }
@@ -87,6 +90,7 @@ namespace JoinGameAfk.Presentation.Controller
             _lastHandledPhase = ClientPhase.Unknown;
             _isClientConnected = false;
             _hasPendingChampSelectExitSound = false;
+            _hasAttemptedRegionLocaleDetectionForConnection = false;
             ResetEventStreamState();
             _isWaitingForClient = false;
             ResetLcuEventSignal();
@@ -96,6 +100,7 @@ namespace JoinGameAfk.Presentation.Controller
 
             fPhaseProgressionPage.SetWatcherState(true);
             fPhaseProgressionPage.SetClientConnection(false);
+            UpdateRegionDisplayFromSettings();
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
 
@@ -137,11 +142,13 @@ namespace JoinGameAfk.Presentation.Controller
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
             ResetQueueSupportState();
+            _hasAttemptedRegionLocaleDetectionForConnection = false;
             if (!updateUi || _isShutdownRequested)
                 return;
 
             fPhaseProgressionPage.SetWatcherState(false);
             fPhaseProgressionPage.SetClientConnection(false);
+            UpdateRegionDisplayFromSettings();
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
         }
@@ -165,6 +172,13 @@ namespace JoinGameAfk.Presentation.Controller
 #endif
 
             return _processManager.GetLeagueAuth();
+        }
+
+        private void UpdateRegionDisplayFromSettings()
+        {
+            fPhaseProgressionPage.UpdateRegionDisplay(
+                _generalSettings.EffectivePlatformId,
+                _generalSettings.EffectiveLocale);
         }
 
 #if DEBUG

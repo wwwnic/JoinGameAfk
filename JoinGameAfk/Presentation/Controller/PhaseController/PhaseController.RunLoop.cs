@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Windows;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Phase;
 using JoinGameAfk.Plugin.Phase.ReadyCheck;
+using JoinGameAfk.Services;
 using LcuClient;
 
 namespace JoinGameAfk.Presentation.Controller
@@ -84,6 +86,7 @@ namespace JoinGameAfk.Presentation.Controller
                             ResetEventStreamState();
                             StartEventStreamIfEnabled(auth, ct);
                             InitializeHandlers(http);
+                            _hasAttemptedRegionLocaleDetectionForConnection = false;
 
                             if (!_isClientConnected)
                             {
@@ -91,6 +94,14 @@ namespace JoinGameAfk.Presentation.Controller
                                 Log("Connected to League Client.");
                                 fPhaseProgressionPage.SetClientConnection(true);
                             }
+                        }
+
+                        if (_generalSettings.AutoDetectRegionLocale
+                            && !_hasAttemptedRegionLocaleDetectionForConnection)
+                        {
+                            bool canUseWatcher = await DetectRegionLocaleAsync(http, ct).ConfigureAwait(false);
+                            if (!canUseWatcher)
+                                break;
                         }
 
                         var activeAuth = GetLeagueAuth();
@@ -251,10 +262,12 @@ namespace JoinGameAfk.Presentation.Controller
             currentAuth = null;
             _isClientConnected = false;
             _isWaitingForClient = false;
+            _hasAttemptedRegionLocaleDetectionForConnection = false;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _hasPendingChampSelectExitSound = false;
             fPhaseProgressionPage.SetClientConnection(false);
+            UpdateRegionDisplayFromSettings();
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
             fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
         }
@@ -331,8 +344,128 @@ namespace JoinGameAfk.Presentation.Controller
                 _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
             }
 
+            bool autoDetectionWasEnabled = _lastAutoDetectRegionLocaleEnabled;
+            _lastAutoDetectRegionLocaleEnabled = _generalSettings.AutoDetectRegionLocale;
+            if (_isClientConnected
+                && !autoDetectionWasEnabled
+                && _lastAutoDetectRegionLocaleEnabled)
+            {
+                _hasAttemptedRegionLocaleDetectionForConnection = false;
+            }
+
+            UpdateRegionDisplayFromSettings();
+
             if (!_isShutdownRequested)
                 SignalLcuEvent();
+        }
+
+        private async Task<bool> DetectRegionLocaleAsync(
+            Lcu.LeagueClientHttp http,
+            CancellationToken cancellationToken)
+        {
+            _hasAttemptedRegionLocaleDetectionForConnection = true;
+
+            try
+            {
+                string json = await http.GetRegionLocaleAsync(cancellationToken).ConfigureAwait(false);
+                using var document = System.Text.Json.JsonDocument.Parse(json);
+                var root = document.RootElement;
+                string? platformId = root.TryGetProperty("platformId", out var platformProperty)
+                    ? platformProperty.GetString()
+                    : null;
+                string? locale = root.TryGetProperty("locale", out var localeProperty)
+                    ? localeProperty.GetString()
+                    : null;
+
+                if (LeagueClientApiRegionPolicy.IsRestricted(platformId))
+                {
+                    StopWatcherForRestrictedRegion();
+                    return false;
+                }
+
+                if (!RegionLocale.TryNormalizePlatformId(platformId, out string normalizedPlatformId)
+                    || !RegionLocale.TryNormalizeLocale(locale, out string normalizedLocale))
+                {
+                    LogError(
+                        "Unable to detect region and locale from League Client because the response was incomplete or invalid. "
+                        + $"Keeping configured values: {_generalSettings.PlatformId} / {_generalSettings.Locale}.");
+                    return true;
+                }
+
+                string previousPlatformId = _generalSettings.PlatformId;
+                string previousLocale = _generalSettings.Locale;
+                bool valuesChanged = !string.Equals(previousPlatformId, normalizedPlatformId, StringComparison.Ordinal)
+                    || !string.Equals(previousLocale, normalizedLocale, StringComparison.Ordinal);
+
+                if (valuesChanged)
+                {
+                    _generalSettings.PlatformId = normalizedPlatformId;
+                    _generalSettings.Locale = normalizedLocale;
+                    try
+                    {
+                        _generalSettings.Save();
+                    }
+                    catch
+                    {
+                        _generalSettings.PlatformId = previousPlatformId;
+                        _generalSettings.Locale = previousLocale;
+                        throw;
+                    }
+
+                    _hasAttemptedRegionLocaleDetectionForConnection = true;
+                    Log(
+                        $"League Client region detected: {normalizedPlatformId} / {normalizedLocale}. "
+                        + $"Saved these values to general settings, replacing {previousPlatformId} / {previousLocale}.");
+                }
+                else
+                {
+                    Log($"Active region: {normalizedPlatformId} / {normalizedLocale} (confirmed by League Client).");
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                LogError(
+                    "Unable to detect region and locale from League Client. "
+                    + $"Keeping configured values: {_generalSettings.PlatformId} / {_generalSettings.Locale}. {ex.Message}");
+            }
+
+            UpdateRegionDisplayFromSettings();
+            return true;
+        }
+
+        private void StopWatcherForRestrictedRegion()
+        {
+            const string message =
+                "Riot does not allow players in Korea to use applications that use the League Client API.\n\n"
+                + "JoinGameAfk stopped the watcher. Settings and champion data remain available.";
+
+            LogError("Watcher stopped because the League Client API is restricted in Korea.");
+            Stop();
+
+            fPhaseProgressionPage.Dispatcher.TryInvoke(() =>
+            {
+                Window? owner = Window.GetWindow(fPhaseProgressionPage);
+                if (owner is null)
+                {
+                    MessageBox.Show(
+                        message,
+                        "Watcher unavailable in Korea",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                MessageBox.Show(
+                    owner,
+                    message,
+                    "Watcher unavailable in Korea",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            });
         }
 
         private void ResetLcuEventSignal()

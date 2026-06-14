@@ -35,7 +35,7 @@ internal sealed class ChampionOption
     public static IReadOnlyList<ChampionOption> LoadAll()
     {
         return new[] { NoChampion }
-            .Concat(ChampionCatalog.All.Select(champion => new ChampionOption(champion.Id, champion.Name)))
+            .Concat(ChampionCatalog.All.Select(champion => new ChampionOption(champion.Key, champion.Name)))
             .ToList();
     }
 

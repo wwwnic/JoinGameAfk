@@ -471,7 +471,7 @@ public partial class ChampSelect
 
     private static bool ShouldShowBanChampion(int championId, IReadOnlySet<int> actionBanChampionIds)
     {
-        return ChampionCatalog.TryGetById(championId, out _)
+        return ChampionCatalog.TryGetByKey(championId, out _)
             || actionBanChampionIds.Contains(championId);
     }
 

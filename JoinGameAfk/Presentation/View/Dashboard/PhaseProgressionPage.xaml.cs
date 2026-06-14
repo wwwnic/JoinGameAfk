@@ -15,6 +15,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         public event Action<bool>? ClientConnectionChanged;
         public event Action<string>? ChampSelectSubPhaseChanged;
         public event Action<DashboardStatus>? DashboardStatusChanged;
+        public event Action<string?>? RegionDisplayChanged;
 
         private const double MinimumLogRowHeight = 150;
         private readonly RolePlanSettings _rolePlanSettings;
@@ -31,6 +32,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private bool _isClientConnected;
         private int _activeDashboardViewIndex;
         private bool _hasManualDashboardViewOverride;
+        private string _regionDisplayText = string.Empty;
 
         public PhaseProgressionPage(RolePlanSettings rolePlanSettings)
         {
@@ -46,7 +48,11 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             UpdatePhase(ClientPhase.Unknown);
             UpdateDashboardStatus(new DashboardStatus());
             ActivateDashboardView(0);
-            Loaded += (_, _) => QueueLogRowResize();
+            Loaded += (_, _) =>
+            {
+                QueueLogRowResize();
+                UpdateRegionBadgeUi();
+            };
             Unloaded += PhaseProgressionPage_Unloaded;
             _rolePlanSettings.Saved += RolePlanSettings_Saved;
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
@@ -128,6 +134,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 SynchronizeDashboardViewForPhase();
                 RefreshReadyAcceptPanel();
                 ClientConnectionChanged?.Invoke(isConnected);
+                UpdateRegionBadgeUi();
             });
         }
 
@@ -140,6 +147,41 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 SynchronizeDashboardViewForPhase();
                 RefreshReadyAcceptPanel();
             });
+        }
+
+        internal void UpdateRegionDisplay(string? platformId, string? locale)
+        {
+            string regionLabel = string.Empty;
+            if (!string.IsNullOrWhiteSpace(platformId))
+                regionLabel = platformId!.Trim().ToUpperInvariant();
+
+            if (!string.IsNullOrWhiteSpace(locale))
+            {
+                string loc = locale!.Trim();
+                regionLabel = string.IsNullOrWhiteSpace(regionLabel) ? loc : $"{regionLabel} • {loc}";
+            }
+
+            _regionDisplayText = string.IsNullOrWhiteSpace(regionLabel) ? string.Empty : $"Region: {regionLabel}";
+
+            Dispatcher.TryInvoke(() =>
+            {
+                UpdateRegionBadgeUi();
+                RegionDisplayChanged?.Invoke(_regionDisplayText);
+            });
+        }
+
+        private void UpdateRegionBadgeUi()
+        {
+            if (!IsLoaded)
+                return;
+
+            if (FindName("RegionBadge") is not FrameworkElement badge || FindName("RegionText") is not TextBlock text)
+                return;
+
+            text.Text = string.IsNullOrWhiteSpace(_regionDisplayText) ? "Region: --" : _regionDisplayText;
+            badge.Visibility = !string.IsNullOrWhiteSpace(_regionDisplayText)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private void ReadyAcceptDashboardViewButton_Click(object sender, RoutedEventArgs e)
@@ -660,13 +702,13 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 return ChampionTileCatalog.GetSelectedImageSource(championId);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key)
                 : null;
         }
 
         private static string GetChampionDisplayName(int championId, string fallbackName)
         {
-            if (championId > 0 && ChampionCatalog.TryGetById(championId, out var champion))
+            if (championId > 0 && ChampionCatalog.TryGetByKey(championId, out var champion))
                 return champion!.Name;
 
             return string.IsNullOrWhiteSpace(fallbackName)

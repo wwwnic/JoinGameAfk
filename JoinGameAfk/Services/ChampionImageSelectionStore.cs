@@ -206,7 +206,7 @@ namespace JoinGameAfk.Services
 
         private static bool IsValidChampionId(int championId)
         {
-            return championId > 0 && ChampionCatalog.TryGetById(championId, out _);
+            return championId > 0 && ChampionCatalog.TryGetByKey(championId, out _);
         }
 
         private static bool TryGetSafeFileName(string? value, out string fileName)

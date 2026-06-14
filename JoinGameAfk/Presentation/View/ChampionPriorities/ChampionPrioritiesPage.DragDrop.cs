@@ -483,7 +483,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
 
             var collection = GetChampionCollection(row, isPick);
-            int existingIndex = collection.ToList().FindIndex(item => item.ChampionId == champion.Id);
+            int existingIndex = collection.ToList().FindIndex(item => item.ChampionId == champion.Key);
             if (existingIndex >= 0)
             {
                 int destinationIndex = Math.Clamp(targetIndex ?? collection.Count, 0, collection.Count);
@@ -495,7 +495,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
             else
             {
-                var item = CreateSelectionItem(row, champion.Id, isPick);
+                var item = CreateSelectionItem(row, champion.Key, isPick);
                 if (targetIndex is int index)
                     collection.Insert(Math.Clamp(index, 0, collection.Count), item);
                 else
@@ -1536,7 +1536,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 return new ChampionDragData
                 {
-                    ChampionId = champion.Id,
+                    ChampionId = champion.Key,
                     ChampionName = champion.Name,
                     PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource
                 };

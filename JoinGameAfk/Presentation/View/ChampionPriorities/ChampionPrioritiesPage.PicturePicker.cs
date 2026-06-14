@@ -37,7 +37,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private void OpenChampionPicturePicker(ChampionInfo champion)
         {
             _selectedChampionPictureChampion = champion;
-            _originalChampionPictureFileName = ChampionImageSelectionStore.GetSelection(champion.Id);
+            _originalChampionPictureFileName = ChampionImageSelectionStore.GetSelection(champion.Key);
             _pendingChampionPictureFileName = _originalChampionPictureFileName;
 
             var chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
@@ -52,7 +52,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private void OpenChampionPicturePicker(ChampionSelectionItem champion)
         {
-            ChampionInfo championInfo = ChampionCatalog.TryGetById(champion.ChampionId, out var catalogChampion)
+            ChampionInfo championInfo = ChampionCatalog.TryGetByKey(champion.ChampionId, out var catalogChampion)
                 ? catalogChampion!
                 : new ChampionInfo(champion.ChampionId, champion.DisplayText);
 
@@ -121,7 +121,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            int requestedChampionId = champion.Id;
+            int requestedChampionId = champion.Key;
             _isChampionPictureDownloadInProgress = true;
             SetChampionPicturePickerDownloadControlsEnabled(false);
             SetChampionPicturePickerDownloadStatus(
@@ -133,7 +133,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 var progress = new Progress<ChampionTileDownloadProgress>(snapshot =>
                 {
-                    if (_selectedChampionPictureChampion?.Id != requestedChampionId
+                    if (_selectedChampionPictureChampion?.Key != requestedChampionId
                         || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                     {
                         return;
@@ -155,8 +155,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
                     champion,
                     progress,
-                    optimizeForLocalCache: !_generalSettings.DownloadRawChampionPictures);
-                if (_selectedChampionPictureChampion?.Id != requestedChampionId
+                    optimizeForLocalCache: !_generalSettings.DownloadRawChampionPictures,
+                    preferredLocale: _generalSettings.EffectiveLocale);
+                if (_selectedChampionPictureChampion?.Key != requestedChampionId
                     || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                 {
                     return;
@@ -172,7 +173,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
             catch (Exception ex)
             {
-                if (_selectedChampionPictureChampion?.Id == requestedChampionId
+                if (_selectedChampionPictureChampion?.Key == requestedChampionId
                     && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
                 {
                     SetChampionPicturePickerDownloadStatus(
@@ -184,7 +185,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             finally
             {
                 _isChampionPictureDownloadInProgress = false;
-                if (_selectedChampionPictureChampion?.Id == requestedChampionId
+                if (_selectedChampionPictureChampion?.Key == requestedChampionId
                     && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
                 {
                     SetChampionPicturePickerDownloadControlsEnabled(true);
@@ -400,9 +401,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private static void SaveChampionPictureSelection(ChampionInfo champion, string? fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName))
-                ChampionImageSelectionStore.ClearSelection(champion.Id);
+                ChampionImageSelectionStore.ClearSelection(champion.Key);
             else
-                ChampionImageSelectionStore.SetSelection(champion.Id, fileName);
+                ChampionImageSelectionStore.SetSelection(champion.Key, fileName);
         }
 
         private void QueueChampionPictureSelectionSave(ChampionInfo champion, string? fileName)

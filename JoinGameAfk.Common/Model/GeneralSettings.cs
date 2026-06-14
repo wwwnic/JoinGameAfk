@@ -1,5 +1,6 @@
 using JoinGameAfk.Constant;
 using JoinGameAfk.Services;
+using System.Text.Json.Serialization;
 
 namespace JoinGameAfk.Model
 {
@@ -11,6 +12,27 @@ namespace JoinGameAfk.Model
         /// Whether the watcher should start automatically when the app starts.
         /// </summary>
         public bool StartWatcherOnStartup { get; set; }
+
+        /// <summary>
+        /// Whether the watcher should use the League Client region and locale while connected.
+        /// </summary>
+        public bool AutoDetectRegionLocale { get; set; } = true;
+
+        /// <summary>
+        /// Manual League platform used before detection or when detection is disabled.
+        /// </summary>
+        public string PlatformId { get; set; } = RegionLocale.DefaultPlatformId;
+
+        /// <summary>
+        /// Manual Riot locale used before detection or when detection is disabled.
+        /// </summary>
+        public string Locale { get; set; } = RegionLocale.DefaultLocale;
+
+        [JsonIgnore]
+        public string EffectivePlatformId => PlatformId;
+
+        [JsonIgnore]
+        public string EffectiveLocale => Locale;
 
         /// <summary>
         /// Whether the app should perform in-queue automation.
@@ -116,6 +138,9 @@ namespace JoinGameAfk.Model
             var defaults = new GeneralSettings();
 
             StartWatcherOnStartup = defaults.StartWatcherOnStartup;
+            AutoDetectRegionLocale = defaults.AutoDetectRegionLocale;
+            PlatformId = defaults.PlatformId;
+            Locale = defaults.Locale;
             InQueueAutomationEnabled = defaults.InQueueAutomationEnabled;
             AutoReadyCheckEnabled = defaults.AutoReadyCheckEnabled;
             ReadyCheckAcceptDelaySeconds = defaults.ReadyCheckAcceptDelaySeconds;
@@ -152,6 +177,8 @@ namespace JoinGameAfk.Model
             settings.ThemeKey = string.IsNullOrWhiteSpace(settings.ThemeKey)
                 ? new GeneralSettings().ThemeKey
                 : settings.ThemeKey.Trim();
+            settings.PlatformId = RegionLocale.NormalizePlatformId(settings.PlatformId);
+            settings.Locale = RegionLocale.NormalizeLocale(settings.Locale);
 
             if (settings.ChampSelectPollIntervalMs <= 0)
                 settings.ChampSelectPollIntervalMs = new GeneralSettings().ChampSelectPollIntervalMs;

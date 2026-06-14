@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Collections.ObjectModel;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
@@ -23,7 +24,9 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private readonly Action<GeneralSettings, OverlaySettings, string?, bool>? _reloadUiForTheme;
         private readonly Action<string>? _logMessage;
         private readonly Action<string>? _logErrorMessage;
-        private readonly DataDragonChampionCatalogService _championCatalogRemoteService = new();
+        private readonly DataDragonChampionCatalogService _championCatalogRemoteService;
+        private readonly ObservableCollection<RegionLocaleSuggestion> _platformOptions = new(PlatformSuggestions);
+        private readonly ObservableCollection<RegionLocaleSuggestion> _localeOptions = new(LocaleSuggestions);
         private readonly List<ThemePickerOption> _themeOptions = [];
         private NumericInputRule _readyCheckAcceptDelayRule = null!;
         private NumericInputRule _pickLockDelayRule = null!;
@@ -49,7 +52,14 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             _settings = settings;
             _overlaySettings = overlaySettings;
+            _championCatalogRemoteService = new DataDragonChampionCatalogService(
+                () => _settings.EffectiveLocale,
+                () => _settings.EffectivePlatformId);
             InitializeComponent();
+            EnsureConfiguredOption(_platformOptions, _settings.PlatformId);
+            EnsureConfiguredOption(_localeOptions, _settings.Locale);
+            PlatformIdBox.ItemsSource = _platformOptions;
+            LocaleBox.ItemsSource = _localeOptions;
             _reloadUiForTheme = reloadUiForTheme;
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
@@ -81,6 +91,16 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             UpdateAutomationInputStates();
             AttachDirtyStateTracking();
             RefreshDirtyState();
+        }
+
+        private static void EnsureConfiguredOption(
+            ICollection<RegionLocaleSuggestion> options,
+            string configuredCode)
+        {
+            if (options.Any(option => string.Equals(option.Code, configuredCode, StringComparison.OrdinalIgnoreCase)))
+                return;
+
+            options.Add(new RegionLocaleSuggestion(configuredCode, "Custom value from settings file"));
         }
 
         private void Settings_Saved()

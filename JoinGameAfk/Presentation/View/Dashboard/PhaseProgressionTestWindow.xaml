@@ -75,6 +75,34 @@
             <StackPanel Grid.Row="1">
                 <Border Style="{StaticResource TesterSectionStyle}">
                     <StackPanel>
+                        <TextBlock Text="Region/Locale Preview"
+                                   Style="{StaticResource TesterLabelStyle}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TestPlatformIdBox"
+                                     Grid.Column="0"
+                                     Style="{StaticResource TesterInputStyle}"
+                                     Text="NA1"
+                                     ToolTip="platformId, e.g., NA1, EUW1, KR" />
+                            <TextBox x:Name="TestLocaleBox"
+                                     Grid.Column="2"
+                                     Style="{StaticResource TesterInputStyle}"
+                                     Text="en_US"
+                                     ToolTip="locale, e.g., en_US, fr_FR, ja_JP" />
+                            <Button Grid.Column="3"
+                                    Content="Preview"
+                                    Click="PreviewRegion_Click"
+                                    Style="{StaticResource TesterActionButtonStyle}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource TesterSectionStyle}">
+                    <StackPanel>
                         <TextBlock Text="App Version"
                                    Style="{StaticResource TesterLabelStyle}" />
                         <Grid>

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using JoinGameAfk.Constant;
+using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Tools.MockLeagueClient;
 
@@ -15,7 +16,7 @@ internal static class ChampionTileImageCatalog
         PropertyNameCaseInsensitive = true
     };
 
-    private static readonly IReadOnlyDictionary<string, string> ChampionKeyAliases =
+    private static readonly IReadOnlyDictionary<string, string> ChampionIdAliases =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["NUNUWILLUMP"] = "NUNU",
@@ -24,7 +25,7 @@ internal static class ChampionTileImageCatalog
         };
 
     private static readonly object SyncRoot = new();
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>>? _tileFilesByChampionKey;
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>>? _tileFilesByChampionId;
     private static IReadOnlyDictionary<int, string>? _selectedTileFiles;
     private static readonly Dictionary<string, ImageSource?> ImageSourceCache = new(StringComparer.OrdinalIgnoreCase);
 
@@ -40,20 +41,24 @@ internal static class ChampionTileImageCatalog
             return GetImageSource(selectedFileName);
         }
 
-        string championKey = GetChampionTileKey(championName);
-        return TileFilesByChampionKey.TryGetValue(championKey, out var tileFiles)
+        string canonicalId = ChampionCatalog.TryGetByKey(championId, out var champion)
+            && !string.IsNullOrWhiteSpace(champion?.Id)
+                ? champion.Id
+                : championName;
+        string normalizedChampionId = GetChampionTileId(canonicalId);
+        return TileFilesByChampionId.TryGetValue(normalizedChampionId, out var tileFiles)
             ? GetImageSource(tileFiles.FirstOrDefault())
             : null;
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> TileFilesByChampionKey
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> TileFilesByChampionId
     {
         get
         {
             lock (SyncRoot)
             {
-                _tileFilesByChampionKey ??= LoadTileFilesByChampionKey();
-                return _tileFilesByChampionKey;
+                _tileFilesByChampionId ??= LoadTileFilesByChampionId();
+                return _tileFilesByChampionId;
             }
         }
     }
@@ -91,7 +96,7 @@ internal static class ChampionTileImageCatalog
         return imageSource;
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> LoadTileFilesByChampionKey()
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> LoadTileFilesByChampionId()
     {
         if (!Directory.Exists(AppStorage.ChampionTileDirectoryPath))
             return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
@@ -104,7 +109,7 @@ internal static class ChampionTileImageCatalog
                 Prefix = GetTilePrefix(Path.GetFileNameWithoutExtension(path))
             })
             .Where(tile => !string.IsNullOrWhiteSpace(tile.FileName) && !string.IsNullOrWhiteSpace(tile.Prefix))
-            .GroupBy(tile => NormalizeKey(tile.Prefix), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(tile => NormalizeChampionId(tile.Prefix), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
                 group => group.Key,
                 group => (IReadOnlyList<string>)group
@@ -183,15 +188,15 @@ internal static class ChampionTileImageCatalog
         return true;
     }
 
-    private static string GetChampionTileKey(string championName)
+    private static string GetChampionTileId(string championName)
     {
-        string normalizedKey = NormalizeKey(championName);
-        return ChampionKeyAliases.TryGetValue(normalizedKey, out string? alias)
+        string normalizedId = NormalizeChampionId(championName);
+        return ChampionIdAliases.TryGetValue(normalizedId, out string? alias)
             ? alias
-            : normalizedKey;
+            : normalizedId;
     }
 
-    private static string NormalizeKey(string value)
+    private static string NormalizeChampionId(string value)
     {
         return new string(value.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
     }

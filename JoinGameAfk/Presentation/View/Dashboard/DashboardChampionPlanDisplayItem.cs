@@ -77,13 +77,13 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 return ChampionTileCatalog.GetSelectedImageSource(championId);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Id)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key)
                 : null;
         }
 
         private static string GetChampionDisplayName(int championId, string fallbackName)
         {
-            if (championId > 0 && ChampionCatalog.TryGetById(championId, out var champion))
+            if (championId > 0 && ChampionCatalog.TryGetByKey(championId, out var champion))
                 return champion!.Name;
 
             return string.IsNullOrWhiteSpace(fallbackName)

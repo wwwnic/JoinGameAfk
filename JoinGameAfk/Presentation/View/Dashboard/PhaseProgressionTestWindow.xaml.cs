@@ -45,6 +45,16 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             PreviewChampionSelectIndicator(string.Empty);
         }
 
+        private void PreviewRegion_Click(object sender, RoutedEventArgs e)
+        {
+            string platformId = NormalizeText(TestPlatformIdBox.Text);
+            string locale = NormalizeText(TestLocaleBox.Text);
+            _phaseProgressionPage.UpdateRegionDisplay(
+                string.IsNullOrWhiteSpace(platformId) ? null : platformId,
+                string.IsNullOrWhiteSpace(locale) ? null : locale);
+            _phaseProgressionPage.SetClientConnection(true);
+        }
+
         private void PreviewClientStoppedIndicator_Click(object sender, RoutedEventArgs e)
         {
             PreviewIndicator(ClientPhase.Unknown, isWatcherRunning: true, isClientConnected: false);
@@ -516,7 +526,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private static int ResolveChampionId(string championName)
         {
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? champion!.Id
+                ? champion!.Key
                 : 0;
         }
 

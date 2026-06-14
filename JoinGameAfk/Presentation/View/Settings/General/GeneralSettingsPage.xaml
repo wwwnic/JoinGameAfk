@@ -84,6 +84,23 @@
             </Setter>
         </Style>
 
+        <DataTemplate x:Key="RegionLocaleSuggestionTemplate">
+            <Grid MinWidth="250"
+                  Margin="2,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="64" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Code}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Name}"
+                           Foreground="{DynamicResource TextMutedBrush}"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </DataTemplate>
+
     </Page.Resources>
 
     <Grid x:Name="GeneralSettingsPanel">
@@ -402,7 +419,7 @@
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="3"
+        <Border Grid.Row="4"
                 Style="{StaticResource SectionCardStyle}"
                 Margin="0,0,0,12">
             <StackPanel>
@@ -1010,9 +1027,92 @@
             <StackPanel>
                 <TextBlock Text="Champion Data"
                            Style="{StaticResource SectionTitleStyle}" />
-                <TextBlock Text="Riot Data Dragon sync."
+                <TextBlock Text="Region, language, and Riot Data Dragon sync."
                            Style="{StaticResource SectionDescriptionStyle}"
                            Margin="0,4,0,0" />
+
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="Your League location"
+                                           Style="{StaticResource FieldLabelStyle}" />
+                                <TextBlock Text="Used on first launch and whenever automatic detection is turned off."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,0" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center">
+                                <StackPanel Width="300">
+                                    <TextBlock Text="Game region"
+                                               Style="{StaticResource FieldHintStyle}"
+                                               Margin="0,0,0,4" />
+                                    <ComboBox x:Name="PlatformIdBox"
+                                              Width="292"
+                                              Style="{StaticResource AppComboBoxStyle}"
+                                              ItemTemplate="{StaticResource RegionLocaleSuggestionTemplate}"
+                                              SelectedValuePath="Code"
+                                              TextSearch.TextPath="Code"
+                                              ToolTip="Select the League platform ID used to check your region's deployed Data Dragon version." />
+                                </StackPanel>
+                                <StackPanel Width="300"
+                                            Margin="10,0,0,0">
+                                    <TextBlock Text="Champion data language"
+                                               Style="{StaticResource FieldHintStyle}"
+                                               Margin="0,0,0,4" />
+                                    <ComboBox x:Name="LocaleBox"
+                                              Width="292"
+                                              Style="{StaticResource AppComboBoxStyle}"
+                                              ItemTemplate="{StaticResource RegionLocaleSuggestionTemplate}"
+                                              SelectedValuePath="Code"
+                                              TextSearch.TextPath="Code"
+                                              ToolTip="Select the Riot locale used for downloaded champion names and metadata." />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Don't see your region? Leave automatic detection on and start the watcher. Advanced users can also set another value in settings/general.json."
+                                   Style="{StaticResource FieldHintStyle}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Use my League Client settings automatically"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <TextBlock Text="When the watcher connects, replace and save the region and language reported by your League Client."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       Margin="0,3,0,0" />
+                        </StackPanel>
+
+                        <CheckBox x:Name="AutoDetectRegionLocaleCheckBox"
+                                  Grid.Column="2"
+                                  Style="{StaticResource AppCheckBoxStyle}"
+                                  VerticalAlignment="Center"
+                                  Checked="RegionLocaleAutoDetection_StateChanged"
+                                  Unchecked="RegionLocaleAutoDetection_StateChanged"
+                                  ToolTip="Turn this off to edit and always use the region and language selected above." />
+                    </Grid>
+                </Border>
 
                 <Border Style="{StaticResource SettingRowStyle}">
                     <Grid>
@@ -1058,8 +1158,11 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="Champion list"
                                            Style="{StaticResource FieldLabelStyle}" />
-                                <TextBlock Text="Shows a confirmation before downloading the latest Riot Data Dragon champion names."
+                                <TextBlock Text="Downloads champion names for the Data Dragon version currently deployed in your game region."
                                            Style="{StaticResource FieldHintStyle}" />
+                                <TextBlock Text="Use this button after changing your champion data language."
+                                           Style="{StaticResource FieldHintStyle}"
+                                           Margin="0,3,0,0" />
                             </StackPanel>
 
                             <Button x:Name="RefreshChampionCatalogButton"

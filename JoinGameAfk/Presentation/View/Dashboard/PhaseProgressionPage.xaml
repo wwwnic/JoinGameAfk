@@ -673,6 +673,21 @@
                         <TextBlock x:Name="ChampSelectSubPhaseText"
                                    Visibility="Collapsed"
                                    Text="Idle" />
+                        <Border x:Name="RegionBadge"
+                                Margin="0,6,0,0"
+                                Padding="6,2"
+                                Background="{DynamicResource AppSurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                HorizontalAlignment="Right"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="RegionText"
+                                       Text="Region: --"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" />
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Border>

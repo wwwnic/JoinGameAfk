@@ -128,6 +128,9 @@ namespace JoinGameAfk
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
             fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
             fDashboardPage.ChampSelectSubPhaseChanged += mainWindow.UpdateChampSelectSubPhase;
+            fDashboardPage.UpdateRegionDisplay(
+                generalSettings.EffectivePlatformId,
+                generalSettings.EffectiveLocale);
             mainWindow.UpdatePhaseIndicator(ClientPhase.Unknown);
             mainWindow.SetWatcherState(false);
             mainWindow.SetClientConnection(false);
@@ -142,10 +145,12 @@ namespace JoinGameAfk
             if (!generalSettings.AutoUpdateChampionCatalogOnStartup)
                 return;
 
-            var remoteService = new DataDragonChampionCatalogService();
+            var remoteService = new DataDragonChampionCatalogService(
+                () => generalSettings.EffectiveLocale,
+                () => generalSettings.EffectivePlatformId);
             string latestDataDragonVersion;
 
-            fLogsPage?.WriteLine("Champion list startup update check is enabled. Checking the latest Riot Data Dragon version.");
+            fLogsPage?.WriteLine($"Champion list startup update check is enabled. Checking Riot Data Dragon for {generalSettings.EffectivePlatformId}.");
 
             try
             {

@@ -192,7 +192,7 @@ internal sealed partial class MockLeagueClientState
     private static string? GetChampionName(int championId)
     {
         return championId > 0
-               && ChampionCatalog.TryGetById(championId, out var champion)
+               && ChampionCatalog.TryGetByKey(championId, out var champion)
                && champion is not null
             ? champion.Name
             : null;
@@ -294,7 +294,7 @@ internal sealed partial class MockLeagueClientState
             && ChampionCatalog.TryGetByName(action.Champion, out var champion)
             && champion is not null)
         {
-            return champion.Id;
+            return champion.Key;
         }
 
         return 0;

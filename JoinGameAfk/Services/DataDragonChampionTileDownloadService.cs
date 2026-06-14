@@ -30,8 +30,8 @@ namespace JoinGameAfk.Services
     internal static class DataDragonChampionTileDownloadService
     {
         private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
-        private const string ChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/champion.json";
-        private const string ChampionDetailUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/en_US/champion/{1}.json";
+        private const string ChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion.json";
+        private const string ChampionDetailUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion/{2}.json";
         private const string ChampionTileUrlFormat = "https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/{0}_{1}.jpg";
         private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(45);
 
@@ -46,12 +46,13 @@ namespace JoinGameAfk.Services
             string tileDirectoryPath,
             IProgress<ChampionTileDownloadProgress>? progress = null,
             CancellationToken cancellationToken = default,
-            bool optimizeForLocalCache = true)
+            bool optimizeForLocalCache = true,
+            string? preferredLocale = null)
         {
             ArgumentNullException.ThrowIfNull(champion);
 
-            if (champion.Id <= 0 || string.IsNullOrWhiteSpace(champion.Name))
-                throw new ArgumentException("Champion id and name are required.", nameof(champion));
+            if (champion.Key <= 0 || string.IsNullOrWhiteSpace(champion.Name))
+                throw new ArgumentException("Champion key and name are required.", nameof(champion));
 
             Directory.CreateDirectory(tileDirectoryPath);
 
@@ -67,6 +68,7 @@ namespace JoinGameAfk.Services
                     progress,
                     cancellationToken)
                 .ConfigureAwait(false);
+            string locale = RegionLocale.NormalizeLocale(preferredLocale);
 
             Report(
                 progress,
@@ -82,6 +84,7 @@ namespace JoinGameAfk.Services
             var catalogChampion = await FetchChampionCatalogEntryAsync(
                     httpClient,
                     dataDragonVersion,
+                    locale,
                     champion,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -89,6 +92,7 @@ namespace JoinGameAfk.Services
             var championDetail = await FetchChampionDetailAsync(
                     httpClient,
                     dataDragonVersion,
+                    locale,
                     catalogChampion.Id!,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -220,51 +224,89 @@ namespace JoinGameAfk.Services
         private static async Task<DataDragonChampion> FetchChampionCatalogEntryAsync(
             HttpClient httpClient,
             string dataDragonVersion,
+            string locale,
             ChampionInfo champion,
             CancellationToken cancellationToken)
         {
-            string championCatalogUrl = string.Format(CultureInfo.InvariantCulture, ChampionCatalogUrlFormat, dataDragonVersion);
+            if (string.IsNullOrWhiteSpace(locale))
+                locale = "en_US";
+
+            string championCatalogUrl = string.Format(CultureInfo.InvariantCulture, ChampionCatalogUrlFormat, dataDragonVersion, locale);
 
             using var response = await httpClient.GetAsync(championCatalogUrl, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                championCatalogUrl = string.Format(CultureInfo.InvariantCulture, ChampionCatalogUrlFormat, dataDragonVersion, "en_US");
+                using var fallback = await httpClient.GetAsync(championCatalogUrl, cancellationToken).ConfigureAwait(false);
+                fallback.EnsureSuccessStatusCode();
+                await using var fallbackStream = await fallback.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                return await DeserializeCatalogChampionAsync(fallbackStream, champion, dataDragonVersion, cancellationToken).ConfigureAwait(false);
+            }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return await DeserializeCatalogChampionAsync(stream, champion, dataDragonVersion, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<DataDragonChampionDetail> FetchChampionDetailAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string locale,
+            string dataDragonChampionId,
+            CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(locale))
+                locale = "en_US";
+
+            string championDetailUrl = string.Format(
+                CultureInfo.InvariantCulture,
+                ChampionDetailUrlFormat,
+                dataDragonVersion,
+                locale,
+                Uri.EscapeDataString(dataDragonChampionId));
+
+            using var response = await httpClient.GetAsync(championDetailUrl, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                championDetailUrl = string.Format(
+                    CultureInfo.InvariantCulture,
+                    ChampionDetailUrlFormat,
+                    dataDragonVersion,
+                    "en_US",
+                    Uri.EscapeDataString(dataDragonChampionId));
+                using var fallback = await httpClient.GetAsync(championDetailUrl, cancellationToken).ConfigureAwait(false);
+                fallback.EnsureSuccessStatusCode();
+                await using var fbStream = await fallback.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                return await DeserializeChampionDetailAsync(fbStream, dataDragonVersion, dataDragonChampionId, cancellationToken).ConfigureAwait(false);
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return await DeserializeChampionDetailAsync(stream, dataDragonVersion, dataDragonChampionId, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<DataDragonChampion> DeserializeCatalogChampionAsync(Stream stream, ChampionInfo champion, string dataDragonVersion, CancellationToken cancellationToken)
+        {
             var catalog = await JsonSerializer.DeserializeAsync<DataDragonChampionCatalog>(
                     stream,
                     SerializerOptions,
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            string championKey = champion.Id.ToString(CultureInfo.InvariantCulture);
+            string championKey = champion.Key.ToString(CultureInfo.InvariantCulture);
             var match = catalog?.Data.Values.FirstOrDefault(candidate =>
                 string.Equals(candidate.Key, championKey, StringComparison.Ordinal));
 
             if (match is null)
-                throw new InvalidOperationException($"Riot Data Dragon {dataDragonVersion} does not list {champion.Name} ({champion.Id}).");
+                throw new InvalidOperationException($"Riot Data Dragon {dataDragonVersion} does not list {champion.Name} ({champion.Key}).");
 
             if (string.IsNullOrWhiteSpace(match.Id))
-                throw new InvalidOperationException($"Riot Data Dragon {dataDragonVersion} did not return an image id for {champion.Name}.");
+                throw new InvalidOperationException($"Riot Data Dragon {dataDragonVersion} did not return a canonical id for {champion.Name}.");
 
             match.Id = match.Id.Trim();
             return match;
         }
 
-        private static async Task<DataDragonChampionDetail> FetchChampionDetailAsync(
-            HttpClient httpClient,
-            string dataDragonVersion,
-            string dataDragonChampionId,
-            CancellationToken cancellationToken)
+        private static async Task<DataDragonChampionDetail> DeserializeChampionDetailAsync(Stream stream, string dataDragonVersion, string dataDragonChampionId, CancellationToken cancellationToken)
         {
-            string championDetailUrl = string.Format(
-                CultureInfo.InvariantCulture,
-                ChampionDetailUrlFormat,
-                dataDragonVersion,
-                Uri.EscapeDataString(dataDragonChampionId));
-
-            using var response = await httpClient.GetAsync(championDetailUrl, cancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             var detailCatalog = await JsonSerializer.DeserializeAsync<DataDragonChampionDetailCatalog>(
                     stream,
                     SerializerOptions,

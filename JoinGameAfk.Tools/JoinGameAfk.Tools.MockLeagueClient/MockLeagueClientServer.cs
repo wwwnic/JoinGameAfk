@@ -245,6 +245,12 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             LogRequest("GET", "/lol-champions/v1/owned-champions-minimal");
             return Results.Json(_state.GetChampionInventoryPayload(), JsonOptions);
         });
+
+        app.MapGet("/riotclient/region-locale", () =>
+        {
+            LogRequest("GET", "/riotclient/region-locale");
+            return Results.Json(_state.GetRegionLocalePayload(), JsonOptions);
+        });
     }
 
     private async Task HandleWebSocketRootAsync(HttpContext context, Func<Task> next)
@@ -416,7 +422,7 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
         if (championId <= 0)
             return "No champion";
 
-        return ChampionCatalog.TryGetById(championId, out var champion) && champion is not null
+        return ChampionCatalog.TryGetByKey(championId, out var champion) && champion is not null
             ? champion.Name
             : $"Champion {championId}";
     }

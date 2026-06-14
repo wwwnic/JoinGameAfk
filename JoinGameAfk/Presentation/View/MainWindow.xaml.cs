@@ -54,6 +54,7 @@ namespace JoinGameAfk.Presentation.View
         private bool _suppressAutoPickBanOverlayForCurrentChampSelect;
         private bool _keepInactiveFramesMeasured;
         private bool _inactiveFrameWarmupQueued;
+        private string _regionDisplayText = string.Empty;
 
         public int ActiveTabIndex => _activeTabIndex;
 
@@ -76,12 +77,18 @@ namespace JoinGameAfk.Presentation.View
 
             SourceInitialized += MainWindow_SourceInitialized;
             ContentRendered += MainWindow_ContentRendered;
+            Loaded += (_, _) => UpdateRegionBadgeUi();
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
             Closed += MainWindow_Closed;
             _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
             _settings.Saved += Settings_Saved;
             _overlaySettings.Saved += OverlaySettings_Saved;
             AppThemeManager.ThemeChanged += RefreshTheme;
+            _dashboardPage.RegionDisplayChanged += text =>
+            {
+                _regionDisplayText = text ?? string.Empty;
+                UpdateRegionBadgeUi();
+            };
             ActivateTab(0);
             SetWatcherState(false);
             SetClientConnection(false);
@@ -236,6 +243,7 @@ namespace JoinGameAfk.Presentation.View
                 SynchronizeAutoPickBanOverlay();
                 _queueMicroOverlayWindow?.SetClientConnection(_isClientConnected);
                 SynchronizeQueueMicroOverlay();
+                UpdateRegionBadgeUi();
             });
         }
 
@@ -581,6 +589,21 @@ namespace JoinGameAfk.Presentation.View
                 _lastDashboardStatus.ReadyCheckAutoAcceptTimeLeftMilliseconds,
                 _lastDashboardStatus.ReadyCheckAutoAcceptObservedAtUtc,
                 _lastDashboardStatus.AllConfiguredOptionsUnavailable);
+            UpdateRegionBadgeUi();
+        }
+
+        private void UpdateRegionBadgeUi()
+        {
+            if (!IsLoaded)
+                return;
+
+            if (FindName("RegionText") is not TextBlock text)
+                return;
+
+            text.Text = string.IsNullOrWhiteSpace(_regionDisplayText) ? "Region: --" : _regionDisplayText;
+            text.Visibility = !string.IsNullOrWhiteSpace(_regionDisplayText)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private string GetPhaseIndicatorState()

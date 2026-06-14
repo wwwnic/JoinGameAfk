@@ -1,135 +1,154 @@
 {
-  "Version": 1,
+  "Version": 2,
+  "DataDragonVersion": "16.12.1",
   "Champions": [
     {
-      "Id": 266,
+      "Key": 266,
       "Name": "Aatrox",
+      "Id": "Aatrox",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 103,
+      "Key": 103,
       "Name": "Ahri",
+      "Id": "Ahri",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 84,
+      "Key": 84,
       "Name": "Akali",
+      "Id": "Akali",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 166,
+      "Key": 166,
       "Name": "Akshan",
+      "Id": "Akshan",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 12,
+      "Key": 12,
       "Name": "Alistar",
+      "Id": "Alistar",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 799,
+      "Key": 799,
       "Name": "Ambessa",
+      "Id": "Ambessa",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 32,
+      "Key": 32,
       "Name": "Amumu",
+      "Id": "Amumu",
       "Roles": [
         "Jungle",
         "Support"
       ]
     },
     {
-      "Id": 34,
+      "Key": 34,
       "Name": "Anivia",
+      "Id": "Anivia",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 1,
+      "Key": 1,
       "Name": "Annie",
+      "Id": "Annie",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 523,
+      "Key": 523,
       "Name": "Aphelios",
+      "Id": "Aphelios",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 22,
+      "Key": 22,
       "Name": "Ashe",
+      "Id": "Ashe",
       "Roles": [
         "Adc",
         "Support"
       ]
     },
     {
-      "Id": 136,
+      "Key": 136,
       "Name": "Aurelion Sol",
+      "Id": "AurelionSol",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 893,
+      "Key": 893,
       "Name": "Aurora",
+      "Id": "Aurora",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 268,
+      "Key": 268,
       "Name": "Azir",
+      "Id": "Azir",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 432,
+      "Key": 432,
       "Name": "Bard",
+      "Id": "Bard",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 200,
+      "Key": 200,
       "Name": "Bel'Veth",
+      "Id": "Belveth",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 53,
+      "Key": 53,
       "Name": "Blitzcrank",
+      "Id": "Blitzcrank",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 63,
+      "Key": 63,
       "Name": "Brand",
+      "Id": "Brand",
       "Roles": [
         "Jungle",
         "Mid",
@@ -137,169 +156,192 @@
       ]
     },
     {
-      "Id": 201,
+      "Key": 201,
       "Name": "Braum",
+      "Id": "Braum",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 233,
+      "Key": 233,
       "Name": "Briar",
+      "Id": "Briar",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 51,
+      "Key": 51,
       "Name": "Caitlyn",
+      "Id": "Caitlyn",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 164,
+      "Key": 164,
       "Name": "Camille",
+      "Id": "Camille",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 69,
+      "Key": 69,
       "Name": "Cassiopeia",
+      "Id": "Cassiopeia",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 31,
+      "Key": 31,
       "Name": "Cho'Gath",
+      "Id": "Chogath",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 42,
+      "Key": 42,
       "Name": "Corki",
+      "Id": "Corki",
       "Roles": [
         "Mid",
         "Adc"
       ]
     },
     {
-      "Id": 122,
+      "Key": 122,
       "Name": "Darius",
+      "Id": "Darius",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 131,
+      "Key": 131,
       "Name": "Diana",
+      "Id": "Diana",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 119,
+      "Key": 119,
       "Name": "Draven",
+      "Id": "Draven",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 36,
+      "Key": 36,
       "Name": "Dr. Mundo",
+      "Id": "DrMundo",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 245,
+      "Key": 245,
       "Name": "Ekko",
+      "Id": "Ekko",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 60,
+      "Key": 60,
       "Name": "Elise",
+      "Id": "Elise",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 28,
+      "Key": 28,
       "Name": "Evelynn",
+      "Id": "Evelynn",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 81,
+      "Key": 81,
       "Name": "Ezreal",
+      "Id": "Ezreal",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 9,
+      "Key": 9,
       "Name": "Fiddlesticks",
+      "Id": "Fiddlesticks",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 114,
+      "Key": 114,
       "Name": "Fiora",
+      "Id": "Fiora",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 105,
+      "Key": 105,
       "Name": "Fizz",
+      "Id": "Fizz",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 3,
+      "Key": 3,
       "Name": "Galio",
+      "Id": "Galio",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 41,
+      "Key": 41,
       "Name": "Gangplank",
+      "Id": "Gangplank",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 86,
+      "Key": 86,
       "Name": "Garen",
+      "Id": "Garen",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 150,
+      "Key": 150,
       "Name": "Gnar",
+      "Id": "Gnar",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 79,
+      "Key": 79,
       "Name": "Gragas",
+      "Id": "Gragas",
       "Roles": [
         "Top",
         "Jungle",
@@ -307,30 +349,34 @@
       ]
     },
     {
-      "Id": 104,
+      "Key": 104,
       "Name": "Graves",
+      "Id": "Graves",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 887,
+      "Key": 887,
       "Name": "Gwen",
+      "Id": "Gwen",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 120,
+      "Key": 120,
       "Name": "Hecarim",
+      "Id": "Hecarim",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 74,
+      "Key": 74,
       "Name": "Heimerdinger",
+      "Id": "Heimerdinger",
       "Roles": [
         "Top",
         "Mid",
@@ -338,97 +384,110 @@
       ]
     },
     {
-      "Id": 910,
+      "Key": 910,
       "Name": "Hwei",
+      "Id": "Hwei",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 420,
+      "Key": 420,
       "Name": "Illaoi",
+      "Id": "Illaoi",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 39,
+      "Key": 39,
       "Name": "Irelia",
+      "Id": "Irelia",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 427,
+      "Key": 427,
       "Name": "Ivern",
+      "Id": "Ivern",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 40,
+      "Key": 40,
       "Name": "Janna",
+      "Id": "Janna",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 59,
+      "Key": 59,
       "Name": "Jarvan IV",
+      "Id": "JarvanIV",
       "Roles": [
         "Jungle",
         "Top"
       ]
     },
     {
-      "Id": 24,
+      "Key": 24,
       "Name": "Jax",
+      "Id": "Jax",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 126,
+      "Key": 126,
       "Name": "Jayce",
+      "Id": "Jayce",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 202,
+      "Key": 202,
       "Name": "Jhin",
+      "Id": "Jhin",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 222,
+      "Key": 222,
       "Name": "Jinx",
+      "Id": "Jinx",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 145,
+      "Key": 145,
       "Name": "Kai'Sa",
+      "Id": "Kaisa",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 429,
+      "Key": 429,
       "Name": "Kalista",
+      "Id": "Kalista",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 43,
+      "Key": 43,
       "Name": "Karma",
+      "Id": "Karma",
       "Roles": [
         "Top",
         "Mid",
@@ -436,8 +495,9 @@
       ]
     },
     {
-      "Id": 30,
+      "Key": 30,
       "Name": "Karthus",
+      "Id": "Karthus",
       "Roles": [
         "Jungle",
         "Mid",
@@ -445,143 +505,162 @@
       ]
     },
     {
-      "Id": 38,
+      "Key": 38,
       "Name": "Kassadin",
+      "Id": "Kassadin",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 55,
+      "Key": 55,
       "Name": "Katarina",
+      "Id": "Katarina",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 10,
+      "Key": 10,
       "Name": "Kayle",
+      "Id": "Kayle",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 141,
+      "Key": 141,
       "Name": "Kayn",
+      "Id": "Kayn",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 85,
+      "Key": 85,
       "Name": "Kennen",
+      "Id": "Kennen",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 121,
+      "Key": 121,
       "Name": "Kha'Zix",
+      "Id": "Khazix",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 203,
+      "Key": 203,
       "Name": "Kindred",
+      "Id": "Kindred",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 240,
+      "Key": 240,
       "Name": "Kled",
+      "Id": "Kled",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 96,
+      "Key": 96,
       "Name": "Kog'Maw",
+      "Id": "KogMaw",
       "Roles": [
         "Adc",
         "Mid"
       ]
     },
     {
-      "Id": 897,
+      "Key": 897,
       "Name": "K'Sante",
+      "Id": "KSante",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 7,
+      "Key": 7,
       "Name": "LeBlanc",
+      "Id": "Leblanc",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 64,
+      "Key": 64,
       "Name": "Lee Sin",
+      "Id": "LeeSin",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 89,
+      "Key": 89,
       "Name": "Leona",
+      "Id": "Leona",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 876,
+      "Key": 876,
       "Name": "Lillia",
+      "Id": "Lillia",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 127,
+      "Key": 127,
       "Name": "Lissandra",
+      "Id": "Lissandra",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 236,
+      "Key": 236,
       "Name": "Lucian",
+      "Id": "Lucian",
       "Roles": [
         "Mid",
         "Adc"
       ]
     },
     {
-      "Id": 117,
+      "Key": 117,
       "Name": "Lulu",
+      "Id": "Lulu",
       "Roles": [
         "Top",
         "Support"
       ]
     },
     {
-      "Id": 99,
+      "Key": 99,
       "Name": "Lux",
+      "Id": "Lux",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 54,
+      "Key": 54,
       "Name": "Malphite",
+      "Id": "Malphite",
       "Roles": [
         "Top",
         "Mid",
@@ -589,15 +668,17 @@
       ]
     },
     {
-      "Id": 90,
+      "Key": 90,
       "Name": "Malzahar",
+      "Id": "Malzahar",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 57,
+      "Key": 57,
       "Name": "Maokai",
+      "Id": "Maokai",
       "Roles": [
         "Top",
         "Jungle",
@@ -605,38 +686,43 @@
       ]
     },
     {
-      "Id": 11,
+      "Key": 11,
       "Name": "Master Yi",
+      "Id": "MasterYi",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 21,
+      "Key": 21,
       "Name": "Miss Fortune",
+      "Id": "MissFortune",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 62,
+      "Key": 62,
       "Name": "Wukong",
+      "Id": "MonkeyKing",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 82,
+      "Key": 82,
       "Name": "Mordekaiser",
+      "Id": "Mordekaiser",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 25,
+      "Key": 25,
       "Name": "Morgana",
+      "Id": "Morgana",
       "Roles": [
         "Jungle",
         "Mid",
@@ -644,98 +730,111 @@
       ]
     },
     {
-      "Id": 950,
+      "Key": 950,
       "Name": "Naafiri",
+      "Id": "Naafiri",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 267,
+      "Key": 267,
       "Name": "Nami",
+      "Id": "Nami",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 75,
+      "Key": 75,
       "Name": "Nasus",
+      "Id": "Nasus",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 111,
+      "Key": 111,
       "Name": "Nautilus",
+      "Id": "Nautilus",
       "Roles": [
         "Jungle",
         "Support"
       ]
     },
     {
-      "Id": 518,
+      "Key": 518,
       "Name": "Neeko",
+      "Id": "Neeko",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 76,
+      "Key": 76,
       "Name": "Nidalee",
+      "Id": "Nidalee",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 895,
+      "Key": 895,
       "Name": "Nilah",
+      "Id": "Nilah",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 56,
+      "Key": 56,
       "Name": "Nocturne",
+      "Id": "Nocturne",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 20,
+      "Key": 20,
       "Name": "Nunu & Willump",
+      "Id": "Nunu",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 2,
+      "Key": 2,
       "Name": "Olaf",
+      "Id": "Olaf",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 61,
+      "Key": 61,
       "Name": "Orianna",
+      "Id": "Orianna",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 516,
+      "Key": 516,
       "Name": "Ornn",
+      "Id": "Ornn",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 80,
+      "Key": 80,
       "Name": "Pantheon",
+      "Id": "Pantheon",
       "Roles": [
         "Top",
         "Mid",
@@ -743,8 +842,9 @@
       ]
     },
     {
-      "Id": 78,
+      "Key": 78,
       "Name": "Poppy",
+      "Id": "Poppy",
       "Roles": [
         "Top",
         "Jungle",
@@ -752,90 +852,102 @@
       ]
     },
     {
-      "Id": 555,
+      "Key": 555,
       "Name": "Pyke",
+      "Id": "Pyke",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 246,
+      "Key": 246,
       "Name": "Qiyana",
+      "Id": "Qiyana",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 133,
+      "Key": 133,
       "Name": "Quinn",
+      "Id": "Quinn",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 497,
+      "Key": 497,
       "Name": "Rakan",
+      "Id": "Rakan",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 33,
+      "Key": 33,
       "Name": "Rammus",
+      "Id": "Rammus",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 421,
+      "Key": 421,
       "Name": "Rek'Sai",
+      "Id": "RekSai",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 526,
+      "Key": 526,
       "Name": "Rell",
+      "Id": "Rell",
       "Roles": [
         "Jungle",
         "Support"
       ]
     },
     {
-      "Id": 888,
+      "Key": 888,
       "Name": "Renata Glasc",
+      "Id": "Renata",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 58,
+      "Key": 58,
       "Name": "Renekton",
+      "Id": "Renekton",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 107,
+      "Key": 107,
       "Name": "Rengar",
+      "Id": "Rengar",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 92,
+      "Key": 92,
       "Name": "Riven",
+      "Id": "Riven",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 68,
+      "Key": 68,
       "Name": "Rumble",
+      "Id": "Rumble",
       "Roles": [
         "Top",
         "Jungle",
@@ -843,39 +955,44 @@
       ]
     },
     {
-      "Id": 13,
+      "Key": 13,
       "Name": "Ryze",
+      "Id": "Ryze",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 360,
+      "Key": 360,
       "Name": "Samira",
+      "Id": "Samira",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 113,
+      "Key": 113,
       "Name": "Sejuani",
+      "Id": "Sejuani",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 235,
+      "Key": 235,
       "Name": "Senna",
+      "Id": "Senna",
       "Roles": [
         "Adc",
         "Support"
       ]
     },
     {
-      "Id": 147,
+      "Key": 147,
       "Name": "Seraphine",
+      "Id": "Seraphine",
       "Roles": [
         "Mid",
         "Adc",
@@ -883,8 +1000,9 @@
       ]
     },
     {
-      "Id": 875,
+      "Key": 875,
       "Name": "Sett",
+      "Id": "Sett",
       "Roles": [
         "Top",
         "Mid",
@@ -892,76 +1010,86 @@
       ]
     },
     {
-      "Id": 35,
+      "Key": 35,
       "Name": "Shaco",
+      "Id": "Shaco",
       "Roles": [
         "Jungle",
         "Support"
       ]
     },
     {
-      "Id": 98,
+      "Key": 98,
       "Name": "Shen",
+      "Id": "Shen",
       "Roles": [
         "Top",
         "Support"
       ]
     },
     {
-      "Id": 102,
+      "Key": 102,
       "Name": "Shyvana",
+      "Id": "Shyvana",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 27,
+      "Key": 27,
       "Name": "Singed",
+      "Id": "Singed",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 14,
+      "Key": 14,
       "Name": "Sion",
+      "Id": "Sion",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 15,
+      "Key": 15,
       "Name": "Sivir",
+      "Id": "Sivir",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 72,
+      "Key": 72,
       "Name": "Skarner",
+      "Id": "Skarner",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 37,
+      "Key": 37,
       "Name": "Sona",
+      "Id": "Sona",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 16,
+      "Key": 16,
       "Name": "Soraka",
+      "Id": "Soraka",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 50,
+      "Key": 50,
       "Name": "Swain",
+      "Id": "Swain",
       "Roles": [
         "Mid",
         "Adc",
@@ -969,8 +1097,9 @@
       ]
     },
     {
-      "Id": 517,
+      "Key": 517,
       "Name": "Sylas",
+      "Id": "Sylas",
       "Roles": [
         "Top",
         "Jungle",
@@ -978,91 +1107,103 @@
       ]
     },
     {
-      "Id": 134,
+      "Key": 134,
       "Name": "Syndra",
+      "Id": "Syndra",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 223,
+      "Key": 223,
       "Name": "Tahm Kench",
+      "Id": "TahmKench",
       "Roles": [
         "Top",
         "Support"
       ]
     },
     {
-      "Id": 163,
+      "Key": 163,
       "Name": "Taliyah",
+      "Id": "Taliyah",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 91,
+      "Key": 91,
       "Name": "Talon",
+      "Id": "Talon",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 44,
+      "Key": 44,
       "Name": "Taric",
+      "Id": "Taric",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 17,
+      "Key": 17,
       "Name": "Teemo",
+      "Id": "Teemo",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 412,
+      "Key": 412,
       "Name": "Thresh",
+      "Id": "Thresh",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 18,
+      "Key": 18,
       "Name": "Tristana",
+      "Id": "Tristana",
       "Roles": [
         "Mid",
         "Adc"
       ]
     },
     {
-      "Id": 48,
+      "Key": 48,
       "Name": "Trundle",
+      "Id": "Trundle",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 23,
+      "Key": 23,
       "Name": "Tryndamere",
+      "Id": "Tryndamere",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 4,
+      "Key": 4,
       "Name": "Twisted Fate",
+      "Id": "TwistedFate",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 29,
+      "Key": 29,
       "Name": "Twitch",
+      "Id": "Twitch",
       "Roles": [
         "Jungle",
         "Adc",
@@ -1070,38 +1211,43 @@
       ]
     },
     {
-      "Id": 77,
+      "Key": 77,
       "Name": "Udyr",
+      "Id": "Udyr",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 6,
+      "Key": 6,
       "Name": "Urgot",
+      "Id": "Urgot",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 110,
+      "Key": 110,
       "Name": "Varus",
+      "Id": "Varus",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 67,
+      "Key": 67,
       "Name": "Vayne",
+      "Id": "Vayne",
       "Roles": [
         "Top",
         "Adc"
       ]
     },
     {
-      "Id": 45,
+      "Key": 45,
       "Name": "Veigar",
+      "Id": "Veigar",
       "Roles": [
         "Mid",
         "Adc",
@@ -1109,90 +1255,102 @@
       ]
     },
     {
-      "Id": 161,
+      "Key": 161,
       "Name": "Vel'Koz",
+      "Id": "Velkoz",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 711,
+      "Key": 711,
       "Name": "Vex",
+      "Id": "Vex",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 254,
+      "Key": 254,
       "Name": "Vi",
+      "Id": "Vi",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 234,
+      "Key": 234,
       "Name": "Viego",
+      "Id": "Viego",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 112,
+      "Key": 112,
       "Name": "Viktor",
+      "Id": "Viktor",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 8,
+      "Key": 8,
       "Name": "Vladimir",
+      "Id": "Vladimir",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 106,
+      "Key": 106,
       "Name": "Volibear",
+      "Id": "Volibear",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 19,
+      "Key": 19,
       "Name": "Warwick",
+      "Id": "Warwick",
       "Roles": [
         "Top",
         "Jungle"
       ]
     },
     {
-      "Id": 498,
+      "Key": 498,
       "Name": "Xayah",
+      "Id": "Xayah",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 101,
+      "Key": 101,
       "Name": "Xerath",
+      "Id": "Xerath",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 5,
+      "Key": 5,
       "Name": "Xin Zhao",
+      "Id": "XinZhao",
       "Roles": [
         "Jungle"
       ]
     },
     {
-      "Id": 157,
+      "Key": 157,
       "Name": "Yasuo",
+      "Id": "Yasuo",
       "Roles": [
         "Top",
         "Mid",
@@ -1200,30 +1358,34 @@
       ]
     },
     {
-      "Id": 777,
+      "Key": 777,
       "Name": "Yone",
+      "Id": "Yone",
       "Roles": [
         "Top",
         "Mid"
       ]
     },
     {
-      "Id": 83,
+      "Key": 83,
       "Name": "Yorick",
+      "Id": "Yorick",
       "Roles": [
         "Top"
       ]
     },
     {
-      "Id": 350,
+      "Key": 350,
       "Name": "Yuumi",
+      "Id": "Yuumi",
       "Roles": [
         "Support"
       ]
     },
     {
-      "Id": 154,
+      "Key": 154,
       "Name": "Zac",
+      "Id": "Zac",
       "Roles": [
         "Top",
         "Jungle",
@@ -1231,46 +1393,52 @@
       ]
     },
     {
-      "Id": 238,
+      "Key": 238,
       "Name": "Zed",
+      "Id": "Zed",
       "Roles": [
         "Jungle",
         "Mid"
       ]
     },
     {
-      "Id": 221,
+      "Key": 221,
       "Name": "Zeri",
+      "Id": "Zeri",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Id": 115,
+      "Key": 115,
       "Name": "Ziggs",
+      "Id": "Ziggs",
       "Roles": [
         "Mid",
         "Adc"
       ]
     },
     {
-      "Id": 26,
+      "Key": 26,
       "Name": "Zilean",
+      "Id": "Zilean",
       "Roles": [
         "Mid",
         "Support"
       ]
     },
     {
-      "Id": 142,
+      "Key": 142,
       "Name": "Zoe",
+      "Id": "Zoe",
       "Roles": [
         "Mid"
       ]
     },
     {
-      "Id": 143,
+      "Key": 143,
       "Name": "Zyra",
+      "Id": "Zyra",
       "Roles": [
         "Jungle",
         "Mid",

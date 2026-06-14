@@ -71,6 +71,8 @@ internal sealed partial class MockLeagueClientState
     private readonly Dictionary<DraftPickStep, DraftStepState> _draftStepStates = [];
     private readonly Dictionary<int, int> _sharedDraftPickHoverChampionIds = [];
     private readonly Dictionary<int, int> _sharedDraftBanHoverChampionIds = [];
+    private string _platformId = "NA1";
+    private string _locale = "en_US";
 
     public event EventHandler? Changed;
 
@@ -78,6 +80,18 @@ internal sealed partial class MockLeagueClientState
     {
         ResetDraftPickCore();
         _phase = MockClientPhase.Unknown;
+    }
+
+    public void UpdateRegionLocale(string platformId, string locale)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(platformId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(locale);
+
+        lock (_lock)
+        {
+            _platformId = platformId.Trim();
+            _locale = locale.Trim();
+        }
     }
 
     public MockLeagueClientSnapshot GetSnapshot()
@@ -103,6 +117,18 @@ internal sealed partial class MockLeagueClientState
                 _theirTeamBans.ToList(),
                 _actions.Select(action => action.Clone()).ToList(),
                 _customTimedActions.Select(action => action.Clone()).ToList());
+        }
+    }
+
+    public object GetRegionLocalePayload()
+    {
+        lock (_lock)
+        {
+            return new
+            {
+                platformId = _platformId,
+                locale = _locale
+            };
         }
     }
 

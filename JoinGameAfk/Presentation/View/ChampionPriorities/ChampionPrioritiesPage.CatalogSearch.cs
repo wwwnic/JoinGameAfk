@@ -247,14 +247,37 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private static int GetChampionSearchScore(ChampionInfo champion, string search)
         {
-            string championName = champion.Name;
-            string championId = champion.Id.ToString();
+            string championId = champion.Key.ToString();
+            int nameScore = GetChampionNameSearchScore(champion.Name, search);
+            if (!string.IsNullOrWhiteSpace(champion.EnglishName)
+                && !string.Equals(champion.Name, champion.EnglishName, StringComparison.OrdinalIgnoreCase))
+            {
+                int englishNameScore = GetChampionNameSearchScore(champion.EnglishName, search);
+                if (nameScore < 0 || englishNameScore >= 0 && englishNameScore < nameScore)
+                    nameScore = englishNameScore;
+            }
 
-            if (championName.Equals(search, StringComparison.OrdinalIgnoreCase)
-                || championId.Equals(search, StringComparison.OrdinalIgnoreCase))
+            if (nameScore >= 0)
+                return nameScore;
+
+            if (championId.Equals(search, StringComparison.OrdinalIgnoreCase))
             {
                 return 0;
             }
+
+            if (championId.StartsWith(search, StringComparison.OrdinalIgnoreCase))
+                return 4;
+
+            if (championId.Contains(search, StringComparison.OrdinalIgnoreCase))
+                return 5;
+
+            return -1;
+        }
+
+        private static int GetChampionNameSearchScore(string championName, string search)
+        {
+            if (championName.Equals(search, StringComparison.OrdinalIgnoreCase))
+                return 0;
 
             if (championName.StartsWith(search, StringComparison.OrdinalIgnoreCase))
                 return 1;
@@ -267,12 +290,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             if (championName.Contains(search, StringComparison.OrdinalIgnoreCase))
                 return 3;
-
-            if (championId.StartsWith(search, StringComparison.OrdinalIgnoreCase))
-                return 4;
-
-            if (championId.Contains(search, StringComparison.OrdinalIgnoreCase))
-                return 5;
 
             return -1;
         }

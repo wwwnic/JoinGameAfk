@@ -11,6 +11,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             CheckBox[] checkBoxes =
             [
                 StartWatcherOnStartupCheckBox,
+                AutoDetectRegionLocaleCheckBox,
                 InQueueAutomationCheckBox,
                 AutoReadyCheckCheckBox,
                 ChampionSelectAutomationCheckBox,
@@ -29,6 +30,8 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             }
 
             ReadyCheckAcceptDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
+            PlatformIdBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
+            LocaleBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
             PickLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             ChampionHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             PlanningHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
@@ -43,6 +46,11 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         }
 
         private void DirtyTrackedControl_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            RefreshDirtyState();
+        }
+
+        private void DirtyTrackedControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             RefreshDirtyState();
         }
@@ -74,6 +82,9 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             return new GeneralSettingsSnapshot(
                 StartWatcherOnStartupCheckBox.IsChecked == true,
+                AutoDetectRegionLocaleCheckBox.IsChecked == true,
+                CreatePlatformIdSnapshot(PlatformIdBox),
+                CreateLocaleSnapshot(LocaleBox),
                 inQueueAutomationEnabled,
                 autoReadyCheckEnabled,
                 autoReadyCheckEnabled ? CreateNumericSnapshot(ReadyCheckAcceptDelayBox) : string.Empty,
@@ -105,6 +116,9 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             return new GeneralSettingsSnapshot(
                 _settings.StartWatcherOnStartup,
+                _settings.AutoDetectRegionLocale,
+                _settings.PlatformId,
+                _settings.Locale,
                 inQueueAutomationEnabled,
                 autoReadyCheckEnabled,
                 autoReadyCheckEnabled ? _settings.ReadyCheckAcceptDelaySeconds.ToString() : string.Empty,
@@ -129,6 +143,20 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             return int.TryParse(textBox.Text, out int value)
                 ? value.ToString()
                 : $"invalid:{textBox.Text}";
+        }
+
+        private static string CreatePlatformIdSnapshot(ComboBox comboBox)
+        {
+            return Model.RegionLocale.TryNormalizePlatformId(comboBox.SelectedValue?.ToString(), out string normalized)
+                ? normalized
+                : "invalid";
+        }
+
+        private static string CreateLocaleSnapshot(ComboBox comboBox)
+        {
+            return Model.RegionLocale.TryNormalizeLocale(comboBox.SelectedValue?.ToString(), out string normalized)
+                ? normalized
+                : "invalid";
         }
     }
 }

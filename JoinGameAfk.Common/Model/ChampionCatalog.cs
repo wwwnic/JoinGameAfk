@@ -5,8 +5,13 @@ using JoinGameAfk.Enums;
 
 namespace JoinGameAfk.Model
 {
-    public sealed record ChampionInfo(int Id, string Name)
+    [JsonConverter(typeof(ChampionInfoJsonConverter))]
+    public sealed record ChampionInfo(int Key, string Name)
     {
+        public string? EnglishName { get; init; }
+
+        public string? Id { get; init; }
+
         public List<Position> Roles { get; init; } = [];
     }
 
@@ -16,7 +21,11 @@ namespace JoinGameAfk.Model
 
     public sealed record ChampionCatalogRemoteData(string DataDragonVersion, IReadOnlyList<ChampionCatalogRemoteChampion> Champions);
 
-    public sealed record ChampionCatalogRemoteChampion(int Id, string Name);
+    public sealed record ChampionCatalogRemoteChampion(
+        int Key,
+        string Name,
+        string? EnglishName = null,
+        string? Id = null);
 
     public interface IChampionCatalogRemoteService
     {
@@ -207,8 +216,11 @@ namespace JoinGameAfk.Model
             Champion(143, "Zyra", Position.Jungle, Position.Mid, Position.Support),
         ];
 
-        private static readonly IReadOnlyDictionary<int, ChampionInfo> DefaultChampionsById =
-            DefaultChampions.ToDictionary(champion => champion.Id);
+        private static readonly IReadOnlyDictionary<int, ChampionInfo> DefaultChampionsByKey =
+            DefaultChampions.ToDictionary(champion => champion.Key);
+
+        private static readonly Lazy<IReadOnlyDictionary<int, string>> BundledChampionIdsByKey =
+            new(LoadBundledChampionIdsByKey);
 
         private static ChampionCatalogState? _catalog;
 
@@ -216,9 +228,9 @@ namespace JoinGameAfk.Model
 
         public static IReadOnlyList<ChampionInfo> All => CurrentCatalog.All;
 
-        public static bool TryGetById(int championId, out ChampionInfo? champion)
+        public static bool TryGetByKey(int championKey, out ChampionInfo? champion)
         {
-            if (CurrentCatalog.ById.TryGetValue(championId, out var match))
+            if (CurrentCatalog.ByKey.TryGetValue(championKey, out var match))
             {
                 champion = match;
                 return true;
@@ -240,9 +252,9 @@ namespace JoinGameAfk.Model
             return false;
         }
 
-        public static string FormatWithName(int championId)
+        public static string FormatWithName(int championKey)
         {
-            return TryGetById(championId, out var champion)
+            return TryGetByKey(championKey, out var champion)
                 ? champion!.Name
                 : "Unknown Champion";
         }
@@ -284,14 +296,14 @@ namespace JoinGameAfk.Model
         {
             ArgumentNullException.ThrowIfNull(remoteCatalog);
 
-            var rolesByChampionId = LoadKnownRolesByChampionId();
+            var knownChampionsByKey = LoadKnownChampionsByKey();
             string dataDragonVersion = remoteCatalog.DataDragonVersion.Trim();
 
             if (string.IsNullOrWhiteSpace(dataDragonVersion))
                 throw new InvalidOperationException("Riot Data Dragon returned no version.");
 
             var champions = remoteCatalog.Champions
-                .Select(champion => CreateChampionFromRemote(champion, rolesByChampionId))
+                .Select(champion => CreateChampionFromRemote(champion, knownChampionsByKey))
                 .Where(champion => champion is not null)
                 .Select(champion => champion!)
                 .ToList();
@@ -366,23 +378,32 @@ namespace JoinGameAfk.Model
 
         private static ChampionInfo? CreateChampionFromRemote(
             ChampionCatalogRemoteChampion champion,
-            IReadOnlyDictionary<int, List<Position>> rolesByChampionId)
+            IReadOnlyDictionary<int, ChampionInfo> knownChampionsByKey)
         {
-            if (champion.Id <= 0
+            if (champion.Key <= 0
                 || string.IsNullOrWhiteSpace(champion.Name))
             {
                 return null;
             }
 
-            return new ChampionInfo(champion.Id, champion.Name.Trim())
+            knownChampionsByKey.TryGetValue(champion.Key, out var knownChampion);
+            string? englishName = !string.IsNullOrWhiteSpace(champion.EnglishName)
+                ? champion.EnglishName.Trim()
+                : !string.IsNullOrWhiteSpace(knownChampion?.EnglishName)
+                    ? knownChampion.EnglishName.Trim()
+                    : knownChampion?.Name;
+
+            return new ChampionInfo(champion.Key, champion.Name.Trim())
             {
-                Roles = rolesByChampionId.TryGetValue(champion.Id, out var roles)
-                    ? roles.ToList()
-                    : []
+                EnglishName = englishName,
+                Id = string.IsNullOrWhiteSpace(champion.Id)
+                    ? null
+                    : champion.Id.Trim(),
+                Roles = knownChampion?.Roles.ToList() ?? []
             };
         }
 
-        private static IReadOnlyDictionary<int, List<Position>> LoadKnownRolesByChampionId()
+        private static IReadOnlyDictionary<int, ChampionInfo> LoadKnownChampionsByKey()
         {
             try
             {
@@ -395,7 +416,7 @@ namespace JoinGameAfk.Model
                     if (catalogFile is not null && catalogFile.Champions.Count > 0)
                     {
                         return NormalizeChampions(catalogFile.Champions)
-                            .ToDictionary(champion => champion.Id, champion => champion.Roles.ToList());
+                            .ToDictionary(champion => champion.Key);
                     }
                 }
             }
@@ -403,7 +424,7 @@ namespace JoinGameAfk.Model
             {
             }
 
-            return DefaultChampions.ToDictionary(champion => champion.Id, champion => champion.Roles.ToList());
+            return DefaultChampions.ToDictionary(champion => champion.Key);
         }
 
         private static void EnsureChampionFileExists(string filePath)
@@ -445,6 +466,27 @@ namespace JoinGameAfk.Model
 
             using var reader = new StreamReader(resourceStream);
             return reader.ReadToEnd();
+        }
+
+        private static IReadOnlyDictionary<int, string> LoadBundledChampionIdsByKey()
+        {
+            try
+            {
+                string? bundledCatalogJson = LoadBundledChampionCatalogJson();
+                ChampionCatalogFile? bundledCatalog = string.IsNullOrWhiteSpace(bundledCatalogJson)
+                    ? null
+                    : DeserializeCatalogFile(bundledCatalogJson);
+
+                return bundledCatalog?.Champions
+                    .Where(champion => champion.Key > 0 && !string.IsNullOrWhiteSpace(champion.Id))
+                    .GroupBy(champion => champion.Key)
+                    .ToDictionary(group => group.Key, group => group.First().Id!)
+                    ?? new Dictionary<int, string>();
+            }
+            catch
+            {
+                return new Dictionary<int, string>();
+            }
         }
 
         private static ChampionCatalogFile? DeserializeCatalogFile(string json)
@@ -526,15 +568,29 @@ namespace JoinGameAfk.Model
 
             return new ChampionCatalogState(
                 normalizedChampions,
-                normalizedChampions.ToDictionary(champion => champion.Id),
-                normalizedChampions.ToDictionary(champion => Normalize(champion.Name), StringComparer.OrdinalIgnoreCase));
+                normalizedChampions.ToDictionary(champion => champion.Key),
+                CreateChampionNameLookup(normalizedChampions));
+        }
+
+        private static IReadOnlyDictionary<string, ChampionInfo> CreateChampionNameLookup(
+            IEnumerable<ChampionInfo> champions)
+        {
+            var lookup = new Dictionary<string, ChampionInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var champion in champions)
+            {
+                lookup.TryAdd(Normalize(champion.Name), champion);
+                if (!string.IsNullOrWhiteSpace(champion.EnglishName))
+                    lookup.TryAdd(Normalize(champion.EnglishName), champion);
+            }
+
+            return lookup;
         }
 
         private static IReadOnlyList<ChampionInfo> NormalizeChampions(IEnumerable<ChampionInfo> champions)
         {
             return champions
-                .Where(champion => champion.Id > 0 && !string.IsNullOrWhiteSpace(champion.Name))
-                .GroupBy(champion => champion.Id)
+                .Where(champion => champion.Key > 0 && !string.IsNullOrWhiteSpace(champion.Name))
+                .GroupBy(champion => champion.Key)
                 .Select(group => NormalizeChampion(group.First()))
                 .OrderBy(champion => champion.Name)
                 .ToList();
@@ -543,12 +599,24 @@ namespace JoinGameAfk.Model
         private static ChampionInfo NormalizeChampion(ChampionInfo champion)
         {
             var roles = NormalizeRoles(champion.Roles);
-            if (roles.Count == 0 && DefaultChampionsById.TryGetValue(champion.Id, out var defaultChampion))
+            DefaultChampionsByKey.TryGetValue(champion.Key, out var defaultChampion);
+            if (roles.Count == 0 && defaultChampion is not null)
                 roles = defaultChampion.Roles.ToList();
+
+            string englishName = !string.IsNullOrWhiteSpace(champion.EnglishName)
+                ? champion.EnglishName.Trim()
+                : defaultChampion?.Name ?? champion.Name.Trim();
+            string? id = !string.IsNullOrWhiteSpace(champion.Id)
+                ? champion.Id.Trim()
+                : BundledChampionIdsByKey.Value.TryGetValue(champion.Key, out string? bundledId)
+                    ? bundledId
+                    : null;
 
             return champion with
             {
                 Name = champion.Name.Trim(),
+                EnglishName = englishName,
+                Id = id,
                 Roles = roles
             };
         }
@@ -573,17 +641,18 @@ namespace JoinGameAfk.Model
                 .ToList();
         }
 
-        private static ChampionInfo Champion(int id, string name, params Position[] roles)
+        private static ChampionInfo Champion(int key, string name, params Position[] roles)
         {
-            return new ChampionInfo(id, name)
+            return new ChampionInfo(key, name)
             {
+                EnglishName = name,
                 Roles = roles.ToList()
             };
         }
 
         private sealed record ChampionCatalogState(
             IReadOnlyList<ChampionInfo> All,
-            IReadOnlyDictionary<int, ChampionInfo> ById,
+            IReadOnlyDictionary<int, ChampionInfo> ByKey,
             IReadOnlyDictionary<string, ChampionInfo> ByName);
 
         private sealed class ChampionCatalogFile
@@ -597,5 +666,94 @@ namespace JoinGameAfk.Model
             public List<ChampionInfo> Champions { get; set; } = [];
         }
 
+    }
+
+    internal sealed class ChampionInfoJsonConverter : JsonConverter<ChampionInfo>
+    {
+        public override ChampionInfo? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using JsonDocument document = JsonDocument.ParseValue(ref reader);
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                throw new JsonException("Champion entry must be a JSON object.");
+
+            int key = ReadInt32(root, "Key");
+            JsonElement legacyId = GetProperty(root, "Id");
+            if (key <= 0 && legacyId.ValueKind == JsonValueKind.Number)
+                legacyId.TryGetInt32(out key);
+
+            string name = ReadString(root, "Name") ?? string.Empty;
+            string? id = legacyId.ValueKind == JsonValueKind.String
+                ? legacyId.GetString()
+                : ReadString(root, "AssetId");
+            string? englishName = ReadString(root, "EnglishName");
+            List<Position> roles = ReadRoles(root, options);
+
+            return new ChampionInfo(key, name)
+            {
+                EnglishName = englishName,
+                Id = id,
+                Roles = roles
+            };
+        }
+
+        public override void Write(Utf8JsonWriter writer, ChampionInfo value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            writer.WriteNumber(nameof(ChampionInfo.Key), value.Key);
+            writer.WriteString(nameof(ChampionInfo.Name), value.Name);
+
+            if (!string.IsNullOrWhiteSpace(value.EnglishName))
+                writer.WriteString(nameof(ChampionInfo.EnglishName), value.EnglishName);
+
+            if (!string.IsNullOrWhiteSpace(value.Id))
+                writer.WriteString(nameof(ChampionInfo.Id), value.Id);
+
+            writer.WritePropertyName(nameof(ChampionInfo.Roles));
+            JsonSerializer.Serialize(writer, value.Roles, options);
+            writer.WriteEndObject();
+        }
+
+        private static JsonElement GetProperty(JsonElement root, string propertyName)
+        {
+            foreach (JsonProperty property in root.EnumerateObject())
+            {
+                if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                    return property.Value;
+            }
+
+            return default;
+        }
+
+        private static int ReadInt32(JsonElement root, string propertyName)
+        {
+            JsonElement property = GetProperty(root, propertyName);
+            if (property.ValueKind == JsonValueKind.Number && property.TryGetInt32(out int value))
+                return value;
+
+            if (property.ValueKind == JsonValueKind.String
+                && int.TryParse(property.GetString(), out value))
+            {
+                return value;
+            }
+
+            return 0;
+        }
+
+        private static string? ReadString(JsonElement root, string propertyName)
+        {
+            JsonElement property = GetProperty(root, propertyName);
+            return property.ValueKind == JsonValueKind.String
+                ? property.GetString()
+                : null;
+        }
+
+        private static List<Position> ReadRoles(JsonElement root, JsonSerializerOptions options)
+        {
+            JsonElement property = GetProperty(root, nameof(ChampionInfo.Roles));
+            return property.ValueKind == JsonValueKind.Array
+                ? property.Deserialize<List<Position>>(options) ?? []
+                : [];
+        }
     }
 }
