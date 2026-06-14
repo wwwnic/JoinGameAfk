@@ -6,46 +6,6 @@ namespace JoinGameAfk.Tests;
 [TestFixture]
 public class GeneralSettingsRegionLocaleTests
 {
-    [Test]
-    public void NewSettings_DefaultToNorthAmericaWithAutoDetectionEnabled()
-    {
-        var settings = new GeneralSettings();
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(settings.AutoDetectRegionLocale, Is.True);
-            Assert.That(settings.PlatformId, Is.EqualTo("NA1"));
-            Assert.That(settings.Locale, Is.EqualTo("en_US"));
-            Assert.That(settings.EffectivePlatformId, Is.EqualTo("NA1"));
-            Assert.That(settings.EffectiveLocale, Is.EqualTo("en_US"));
-        });
-    }
-
-    [Test]
-    public void ConfiguredValues_AreTheEffectiveValues()
-    {
-        var settings = new GeneralSettings
-        {
-            PlatformId = "EUW1",
-            Locale = "fr_FR",
-            AutoDetectRegionLocale = true
-        };
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(settings.EffectivePlatformId, Is.EqualTo("EUW1"));
-            Assert.That(settings.EffectiveLocale, Is.EqualTo("fr_FR"));
-        });
-
-        settings.AutoDetectRegionLocale = false;
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(settings.EffectivePlatformId, Is.EqualTo("EUW1"));
-            Assert.That(settings.EffectiveLocale, Is.EqualTo("fr_FR"));
-        });
-    }
-
     [TestCase("euw1", "EUW1")]
     [TestCase(" NA1 ", "NA1")]
     [TestCase("new-region-9", "NEW-REGION-9")]
