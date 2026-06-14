@@ -819,7 +819,7 @@
                                        Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="11"
                                        FontWeight="Bold"
-                                       Text="Drag champions"
+                                       Text="Drag tiles"
                                        TextTrimming="CharacterEllipsis" />
 
                             <StackPanel Grid.Column="2"
@@ -834,19 +834,24 @@
                                         VerticalAlignment="Center"
                                         AutomationProperties.Name="Open champion data downloads"
                                         Click="OpenChampionDataButton_Click"
-                                        Style="{StaticResource SecondaryButtonStyle}"
                                         ToolTip="Manage champion data and picture downloads">
-                                    <Viewbox Width="17"
-                                             Height="17"
-                                             Stretch="Uniform">
-                                        <Canvas Width="191.919"
-                                                Height="191.919">
-                                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                                  Data="M63.321,145.967 L95.963,178.617 L128.606,145.967 L126.018,143.372 L97.796,171.592 L97.796,93.097 L94.131,93.097 L94.131,171.592 L65.915,143.372 Z" />
-                                            <Path Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                                  Data="M146.593,50.494 C139.679,38.963 127.206,31.859 113.728,31.859 C110.636,31.859 107.529,32.246 104.462,33.011 C97.684,20.818 84.997,13.302 70.996,13.302 C50.393,13.302 33.536,29.643 32.724,50.236 C13.961,52.967 0,68.989 0,88.144 C0,109.274 17.189,126.463 38.312,126.463 L76.58,126.463 L76.58,122.884 L38.319,122.884 C19.165,122.884 3.586,107.298 3.586,88.144 C3.586,70.3 16.949,55.448 34.675,53.601 L36.268,53.229 L36.268,51.619 C36.268,32.465 51.85,16.883 71.004,16.883 C84.131,16.883 95.992,24.18 101.961,35.922 L102.634,37.243 L104.055,36.831 C107.247,35.904 110.504,35.435 113.732,35.435 C126.347,35.435 137.993,42.306 144.124,53.369 L144.775,54.536 L146.074,54.25 C168.345,49.336 188.344,66.529 188.344,88.145 C188.344,107.295 172.762,122.885 153.611,122.885 L115.06,122.885 L115.06,126.464 L153.608,126.464 C174.73,126.464 191.92,109.275 191.92,88.145 C191.923,64.716 170.604,46.006 146.593,50.494 Z" />
-                                        </Canvas>
-                                    </Viewbox>
+                                    <Button.Style>
+                                        <Style TargetType="Button"
+                                               BasedOn="{StaticResource SecondaryButtonStyle}">
+                                            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                        </Style>
+                                    </Button.Style>
+                                    <Path Width="14"
+                                          Height="14"
+                                          Stretch="Uniform"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M12,3 L12,15 M7.5,10.5 L12,15 L16.5,10.5 M5,17 L5,20 L19,20 L19,17" />
                                 </Button>
 
                                 <Button x:Name="ToggleChampionPictureEditModeButton"
@@ -1258,135 +1263,83 @@
                         <ScrollViewer Grid.Row="2"
                                       Style="{StaticResource StableVerticalScrollViewerStyle}">
                             <StackPanel>
-                                <StackPanel x:Name="ChampionDataConfigurationPanel">
-                                    <Border Style="{StaticResource SettingRowStyle}">
-                                        <StackPanel>
-                                            <TextBlock Text="Your League region and language"
-                                                       Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBlock Text="These saved values are used until the watcher reads them from League Client, and whenever automatic detection is turned off."
-                                                       Style="{StaticResource FieldHintStyle}"
-                                                       TextWrapping="Wrap"
-                                                       Margin="0,3,0,10" />
+                                <Border Style="{StaticResource SettingRowStyle}">
+                                    <StackPanel x:Name="ChampionDataConfigurationPanel">
+                                        <TextBlock Text="Region and language"
+                                                   Style="{StaticResource FieldLabelStyle}" />
+                                        <TextBlock Text="Choose which Riot region and language JoinGameAfk uses for champion names, IDs, and version checks."
+                                                   Style="{StaticResource FieldHintStyle}"
+                                                   TextWrapping="Wrap" />
 
-                                            <Grid Margin="0,0,0,8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="12" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="Game region"
-                                                               Style="{StaticResource FieldHintStyle}"
-                                                               Margin="0,0,0,4" />
-                                                    <ComboBox x:Name="ChampionDataPlatformIdBox"
-                                                              Width="Auto"
-                                                              HorizontalAlignment="Stretch"
-                                                              Style="{StaticResource AppComboBoxStyle}"
-                                                              ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
-                                                              SelectedValuePath="Code"
-                                                              TextSearch.TextPath="Code"
-                                                              SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
-                                                              ToolTip="League platform used to check the region's deployed Data Dragon version." />
-                                                </StackPanel>
-
-                                                <StackPanel Grid.Column="2">
-                                                    <TextBlock Text="Champion data language"
-                                                               Style="{StaticResource FieldHintStyle}"
-                                                               Margin="0,0,0,4" />
-                                                    <ComboBox x:Name="ChampionDataLocaleBox"
-                                                              Width="Auto"
-                                                              HorizontalAlignment="Stretch"
-                                                              Style="{StaticResource AppComboBoxStyle}"
-                                                              ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
-                                                              SelectedValuePath="Code"
-                                                              TextSearch.TextPath="Code"
-                                                              SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
-                                                              ToolTip="Riot locale used for downloaded champion names and metadata." />
-                                                </StackPanel>
-                                            </Grid>
-
-                                            <TextBlock Text="If your platform is not listed, its ID can be configured directly in role-plans/downloadSettings.json."
-                                                       Style="{StaticResource FieldHintStyle}"
-                                                       TextWrapping="Wrap" />
-
-                                            <Border Height="1"
-                                                    Margin="0,12,0,12"
-                                                    Background="{DynamicResource AppSubtleBorderBrush}" />
-
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="14" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <StackPanel Grid.Column="0">
-                                                    <TextBlock Text="Use my League Client settings automatically"
-                                                               Style="{StaticResource FieldLabelStyle}" />
-                                                    <TextBlock Text="When the watcher connects, read the region and language reported by League Client and save them as the selections above."
-                                                               Style="{StaticResource FieldHintStyle}"
-                                                               TextWrapping="Wrap"
-                                                               Margin="0,3,0,0" />
-                                                </StackPanel>
-                                                <CheckBox x:Name="ChampionDataAutoDetectRegionLocaleCheckBox"
-                                                          Grid.Column="2"
-                                                          Style="{StaticResource AppCheckBoxStyle}"
-                                                          VerticalAlignment="Center"
-                                                          Checked="ChampionDataSettingCheckBox_Changed"
-                                                          Unchecked="ChampionDataSettingCheckBox_Changed"
-                                                          ToolTip="Turn this off to edit and always use the saved region and language." />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource SettingRowStyle}">
-                                        <Grid>
+                                        <Grid Margin="0,12,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="14" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="Check champion list updates on app launch"
+                                                <TextBlock Text="Use my League Client settings automatically"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="At startup, check Riot Data Dragon for a newer champion list and update champion names and IDs. Pictures are not downloaded automatically; use the pencil in Role Plans for missing images."
+                                                <TextBlock Text="When the watcher connects, read and save the region and language reported by League Client."
                                                            Style="{StaticResource FieldHintStyle}"
-                                                           TextWrapping="Wrap"
-                                                           Margin="0,3,0,0" />
+                                                           TextWrapping="Wrap" />
                                             </StackPanel>
-                                            <CheckBox x:Name="ChampionDataAutoUpdateCatalogCheckBox"
+                                            <CheckBox x:Name="ChampionDataAutoDetectRegionLocaleCheckBox"
                                                       Grid.Column="2"
                                                       Style="{StaticResource AppCheckBoxStyle}"
                                                       VerticalAlignment="Center"
                                                       Checked="ChampionDataSettingCheckBox_Changed"
-                                                      Unchecked="ChampionDataSettingCheckBox_Changed" />
+                                                      Unchecked="ChampionDataSettingCheckBox_Changed"
+                                                      ToolTip="Turn this off to edit and always use the saved region and language." />
                                         </Grid>
-                                    </Border>
 
-                                    <Border Style="{StaticResource SettingRowStyle}">
-                                        <Grid>
+                                        <Border Height="1"
+                                                Margin="0,12"
+                                                Background="{DynamicResource AppSubtleBorderBrush}" />
+
+                                        <Grid Margin="0,0,0,8">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="14" />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
+
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="Keep original-resolution pictures on download (not recommended)"
-                                                           Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="Leave this off to store compact 96 px-wide copies that use much less memory and disk space with no noticeable difference in JoinGameAfk. This setting applies only to pictures downloaded after it changes."
+                                                <TextBlock Text="Game region"
                                                            Style="{StaticResource FieldHintStyle}"
-                                                           TextWrapping="Wrap"
-                                                           Margin="0,3,0,0" />
+                                                           Margin="0,0,0,4" />
+                                                <ComboBox x:Name="ChampionDataPlatformIdBox"
+                                                          Width="Auto"
+                                                          HorizontalAlignment="Stretch"
+                                                          Style="{StaticResource AppComboBoxStyle}"
+                                                          ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
+                                                          SelectedValuePath="Code"
+                                                          TextSearch.TextPath="Code"
+                                                          SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
+                                                          ToolTip="League platform used to check the region's deployed Data Dragon version." />
                                             </StackPanel>
-                                            <CheckBox x:Name="ChampionDataDownloadRawPicturesCheckBox"
-                                                      Grid.Column="2"
-                                                      Style="{StaticResource AppCheckBoxStyle}"
-                                                      VerticalAlignment="Center"
-                                                      Checked="ChampionDataSettingCheckBox_Changed"
-                                                      Unchecked="ChampionDataSettingCheckBox_Changed" />
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Champion data language"
+                                                           Style="{StaticResource FieldHintStyle}"
+                                                           Margin="0,0,0,4" />
+                                                <ComboBox x:Name="ChampionDataLocaleBox"
+                                                          Width="Auto"
+                                                          HorizontalAlignment="Stretch"
+                                                          Style="{StaticResource AppComboBoxStyle}"
+                                                          ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
+                                                          SelectedValuePath="Code"
+                                                          TextSearch.TextPath="Code"
+                                                          SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
+                                                          ToolTip="Riot locale used for downloaded champion names and metadata." />
+                                            </StackPanel>
                                         </Grid>
-                                    </Border>
-                                </StackPanel>
+
+                                        <TextBlock Text="The selections are editable when automatic detection is off. Custom platform IDs can be configured in role-plans/downloadSettings.json."
+                                                   Style="{StaticResource FieldHintStyle}"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
 
                                 <Border Style="{StaticResource SettingRowStyle}">
                                     <StackPanel>
@@ -1399,7 +1352,7 @@
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="Champion list"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="Download champion names and IDs for the Data Dragon version currently deployed in your selected region. Existing champion pictures are not changed."
+                                                <TextBlock Text="Keep your champion list current for the selected game region and language. Pictures are not downloaded here, use the pencil in Role Plans to add or refresh images."
                                                            Style="{StaticResource FieldHintStyle}"
                                                            TextWrapping="Wrap" />
                                             </StackPanel>
@@ -1438,6 +1391,31 @@
                                                        FontWeight="SemiBold"
                                                        TextWrapping="Wrap" />
                                         </Border>
+
+                                        <Border Height="1"
+                                                Margin="0,12"
+                                                Background="{DynamicResource AppSubtleBorderBrush}" />
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="14" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Check for champion list updates on app launch"
+                                                           Style="{StaticResource FieldLabelStyle}" />
+                                                <TextBlock Text="Off by default. When enabled, JoinGameAfk checks at startup for champion-list changes in your selected region and language. You will be asked before this is enabled."
+                                                           Style="{StaticResource FieldHintStyle}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <CheckBox x:Name="ChampionDataAutoUpdateCatalogCheckBox"
+                                                      Grid.Column="2"
+                                                      Style="{StaticResource AppCheckBoxStyle}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="ChampionDataSettingCheckBox_Changed"
+                                                      Unchecked="ChampionDataSettingCheckBox_Changed" />
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
 
@@ -1450,24 +1428,32 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="Full champion picture archive (advanced)"
+                                                <TextBlock Text="Local champion pictures"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="Download Riot's full Data Dragon dragontail archive and rebuild the entire local picture cache using the picture quality selected above. For one champion, use the pencil in Role Plans instead."
+                                                <TextBlock Text="Open the local picture folder, or reload it after manually adding, replacing, or removing champion JPG files. These actions do not use the internet."
                                                            Style="{StaticResource FieldHintStyle}"
                                                            TextWrapping="Wrap" />
-                                                <TextBlock Text="This download can exceed 2 GB. Use it only when you need to restore or update every champion picture."
-                                                           Style="{StaticResource FieldHintStyle}"
+                                                <TextBlock x:Name="ChampionDataPictureFolderPathTextBlock"
+                                                           Foreground="{DynamicResource TextSoftBrush}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
                                                            TextWrapping="Wrap"
-                                                           Margin="0,4,0,0" />
+                                                           Margin="0,7,0,0" />
                                             </StackPanel>
-                                            <Button x:Name="DownloadChampionPictureArchiveButton"
-                                                    Grid.Column="2"
-                                                    Content="Download Archive"
-                                                    Click="DownloadChampionPictureArchiveButton_Click"
-                                                    Style="{StaticResource AccentButtonStyle}"
-                                                    Padding="14,8"
-                                                    MinWidth="150"
-                                                    HorizontalAlignment="Right" />
+                                            <WrapPanel Grid.Column="2"
+                                                       HorizontalAlignment="Right">
+                                                <Button x:Name="OpenChampionPictureFolderButton"
+                                                        Content="Open Folder"
+                                                        Click="OpenChampionPictureFolderButton_Click"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Padding="12,8" />
+                                                <Button x:Name="ReloadChampionPicturesButton"
+                                                        Content="Reload Pictures"
+                                                        Click="ReloadChampionPicturesButton_Click"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        Padding="12,8"
+                                                        Margin="8,0,0,0" />
+                                            </WrapPanel>
                                         </Grid>
                                         <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"
                                                    Foreground="{DynamicResource TextSoftBrush}"
@@ -1475,19 +1461,6 @@
                                                    FontWeight="SemiBold"
                                                    TextWrapping="Wrap"
                                                    Margin="0,10,0,0" />
-                                        <TextBlock x:Name="ChampionPictureDownloadStatusLabel"
-                                                   Foreground="{DynamicResource TextSoftBrush}"
-                                                   FontSize="12"
-                                                   FontWeight="SemiBold"
-                                                   TextWrapping="Wrap"
-                                                   Margin="0,5,0,0"
-                                                   Visibility="Collapsed" />
-                                        <ProgressBar x:Name="ChampionPictureDownloadProgressBar"
-                                                     Height="8"
-                                                     Minimum="0"
-                                                     Maximum="100"
-                                                     Margin="0,8,0,0"
-                                                     Visibility="Collapsed" />
                                     </StackPanel>
                                 </Border>
 
@@ -1499,33 +1472,81 @@
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Champion pictures"
+                                            <TextBlock Text="Full-resolution champion tiles (enthusiast option)"
                                                        Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBlock Text="Open the local picture folder, or reload it after manually adding, replacing, or removing champion JPG files."
+                                            <TextBlock Text="Off is strongly recommended. JoinGameAfk displays champion tiles at small sizes, so most users will see no noticeable difference. Enabling this keeps Riot's original JPGs for both pencil downloads and full-cache rebuilds, and a complete collection can use 500 MB+ more disk space and RAM."
                                                        Style="{StaticResource FieldHintStyle}"
                                                        TextWrapping="Wrap" />
-                                            <TextBlock x:Name="ChampionDataPictureFolderPathTextBlock"
-                                                       Foreground="{DynamicResource TextSoftBrush}"
-                                                       FontSize="12"
-                                                       FontWeight="SemiBold"
+                                            <TextBlock Text="This affects future downloads only; existing cached pictures are not converted automatically."
+                                                       Style="{StaticResource FieldHintStyle}"
                                                        TextWrapping="Wrap"
-                                                       Margin="0,7,0,0" />
+                                                       Margin="0,5,0,0" />
                                         </StackPanel>
-                                        <WrapPanel Grid.Column="2"
-                                                   HorizontalAlignment="Right">
-                                            <Button x:Name="OpenChampionPictureFolderButton"
-                                                    Content="Open Folder"
-                                                    Click="OpenChampionPictureFolderButton_Click"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    Padding="12,8" />
-                                            <Button x:Name="ReloadChampionPicturesButton"
-                                                    Content="Reload Pictures"
-                                                    Click="ReloadChampionPicturesButton_Click"
-                                                    Style="{StaticResource SecondaryButtonStyle}"
-                                                    Padding="12,8"
-                                                    Margin="8,0,0,0" />
-                                        </WrapPanel>
+                                        <CheckBox x:Name="ChampionDataDownloadRawPicturesCheckBox"
+                                                  Grid.Column="2"
+                                                  Style="{StaticResource AppCheckBoxStyle}"
+                                                  VerticalAlignment="Center"
+                                                  Checked="ChampionDataSettingCheckBox_Changed"
+                                                  Unchecked="ChampionDataSettingCheckBox_Changed"
+                                                  ToolTip="Keep Riot's original JPG files for future pencil downloads and full-cache rebuilds." />
                                     </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource SettingRowStyle}"
+                                        BorderBrush="{DynamicResource AccentAmberBrush}">
+                                    <StackPanel>
+                                        <TextBlock Text="ADVANCED MAINTENANCE"
+                                                   Style="{StaticResource EyebrowTextStyle}"
+                                                   Foreground="{DynamicResource AccentAmberBrush}" />
+                                        <TextBlock Text="Rebuild the full champion picture cache"
+                                                   Style="{StaticResource FieldLabelStyle}"
+                                                   Margin="0,4,0,0" />
+                                        <TextBlock Text="Official JoinGameAfk releases already include a prepared picture cache. This tool is mainly for self-built installations."
+                                                   Style="{StaticResource FieldHintStyle}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Text="This is a heavy operation: it downloads Riot's full Data Dragon archive that can exceed 2 GB and processes every champion picture. For small update, use the pencil in Role Plans instead."
+                                                   Style="{StaticResource FieldHintStyle}"
+                                                   Foreground="{DynamicResource AccentAmberBrush}"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,5,0,0" />
+
+                                        <Grid Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="14" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="No rebuild or download starts until you select the button and confirm the prompt."
+                                                       Style="{StaticResource FieldHintStyle}"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap" />
+                                            <Button x:Name="DownloadChampionPictureArchiveButton"
+                                                    Grid.Column="2"
+                                                    Content="Rebuild Full Cache"
+                                                    Click="DownloadChampionPictureArchiveButton_Click"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    BorderBrush="{DynamicResource AccentAmberBrush}"
+                                                    BorderThickness="1"
+                                                    Padding="14,8"
+                                                    MinWidth="150"
+                                                    HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <TextBlock x:Name="ChampionPictureDownloadStatusLabel"
+                                                   Foreground="{DynamicResource TextSoftBrush}"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,8,0,0"
+                                                   Visibility="Collapsed" />
+                                        <ProgressBar x:Name="ChampionPictureDownloadProgressBar"
+                                                     Height="8"
+                                                     Minimum="0"
+                                                     Maximum="100"
+                                                     Margin="0,8,0,0"
+                                                     Visibility="Collapsed" />
+                                    </StackPanel>
                                 </Border>
 
                                 <Border Height="4" />

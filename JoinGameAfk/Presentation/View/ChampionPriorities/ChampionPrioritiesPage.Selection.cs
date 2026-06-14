@@ -489,8 +489,12 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private void Page_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (!IsPriorityEditingEnabled || _isChampionDragActive)
+            if (!IsPriorityEditingEnabled
+                || _isChampionDragActive
+                || ChampionDataOverlay.Visibility == Visibility.Visible)
+            {
                 return;
+            }
 
             var source = e.OriginalSource as DependencyObject;
             if (!IsSearchTextBoxClick(source))

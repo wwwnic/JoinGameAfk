@@ -74,13 +74,16 @@ public class ChampionCatalogSchemaTests
         Assert.That(stream, Is.Not.Null);
 
         using JsonDocument document = JsonDocument.Parse(stream!);
-        JsonElement champion = document.RootElement
+        JsonElement root = document.RootElement;
+        JsonElement champion = root
             .GetProperty("Champions")
             .EnumerateArray()
             .Single(candidate => candidate.GetProperty("Key").GetInt32() == expectedKey);
 
         Assert.Multiple(() =>
         {
+            Assert.That(root.GetProperty("Version").GetInt32(), Is.EqualTo(2));
+            Assert.That(root.GetProperty("Locale").GetString(), Is.EqualTo("en_US"));
             Assert.That(champion.GetProperty("Name").GetString(), Is.EqualTo(expectedName));
             Assert.That(champion.GetProperty("Id").GetString(), Is.EqualTo(expectedId));
             Assert.That(champion.TryGetProperty("AssetId", out _), Is.False);

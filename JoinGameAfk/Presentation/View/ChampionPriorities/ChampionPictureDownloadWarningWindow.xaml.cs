@@ -8,7 +8,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             InitializeComponent();
             string cacheModeText = downloadRawPictures
-                ? "Raw picture mode is enabled, so these jpg files stay as Riot's original files."
+                ? "Full-resolution enthusiast mode is enabled, so these downloads will keep Riot's original JPG files. JoinGameAfk normally shows no noticeable visual difference, while a complete collection can add 500 MB+ of disk and RAM usage."
                 : "Compact picture mode is enabled, so these jpg files are resized to 96px-wide cache copies at maximum JPEG quality.";
             MessageTextBlock.Text =
                 $"JoinGameAfk will use your internet connection to contact Riot Data Dragon and download every available tile image for {championName}. The JPG files will be stored in your local JoinGameAfk app storage.\n\n{cacheModeText}";

@@ -374,6 +374,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             bool enabled = !_isChampionDataOperationInProgress && !_isChampionPictureDownloadInProgress;
             ChampionDataConfigurationPanel.IsEnabled = enabled;
+            ChampionDataAutoUpdateCatalogCheckBox.IsEnabled = enabled;
+            ChampionDataDownloadRawPicturesCheckBox.IsEnabled = enabled;
             RefreshChampionCatalogButton.IsEnabled = enabled;
             DownloadChampionPictureArchiveButton.IsEnabled = enabled;
             ReloadChampionPicturesButton.IsEnabled = enabled;
@@ -385,7 +387,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "This will use your internet connection to contact Riot Data Dragon at ddragon.leagueoflegends.com.\n\nThe app downloads champion keys, names for your selected locale, and canonical IDs, then updates only your local champions.json file.\n\nContinue?",
+                "JoinGameAfk will connect to Riot to update the champion list for your selected game region and language.\n\nNo champion pictures are downloaded. To add or refresh pictures, use the pencil in Role Plans after updating the list.\n\nContinue?",
                 "Update Champion List",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -398,7 +400,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Check champion list updates on app startup?\n\nThis helps JoinGameAfk notice new champions automatically. At app startup, it checks Riot Data Dragon version and downloads champion keys, names for your selected locale, and canonical IDs when your local list is out of date.\n\nChampion pictures are not downloaded automatically. Use the manual picture options if you want to add or refresh images.",
+                "Check for champion-list updates when JoinGameAfk starts?\n\nWhen enabled, JoinGameAfk connects to Riot at startup and keeps the champion list current for your selected game region and language. Champion pictures are not downloaded automatically. Use the pencil in Role Plans to add or refresh pictures.",
                 "Allow Startup Champion List Update Check",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -410,13 +412,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private bool ConfirmChampionPictureRefresh()
         {
             string cacheModeText = _championDataSettings.DownloadRawChampionPictures
-                ? "Raw picture mode is enabled, so extracted jpg files stay as Riot's original files."
+                ? "Full-resolution enthusiast mode is enabled. Every tile will keep Riot's original JPG. This usually has no noticeable visual benefit in JoinGameAfk and can add 500 MB+ of disk and RAM usage across a complete cache."
                 : "Compact picture mode is enabled, so extracted jpg files are resized to 96px-wide cache copies at maximum JPEG quality.";
 
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                $"This will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can be very large.\n\nThis is not recommended for normal picture changes. Use it only if you really want to refresh the entire local champion image cache.\n\nAfter the download, JoinGameAfk extracts champion tile jpg files into the picture cache, then deletes the archive so only the champion tiles remain on disk.\n\n{cacheModeText}\n\nContinue?",
-                "Download Data Dragon Archive",
+                $"Official JoinGameAfk releases already include a prepared champion picture cache. This advanced operation is intended for self-built installations, repairing or replacing the full cache, or retrieving Riot's original-resolution pictures.\n\nJoinGameAfk will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can exceed 2 GB. Afterward, the app extracts every champion tile into the local cache and removes the archive.\n\nFor a small update, cancel and use the pencil in Role Plans instead.\n\n{cacheModeText}\n\nRebuild the full picture cache?",
+                "Rebuild Full Champion Picture Cache",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
                 MessageBoxResult.Cancel);
