@@ -28,6 +28,62 @@ flowchart LR
     end
 ```
 
+## League Client (LCU) API Context
+
+JoinGameAfk communicates with the running League Client through its local League Client Update (LCU) API. This is a private API exposed on `127.0.0.1`; it is not the public Riot developer API.
+
+- LCU reference: [League of Legends LCU API Docs](https://lcu.kebs.dev/)
+- Riot Client reference: [Riot Client API Docs](https://riotclient.kebs.dev/)
+- Shared source: [KebsCS/lcu-and-riotclient-api](https://github.com/KebsCS/lcu-and-riotclient-api)
+- Purpose: community-maintained, version-specific endpoint and schema reference for development.
+- Runtime: JoinGameAfk does not depend on the documentation website. It connects directly to the local League Client.
+- Current scope: JoinGameAfk uses the LCU API. The separate Riot Client API documentation is a reference for the Riot launcher/client layer and is not currently part of the app's runtime integration.
+- Authentication: `ProcessManager` reads the League Client's `--app-port` and `--remoting-auth-token`, then the app uses local HTTPS/WSS with Basic authentication.
+- Updates: prefer live `OnJsonApiEvent` WebSocket events, with HTTP polling as a fallback and optional safety refresh.
+
+```mermaid
+flowchart LR
+    SOURCE["KebsCS/lcu-and-riotclient-api\nShared documentation source"]
+    LCU_DOCS["LCU API Docs\nlcu.kebs.dev\nUsed for League Client development"]
+    RIOT_DOCS["Riot Client API Docs\nriotclient.kebs.dev\nCompanion reference; not currently used"]
+
+    subgraph LOCAL["Player's computer"]
+        CLIENT["League Client\nLocal LCU API\nhttps/wss://127.0.0.1:&lt;port&gt;"]
+        PROCESS["ProcessManager\nFind app port and auth token"]
+        HTTP["LeagueClientHttp\nRead state and send actions"]
+        EVENTS["LeagueClientEventStream\nSubscribe to OnJsonApiEvent"]
+        CONTROLLER["PhaseController\nResolve ReadyCheck, ChampSelect,\nand gameflow state"]
+        HANDLERS["ReadyCheck / ChampSelect\nAccept, hover, pick, ban, lock"]
+
+        CLIENT -- "process command-line credentials" --> PROCESS
+        PROCESS -- "port and Basic auth" --> HTTP
+        PROCESS -- "port and Basic auth" --> EVENTS
+        HTTP <--> CLIENT
+        EVENTS <--> CLIENT
+        HTTP --> CONTROLLER
+        EVENTS --> CONTROLLER
+        CONTROLLER --> HANDLERS
+        HANDLERS --> HTTP
+    end
+
+    SOURCE --> LCU_DOCS
+    SOURCE --> RIOT_DOCS
+    LCU_DOCS -. "documents endpoints and payloads" .-> HTTP
+    LCU_DOCS -. "documents events and schemas" .-> EVENTS
+```
+
+LCU routes currently used by JoinGameAfk:
+
+- Game state: `/lol-gameflow/v1/session`, `/lol-gameflow/v1/gameflow-phase`, `/lol-lobby/v2/lobby`
+- Queue: `/lol-matchmaking/v1/ready-check`, `/lol-matchmaking/v1/ready-check/accept`
+- Champion select: `/lol-champ-select/v1/session`, `/lol-champ-select/v1/session/actions/{actionId}`
+- Player and ownership: `/lol-summoner/v1/current-summoner`, champion inventory endpoints
+- Client configuration: `/riotclient/region-locale`
+- Locally installed game version: `/lol-patch/v1/game-version`
+- Live updates: WebSocket subscription to `OnJsonApiEvent`
+
+The `/riotclient/region-locale` path is exposed by the League Client's local LCU API. Its `riotclient` prefix does not mean JoinGameAfk connects to the separate Riot Client API documented at `riotclient.kebs.dev`.
+
 ## YAML Schema
 
 Root fields
