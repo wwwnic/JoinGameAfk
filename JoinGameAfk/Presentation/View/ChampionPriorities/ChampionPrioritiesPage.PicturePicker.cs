@@ -107,6 +107,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             e.Handled = true;
 
             if (_isChampionPictureDownloadInProgress
+                || _isChampionDataOperationInProgress
                 || _selectedChampionPictureChampion is not ChampionInfo champion)
             {
                 return;
@@ -124,6 +125,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             int requestedChampionId = champion.Key;
             _isChampionPictureDownloadInProgress = true;
             SetChampionPicturePickerDownloadControlsEnabled(false);
+            RefreshChampionDataActionStates();
             SetChampionPicturePickerDownloadStatus(
                 $"Preparing {champion.Name} picture download...",
                 "TextSoftBrush",
@@ -155,8 +157,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
                     champion,
                     progress,
-                    optimizeForLocalCache: !_generalSettings.DownloadRawChampionPictures,
-                    preferredLocale: _generalSettings.EffectiveLocale);
+                    optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
+                    preferredLocale: _championDataSettings.Locale);
                 if (_selectedChampionPictureChampion?.Key != requestedChampionId
                     || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                 {
@@ -185,6 +187,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             finally
             {
                 _isChampionPictureDownloadInProgress = false;
+                RefreshChampionDataActionStates();
                 if (_selectedChampionPictureChampion?.Key == requestedChampionId
                     && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
                 {
@@ -307,7 +310,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             bool hasPendingCustomSelection = !string.IsNullOrWhiteSpace(_pendingChampionPictureFileName);
             ChampionPicturePickerPreviewImage.Source = selectedOption?.ImageSource;
             ChampionPicturePickerUseDefaultButton.IsEnabled = !_isChampionPictureDownloadInProgress && hasPendingCustomSelection;
-            ChampionPicturePickerDownloadAllButton.IsEnabled = !_isChampionPictureDownloadInProgress;
+            ChampionPicturePickerDownloadAllButton.IsEnabled =
+                !_isChampionPictureDownloadInProgress && !_isChampionDataOperationInProgress;
 
             if (optionCount == 0)
             {
@@ -332,6 +336,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             bool hasPendingCustomSelection = !string.IsNullOrWhiteSpace(_pendingChampionPictureFileName);
             ChampionPicturePickerDownloadAllButton.IsEnabled = !_isChampionPictureDownloadInProgress
+                && !_isChampionDataOperationInProgress
                 && _selectedChampionPictureChampion is not null;
             ChampionPicturePickerUseDefaultButton.IsEnabled = !_isChampionPictureDownloadInProgress
                 && hasPendingCustomSelection;
@@ -371,7 +376,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (!ChampionImageSelectionStore.ShowChampionPictureDownloadWarning)
                 return true;
 
-            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _generalSettings.DownloadRawChampionPictures)
+            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _championDataSettings.DownloadRawChampionPictures)
             {
                 Owner = Window.GetWindow(this)
             };

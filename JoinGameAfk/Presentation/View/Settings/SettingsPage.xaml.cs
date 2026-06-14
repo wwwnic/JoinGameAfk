@@ -12,27 +12,26 @@ namespace JoinGameAfk.Presentation.View.Settings
     {
         private readonly Button[] _settingsSectionButtons;
         private readonly FrameworkElement[] _settingsSectionViews;
+        public event Action? OpenChampionDataRequested;
 
         public SettingsPage(
             GeneralSettings generalSettings,
             SoundSettings soundSettings,
             OverlaySettings overlaySettings,
             Action<GeneralSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
-            Action<string>? logMessage = null,
-            Action<string>? logErrorMessage = null,
             string? selectedThemeKey = null,
             bool themePickerExpanded = false)
         {
             InitializeComponent();
 
-            GeneralSettingsFrame.Content = new GeneralSettingsPage(
+            var generalSettingsPage = new GeneralSettingsPage(
                 generalSettings,
                 overlaySettings,
                 reloadUiForTheme,
-                logMessage,
-                logErrorMessage,
                 selectedThemeKey,
                 themePickerExpanded);
+            generalSettingsPage.OpenChampionDataRequested += () => OpenChampionDataRequested?.Invoke();
+            GeneralSettingsFrame.Content = generalSettingsPage;
             SoundSettingsFrame.Content = new SoundSettingsPage(soundSettings);
             OverlaySettingsFrame.Content = new OverlaySettingsPage(overlaySettings);
 

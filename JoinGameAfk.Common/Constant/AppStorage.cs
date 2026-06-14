@@ -5,8 +5,9 @@ namespace JoinGameAfk.Constant
         public const int GeneralSettingsFileVersion = 1;
         public const int SoundSettingsFileVersion = 1;
         public const int RolePlanSettingsFileVersion = 1;
+        public const int ChampionDataSettingsFileVersion = 1;
         public const int OverlaySettingsFileVersion = 1;
-        public const int ChampionFileVersion = 1;
+        public const int ChampionFileVersion = 2;
         public const int ChampionImageSelectionFileVersion = 1;
 
         public const string SettingsDirectoryName = "settings";
@@ -16,6 +17,7 @@ namespace JoinGameAfk.Constant
         public const string GeneralSettingsFileName = "general.json";
         public const string SoundSettingsFileName = "sound.json";
         public const string RolePlanSettingsFileName = "plans.json";
+        public const string ChampionDataSettingsFileName = "downloadSettings.json";
         public const string OverlaySettingsFileName = "overlays.json";
         public const string ChampionFileName = "champions.json";
         public const string ChampionImageSelectionFileName = "champion-image-selections.json";
@@ -43,6 +45,8 @@ namespace JoinGameAfk.Constant
         public static string OverlaySettingsFilePath => Path.Combine(SettingsDirectoryPath, OverlaySettingsFileName);
 
         public static string RolePlanSettingsFilePath => Path.Combine(RolePlansDirectoryPath, RolePlanSettingsFileName);
+
+        public static string ChampionDataSettingsFilePath => Path.Combine(RolePlansDirectoryPath, ChampionDataSettingsFileName);
 
         public static string ChampionImageSelectionFilePath => Path.Combine(RolePlansDirectoryPath, ChampionImageSelectionFileName);
 

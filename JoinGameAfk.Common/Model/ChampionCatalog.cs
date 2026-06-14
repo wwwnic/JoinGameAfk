@@ -15,11 +15,11 @@ namespace JoinGameAfk.Model
         public List<Position> Roles { get; init; } = [];
     }
 
-    public sealed record ChampionCatalogSyncInfo(string? DataDragonVersion, int ChampionCount, string FilePath, DateTime? LastSyncedAtUtc);
+    public sealed record ChampionCatalogSyncInfo(string? DataDragonVersion, string? Locale, int ChampionCount, string FilePath, DateTime? LastSyncedAtUtc);
 
-    public sealed record ChampionCatalogRefreshResult(string DataDragonVersion, int ChampionCount, string FilePath, DateTime LastSyncedAtUtc);
+    public sealed record ChampionCatalogRefreshResult(string DataDragonVersion, string Locale, int ChampionCount, string FilePath, DateTime LastSyncedAtUtc);
 
-    public sealed record ChampionCatalogRemoteData(string DataDragonVersion, IReadOnlyList<ChampionCatalogRemoteChampion> Champions);
+    public sealed record ChampionCatalogRemoteData(string DataDragonVersion, string Locale, IReadOnlyList<ChampionCatalogRemoteChampion> Champions);
 
     public sealed record ChampionCatalogRemoteChampion(
         int Key,
@@ -266,18 +266,23 @@ namespace JoinGameAfk.Model
             try
             {
                 if (!File.Exists(filePath))
-                    return new ChampionCatalogSyncInfo(null, 0, filePath, null);
+                    return new ChampionCatalogSyncInfo(null, null, 0, filePath, null);
 
                 var catalogFile = DeserializeCatalogFile(File.ReadAllText(filePath));
                 if (catalogFile is null || catalogFile.Champions.Count == 0)
-                    return new ChampionCatalogSyncInfo(null, 0, filePath, null);
+                    return new ChampionCatalogSyncInfo(null, null, 0, filePath, null);
 
                 int championCount = NormalizeChampions(catalogFile.Champions).Count;
-                return new ChampionCatalogSyncInfo(catalogFile.DataDragonVersion, championCount, filePath, catalogFile.LastSyncedAtUtc);
+                return new ChampionCatalogSyncInfo(
+                    catalogFile.DataDragonVersion,
+                    catalogFile.Locale,
+                    championCount,
+                    filePath,
+                    catalogFile.LastSyncedAtUtc);
             }
             catch
             {
-                return new ChampionCatalogSyncInfo(null, 0, filePath, null);
+                return new ChampionCatalogSyncInfo(null, null, 0, filePath, null);
             }
         }
 
@@ -298,6 +303,7 @@ namespace JoinGameAfk.Model
 
             var knownChampionsByKey = LoadKnownChampionsByKey();
             string dataDragonVersion = remoteCatalog.DataDragonVersion.Trim();
+            string locale = RegionLocale.NormalizeLocale(remoteCatalog.Locale);
 
             if (string.IsNullOrWhiteSpace(dataDragonVersion))
                 throw new InvalidOperationException("Riot Data Dragon returned no version.");
@@ -314,10 +320,10 @@ namespace JoinGameAfk.Model
             AppStorage.EnsureDataDirectoryExists();
             string filePath = AppStorage.ChampionFilePath;
             DateTime lastSyncedAtUtc = DateTime.UtcNow;
-            SaveCatalogFile(filePath, champions, dataDragonVersion, lastSyncedAtUtc);
+            SaveCatalogFile(filePath, champions, dataDragonVersion, locale, lastSyncedAtUtc);
             SetCatalogState(champions);
 
-            return new ChampionCatalogRefreshResult(dataDragonVersion, champions.Count, filePath, lastSyncedAtUtc);
+            return new ChampionCatalogRefreshResult(dataDragonVersion, locale, champions.Count, filePath, lastSyncedAtUtc);
         }
 
         private static string Normalize(string value)
@@ -366,6 +372,7 @@ namespace JoinGameAfk.Model
                     json,
                     champions,
                     catalogFile.DataDragonVersion,
+                    catalogFile.Locale,
                     catalogFile.LastSyncedAtUtc);
 
                 return champions;
@@ -445,6 +452,7 @@ namespace JoinGameAfk.Model
                             filePath,
                             bundledCatalogFile.Champions,
                             bundledCatalogFile.DataDragonVersion,
+                            bundledCatalogFile.Locale,
                             bundledCatalogFile.LastSyncedAtUtc);
                         return;
                     }
@@ -455,7 +463,7 @@ namespace JoinGameAfk.Model
             }
 
             AppStorage.EnsureDataDirectoryExists();
-            SaveCatalogFile(filePath, DefaultChampions);
+            SaveCatalogFile(filePath, DefaultChampions, locale: RegionLocale.DefaultLocale);
         }
 
         private static string? LoadBundledChampionCatalogJson()
@@ -508,9 +516,10 @@ namespace JoinGameAfk.Model
             string filePath,
             IReadOnlyList<ChampionInfo> champions,
             string? dataDragonVersion = null,
+            string? locale = null,
             DateTime? lastSyncedAtUtc = null)
         {
-            File.WriteAllText(filePath, SerializeCatalogFile(champions, dataDragonVersion, lastSyncedAtUtc));
+            File.WriteAllText(filePath, SerializeCatalogFile(champions, dataDragonVersion, locale, lastSyncedAtUtc));
         }
 
         private static void SaveCatalogFileIfChanged(
@@ -518,9 +527,10 @@ namespace JoinGameAfk.Model
             string currentJson,
             IReadOnlyList<ChampionInfo> champions,
             string? dataDragonVersion,
+            string? locale,
             DateTime? lastSyncedAtUtc)
         {
-            string normalizedJson = SerializeCatalogFile(champions, dataDragonVersion, lastSyncedAtUtc);
+            string normalizedJson = SerializeCatalogFile(champions, dataDragonVersion, locale, lastSyncedAtUtc);
             if (string.Equals(NormalizeJsonForComparison(currentJson), NormalizeJsonForComparison(normalizedJson), StringComparison.Ordinal))
                 return;
 
@@ -530,12 +540,16 @@ namespace JoinGameAfk.Model
         private static string SerializeCatalogFile(
             IReadOnlyList<ChampionInfo> champions,
             string? dataDragonVersion = null,
+            string? locale = null,
             DateTime? lastSyncedAtUtc = null)
         {
             var catalogFile = new ChampionCatalogFile
             {
                 Version = AppStorage.ChampionFileVersion,
                 DataDragonVersion = dataDragonVersion,
+                Locale = string.IsNullOrWhiteSpace(locale)
+                    ? null
+                    : RegionLocale.NormalizeLocale(locale),
                 LastSyncedAtUtc = lastSyncedAtUtc,
                 Champions = NormalizeChampions(champions).ToList()
             };
@@ -660,6 +674,8 @@ namespace JoinGameAfk.Model
             public int Version { get; set; } = AppStorage.ChampionFileVersion;
 
             public string? DataDragonVersion { get; set; }
+
+            public string? Locale { get; set; }
 
             public DateTime? LastSyncedAtUtc { get; set; }
 

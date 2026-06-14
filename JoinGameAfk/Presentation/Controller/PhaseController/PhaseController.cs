@@ -14,6 +14,7 @@ namespace JoinGameAfk.Presentation.Controller
         private readonly PhaseProgressionPage fPhaseProgressionPage;
         private readonly LogsPage _logsPage;
         private readonly GeneralSettings _generalSettings;
+        private readonly ChampionDataSettings _championDataSettings;
         private readonly RolePlanSettings _rolePlanSettings;
         private readonly SoundSettings _soundSettings;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
@@ -60,19 +61,22 @@ namespace JoinGameAfk.Presentation.Controller
             PhaseProgressionPage phaseProgressionPage,
             LogsPage logsPage,
             GeneralSettings generalSettings,
+            ChampionDataSettings championDataSettings,
             RolePlanSettings rolePlanSettings,
             SoundSettings soundSettings)
         {
             fPhaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
             _generalSettings = generalSettings;
+            _championDataSettings = championDataSettings;
             _rolePlanSettings = rolePlanSettings;
             _soundSettings = soundSettings;
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
             _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
-            _lastAutoDetectRegionLocaleEnabled = generalSettings.AutoDetectRegionLocale;
+            _lastAutoDetectRegionLocaleEnabled = championDataSettings.AutoDetectRegionLocale;
             _generalSettings.Saved += OnSettingsSaved;
+            _championDataSettings.Saved += OnSettingsSaved;
             _rolePlanSettings.Saved += OnSettingsSaved;
         }
 
@@ -161,6 +165,7 @@ namespace JoinGameAfk.Presentation.Controller
             _disposed = true;
             Shutdown();
             _generalSettings.Saved -= OnSettingsSaved;
+            _championDataSettings.Saved -= OnSettingsSaved;
             _rolePlanSettings.Saved -= OnSettingsSaved;
         }
 
@@ -177,8 +182,8 @@ namespace JoinGameAfk.Presentation.Controller
         private void UpdateRegionDisplayFromSettings()
         {
             fPhaseProgressionPage.UpdateRegionDisplay(
-                _generalSettings.EffectivePlatformId,
-                _generalSettings.EffectiveLocale);
+                _championDataSettings.PlatformId,
+                _championDataSettings.Locale);
         }
 
 #if DEBUG

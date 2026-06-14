@@ -11,16 +11,13 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             CheckBox[] checkBoxes =
             [
                 StartWatcherOnStartupCheckBox,
-                AutoDetectRegionLocaleCheckBox,
                 InQueueAutomationCheckBox,
                 AutoReadyCheckCheckBox,
                 ChampionSelectAutomationCheckBox,
                 AutoHoverChampionCheckBox,
                 AutoLockSelectionCheckBox,
                 UseLiveEventsCheckBox,
-                EventFallbackPollingCheckBox,
-                AutoUpdateChampionCatalogOnStartupCheckBox,
-                DownloadRawChampionPicturesCheckBox
+                EventFallbackPollingCheckBox
             ];
 
             foreach (var checkBox in checkBoxes)
@@ -30,8 +27,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             }
 
             ReadyCheckAcceptDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
-            PlatformIdBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
-            LocaleBox.SelectionChanged += DirtyTrackedControl_SelectionChanged;
             PickLockDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             ChampionHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
             PlanningHoverDelayBox.TextChanged += DirtyTrackedControl_TextChanged;
@@ -82,9 +77,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             return new GeneralSettingsSnapshot(
                 StartWatcherOnStartupCheckBox.IsChecked == true,
-                AutoDetectRegionLocaleCheckBox.IsChecked == true,
-                CreatePlatformIdSnapshot(PlatformIdBox),
-                CreateLocaleSnapshot(LocaleBox),
                 inQueueAutomationEnabled,
                 autoReadyCheckEnabled,
                 autoReadyCheckEnabled ? CreateNumericSnapshot(ReadyCheckAcceptDelayBox) : string.Empty,
@@ -99,9 +91,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                 useLiveEvents,
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? CreateNumericSnapshot(EventFallbackPollIntervalBox) : string.Empty,
-                GetSelectedThemeKey(),
-                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true,
-                DownloadRawChampionPicturesCheckBox.IsChecked == true);
+                GetSelectedThemeKey());
         }
 
         private GeneralSettingsSnapshot CaptureSavedSettingsSnapshot()
@@ -116,9 +106,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
 
             return new GeneralSettingsSnapshot(
                 _settings.StartWatcherOnStartup,
-                _settings.AutoDetectRegionLocale,
-                _settings.PlatformId,
-                _settings.Locale,
                 inQueueAutomationEnabled,
                 autoReadyCheckEnabled,
                 autoReadyCheckEnabled ? _settings.ReadyCheckAcceptDelaySeconds.ToString() : string.Empty,
@@ -133,9 +120,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                 useLiveEvents,
                 eventFallbackPollingEnabled,
                 useLiveEvents && eventFallbackPollingEnabled ? _settings.ChampSelectEventFallbackPollIntervalMs.ToString() : string.Empty,
-                AppThemeManager.NormalizeThemeKey(_settings.ThemeKey),
-                _settings.AutoUpdateChampionCatalogOnStartup,
-                _settings.DownloadRawChampionPictures);
+                AppThemeManager.NormalizeThemeKey(_settings.ThemeKey));
         }
 
         private static string CreateNumericSnapshot(TextBox textBox)
@@ -145,18 +130,5 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                 : $"invalid:{textBox.Text}";
         }
 
-        private static string CreatePlatformIdSnapshot(ComboBox comboBox)
-        {
-            return Model.RegionLocale.TryNormalizePlatformId(comboBox.SelectedValue?.ToString(), out string normalized)
-                ? normalized
-                : "invalid";
-        }
-
-        private static string CreateLocaleSnapshot(ComboBox comboBox)
-        {
-            return Model.RegionLocale.TryNormalizeLocale(comboBox.SelectedValue?.ToString(), out string normalized)
-                ? normalized
-                : "invalid";
-        }
     }
 }

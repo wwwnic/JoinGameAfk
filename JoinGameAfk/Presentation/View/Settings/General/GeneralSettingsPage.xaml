@@ -363,39 +363,6 @@
                         <StackPanel Grid.Column="0">
                             <StackPanel Orientation="Horizontal"
                                         VerticalAlignment="Center">
-                                <TextBlock Text="Check champion list updates on app launch"
-                                           Style="{StaticResource FieldLabelStyle}" />
-                                <Button Style="{StaticResource InfoIndicatorStyle}"
-                                        Content="?"
-                                        Margin="8,0,0,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="Checks for new champions at app startup and updates only the local name list. Picture downloads never run automatically." />
-                            </StackPanel>
-                            <TextBlock Text="Keeps new champions available."
-                                       Style="{StaticResource FieldHintStyle}"
-                                       Margin="0,3,0,0" />
-                        </StackPanel>
-
-                        <CheckBox x:Name="AutoUpdateChampionCatalogOnStartupCheckBox"
-                                  Grid.Column="2"
-                                  Style="{StaticResource AppCheckBoxStyle}"
-                                  VerticalAlignment="Center"
-                                  Checked="AutoUpdateChampionCatalogOnStartupCheckBox_Checked"
-                                  ToolTip="When enabled, startup compares the local champion data version with the latest Riot Data Dragon version before downloading updates." />
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <StackPanel Orientation="Horizontal"
-                                        VerticalAlignment="Center">
                                 <TextBlock Text="Start watcher on app launch"
                                            Style="{StaticResource FieldLabelStyle}" />
                                 <Button Style="{StaticResource InfoIndicatorStyle}"
@@ -1027,6 +994,44 @@
             <StackPanel>
                 <TextBlock Text="Champion Data"
                            Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock Text="Region, language, Riot Data Dragon synchronization, and champion picture downloads are managed with Role Plans."
+                           Style="{StaticResource SectionDescriptionStyle}"
+                           TextWrapping="Wrap"
+                           Margin="0,4,0,0" />
+
+                <Border Style="{StaticResource SettingRowStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Open champion data manager"
+                                       Style="{StaticResource FieldLabelStyle}" />
+                            <TextBlock Text="Switch to Role Plans and open the auto-saving champion data popup."
+                                       Style="{StaticResource FieldHintStyle}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,3,0,0" />
+                        </StackPanel>
+                        <Button Grid.Column="2"
+                                Content="Open in Role Plans"
+                                Click="OpenChampionDataButton_Click"
+                                Style="{StaticResource AccentButtonStyle}"
+                                Padding="16,9"
+                                HorizontalAlignment="Right" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="7"
+                Style="{StaticResource SectionCardStyle}"
+                Margin="0,0,0,12"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="Champion Data"
+                           Style="{StaticResource SectionTitleStyle}" />
                 <TextBlock Text="Region, language, and Riot Data Dragon sync."
                            Style="{StaticResource SectionDescriptionStyle}"
                            Margin="0,4,0,0" />
@@ -1108,8 +1113,6 @@
                                   Grid.Column="2"
                                   Style="{StaticResource AppCheckBoxStyle}"
                                   VerticalAlignment="Center"
-                                  Checked="RegionLocaleAutoDetection_StateChanged"
-                                  Unchecked="RegionLocaleAutoDetection_StateChanged"
                                   ToolTip="Turn this off to edit and always use the region and language selected above." />
                     </Grid>
                 </Border>
@@ -1168,7 +1171,6 @@
                             <Button x:Name="RefreshChampionCatalogButton"
                                     Grid.Column="2"
                                     Content="Update Champion List"
-                                    Click="RefreshChampionCatalogButton_Click"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Padding="18,9"
                                     HorizontalAlignment="Right"
@@ -1224,7 +1226,6 @@
                             <Button x:Name="DownloadChampionPictureArchiveButton"
                                     Grid.Column="2"
                                     Content="Download Archive"
-                                    Click="DownloadChampionPictureArchiveButton_Click"
                                     Style="{StaticResource AccentButtonStyle}"
                                     Padding="18,9"
                                     MinWidth="168"
@@ -1283,13 +1284,11 @@
                                    HorizontalAlignment="Right">
                             <Button x:Name="OpenChampionPictureFolderButton"
                                     Content="Open Pictures Folder"
-                                    Click="OpenChampionPictureFolderButton_Click"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Padding="12,8"
                                     ToolTip="Open the local folder where champion tile jpg files are stored." />
                             <Button x:Name="ReloadChampionPicturesButton"
                                     Content="Reload Pictures"
-                                    Click="ReloadChampionPicturesButton_Click"
                                     Style="{StaticResource SecondaryButtonStyle}"
                                     Padding="12,8"
                                     Margin="8,0,0,0"

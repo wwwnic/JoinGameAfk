@@ -96,7 +96,7 @@ namespace JoinGameAfk.Presentation.Controller
                             }
                         }
 
-                        if (_generalSettings.AutoDetectRegionLocale
+                        if (_championDataSettings.AutoDetectRegionLocale
                             && !_hasAttemptedRegionLocaleDetectionForConnection)
                         {
                             bool canUseWatcher = await DetectRegionLocaleAsync(http, ct).ConfigureAwait(false);
@@ -345,7 +345,7 @@ namespace JoinGameAfk.Presentation.Controller
             }
 
             bool autoDetectionWasEnabled = _lastAutoDetectRegionLocaleEnabled;
-            _lastAutoDetectRegionLocaleEnabled = _generalSettings.AutoDetectRegionLocale;
+            _lastAutoDetectRegionLocaleEnabled = _championDataSettings.AutoDetectRegionLocale;
             if (_isClientConnected
                 && !autoDetectionWasEnabled
                 && _lastAutoDetectRegionLocaleEnabled)
@@ -388,34 +388,34 @@ namespace JoinGameAfk.Presentation.Controller
                 {
                     LogError(
                         "Unable to detect region and locale from League Client because the response was incomplete or invalid. "
-                        + $"Keeping configured values: {_generalSettings.PlatformId} / {_generalSettings.Locale}.");
+                        + $"Keeping configured values: {_championDataSettings.PlatformId} / {_championDataSettings.Locale}.");
                     return true;
                 }
 
-                string previousPlatformId = _generalSettings.PlatformId;
-                string previousLocale = _generalSettings.Locale;
+                string previousPlatformId = _championDataSettings.PlatformId;
+                string previousLocale = _championDataSettings.Locale;
                 bool valuesChanged = !string.Equals(previousPlatformId, normalizedPlatformId, StringComparison.Ordinal)
                     || !string.Equals(previousLocale, normalizedLocale, StringComparison.Ordinal);
 
                 if (valuesChanged)
                 {
-                    _generalSettings.PlatformId = normalizedPlatformId;
-                    _generalSettings.Locale = normalizedLocale;
+                    _championDataSettings.PlatformId = normalizedPlatformId;
+                    _championDataSettings.Locale = normalizedLocale;
                     try
                     {
-                        _generalSettings.Save();
+                        _championDataSettings.Save();
                     }
                     catch
                     {
-                        _generalSettings.PlatformId = previousPlatformId;
-                        _generalSettings.Locale = previousLocale;
+                        _championDataSettings.PlatformId = previousPlatformId;
+                        _championDataSettings.Locale = previousLocale;
                         throw;
                     }
 
                     _hasAttemptedRegionLocaleDetectionForConnection = true;
                     Log(
                         $"League Client region detected: {normalizedPlatformId} / {normalizedLocale}. "
-                        + $"Saved these values to general settings, replacing {previousPlatformId} / {previousLocale}.");
+                        + $"Saved these values to champion data settings, replacing {previousPlatformId} / {previousLocale}.");
                 }
                 else
                 {
@@ -430,7 +430,7 @@ namespace JoinGameAfk.Presentation.Controller
             {
                 LogError(
                     "Unable to detect region and locale from League Client. "
-                    + $"Keeping configured values: {_generalSettings.PlatformId} / {_generalSettings.Locale}. {ex.Message}");
+                    + $"Keeping configured values: {_championDataSettings.PlatformId} / {_championDataSettings.Locale}. {ex.Message}");
             }
 
             UpdateRegionDisplayFromSettings();

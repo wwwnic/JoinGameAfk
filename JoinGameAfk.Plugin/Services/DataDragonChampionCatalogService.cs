@@ -39,9 +39,14 @@ namespace JoinGameAfk.Plugin.Services
                     GetPlatformId(),
                     cancellationToken)
                 .ConfigureAwait(false);
-            var champions = await FetchChampionsAsync(httpClient, dataDragonVersion, GetPreferredLocale(), cancellationToken).ConfigureAwait(false);
+            var fetchedCatalog = await FetchChampionsAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    GetPreferredLocale(),
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            return new ChampionCatalogRemoteData(dataDragonVersion, champions);
+            return new ChampionCatalogRemoteData(dataDragonVersion, fetchedCatalog.Locale, fetchedCatalog.Champions);
         }
 
         public async Task<string> FetchLatestDataDragonVersionAsync(CancellationToken cancellationToken = default)
@@ -69,8 +74,13 @@ namespace JoinGameAfk.Plugin.Services
                 Timeout = RequestTimeout
             };
 
-            var champions = await FetchChampionsAsync(httpClient, dataDragonVersion, GetPreferredLocale(), cancellationToken).ConfigureAwait(false);
-            return new ChampionCatalogRemoteData(dataDragonVersion, champions);
+            var fetchedCatalog = await FetchChampionsAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    GetPreferredLocale(),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return new ChampionCatalogRemoteData(dataDragonVersion, fetchedCatalog.Locale, fetchedCatalog.Champions);
         }
 
         private static async Task<string> FetchLatestDataDragonVersionAsync(
@@ -126,7 +136,7 @@ namespace JoinGameAfk.Plugin.Services
             return latestVersion.Trim();
         }
 
-        private static async Task<IReadOnlyList<ChampionCatalogRemoteChampion>> FetchChampionsAsync(
+        private static async Task<FetchedChampionCatalog> FetchChampionsAsync(
             HttpClient httpClient,
             string dataDragonVersion,
             string locale,
@@ -165,7 +175,9 @@ namespace JoinGameAfk.Plugin.Services
                 fetchedLocale,
                 RegionLocale.DefaultLocale,
                 StringComparison.OrdinalIgnoreCase);
-            return CreateRemoteChampions(catalog, hasEnglishNames);
+            return new FetchedChampionCatalog(
+                RegionLocale.NormalizeLocale(fetchedLocale),
+                CreateRemoteChampions(catalog, hasEnglishNames));
         }
 
         private static async Task<DataDragonChampionCatalog?> TryFetchChampionCatalogAsync(
@@ -253,6 +265,10 @@ namespace JoinGameAfk.Plugin.Services
         {
             public Dictionary<string, DataDragonChampion> Data { get; set; } = [];
         }
+
+        private sealed record FetchedChampionCatalog(
+            string Locale,
+            IReadOnlyList<ChampionCatalogRemoteChampion> Champions);
 
         private sealed class DataDragonRealm
         {

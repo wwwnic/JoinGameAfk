@@ -11,9 +11,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                 return;
 
             _settings.StartWatcherOnStartup = StartWatcherOnStartupCheckBox.IsChecked == true;
-            _settings.AutoDetectRegionLocale = AutoDetectRegionLocaleCheckBox.IsChecked == true;
-            _settings.PlatformId = input.PlatformId;
-            _settings.Locale = input.Locale;
             _settings.InQueueAutomationEnabled = InQueueAutomationCheckBox.IsChecked == true;
             _settings.AutoReadyCheckEnabled = _settings.InQueueAutomationEnabled && AutoReadyCheckCheckBox.IsChecked == true;
             _settings.ReadyCheckAcceptDelaySeconds = input.ReadyCheckAcceptDelaySeconds;
@@ -29,8 +26,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             _settings.ChampSelectEventFallbackPollingEnabled = EventFallbackPollingCheckBox.IsChecked == true;
             _settings.ChampSelectEventFallbackPollIntervalMs = input.ChampSelectEventFallbackPollIntervalMs;
             _settings.ThemeKey = GetSelectedThemeKey();
-            _settings.AutoUpdateChampionCatalogOnStartup = AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked == true;
-            _settings.DownloadRawChampionPictures = DownloadRawChampionPicturesCheckBox.IsChecked == true;
             bool shouldReloadTheme = SelectedThemeRequiresReload();
 
             _settings.Save();
@@ -48,7 +43,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "Restore default startup, region, automation, timing, performance, theme, and download settings?\n\nRole plans, sound alerts, and overlay settings are kept.",
+                "Restore default startup, automation, timing, performance, and theme settings?\n\nRole plans, champion data, sound alerts, and overlay settings are kept.",
                 "Reset Defaults",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,

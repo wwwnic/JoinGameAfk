@@ -29,11 +29,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             try
             {
                 StartWatcherOnStartupCheckBox.IsChecked = _settings.StartWatcherOnStartup;
-                AutoDetectRegionLocaleCheckBox.IsChecked = _settings.AutoDetectRegionLocale;
-                EnsureConfiguredOption(_platformOptions, _settings.PlatformId);
-                EnsureConfiguredOption(_localeOptions, _settings.Locale);
-                PlatformIdBox.SelectedValue = _settings.PlatformId;
-                LocaleBox.SelectedValue = _settings.Locale;
                 InQueueAutomationCheckBox.IsChecked = inQueueAutomationEnabled;
                 AutoReadyCheckCheckBox.IsChecked = inQueueAutomationEnabled && _settings.AutoReadyCheckEnabled;
                 ReadyCheckAcceptDelayBox.Text = _settings.ReadyCheckAcceptDelaySeconds.ToString();
@@ -51,10 +46,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
                 string themeKeyToSelect = _pendingInitialThemeSelectionKey ?? _settings.ThemeKey;
                 _pendingInitialThemeSelectionKey = null;
                 SelectTheme(themeKeyToSelect);
-                AutoUpdateChampionCatalogOnStartupCheckBox.IsChecked = _settings.AutoUpdateChampionCatalogOnStartup;
-                DownloadRawChampionPicturesCheckBox.IsChecked = _settings.DownloadRawChampionPictures;
                 UpdateThemePickerExpansionState();
-                UpdateRegionLocaleInputStates();
             }
             finally
             {
@@ -78,18 +70,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             }
 
             UpdateAutomationInputStates();
-        }
-
-        private void RegionLocaleAutoDetection_StateChanged(object sender, RoutedEventArgs e)
-        {
-            UpdateRegionLocaleInputStates();
-        }
-
-        private void UpdateRegionLocaleInputStates()
-        {
-            bool manualSelectionEnabled = AutoDetectRegionLocaleCheckBox.IsChecked != true;
-            PlatformIdBox.IsEnabled = manualSelectionEnabled;
-            LocaleBox.IsEnabled = manualSelectionEnabled;
         }
 
         private void PerformanceCheckBox_StateChanged(object sender, RoutedEventArgs e)
@@ -262,22 +242,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         {
             input = default;
 
-            string platformId = PlatformIdBox.SelectedValue?.ToString() ?? string.Empty;
-            if (!RegionLocale.TryNormalizePlatformId(platformId, out string normalizedPlatformId))
-            {
-                ShowValidationMessage("Select a platform ID.");
-                PlatformIdBox.Focus();
-                return false;
-            }
-
-            string locale = LocaleBox.SelectedValue?.ToString() ?? string.Empty;
-            if (!RegionLocale.TryNormalizeLocale(locale, out string normalizedLocale))
-            {
-                ShowValidationMessage("Select a locale.");
-                LocaleBox.Focus();
-                return false;
-            }
-
             if (!InputValidator.TryValidateAll(GetActiveNumericInputRules(), out var invalidRule, out string errorMessage))
             {
                 ShowValidationMessage(errorMessage);
@@ -315,8 +279,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             }
 
             input = new GeneralSettingsInputValues(
-                normalizedPlatformId,
-                normalizedLocale,
                 readyCheckDelay,
                 pickDelay,
                 hoverDelay,

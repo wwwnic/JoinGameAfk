@@ -22,6 +22,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && ChampionDataOverlay.Visibility == Visibility.Visible)
+            {
+                CloseChampionDataManager();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Escape && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
             {
                 CloseChampionPicturePicker();

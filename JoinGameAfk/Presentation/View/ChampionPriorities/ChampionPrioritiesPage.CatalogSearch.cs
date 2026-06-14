@@ -14,12 +14,21 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
     {
         private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
         {
-            Dispatcher.InvokeAsync(RefreshChampionCatalogView);
+            Dispatcher.InvokeAsync(() =>
+            {
+                RefreshChampionCatalogView();
+                RefreshChampionCatalogSyncStatus();
+                UpdateChampionCatalogVersionWarning();
+            });
         }
 
         private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
         {
-            Dispatcher.InvokeAsync(RefreshChampionImages);
+            Dispatcher.InvokeAsync(() =>
+            {
+                RefreshChampionImages();
+                RefreshChampionPictureCacheStatus();
+            });
         }
 
         private void ChampionImageSelectionStore_SelectionsChanged(object? sender, EventArgs e)

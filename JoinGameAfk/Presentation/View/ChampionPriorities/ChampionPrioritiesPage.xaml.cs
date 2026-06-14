@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 
@@ -20,8 +21,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private const int DefaultPriorityChampionChipsPerRow = 5;
         private const string ChampionPillTag = "ChampionPill";
 
-        private readonly GeneralSettings _generalSettings;
+        private readonly ChampionDataSettings _championDataSettings;
         private readonly RolePlanSettings _rolePlanSettings;
+        private readonly Action<string>? _logMessage;
+        private readonly Action<string>? _logErrorMessage;
+        private readonly DataDragonChampionCatalogService _championCatalogRemoteService;
+        private readonly ObservableCollection<RegionLocaleSuggestion> _platformOptions = new(PlatformSuggestions);
+        private readonly ObservableCollection<RegionLocaleSuggestion> _localeOptions = new(LocaleSuggestions);
         private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private List<ChampionReferenceItem> _filteredChampionReferences;
@@ -62,6 +68,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private string? _pendingChampionPictureFileName;
         private bool _isUpdatingChampionPicturePicker;
         private bool _isChampionPictureDownloadInProgress;
+        private bool _isApplyingChampionDataSettings;
+        private bool _isChampionDataOperationInProgress;
+        private CancellationTokenSource? _championCatalogVersionCheckCancellation;
+        private string? _checkedChampionCatalogPlatformId;
+        private string? _latestConfiguredRegionDataDragonVersion;
 
         public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
             nameof(IsChampionSelectLockActive),
@@ -147,11 +158,28 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             private set => SetValue(IsChampionPictureEditModeProperty, value);
         }
 
-        public ChampionPrioritiesPage(GeneralSettings generalSettings, RolePlanSettings rolePlanSettings)
+        public ChampionPrioritiesPage(
+            ChampionDataSettings championDataSettings,
+            RolePlanSettings rolePlanSettings,
+            Action<string>? logMessage = null,
+            Action<string>? logErrorMessage = null)
         {
             InitializeComponent();
-            _generalSettings = generalSettings;
+            _championDataSettings = championDataSettings;
             _rolePlanSettings = rolePlanSettings;
+            _logMessage = logMessage;
+            _logErrorMessage = logErrorMessage;
+            _championCatalogRemoteService = new DataDragonChampionCatalogService(
+                () => _championDataSettings.Locale,
+                () => _championDataSettings.PlatformId);
+            EnsureConfiguredOption(_platformOptions, _championDataSettings.PlatformId);
+            EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
+            ChampionDataPlatformIdBox.ItemsSource = _platformOptions;
+            ChampionDataLocaleBox.ItemsSource = _localeOptions;
+            ChampionDataPictureFolderPathTextBlock.Text = ChampionTileCatalog.TileDirectoryPath;
+            ApplyChampionDataSettingsToControls();
+            RefreshChampionCatalogSyncStatus();
+            RefreshChampionPictureCacheStatus();
             ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
             RefreshThemeBrushes();
             Unloaded += ChampionPrioritiesPage_Unloaded;
@@ -214,6 +242,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
+            _championDataSettings.Saved += ChampionDataSettings_Saved;
         }
 
         public void SetChampionSelectActive(bool isActive)
@@ -253,6 +282,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
             ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
+            _championDataSettings.Saved -= ChampionDataSettings_Saved;
+            _championCatalogVersionCheckCancellation?.Cancel();
+            _championCatalogVersionCheckCancellation?.Dispose();
+            _championCatalogVersionCheckCancellation = null;
         }
     }
 }

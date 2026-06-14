@@ -21,6 +21,7 @@ namespace JoinGameAfk
         private LogsPage? fLogsPage;
         private PhaseController? fPhaseController;
         private GeneralSettings? fGeneralSettings;
+        private ChampionDataSettings? fChampionDataSettings;
         private SoundSettings? fSoundSettings;
         private RolePlanSettings? fRolePlanSettings;
         private OverlaySettings? fOverlaySettings;
@@ -32,6 +33,7 @@ namespace JoinGameAfk
             {
                 AppStorage.EnsureStorageLayoutExists();
                 var generalSettings = GeneralSettings.Load();
+                var championDataSettings = ChampionDataSettings.Load();
                 var soundSettings = SoundSettings.Load();
                 var rolePlanSettings = RolePlanSettings.Load();
                 var overlaySettings = OverlaySettings.Load();
@@ -49,7 +51,7 @@ namespace JoinGameAfk
                     bundledTileSeedError = FormatException(ex);
                 }
 
-                fMainWindow = CreateMainWindow(generalSettings, soundSettings, rolePlanSettings, overlaySettings);
+                fMainWindow = CreateMainWindow(generalSettings, championDataSettings, soundSettings, rolePlanSettings, overlaySettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
                 LogBundledChampionTileSeedResult(bundledTileSeedResult, bundledTileSeedError);
@@ -61,7 +63,7 @@ namespace JoinGameAfk
                     fPhaseController?.Start();
 
                 LogChampionTileArchiveCleanup(ChampionTileCatalog.DeleteDownloadedArchives());
-                _ = AutoSyncChampionListOnStartupAsync(generalSettings);
+                _ = AutoSyncChampionListOnStartupAsync(championDataSettings);
             }
             catch (Exception ex)
             {
@@ -92,6 +94,7 @@ namespace JoinGameAfk
 
         private MainWindow CreateMainWindow(
             GeneralSettings generalSettings,
+            ChampionDataSettings championDataSettings,
             SoundSettings soundSettings,
             RolePlanSettings rolePlanSettings,
             OverlaySettings overlaySettings,
@@ -100,6 +103,7 @@ namespace JoinGameAfk
             bool themePickerExpanded = false)
         {
             fGeneralSettings = generalSettings;
+            fChampionDataSettings = championDataSettings;
             fSoundSettings = soundSettings;
             fRolePlanSettings = rolePlanSettings;
             fOverlaySettings = overlaySettings;
@@ -109,28 +113,37 @@ namespace JoinGameAfk
             fLogsPage = logsPage;
             fDashboardPage.SetLogsPage(logsPage);
 
-            fPhaseController = new PhaseController(fDashboardPage, logsPage, generalSettings, rolePlanSettings, soundSettings);
+            fPhaseController = new PhaseController(
+                fDashboardPage,
+                logsPage,
+                generalSettings,
+                championDataSettings,
+                rolePlanSettings,
+                soundSettings);
 
-            var championPrioritiesPage = new ChampionPrioritiesPage(generalSettings, rolePlanSettings);
+            var championPrioritiesPage = new ChampionPrioritiesPage(
+                championDataSettings,
+                rolePlanSettings,
+                logsPage.WriteLine,
+                logsPage.WriteErrorLine);
             var settingsPage = new SettingsPage(
                 generalSettings,
                 soundSettings,
                 overlaySettings,
                 ReloadUiForTheme,
-                logsPage.WriteLine,
-                logsPage.WriteErrorLine,
                 selectedThemeKey,
                 themePickerExpanded);
 
             var mainWindow = new MainWindow(fDashboardPage, logsPage, championPrioritiesPage, settingsPage, generalSettings, overlaySettings);
+            settingsPage.OpenChampionDataRequested += mainWindow.OpenChampionDataManager;
             mainWindow.SetController(fPhaseController);
             fDashboardPage.PhaseChanged += mainWindow.UpdatePhaseIndicator;
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
             fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
             fDashboardPage.ChampSelectSubPhaseChanged += mainWindow.UpdateChampSelectSubPhase;
             fDashboardPage.UpdateRegionDisplay(
-                generalSettings.EffectivePlatformId,
-                generalSettings.EffectiveLocale);
+                championDataSettings.PlatformId,
+                championDataSettings.Locale);
             mainWindow.UpdatePhaseIndicator(ClientPhase.Unknown);
             mainWindow.SetWatcherState(false);
             mainWindow.SetClientConnection(false);
@@ -140,17 +153,17 @@ namespace JoinGameAfk
             return mainWindow;
         }
 
-        private async Task AutoSyncChampionListOnStartupAsync(GeneralSettings generalSettings)
+        private async Task AutoSyncChampionListOnStartupAsync(ChampionDataSettings championDataSettings)
         {
-            if (!generalSettings.AutoUpdateChampionCatalogOnStartup)
+            if (!championDataSettings.AutoUpdateChampionCatalogOnStartup)
                 return;
 
             var remoteService = new DataDragonChampionCatalogService(
-                () => generalSettings.EffectiveLocale,
-                () => generalSettings.EffectivePlatformId);
+                () => championDataSettings.Locale,
+                () => championDataSettings.PlatformId);
             string latestDataDragonVersion;
 
-            fLogsPage?.WriteLine($"Champion list startup update check is enabled. Checking Riot Data Dragon for {generalSettings.EffectivePlatformId}.");
+            fLogsPage?.WriteLine($"Champion list startup update check is enabled. Checking Riot Data Dragon for {championDataSettings.PlatformId}.");
 
             try
             {
@@ -163,15 +176,21 @@ namespace JoinGameAfk
             }
 
             var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
-            bool championListNeedsUpdate = !IsDataDragonVersionCurrent(catalogSyncInfo.DataDragonVersion, latestDataDragonVersion);
+            bool championListNeedsUpdate =
+                !IsDataDragonVersionCurrent(catalogSyncInfo.DataDragonVersion, latestDataDragonVersion)
+                || !IsChampionCatalogLocaleCurrent(catalogSyncInfo.Locale, championDataSettings.Locale);
             if (championListNeedsUpdate)
             {
                 try
                 {
-                    fLogsPage?.WriteLine($"Champion list update available. Local version: {FormatDataDragonVersion(catalogSyncInfo.DataDragonVersion)}; latest version: {latestDataDragonVersion}.");
+                    fLogsPage?.WriteLine(
+                        $"Champion list update available. Local version/language: {FormatDataDragonVersion(catalogSyncInfo.DataDragonVersion)} / {FormatChampionCatalogLocale(catalogSyncInfo.Locale)}; "
+                        + $"configured version/language: {latestDataDragonVersion} / {championDataSettings.Locale}.");
                     var remoteCatalog = await remoteService.FetchChampionCatalogAsync(latestDataDragonVersion);
                     var result = ChampionCatalog.RefreshFromDataDragon(remoteCatalog);
-                    fLogsPage?.WriteLine($"Champion list updated to Riot Data Dragon {result.DataDragonVersion} ({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
+                    fLogsPage?.WriteLine(
+                        $"Champion list updated to Riot Data Dragon {result.DataDragonVersion} in {result.Locale} "
+                        + $"({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
                 }
                 catch (Exception ex)
                 {
@@ -180,7 +199,8 @@ namespace JoinGameAfk
             }
             else
             {
-                fLogsPage?.WriteLine($"Champion list is already current with Riot Data Dragon {latestDataDragonVersion}.");
+                fLogsPage?.WriteLine(
+                    $"Champion list is already current with Riot Data Dragon {latestDataDragonVersion} in {championDataSettings.Locale}.");
             }
         }
 
@@ -195,6 +215,22 @@ namespace JoinGameAfk
             return string.IsNullOrWhiteSpace(dataDragonVersion)
                 ? "none"
                 : dataDragonVersion.Trim();
+        }
+
+        private static bool IsChampionCatalogLocaleCurrent(string? localLocale, string configuredLocale)
+        {
+            return !string.IsNullOrWhiteSpace(localLocale)
+                && string.Equals(
+                    RegionLocale.NormalizeLocale(localLocale),
+                    RegionLocale.NormalizeLocale(configuredLocale),
+                    StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatChampionCatalogLocale(string? locale)
+        {
+            return string.IsNullOrWhiteSpace(locale)
+                ? "unknown"
+                : RegionLocale.NormalizeLocale(locale);
         }
 
         private void LogChampionTileArchiveCleanup(ChampionTileArchiveCleanupResult cleanupResult)
@@ -230,6 +266,7 @@ namespace JoinGameAfk
 
                 var newWindow = CreateMainWindow(
                     generalSettings,
+                    fChampionDataSettings ?? ChampionDataSettings.Load(),
                     fSoundSettings ?? SoundSettings.Load(),
                     fRolePlanSettings ?? RolePlanSettings.Load(),
                     overlaySettings,

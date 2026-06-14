@@ -11,8 +11,6 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private void RefreshThemeDrivenControls()
         {
             UpdateAutomationInputStates();
-            RefreshChampionCatalogSyncStatus();
-            RefreshChampionPictureCacheStatus();
             InvalidateVisual();
         }
 
