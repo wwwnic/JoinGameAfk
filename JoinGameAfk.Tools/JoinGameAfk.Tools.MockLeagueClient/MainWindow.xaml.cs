@@ -72,20 +72,6 @@ public partial class MainWindow : Window
         RefreshUiFromState();
     }
 
-    private void ApplyRegionLocaleButton_Click(object sender, RoutedEventArgs e)
-    {
-        string platformId = PlatformIdBox.Text.Trim();
-        string locale = LocaleBox.Text.Trim();
-        if (string.IsNullOrWhiteSpace(platformId) || string.IsNullOrWhiteSpace(locale))
-        {
-            AddLog("Platform ID and locale are required.");
-            return;
-        }
-
-        _state.UpdateRegionLocale(platformId, locale);
-        AddLog($"Region/locale endpoint updated: {platformId} / {locale}. Reconnect JoinGameAfk to refresh it.");
-    }
-
     private async void StartButton_Click(object sender, RoutedEventArgs e)
     {
         if (_server is not null)

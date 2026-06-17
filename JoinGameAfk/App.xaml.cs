@@ -128,6 +128,7 @@ namespace JoinGameAfk
                 logsPage.WriteErrorLine);
             var settingsPage = new SettingsPage(
                 generalSettings,
+                championDataSettings,
                 soundSettings,
                 overlaySettings,
                 ReloadUiForTheme,

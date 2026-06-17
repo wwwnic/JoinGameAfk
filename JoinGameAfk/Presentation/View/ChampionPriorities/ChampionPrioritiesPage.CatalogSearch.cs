@@ -27,7 +27,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             Dispatcher.InvokeAsync(() =>
             {
                 RefreshChampionImages();
-                RefreshChampionPictureCacheStatus();
             });
         }
 

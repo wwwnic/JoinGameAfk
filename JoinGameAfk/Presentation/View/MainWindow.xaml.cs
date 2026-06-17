@@ -75,14 +75,12 @@ namespace JoinGameAfk.Presentation.View
 
             SourceInitialized += MainWindow_SourceInitialized;
             ContentRendered += MainWindow_ContentRendered;
-            Loaded += (_, _) => UpdateChampionListVersionUi();
             StateChanged += (_, _) => UpdateMaximizeRestoreButton();
             Closed += MainWindow_Closed;
             _dashboardPage.DashboardStatusChanged += UpdateDashboardStatus;
             _settings.Saved += Settings_Saved;
             _overlaySettings.Saved += OverlaySettings_Saved;
             AppThemeManager.ThemeChanged += RefreshTheme;
-            ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ActivateTab(0);
             SetWatcherState(false);
             SetClientConnection(false);
@@ -193,14 +191,8 @@ namespace JoinGameAfk.Presentation.View
             _settings.Saved -= Settings_Saved;
             _overlaySettings.Saved -= OverlaySettings_Saved;
             _dashboardPage.DashboardStatusChanged -= UpdateDashboardStatus;
-            ChampionCatalog.CatalogChanged -= ChampionCatalog_CatalogChanged;
             _pickBanOverlayWindow?.Close();
             _queueMicroOverlayWindow?.Close();
-        }
-
-        private void ChampionCatalog_CatalogChanged(object? sender, EventArgs e)
-        {
-            Dispatcher.TryInvoke(UpdateChampionListVersionUi);
         }
 
         private void TabDashboard_Click(object sender, RoutedEventArgs e) => ActivateTab(0);
@@ -594,26 +586,6 @@ namespace JoinGameAfk.Presentation.View
                 _lastDashboardStatus.ReadyCheckAutoAcceptTimeLeftMilliseconds,
                 _lastDashboardStatus.ReadyCheckAutoAcceptObservedAtUtc,
                 _lastDashboardStatus.AllConfiguredOptionsUnavailable);
-        }
-
-        private void UpdateChampionListVersionUi()
-        {
-            if (!IsLoaded)
-                return;
-
-            if (FindName("ChampionListVersionText") is not TextBlock text)
-                return;
-
-            var syncInfo = ChampionCatalog.GetLocalSyncInfo();
-            string? dataDragonVersion = syncInfo.DataDragonVersion;
-            text.Text = string.IsNullOrWhiteSpace(dataDragonVersion)
-                ? "unknown"
-                : $"{dataDragonVersion.Trim()}";
-            text.ToolTip = string.IsNullOrWhiteSpace(dataDragonVersion)
-                ? "No Data Dragon version is recorded in the local champion list."
-                : $"Local champion list uses Riot Data Dragon {dataDragonVersion.Trim()} in "
-                    + $"{(string.IsNullOrWhiteSpace(syncInfo.Locale) ? "an unknown language" : RegionLocale.NormalizeLocale(syncInfo.Locale))}.";
-            AutomationProperties.SetName(text, text.Text);
         }
 
         private string GetPhaseIndicatorState()

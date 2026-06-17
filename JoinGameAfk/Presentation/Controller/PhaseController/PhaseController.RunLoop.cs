@@ -86,7 +86,6 @@ namespace JoinGameAfk.Presentation.Controller
                             ResetEventStreamState();
                             StartEventStreamIfEnabled(auth, ct);
                             InitializeHandlers(http);
-                            _hasAttemptedRegionLocaleDetectionForConnection = false;
 
                             if (!_isClientConnected)
                             {
@@ -94,14 +93,6 @@ namespace JoinGameAfk.Presentation.Controller
                                 Log("Connected to League Client.");
                                 fPhaseProgressionPage.SetClientConnection(true);
                             }
-                        }
-
-                        if (_championDataSettings.AutoDetectRegionLocale
-                            && !_hasAttemptedRegionLocaleDetectionForConnection)
-                        {
-                            bool canUseWatcher = await DetectRegionLocaleAsync(http, ct).ConfigureAwait(false);
-                            if (!canUseWatcher)
-                                break;
                         }
 
                         var activeAuth = GetLeagueAuth();
@@ -262,7 +253,6 @@ namespace JoinGameAfk.Presentation.Controller
             currentAuth = null;
             _isClientConnected = false;
             _isWaitingForClient = false;
-            _hasAttemptedRegionLocaleDetectionForConnection = false;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _hasPendingChampSelectExitSound = false;
@@ -344,97 +334,16 @@ namespace JoinGameAfk.Presentation.Controller
                 _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
             }
 
-            bool autoDetectionWasEnabled = _lastAutoDetectRegionLocaleEnabled;
-            _lastAutoDetectRegionLocaleEnabled = _championDataSettings.AutoDetectRegionLocale;
-            if (_isClientConnected
-                && !autoDetectionWasEnabled
-                && _lastAutoDetectRegionLocaleEnabled)
+            if (_isRunning && LeagueClientApiRegionPolicy.IsRestricted(_championDataSettings.PlatformId))
             {
-                _hasAttemptedRegionLocaleDetectionForConnection = false;
+                StopWatcherForRestrictedRegion();
+                return;
             }
 
             UpdateRegionDisplayFromSettings();
 
             if (!_isShutdownRequested)
                 SignalLcuEvent();
-        }
-
-        private async Task<bool> DetectRegionLocaleAsync(
-            Lcu.LeagueClientHttp http,
-            CancellationToken cancellationToken)
-        {
-            _hasAttemptedRegionLocaleDetectionForConnection = true;
-
-            try
-            {
-                string json = await http.GetRegionLocaleAsync(cancellationToken).ConfigureAwait(false);
-                using var document = System.Text.Json.JsonDocument.Parse(json);
-                var root = document.RootElement;
-                string? platformId = root.TryGetProperty("platformId", out var platformProperty)
-                    ? platformProperty.GetString()
-                    : null;
-                string? locale = root.TryGetProperty("locale", out var localeProperty)
-                    ? localeProperty.GetString()
-                    : null;
-
-                if (LeagueClientApiRegionPolicy.IsRestricted(platformId))
-                {
-                    StopWatcherForRestrictedRegion();
-                    return false;
-                }
-
-                if (!RegionLocale.TryNormalizePlatformId(platformId, out string normalizedPlatformId)
-                    || !RegionLocale.TryNormalizeLocale(locale, out string normalizedLocale))
-                {
-                    LogError(
-                        "Unable to detect region and locale from League Client because the response was incomplete or invalid. "
-                        + $"Keeping configured values: {_championDataSettings.PlatformId} / {_championDataSettings.Locale}.");
-                    return true;
-                }
-
-                string previousPlatformId = _championDataSettings.PlatformId;
-                string previousLocale = _championDataSettings.Locale;
-                bool valuesChanged = !string.Equals(previousPlatformId, normalizedPlatformId, StringComparison.Ordinal)
-                    || !string.Equals(previousLocale, normalizedLocale, StringComparison.Ordinal);
-
-                if (valuesChanged)
-                {
-                    _championDataSettings.PlatformId = normalizedPlatformId;
-                    _championDataSettings.Locale = normalizedLocale;
-                    try
-                    {
-                        _championDataSettings.Save();
-                    }
-                    catch
-                    {
-                        _championDataSettings.PlatformId = previousPlatformId;
-                        _championDataSettings.Locale = previousLocale;
-                        throw;
-                    }
-
-                    _hasAttemptedRegionLocaleDetectionForConnection = true;
-                    Log(
-                        $"League Client region detected: {normalizedPlatformId} / {normalizedLocale}. "
-                        + $"Saved these values to champion data settings, replacing {previousPlatformId} / {previousLocale}.");
-                }
-                else
-                {
-                    Log($"Active region: {normalizedPlatformId} / {normalizedLocale} (confirmed by League Client).");
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                LogError(
-                    "Unable to detect region and locale from League Client. "
-                    + $"Keeping configured values: {_championDataSettings.PlatformId} / {_championDataSettings.Locale}. {ex.Message}");
-            }
-
-            UpdateRegionDisplayFromSettings();
-            return true;
         }
 
         private void StopWatcherForRestrictedRegion()

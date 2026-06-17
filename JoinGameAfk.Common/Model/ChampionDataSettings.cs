@@ -7,8 +7,6 @@ namespace JoinGameAfk.Model
     {
         public int Version { get; set; } = AppStorage.ChampionDataSettingsFileVersion;
 
-        public bool AutoDetectRegionLocale { get; set; } = true;
-
         public string PlatformId { get; set; } = RegionLocale.DefaultPlatformId;
 
         public string Locale { get; set; } = RegionLocale.DefaultLocale;

@@ -246,11 +246,6 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             return Results.Json(_state.GetChampionInventoryPayload(), JsonOptions);
         });
 
-        app.MapGet("/riotclient/region-locale", () =>
-        {
-            LogRequest("GET", "/riotclient/region-locale");
-            return Results.Json(_state.GetRegionLocalePayload(), JsonOptions);
-        });
     }
 
     private async Task HandleWebSocketRootAsync(HttpContext context, Func<Task> next)

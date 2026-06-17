@@ -14,6 +14,14 @@ public class GeneralSettingsRegionLocaleTests
         Assert.That(RegionLocale.NormalizePlatformId(input), Is.EqualTo(expected));
     }
 
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    public void NormalizePlatformId_UsesGlobalDefaultWhenMissing(string? input)
+    {
+        Assert.That(RegionLocale.NormalizePlatformId(input), Is.EqualTo(RegionLocale.DefaultPlatformId));
+    }
+
     [TestCase("NA1", "na")]
     [TestCase("BR1", "br")]
     [TestCase("EUN1", "eune")]
@@ -46,6 +54,18 @@ public class GeneralSettingsRegionLocaleTests
     public void TryGetDataDragonRealm_AllowsUnknownPlatformToUseFallback()
     {
         bool mapped = RegionLocale.TryGetDataDragonRealm("NEW1", out string realm);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mapped, Is.False);
+            Assert.That(realm, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void TryGetDataDragonRealm_UsesFallbackForGlobalDefault()
+    {
+        bool mapped = RegionLocale.TryGetDataDragonRealm(RegionLocale.DefaultPlatformId, out string realm);
 
         Assert.Multiple(() =>
         {

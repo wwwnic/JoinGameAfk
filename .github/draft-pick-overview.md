@@ -78,11 +78,8 @@ LCU routes currently used by JoinGameAfk:
 - Queue: `/lol-matchmaking/v1/ready-check`, `/lol-matchmaking/v1/ready-check/accept`
 - Champion select: `/lol-champ-select/v1/session`, `/lol-champ-select/v1/session/actions/{actionId}`
 - Player and ownership: `/lol-summoner/v1/current-summoner`, champion inventory endpoints
-- Client configuration: `/riotclient/region-locale`
 - Locally installed game version: `/lol-patch/v1/game-version`
 - Live updates: WebSocket subscription to `OnJsonApiEvent`
-
-The `/riotclient/region-locale` path is exposed by the League Client's local LCU API. Its `riotclient` prefix does not mean JoinGameAfk connects to the separate Riot Client API documented at `riotclient.kebs.dev`.
 
 ## YAML Schema
 

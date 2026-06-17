@@ -2,7 +2,7 @@ namespace JoinGameAfk.Model
 {
     public static class RegionLocale
     {
-        public const string DefaultPlatformId = "NA1";
+        public const string DefaultPlatformId = "GLOBAL";
         public const string DefaultLocale = "en_US";
 
         private static readonly IReadOnlyDictionary<string, string> DataDragonRealmsByPlatformId =

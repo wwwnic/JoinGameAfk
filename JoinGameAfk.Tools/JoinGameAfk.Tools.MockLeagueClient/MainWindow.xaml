@@ -512,49 +512,6 @@
                                         Click="CopyEnvButton_Click" />
                             </WrapPanel>
                         </Grid>
-                        <TextBlock Text="Region / Locale endpoint"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,10,0,6" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0"
-                                       Grid.Column="0"
-                                       Text="Platform ID"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,0,0,4" />
-                            <TextBlock Grid.Row="0"
-                                       Grid.Column="2"
-                                       Text="Locale"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       Margin="0,0,0,4" />
-                            <TextBox x:Name="PlatformIdBox"
-                                     Grid.Row="1"
-                                     Grid.Column="0"
-                                     ToolTip="Examples: NA1, EUW1, KR"
-                                     Text="NA1" />
-                            <TextBox x:Name="LocaleBox"
-                                     Grid.Row="1"
-                                     Grid.Column="2"
-                                     ToolTip="Examples: en_US, fr_FR, ja_JP"
-                                     Text="en_US" />
-                            <Button Grid.Row="1"
-                                    Grid.Column="4"
-                                    Margin="0"
-                                    Content="Apply"
-                                    Click="ApplyRegionLocaleButton_Click" />
-                        </Grid>
                         <TextBlock x:Name="ServerStatusText"
                                    Text="Stopped"
                                    Foreground="{DynamicResource TextMutedBrush}"

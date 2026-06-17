@@ -17,6 +17,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private const double ThemePickerTileOuterHeight = 84;
 
         private readonly GeneralSettings _settings;
+        private readonly ChampionDataSettings _championDataSettings;
         private readonly OverlaySettings _overlaySettings;
         private readonly DispatcherTimer _savedMessageTimer;
         private readonly Action<GeneralSettings, OverlaySettings, string?, bool>? _reloadUiForTheme;
@@ -30,18 +31,21 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private NumericInputRule _champSelectEventFallbackPollIntervalRule = null!;
         private bool _isUpdatingAutomationControls;
         private bool _isApplyingSettingsToControls;
+        private bool _isApplyingChampionDataSettingsToControls;
         private bool _isThemePickerExpanded;
         private string? _pendingInitialThemeSelectionKey;
         private string _selectedThemeKey = AppThemeManager.DefaultThemeKey;
 
         public GeneralSettingsPage(
             GeneralSettings settings,
+            ChampionDataSettings championDataSettings,
             OverlaySettings overlaySettings,
             Action<GeneralSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
             string? selectedThemeKey = null,
             bool themePickerExpanded = false)
         {
             _settings = settings;
+            _championDataSettings = championDataSettings;
             _overlaySettings = overlaySettings;
             InitializeComponent();
             _reloadUiForTheme = reloadUiForTheme;
@@ -60,10 +64,15 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             };
 
             StoragePathTextBlock.Text = AppStorage.DirectoryPath;
+            ChampionPictureFolderPathTextBlock.Text = ChampionTileCatalog.TileDirectoryPath;
             _settings.Saved += Settings_Saved;
+            _championDataSettings.Saved += ChampionDataSettings_Saved;
+            ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
             Unloaded += GeneralSettingsPage_Unloaded;
             LoadThemeOptions();
             ApplySettingsToControls();
+            ApplyChampionDataSettingsToControls();
+            RefreshChampionPictureCacheStatus();
             AttachNumericInputValidation();
             UpdateAutomationInputStates();
             AttachDirtyStateTracking();
@@ -86,7 +95,19 @@ namespace JoinGameAfk.Presentation.View.Settings.General
         private void GeneralSettingsPage_Unloaded(object sender, RoutedEventArgs e)
         {
             _settings.Saved -= Settings_Saved;
+            _championDataSettings.Saved -= ChampionDataSettings_Saved;
+            ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
             Unloaded -= GeneralSettingsPage_Unloaded;
+        }
+
+        private void ChampionDataSettings_Saved()
+        {
+            Dispatcher.TryInvoke(ApplyChampionDataSettingsToControls);
+        }
+
+        private void ChampionTileCatalog_TileCatalogChanged(object? sender, EventArgs e)
+        {
+            Dispatcher.TryInvoke(RefreshChampionPictureCacheStatus);
         }
 
         public event Action? OpenChampionDataRequested;

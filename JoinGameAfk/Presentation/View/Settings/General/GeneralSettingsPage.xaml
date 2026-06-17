@@ -994,7 +994,7 @@
             <StackPanel>
                 <TextBlock Text="Champion Data"
                            Style="{StaticResource SectionTitleStyle}" />
-                <TextBlock Text="Region, language, Riot Data Dragon synchronization, and champion picture downloads are managed with Role Plans."
+                <TextBlock Text="Champion list downloads are managed with Role Plans. Local picture cache options are available here."
                            Style="{StaticResource SectionDescriptionStyle}"
                            TextWrapping="Wrap"
                            Margin="0,4,0,0" />
@@ -1022,19 +1022,6 @@
                                 HorizontalAlignment="Right" />
                     </Grid>
                 </Border>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="7"
-                Style="{StaticResource SectionCardStyle}"
-                Margin="0,0,0,12"
-                Visibility="Collapsed">
-            <StackPanel>
-                <TextBlock Text="Champion Data"
-                           Style="{StaticResource SectionTitleStyle}" />
-                <TextBlock Text="Region, language, and Riot Data Dragon sync."
-                           Style="{StaticResource SectionDescriptionStyle}"
-                           Margin="0,4,0,0" />
 
                 <Border Style="{StaticResource SettingRowStyle}">
                     <StackPanel>
@@ -1044,50 +1031,41 @@
                                 <ColumnDefinition Width="14" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="Your League location"
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Local champion pictures"
                                            Style="{StaticResource FieldLabelStyle}" />
-                                <TextBlock Text="Used on first launch and whenever automatic detection is turned off."
+                                <TextBlock Text="Open the local picture folder, or reload it after manually adding, replacing, or removing champion JPG files. These actions do not use the internet."
                                            Style="{StaticResource FieldHintStyle}"
                                            TextWrapping="Wrap"
                                            Margin="0,3,0,0" />
+                                <TextBlock x:Name="ChampionPictureFolderPathTextBlock"
+                                           Foreground="{DynamicResource TextSoftBrush}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0" />
                             </StackPanel>
-
-                            <StackPanel Grid.Column="2"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center">
-                                <StackPanel Width="300">
-                                    <TextBlock Text="Game region"
-                                               Style="{StaticResource FieldHintStyle}"
-                                               Margin="0,0,0,4" />
-                                    <ComboBox x:Name="PlatformIdBox"
-                                              Width="292"
-                                              Style="{StaticResource AppComboBoxStyle}"
-                                              ItemTemplate="{StaticResource RegionLocaleSuggestionTemplate}"
-                                              SelectedValuePath="Code"
-                                              TextSearch.TextPath="Code"
-                                              ToolTip="Select the League platform ID used to check your region's deployed Data Dragon version." />
-                                </StackPanel>
-                                <StackPanel Width="300"
-                                            Margin="10,0,0,0">
-                                    <TextBlock Text="Champion data language"
-                                               Style="{StaticResource FieldHintStyle}"
-                                               Margin="0,0,0,4" />
-                                    <ComboBox x:Name="LocaleBox"
-                                              Width="292"
-                                              Style="{StaticResource AppComboBoxStyle}"
-                                              ItemTemplate="{StaticResource RegionLocaleSuggestionTemplate}"
-                                              SelectedValuePath="Code"
-                                              TextSearch.TextPath="Code"
-                                              ToolTip="Select the Riot locale used for downloaded champion names and metadata." />
-                                </StackPanel>
-                            </StackPanel>
+                            <WrapPanel Grid.Column="2"
+                                       HorizontalAlignment="Right">
+                                <Button x:Name="OpenChampionPictureFolderButton"
+                                        Content="Open Folder"
+                                        Click="OpenChampionPictureFolderButton_Click"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,8"
+                                        ToolTip="Open the local folder where champion tile jpg files are stored." />
+                                <Button x:Name="ReloadChampionPicturesButton"
+                                        Content="Reload Pictures"
+                                        Click="ReloadChampionPicturesButton_Click"
+                                        Style="{StaticResource SecondaryButtonStyle}"
+                                        Padding="12,8"
+                                        Margin="8,0,0,0"
+                                        ToolTip="Rescan the local champion picture folder." />
+                            </WrapPanel>
                         </Grid>
-
-                        <TextBlock Text="Don't see your region? Leave automatic detection on and start the watcher. Advanced users can also set another value in settings/general.json."
-                                   Style="{StaticResource FieldHintStyle}"
+                        <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"
+                                   Foreground="{DynamicResource TextSoftBrush}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
                                    TextWrapping="Wrap"
                                    Margin="0,10,0,0" />
                     </StackPanel>
@@ -1100,200 +1078,25 @@
                             <ColumnDefinition Width="14" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
                         <StackPanel Grid.Column="0">
-                            <TextBlock Text="Use my League Client settings automatically"
+                            <TextBlock Text="Full-resolution champion tiles (enthusiast option)"
                                        Style="{StaticResource FieldLabelStyle}" />
-                            <TextBlock Text="When the watcher connects, replace and save the region and language reported by your League Client."
+                            <TextBlock Text="Off is strongly recommended. JoinGameAfk displays champion tiles at small sizes, so most users will see no noticeable difference. Enabling this keeps Riot's original JPGs for both pencil downloads and full-cache rebuilds, and a complete collection can use 500 MB+ more disk space and RAM."
                                        Style="{StaticResource FieldHintStyle}"
+                                       TextWrapping="Wrap"
                                        Margin="0,3,0,0" />
-                        </StackPanel>
-
-                        <CheckBox x:Name="AutoDetectRegionLocaleCheckBox"
-                                  Grid.Column="2"
-                                  Style="{StaticResource AppCheckBoxStyle}"
-                                  VerticalAlignment="Center"
-                                  ToolTip="Turn this off to edit and always use the region and language selected above." />
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <StackPanel Orientation="Horizontal"
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="Download raw champion pictures"
-                                           Style="{StaticResource FieldLabelStyle}" />
-                                <Button Style="{StaticResource InfoIndicatorStyle}"
-                                        Content="?"
-                                        Margin="8,0,0,0"
-                                        VerticalAlignment="Center"
-                                        ToolTip="When enabled, manual picture downloads keep Riot's original JPG files and skip the compact resize step." />
-                            </StackPanel>
-                            <TextBlock Text="Leave off to save disk space and ram. Turn on if you want Riot's original full-resolution JPGs. Expect 500mb+ difference for all images."
+                            <TextBlock Text="This affects future downloads only; existing cached pictures are not converted automatically."
                                        Style="{StaticResource FieldHintStyle}"
-                                       Margin="0,3,0,0" />
+                                       TextWrapping="Wrap"
+                                       Margin="0,5,0,0" />
                         </StackPanel>
-
                         <CheckBox x:Name="DownloadRawChampionPicturesCheckBox"
                                   Grid.Column="2"
                                   Style="{StaticResource AppCheckBoxStyle}"
                                   VerticalAlignment="Center"
-                                  ToolTip="Off stores smaller resized files. On stores larger raw files for future manual downloads only." />
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="14" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Champion list"
-                                           Style="{StaticResource FieldLabelStyle}" />
-                                <TextBlock Text="Downloads champion names for the Data Dragon version currently deployed in your game region."
-                                           Style="{StaticResource FieldHintStyle}" />
-                                <TextBlock Text="Use this button after changing your champion data language."
-                                           Style="{StaticResource FieldHintStyle}"
-                                           Margin="0,3,0,0" />
-                            </StackPanel>
-
-                            <Button x:Name="RefreshChampionCatalogButton"
-                                    Grid.Column="2"
-                                    Content="Update Champion List"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Padding="18,9"
-                                    HorizontalAlignment="Right"
-                                    ToolTip="Fetches Riot Data Dragon versions and champion data, then updates the local champions.json file." />
-                        </Grid>
-
-                        <TextBlock x:Name="ChampionCatalogSyncStatusTextBlock"
-                                   Foreground="{DynamicResource TextSoftBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   Margin="0,10,0,0" />
-
-                        <TextBlock x:Name="ChampionCatalogRefreshStatusLabel"
-                                   Foreground="{DynamicResource TextSoftBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   Margin="0,6,0,0"
-                                   Visibility="Collapsed" />
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Champion picture archive"
-                                           Style="{StaticResource FieldLabelStyle}" />
-                                <TextBlock Text="Download Riot Data Dragon's dragontail archive, extract champion tile jpg files, then remove the archive."
-                                           Style="{StaticResource FieldHintStyle}" />
-                                <TextBlock Text="Not recommended for normal picture changes. Use only to refresh the entire local champion image cache."
-                                       Style="{StaticResource FieldHintStyle}"
-                                       Margin="0,4,0,0" />
-                                <TextBlock Text="The archive is deleted after extraction so only champion tiles stay on disk."
-                                           Style="{StaticResource FieldHintStyle}"
-                                           Margin="0,4,0,0" />
-                            </StackPanel>
-
-                            <Button x:Name="DownloadChampionPictureArchiveButton"
-                                    Grid.Column="2"
-                                    Content="Download Archive"
-                                    Style="{StaticResource AccentButtonStyle}"
-                                    Padding="18,9"
-                                    MinWidth="168"
-                                    HorizontalAlignment="Right"
-                                    VerticalAlignment="Center"
-                                    ToolTip="Heavy manual refresh for the entire local champion image cache. Downloads the latest Riot Data Dragon dragontail archive, extracts champion tiles, then deletes the archive." />
-                        </Grid>
-
-                        <TextBlock x:Name="ChampionPictureCacheStatusTextBlock"
-                                   Grid.Row="1"
-                                   Foreground="{DynamicResource TextSoftBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   Margin="0,10,0,0" />
-                        <TextBlock x:Name="ChampionPictureDownloadStatusLabel"
-                                   Grid.Row="2"
-                                   Foreground="{DynamicResource TextSoftBrush}"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   Margin="0,6,0,0"
-                                   Visibility="Collapsed" />
-                        <ProgressBar x:Name="ChampionPictureDownloadProgressBar"
-                                     Grid.Row="3"
-                                     Height="8"
-                                     Minimum="0"
-                                     Maximum="100"
-                                     Margin="0,8,0,0"
-                                     Visibility="Collapsed" />
-                    </Grid>
-                </Border>
-
-                <Border Style="{StaticResource SettingRowStyle}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Champion pictures"
-                                       Style="{StaticResource FieldLabelStyle}" />
-                            <TextBlock Text="Manage the local Data Dragon champion tile cache used by role plans."
-                                       Style="{StaticResource FieldHintStyle}" />
-                            <TextBlock x:Name="ChampionPictureFolderPathTextBlock"
-                                       Foreground="{DynamicResource TextSoftBrush}"
-                                       FontSize="12"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"
-                                       Margin="0,8,0,0" />
-                        </StackPanel>
-
-                        <WrapPanel Grid.Column="2"
-                                   HorizontalAlignment="Right">
-                            <Button x:Name="OpenChampionPictureFolderButton"
-                                    Content="Open Pictures Folder"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Padding="12,8"
-                                    ToolTip="Open the local folder where champion tile jpg files are stored." />
-                            <Button x:Name="ReloadChampionPicturesButton"
-                                    Content="Reload Pictures"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Padding="12,8"
-                                    Margin="8,0,0,0"
-                                    ToolTip="Rescan the local champion picture folder." />
-                        </WrapPanel>
+                                  Checked="DownloadRawChampionPicturesCheckBox_Changed"
+                                  Unchecked="DownloadRawChampionPicturesCheckBox_Changed"
+                                  ToolTip="Keep Riot's original JPG files for future pencil downloads and full-cache rebuilds." />
                     </Grid>
                 </Border>
             </StackPanel>

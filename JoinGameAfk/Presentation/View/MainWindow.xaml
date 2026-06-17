@@ -74,15 +74,6 @@
                     <StackPanel Grid.Column="4"
                                 Orientation="Horizontal"
                                 HorizontalAlignment="Right">
-                        <TextBlock x:Name="ChampionListVersionText"
-                                   Margin="0,1,10,0"
-                                   VerticalAlignment="Center"
-                                   FontSize="11"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextMutedBrush}"
-                                   TextTrimming="CharacterEllipsis"
-                                   Text="--"
-                                   ToolTip="Data Dragon version stored in the local champion list." />
                         <Button x:Name="PickBanOverlayButton"
                                 Style="{StaticResource TitleBarButtonStyle}"
                                 ToolTip="Open or minimize mini overlay"

@@ -50,8 +50,6 @@ namespace JoinGameAfk.Presentation.Controller
         private bool _hasReceivedPhaseResponse;
         private bool _hasPendingChampSelectExitSound;
         private bool _isWaitingForClient;
-        private bool _hasAttemptedRegionLocaleDetectionForConnection;
-        private bool _lastAutoDetectRegionLocaleEnabled;
         private bool _isShutdownRequested;
         private bool _disposed;
 
@@ -74,7 +72,6 @@ namespace JoinGameAfk.Presentation.Controller
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
             _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
-            _lastAutoDetectRegionLocaleEnabled = championDataSettings.AutoDetectRegionLocale;
             _generalSettings.Saved += OnSettingsSaved;
             _championDataSettings.Saved += OnSettingsSaved;
             _rolePlanSettings.Saved += OnSettingsSaved;
@@ -88,13 +85,18 @@ namespace JoinGameAfk.Presentation.Controller
             if (_isRunning || _runLoopTask is { IsCompleted: false })
                 return;
 
+            if (LeagueClientApiRegionPolicy.IsRestricted(_championDataSettings.PlatformId))
+            {
+                StopWatcherForRestrictedRegion();
+                return;
+            }
+
             _isShutdownRequested = false;
             _isRunning = true;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _isClientConnected = false;
             _hasPendingChampSelectExitSound = false;
-            _hasAttemptedRegionLocaleDetectionForConnection = false;
             ResetEventStreamState();
             _isWaitingForClient = false;
             ResetLcuEventSignal();
@@ -146,7 +148,6 @@ namespace JoinGameAfk.Presentation.Controller
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
             ResetQueueSupportState();
-            _hasAttemptedRegionLocaleDetectionForConnection = false;
             if (!updateUi || _isShutdownRequested)
                 return;
 

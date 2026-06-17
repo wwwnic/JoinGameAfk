@@ -16,6 +16,7 @@ namespace JoinGameAfk.Presentation.View.Settings
 
         public SettingsPage(
             GeneralSettings generalSettings,
+            ChampionDataSettings championDataSettings,
             SoundSettings soundSettings,
             OverlaySettings overlaySettings,
             Action<GeneralSettings, OverlaySettings, string?, bool>? reloadUiForTheme = null,
@@ -26,6 +27,7 @@ namespace JoinGameAfk.Presentation.View.Settings
 
             var generalSettingsPage = new GeneralSettingsPage(
                 generalSettings,
+                championDataSettings,
                 overlaySettings,
                 reloadUiForTheme,
                 selectedThemeKey,

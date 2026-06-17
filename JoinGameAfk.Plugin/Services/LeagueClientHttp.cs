@@ -43,12 +43,6 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
-            public async Task<string> GetRegionLocaleAsync(CancellationToken cancellationToken = default)
-            {
-                string endpoint = "/riotclient/region-locale";
-                return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
-            }
-
             public async Task<string> GetLobbyAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-lobby/v2/lobby";

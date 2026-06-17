@@ -176,10 +176,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
             ChampionDataPlatformIdBox.ItemsSource = _platformOptions;
             ChampionDataLocaleBox.ItemsSource = _localeOptions;
-            ChampionDataPictureFolderPathTextBlock.Text = ChampionTileCatalog.TileDirectoryPath;
             ApplyChampionDataSettingsToControls();
             RefreshChampionCatalogSyncStatus();
-            RefreshChampionPictureCacheStatus();
             ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
             RefreshThemeBrushes();
             Unloaded += ChampionPrioritiesPage_Unloaded;

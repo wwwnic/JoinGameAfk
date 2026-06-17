@@ -1,6 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,6 +13,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
     {
         private static readonly IReadOnlyList<RegionLocaleSuggestion> PlatformSuggestions =
         [
+            new(RegionLocale.DefaultPlatformId, "Global (latest)"),
             new("NA1", "North America"),
             new("BR1", "Brazil"),
             new("EUN1", "Europe Nordic and East"),
@@ -73,7 +72,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             ApplyChampionDataSettingsToControls();
             RefreshChampionCatalogSyncStatus();
-            RefreshChampionPictureCacheStatus();
             RefreshChampionDataActionStates();
             ChampionDataOverlay.Visibility = Visibility.Visible;
             ChampionDataCloseButton.Focus();
@@ -127,10 +125,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
                 ChampionDataPlatformIdBox.SelectedValue = _championDataSettings.PlatformId;
                 ChampionDataLocaleBox.SelectedValue = _championDataSettings.Locale;
-                ChampionDataAutoDetectRegionLocaleCheckBox.IsChecked = _championDataSettings.AutoDetectRegionLocale;
                 ChampionDataAutoUpdateCatalogCheckBox.IsChecked = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
-                ChampionDataDownloadRawPicturesCheckBox.IsChecked = _championDataSettings.DownloadRawChampionPictures;
-                UpdateChampionDataRegionLocaleInputStates();
             }
             finally
             {
@@ -160,7 +155,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            UpdateChampionDataRegionLocaleInputStates();
             SaveChampionDataSettingsFromControls();
         }
 
@@ -170,15 +164,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
 
             SaveChampionDataSettingsFromControls();
-        }
-
-        private void UpdateChampionDataRegionLocaleInputStates()
-        {
-            bool manualSelectionEnabled = ChampionDataAutoDetectRegionLocaleCheckBox.IsChecked != true
-                && !_isChampionDataOperationInProgress
-                && !_isChampionPictureDownloadInProgress;
-            ChampionDataPlatformIdBox.IsEnabled = manualSelectionEnabled;
-            ChampionDataLocaleBox.IsEnabled = manualSelectionEnabled;
         }
 
         private void SaveChampionDataSettingsFromControls()
@@ -192,17 +177,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            bool previousAutoDetect = _championDataSettings.AutoDetectRegionLocale;
             string previousPlatformId = _championDataSettings.PlatformId;
             string previousLocale = _championDataSettings.Locale;
             bool previousAutoUpdate = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
-            bool previousRawPictures = _championDataSettings.DownloadRawChampionPictures;
 
-            _championDataSettings.AutoDetectRegionLocale = ChampionDataAutoDetectRegionLocaleCheckBox.IsChecked == true;
             _championDataSettings.PlatformId = normalizedPlatformId;
             _championDataSettings.Locale = normalizedLocale;
             _championDataSettings.AutoUpdateChampionCatalogOnStartup = ChampionDataAutoUpdateCatalogCheckBox.IsChecked == true;
-            _championDataSettings.DownloadRawChampionPictures = ChampionDataDownloadRawPicturesCheckBox.IsChecked == true;
 
             try
             {
@@ -210,11 +191,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
             catch (Exception ex)
             {
-                _championDataSettings.AutoDetectRegionLocale = previousAutoDetect;
                 _championDataSettings.PlatformId = previousPlatformId;
                 _championDataSettings.Locale = previousLocale;
                 _championDataSettings.AutoUpdateChampionCatalogOnStartup = previousAutoUpdate;
-                _championDataSettings.DownloadRawChampionPictures = previousRawPictures;
                 ApplyChampionDataSettingsToControls();
                 MessageBox.Show(
                     Window.GetWindow(this),
@@ -333,7 +312,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                     regionalDataDragonVersion,
                     progress,
                     optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures);
-                RefreshChampionPictureCacheStatus(result);
                 string archiveCleanupText = result.ArchiveDeleted
                     ? "then removed the archive"
                     : $"but could not remove the archive ({result.ArchiveDeleteError})";
@@ -375,12 +353,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             bool enabled = !_isChampionDataOperationInProgress && !_isChampionPictureDownloadInProgress;
             ChampionDataConfigurationPanel.IsEnabled = enabled;
             ChampionDataAutoUpdateCatalogCheckBox.IsEnabled = enabled;
-            ChampionDataDownloadRawPicturesCheckBox.IsEnabled = enabled;
             RefreshChampionCatalogButton.IsEnabled = enabled;
             DownloadChampionPictureArchiveButton.IsEnabled = enabled;
-            ReloadChampionPicturesButton.IsEnabled = enabled;
-            OpenChampionPictureFolderButton.IsEnabled = enabled;
-            UpdateChampionDataRegionLocaleInputStates();
         }
 
         private bool ConfirmChampionCatalogRefresh()
@@ -417,8 +391,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                $"Official JoinGameAfk releases already include a prepared champion picture cache. This advanced operation is intended for self-built installations, repairing or replacing the full cache, or retrieving Riot's original-resolution pictures.\n\nJoinGameAfk will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can exceed 2 GB. Afterward, the app extracts every champion tile into the local cache and removes the archive.\n\nFor a small update, cancel and use the pencil in Role Plans instead.\n\n{cacheModeText}\n\nRebuild the full picture cache?",
-                "Rebuild Full Champion Picture Cache",
+                $"Official JoinGameAfk releases already include a prepared champion picture cache. This download is intended for self-built installations, repairing or replacing the full cache, or retrieving Riot's original-resolution pictures.\n\nJoinGameAfk will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can exceed 2 GB. Afterward, the app extracts every champion tile into the local cache and removes the archive.\n\nFor a small update, cancel and use the pencil in Role Plans instead.\n\n{cacheModeText}\n\nDownload all champion images?",
+                "Download Champion Images",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
                 MessageBoxResult.Cancel);
@@ -569,92 +543,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionCatalogVersionWarningBorder.Visibility = Visibility.Collapsed;
         }
 
-        private void RefreshChampionPictureCacheStatus(ChampionTileArchiveInstallResult? refreshResult = null)
-        {
-            if (refreshResult is not null)
-            {
-                string archiveCleanupText = refreshResult.ArchiveDeleted
-                    ? "then removed the archive"
-                    : $"but archive cleanup failed ({refreshResult.ArchiveDeleteError})";
-
-                SetChampionPictureCacheStatus(
-                    $"Picture cache synced with Riot Data Dragon {refreshResult.DataDragonVersion}. Downloaded {FormatByteCount(refreshResult.ArchiveSizeBytes)} archive, checked {refreshResult.CheckedTileCount} champion tiles, updated {refreshResult.UpdatedTileCount}, unchanged {refreshResult.UnchangedTileCount}, {archiveCleanupText}. Local folder currently has {refreshResult.CachedTileCount} jpg files. Last sync: {FormatLastSyncedAt(refreshResult.LastSyncedAtUtc)}.",
-                    refreshResult.ArchiveDeleted ? "TextSoftBrush" : "DangerTextBrush",
-                    refreshResult.ArchiveDeleted ? Brushes.SlateGray : Brushes.IndianRed);
-                return;
-            }
-
-            var syncInfo = ChampionTileCatalog.GetCacheSyncInfo();
-            int fileCount = ChampionTileCatalog.GetTileFileCount();
-            if (string.IsNullOrWhiteSpace(syncInfo.DataDragonVersion))
-            {
-                SetChampionPictureCacheStatus(
-                    $"Local picture cache has {fileCount} jpg files. It has not been synced with Riot Data Dragon yet.",
-                    "TextSoftBrush",
-                    Brushes.SlateGray);
-                return;
-            }
-
-            if (fileCount <= 0)
-            {
-                SetChampionPictureCacheStatus(
-                    $"Picture cache has Riot Data Dragon {syncInfo.DataDragonVersion} recorded, but no champion tile jpg files were found. Use Download Archive to restore champion pictures.",
-                    "DangerTextBrush",
-                    Brushes.IndianRed);
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(syncInfo.ArchiveFilePath))
-            {
-                SetChampionPictureCacheStatus(
-                    $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive cleanup did not complete; {Path.GetFileName(syncInfo.ArchiveFilePath)} ({FormatByteCount(syncInfo.ArchiveSizeBytes)}) is still in local storage. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
-                    "DangerTextBrush",
-                    Brushes.IndianRed);
-                return;
-            }
-
-            SetChampionPictureCacheStatus(
-                $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive files are removed after extraction. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
-                "TextSoftBrush",
-                Brushes.SlateGray);
-        }
-
-        private void OpenChampionPictureFolderButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                AppStorage.EnsureChampionTileDirectoryExists();
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = ChampionTileCatalog.TileDirectoryPath,
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(
-                    Window.GetWindow(this),
-                    $"Unable to open champion pictures folder: {ex.Message}",
-                    "Open Folder Failed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-        }
-
-        private void ReloadChampionPicturesButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isChampionDataOperationInProgress || _isChampionPictureDownloadInProgress)
-                return;
-
-            AppStorage.EnsureChampionTileDirectoryExists();
-            ChampionTileCatalog.Reload();
-            RefreshChampionPictureCacheStatus();
-            SetChampionPictureDownloadStatus(
-                $"Champion pictures reloaded from local storage ({ChampionTileCatalog.GetTileFileCount()} files).",
-                "AccentGreenTextBrush",
-                Brushes.ForestGreen);
-        }
-
         private void SetChampionCatalogSyncStatus(string message, string brushResourceKey, Brush fallbackBrush)
         {
             ChampionCatalogSyncStatusTextBlock.Text = message;
@@ -666,12 +554,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionCatalogRefreshStatusLabel.Text = message;
             ChampionCatalogRefreshStatusLabel.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
             ChampionCatalogRefreshStatusLabel.Visibility = Visibility.Visible;
-        }
-
-        private void SetChampionPictureCacheStatus(string message, string brushResourceKey, Brush fallbackBrush)
-        {
-            ChampionPictureCacheStatusTextBlock.Text = message;
-            ChampionPictureCacheStatusTextBlock.Foreground = TryFindResource(brushResourceKey) as Brush ?? fallbackBrush;
         }
 
         private void SetChampionPictureDownloadStatus(string message, string brushResourceKey, Brush fallbackBrush)
