@@ -29,7 +29,9 @@ public partial class ChampSelect
         var banChoices = GetMergedBanChampionChoices(assignedPosition);
         var mergedPickIds = pickChoices.Select(choice => choice.ChampionId).ToList();
         var mergedBanIds = banChoices.Select(choice => choice.ChampionId).ToList();
-        ChampionOwnershipSnapshot ownershipSnapshot = await _ownershipService.GetSnapshotAsync(cancellationToken);
+        ChampionEligibilitySnapshot eligibilitySnapshot = mergedPickIds.Count > 0
+            ? await _eligibilityService.GetSnapshotAsync(sessionId, cancellationToken)
+            : ChampionEligibilitySnapshot.Unknown;
         TimerSnapshot timerSnapshot = GetTimerSnapshot(root, sessionObservedAtUtc);
         string champSelectPhase = timerSnapshot.Phase;
         long timeLeftMs = GetEffectiveTimeLeftMs(sessionId, timerSnapshot, out DateTime timeLeftObservedAtUtc);
@@ -112,7 +114,7 @@ public partial class ChampSelect
 
                     if (championSelectAutomationEnabled && type == "pick" && mergedPickIds.Count > 0 && !_hasPicked)
                     {
-                        await HandlePickActionAsync(soundAlertSessionId, root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, ownershipSnapshot, cancellationToken);
+                        await HandlePickActionAsync(soundAlertSessionId, root, localPlayerCellId, actionId, currentChampionId, isInProgress, champSelectPhase, timeLeftMs, timeLeftObservedAtUtc, mergedPickIds, eligibilitySnapshot, cancellationToken);
                     }
                     else if (championSelectAutomationEnabled && type == "ban" && mergedBanIds.Count > 0 && !_hasBanned)
                     {
@@ -131,7 +133,7 @@ public partial class ChampSelect
             banChoices,
             mergedPickIds,
             mergedBanIds,
-            ownershipSnapshot,
+            eligibilitySnapshot,
             assignedPosition,
             champSelectPhase,
             timeLeftMs,
@@ -197,6 +199,7 @@ public partial class ChampSelect
 
     public void Reset()
     {
+        _eligibilityService.Reset();
         _lastSessionId = null;
         _hasPicked = false;
         _hasBanned = false;

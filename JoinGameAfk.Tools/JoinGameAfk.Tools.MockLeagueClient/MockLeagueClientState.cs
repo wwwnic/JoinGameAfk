@@ -1,3 +1,5 @@
+using JoinGameAfk.Model;
+
 namespace JoinGameAfk.Tools.MockLeagueClient;
 
 internal enum MockClientPhase
@@ -25,6 +27,12 @@ internal enum MockLeagueClientScenario
     UnsupportedQuickplay
 }
 
+internal enum MockChampionOwnershipMode
+{
+    ConfiguredInventory,
+    AllChampions
+}
+
 internal sealed partial class MockLeagueClientState
 {
     private const int DefaultChampSelectTimeLeftSeconds = 30;
@@ -32,7 +40,7 @@ internal sealed partial class MockLeagueClientState
     private const int LastBluePlayerCellId = 5;
     private const int LastPlayerCellId = 10;
 
-    private static readonly int[] OwnedChampionIds =
+    private static readonly int[] DefaultOwnedChampionIds =
     [
         1, 12, 22, 24, 25, 40, 51, 53, 64, 81, 86, 89, 99, 103, 122, 157, 202, 222, 412, 517
     ];
@@ -62,12 +70,17 @@ internal sealed partial class MockLeagueClientState
     private int _localPlayerCellId = 1;
     private string _localPlayerAssignedPosition = MockLeagueClientRoles.DefaultRole;
     private bool _revealEnemyPickIntents;
+    private bool _champSelectGridAvailable = true;
+    private MockChampionOwnershipMode _championOwnershipMode = MockChampionOwnershipMode.ConfiguredInventory;
     private readonly List<TeamSlot> _myTeam = [];
     private readonly List<TeamSlot> _theirTeam = [];
     private readonly List<int> _myTeamBans = [];
     private readonly List<int> _theirTeamBans = [];
     private readonly List<ChampSelectAction> _actions = [];
     private readonly List<TimedCustomAction> _customTimedActions = [];
+    private readonly HashSet<int> _ownedChampionIds = new(DefaultOwnedChampionIds);
+    private readonly HashSet<int> _notOwnedChampionIds = [];
+    private readonly Dictionary<int, MockChampSelectGridChampion> _champSelectGridChampionOverrides = [];
     private readonly Dictionary<DraftPickStep, DraftStepState> _draftStepStates = [];
     private readonly Dictionary<int, int> _sharedDraftPickHoverChampionIds = [];
     private readonly Dictionary<int, int> _sharedDraftBanHoverChampionIds = [];
@@ -605,6 +618,152 @@ internal sealed partial class MockLeagueClientState
         }
     }
 
+    public void SetChampSelectGridChampion(
+        int championId,
+        bool owned = false,
+        bool freeToPlay = false,
+        bool freeToPlayForQueue = false,
+        bool loyaltyReward = false,
+        bool xboxGPReward = false,
+        bool rented = false,
+        bool disabled = false)
+    {
+        if (championId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(championId));
+
+        lock (_lock)
+        {
+            _champSelectGridChampionOverrides[championId] = new MockChampSelectGridChampion(
+                championId,
+                owned,
+                freeToPlay,
+                freeToPlayForQueue,
+                loyaltyReward,
+                xboxGPReward,
+                rented,
+                disabled);
+        }
+
+        OnChanged();
+    }
+
+    public bool AddOwnedChampion(int championId)
+    {
+        if (championId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(championId));
+
+        bool changed;
+        lock (_lock)
+        {
+            if (_championOwnershipMode == MockChampionOwnershipMode.AllChampions)
+                return false;
+
+            changed = _ownedChampionIds.Add(championId);
+            changed |= _notOwnedChampionIds.Remove(championId);
+            if (_champSelectGridChampionOverrides.TryGetValue(championId, out MockChampSelectGridChampion? champion)
+                && !champion.Owned)
+            {
+                _champSelectGridChampionOverrides[championId] = champion with { Owned = true };
+                changed = true;
+            }
+        }
+
+        if (changed)
+            OnChanged();
+
+        return changed;
+    }
+
+    public void UpdateChampionOwnershipMode(MockChampionOwnershipMode mode)
+    {
+        bool changed;
+        lock (_lock)
+        {
+            changed = _championOwnershipMode != mode;
+            _championOwnershipMode = mode;
+            if (mode == MockChampionOwnershipMode.AllChampions)
+                changed |= _notOwnedChampionIds.Count > 0;
+
+            if (mode == MockChampionOwnershipMode.AllChampions)
+                _notOwnedChampionIds.Clear();
+        }
+
+        if (changed)
+            OnChanged();
+    }
+
+    public MockChampionOwnershipMode GetChampionOwnershipMode()
+    {
+        lock (_lock)
+        {
+            return _championOwnershipMode;
+        }
+    }
+
+    public int GetOwnedChampionCount()
+    {
+        lock (_lock)
+        {
+            return GetEffectiveOwnedChampionIdsCore().Count();
+        }
+    }
+
+    public int GetNotOwnedChampionCount()
+    {
+        lock (_lock)
+        {
+            return _notOwnedChampionIds.Count;
+        }
+    }
+
+    public void SetChampSelectGridAvailable(bool available)
+    {
+        lock (_lock)
+        {
+            _champSelectGridAvailable = available;
+        }
+
+        OnChanged();
+    }
+
+    public bool IsChampSelectGridAvailable()
+    {
+        lock (_lock)
+        {
+            return _champSelectGridAvailable;
+        }
+    }
+
+    public object GetChampSelectGridChampionsPayload()
+    {
+        lock (_lock)
+        {
+            var ownedChampionIds = GetEffectiveOwnedChampionIdsCore().ToHashSet();
+            var champions = ChampionCatalog.All
+                .ToDictionary(
+                    champion => champion.Key,
+                    champion => new MockChampSelectGridChampion(
+                        champion.Key,
+                        Owned: ownedChampionIds.Contains(champion.Key),
+                        FreeToPlay: false,
+                        FreeToPlayForQueue: false,
+                        LoyaltyReward: false,
+                        XboxGPReward: false,
+                        Rented: false,
+                        Disabled: false));
+
+            foreach ((int championId, MockChampSelectGridChampion champion) in _champSelectGridChampionOverrides)
+            {
+                champions[championId] = _championOwnershipMode == MockChampionOwnershipMode.AllChampions
+                                            && !_notOwnedChampionIds.Contains(championId)
+                    ? champion with { Owned = true }
+                    : champion;
+            }
+
+            return champions.Values.OrderBy(champion => champion.Id).ToArray();
+        }
+    }
+
     public object GetCurrentSummonerPayload()
     {
         return new
@@ -616,14 +775,27 @@ internal sealed partial class MockLeagueClientState
 
     public object GetChampionInventoryPayload()
     {
-        return OwnedChampionIds
-            .Select(championId => new
-            {
-                id = championId,
-                owned = true,
-                ownership = new { owned = true }
-            })
-            .ToArray();
+        lock (_lock)
+        {
+            return GetEffectiveOwnedChampionIdsCore()
+                .Order()
+                .Select(championId => new
+                {
+                    id = championId,
+                    owned = true,
+                    ownership = new { owned = true }
+                })
+                .ToArray();
+        }
+    }
+
+    private IEnumerable<int> GetEffectiveOwnedChampionIdsCore()
+    {
+        IEnumerable<int> championIds = _championOwnershipMode == MockChampionOwnershipMode.AllChampions
+            ? ChampionCatalog.All.Select(champion => champion.Key)
+            : _ownedChampionIds;
+
+        return championIds.Where(championId => !_notOwnedChampionIds.Contains(championId));
     }
 
     private void ApplyPlanningScenarioCore()
@@ -1829,6 +2001,21 @@ internal sealed record DraftPlaybackAdvanceResult(
     DraftPickStep Step,
     int TimeLeftSeconds,
     bool ContinuesPlayback);
+
+internal sealed record MockChampSelectGridChampion(
+    int Id,
+    bool Owned,
+    bool FreeToPlay,
+    bool FreeToPlayForQueue,
+    bool LoyaltyReward,
+    bool XboxGPReward,
+    bool Rented,
+    bool Disabled);
+
+internal sealed record ParsedYamlChampionOwnership(
+    MockChampionOwnershipMode DefaultMode,
+    IReadOnlyCollection<int> OwnedChampionIds,
+    IReadOnlyCollection<int> NotOwnedChampionIds);
 
 internal sealed record DraftStepState(
     string TimerPhase,

@@ -60,6 +60,9 @@ public partial class MainWindow : Window
         ConfigureChampionColumn(ActionPickChampionColumn);
         ConfigureChampionColumn(ActionBanChampionColumn);
         ConfigureCustomTimedActionControls();
+        OwnedChampionBox.ItemsSource = _champions.Where(champion => champion.ChampionId > 0).ToList();
+        OwnedChampionBox.SelectedIndex = 0;
+        SetChampionOwnershipModeBoxFromValue(ChampionOwnershipModeBox, _state.GetChampionOwnershipMode());
         SetRoleBoxFromValue(LocalPlayerRoleBox, MockLeagueClientRoles.DefaultRole);
         SetQueueModeBoxFromValue(QueueModeBox, MockQueueMode.DraftPick);
         SetLocalPlayerCellBoxFromValue(LocalPlayerCellBox, 1);
@@ -567,6 +570,32 @@ public partial class MainWindow : Window
         await EmitSnapshotIfRunningAsync();
     }
 
+    private void AddOwnedChampionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (OwnedChampionBox.SelectedItem is not ChampionOption champion)
+        {
+            AddLog("Select a champion to add to the mock owned inventory.");
+            return;
+        }
+
+        bool added = _state.AddOwnedChampion(champion.ChampionId);
+        AddLog(added
+            ? $"Added {champion.Name} to mock owned champions. Restart Champion Select to reload JoinGameAfk eligibility."
+            : $"{champion.Name} is already owned by the mock player, or All champions mode is active.");
+    }
+
+    private void ChampionOwnershipModeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isRefreshingUi || !IsLoaded)
+            return;
+
+        MockChampionOwnershipMode mode = GetChampionOwnershipModeBoxValue(ChampionOwnershipModeBox);
+        _state.UpdateChampionOwnershipMode(mode);
+        AddLog(mode == MockChampionOwnershipMode.AllChampions
+            ? "Champion ownership mode set to All champions. Restart Champion Select to reload JoinGameAfk eligibility."
+            : "Champion ownership mode set to Configured inventory. Restart Champion Select to reload JoinGameAfk eligibility.");
+    }
+
     private async void EnemyPickIntentsCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         if (_isRefreshingUi || !IsLoaded)
@@ -775,6 +804,19 @@ public partial class MainWindow : Window
             var snapshot = _state.GetSnapshot();
             CurrentPhaseText.Text = snapshot.Phase.ToString();
             CurrentTimerText.Text = $"{snapshot.TimerPhase} / {snapshot.TimeLeftSeconds}s";
+            MockChampionOwnershipMode ownershipMode = _state.GetChampionOwnershipMode();
+            int ownedChampionCount = _state.GetOwnedChampionCount();
+            int notOwnedChampionCount = _state.GetNotOwnedChampionCount();
+            SetChampionOwnershipModeBoxFromValue(ChampionOwnershipModeBox, ownershipMode);
+            OwnedChampionBox.IsEnabled = ownershipMode == MockChampionOwnershipMode.ConfiguredInventory;
+            AddOwnedChampionButton.IsEnabled = ownershipMode == MockChampionOwnershipMode.ConfiguredInventory;
+            OwnedChampionStatusText.Text = ownershipMode == MockChampionOwnershipMode.AllChampions
+                ? notOwnedChampionCount == 0
+                    ? $"All champions mode: {ownedChampionCount} champions reported as owned."
+                    : $"All champions baseline: {ownedChampionCount} owned, {notOwnedChampionCount} configured as not owned."
+                : notOwnedChampionCount == 0
+                    ? $"Configured inventory: {ownedChampionCount} champions reported as owned."
+                    : $"Configured inventory: {ownedChampionCount} owned, {notOwnedChampionCount} configured as not owned.";
             DraftTimerStatusText.Text = _draftCountdownTimer.IsEnabled
                 ? GetRunningDraftPlaybackStatus()
                 : _draftPlaybackEditSnapshot is not null
@@ -1023,6 +1065,29 @@ public partial class MainWindow : Window
                && Enum.TryParse(mode, out MockQueueMode queueMode)
             ? queueMode
             : MockQueueMode.DraftPick;
+    }
+
+    private static MockChampionOwnershipMode GetChampionOwnershipModeBoxValue(ComboBox comboBox)
+    {
+        return comboBox.SelectedItem is ComboBoxItem { Tag: string mode }
+               && Enum.TryParse(mode, out MockChampionOwnershipMode ownershipMode)
+            ? ownershipMode
+            : MockChampionOwnershipMode.ConfiguredInventory;
+    }
+
+    private static void SetChampionOwnershipModeBoxFromValue(
+        ComboBox comboBox,
+        MockChampionOwnershipMode ownershipMode)
+    {
+        string ownershipModeText = ownershipMode.ToString();
+        foreach (var item in comboBox.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals(item.Tag as string, ownershipModeText, StringComparison.Ordinal))
+            {
+                comboBox.SelectedItem = item;
+                return;
+            }
+        }
     }
 
     private static void SetQueueModeBoxFromValue(ComboBox comboBox, MockQueueMode queueMode)

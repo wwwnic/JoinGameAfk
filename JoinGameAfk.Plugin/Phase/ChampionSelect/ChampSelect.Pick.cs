@@ -5,14 +5,14 @@ namespace JoinGameAfk.Phase;
 
 public partial class ChampSelect
 {
-    private async Task HandlePickActionAsync(string sessionId, JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, CancellationToken cancellationToken)
+    private async Task HandlePickActionAsync(string sessionId, JsonElement root, int localPlayerCellId, int actionId, int currentChampionId, bool isInProgress, string champSelectPhase, long timeLeftMs, DateTime timeLeftObservedAtUtc, IReadOnlyCollection<int> preferredChampionIds, ChampionEligibilitySnapshot eligibilitySnapshot, CancellationToken cancellationToken)
     {
         EnsureRetryStateForAction(actionId, isPickAction: true);
         bool canHoverPickNow = CanHoverPickNow(champSelectPhase, isInProgress);
 
         string? hoveredPickUnavailableStatus = _hoveredPickChampionId == 0
             ? null
-            : GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, _hoveredPickChampionId, ownershipSnapshot);
+            : GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, _hoveredPickChampionId, eligibilitySnapshot);
 
         if (_hasHoveredPick
             && !_manualPickSelectionOverride
@@ -46,7 +46,7 @@ public partial class ChampSelect
             _hoveredPickChampionId = currentChampionId;
         }
 
-        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
+        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, eligibilitySnapshot, _manualPickSelectionOverride, isPickAction: true);
 
         if (!_hasHoveredPick && !_manualPickSelectionOverride && !_settings.AutoHoverChampionEnabled)
         {
@@ -70,8 +70,8 @@ public partial class ChampSelect
             if (ShouldAttemptHover(actionId, champSelectPhase, timeLeftMs, isPickAction: true, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastPickStatusMessage, $"{hoverActionLabel} delay satisfied. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, isPickAction: true, actionLabel: hoverActionLabel, cancellationToken);
-                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedPickChampionIds, eligibilitySnapshot, isPickAction: true, actionLabel: hoverActionLabel, cancellationToken);
+                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, eligibilitySnapshot, _manualPickSelectionOverride, isPickAction: true);
             }
             else
             {
@@ -100,11 +100,11 @@ public partial class ChampSelect
             return;
         }
 
-        string? pickOwnershipUnavailableStatus = GetChampionOwnershipUnavailableStatus(ownershipSnapshot, championIdToLock);
-        if (pickOwnershipUnavailableStatus is not null)
+        string? pickEligibilityUnavailableStatus = GetChampionEligibilityUnavailableStatus(eligibilitySnapshot, championIdToLock);
+        if (pickEligibilityUnavailableStatus is not null)
         {
             CancelScheduledPickLock();
-            LogStatus(ref _lastPickStatusMessage, $"Pick target {FormatChampion(championIdToLock)} is blocked ({pickOwnershipUnavailableStatus}). The app will not lock this pick.");
+            LogStatus(ref _lastPickStatusMessage, $"Pick target {FormatChampion(championIdToLock)} is blocked ({pickEligibilityUnavailableStatus}). The app will not lock this pick.");
             if (!_manualPickSelectionOverride)
             {
                 ResetPickHover();
@@ -113,7 +113,7 @@ public partial class ChampSelect
                 _pickHoverReadyAtUtc = DateTime.UtcNow;
             }
 
-            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, eligibilitySnapshot, _manualPickSelectionOverride, isPickAction: true);
             return;
         }
 
@@ -164,7 +164,7 @@ public partial class ChampSelect
             _pendingPickHoverActionId = actionId;
             _pendingPickHoverPhase = champSelectPhase;
             _pickHoverReadyAtUtc = DateTime.UtcNow;
-            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, ownershipSnapshot, _manualPickSelectionOverride, isPickAction: true);
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedPickChampionIds, eligibilitySnapshot, _manualPickSelectionOverride, isPickAction: true);
         }
     }
 

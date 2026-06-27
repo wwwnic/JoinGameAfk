@@ -36,7 +36,7 @@ public partial class ChampSelect
         int localPlayerCellId,
         IReadOnlyCollection<int> preferredChampionIds,
         IReadOnlySet<int> excludedChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         bool manualSelectionOverride,
         bool isPickAction)
     {
@@ -46,7 +46,7 @@ public partial class ChampSelect
             actionId,
             preferredChampionIds,
             excludedChampionIds,
-            ownershipSnapshot,
+            eligibilitySnapshot,
             manualSelectionOverride,
             isPickAction))
         {

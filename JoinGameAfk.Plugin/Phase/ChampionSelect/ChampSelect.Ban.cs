@@ -39,7 +39,7 @@ public partial class ChampSelect
             _hoveredBanChampionId = currentChampionId;
         }
 
-        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
+        TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionEligibilitySnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
 
         if (!_hasHoveredBan && !_manualBanSelectionOverride && !_settings.AutoHoverChampionEnabled && !IsPlanningPhase(champSelectPhase))
         {
@@ -53,8 +53,8 @@ public partial class ChampSelect
             if (ShouldAttemptHover(actionId, champSelectPhase, timeLeftMs, isPickAction: false, out int hoverDelaySeconds))
             {
                 LogStatus(ref _lastBanStatusMessage, $"Ban hover delay satisfied. ActionId={actionId}, currentChampionId={currentChampionId}, inProgress={isInProgress}, phase={champSelectPhase}, timeLeft={FormatTimeLeft(timeLeftMs)}. Attempting hover.");
-                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
-                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
+                await TryHoverChampionAsync(root, localPlayerCellId, actionId, preferredChampionIds, _failedBanChampionIds, ChampionEligibilitySnapshot.Unknown, isPickAction: false, actionLabel: "Ban", cancellationToken);
+                TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionEligibilitySnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
             }
             else
             {
@@ -124,7 +124,7 @@ public partial class ChampSelect
                 _banHoverReadyAtUtc = DateTime.UtcNow;
             }
 
-            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionEligibilitySnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
             return;
         }
 
@@ -151,7 +151,7 @@ public partial class ChampSelect
             _pendingBanHoverActionId = actionId;
             _pendingBanHoverPhase = champSelectPhase;
             _banHoverReadyAtUtc = DateTime.UtcNow;
-            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionOwnershipSnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
+            TryPlayAllOptionsUnavailableSoundAlert(sessionId, actionId, root, localPlayerCellId, preferredChampionIds, _failedBanChampionIds, ChampionEligibilitySnapshot.Unknown, _manualBanSelectionOverride, isPickAction: false);
         }
     }
 

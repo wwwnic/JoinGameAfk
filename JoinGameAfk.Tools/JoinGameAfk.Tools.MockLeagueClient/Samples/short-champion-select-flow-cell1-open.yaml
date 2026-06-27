@@ -1,8 +1,17 @@
-Version: 1
+Version: 2
 QueueId: 400
 QueueName: Normal Draft
 LocalSlot: 1
 LocalRole: top
+# Default can be all or none. The explicit NotOwned list takes precedence over Owned.
+ChampionOwnership:
+  Default: none
+  Owned:
+  - Darius
+  - Garen
+  - Yasuo
+  NotOwned:
+  - Gwen
 ActivePhase: Planning
 BlueTeam:
 - Cell: 1

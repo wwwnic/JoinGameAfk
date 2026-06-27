@@ -188,6 +188,14 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
                 : Results.NotFound();
         });
 
+        app.MapGet("/lol-champ-select/v1/all-grid-champions", () =>
+        {
+            LogRequest("GET", "/lol-champ-select/v1/all-grid-champions");
+            return _state.HasChampSelectSession() && _state.IsChampSelectGridAvailable()
+                ? Results.Json(_state.GetChampSelectGridChampionsPayload(), JsonOptions)
+                : Results.NotFound();
+        });
+
         app.MapGet("/lol-champ-select/v1/session/timer", () =>
         {
             LogRequest("GET", "/lol-champ-select/v1/session/timer");

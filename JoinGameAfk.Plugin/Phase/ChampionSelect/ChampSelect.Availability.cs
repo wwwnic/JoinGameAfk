@@ -13,13 +13,13 @@ public partial class ChampSelect
         int actionId,
         IReadOnlyCollection<int> championIds,
         IReadOnlySet<int> excludedChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         bool manualSelectionOverride,
         bool isPickAction)
     {
         return !manualSelectionOverride
             && championIds.Count > 0
-            && !HasAvailableConfiguredChampion(root, localPlayerCellId, actionId, championIds, excludedChampionIds, ownershipSnapshot, isPickAction);
+            && !HasAvailableConfiguredChampion(root, localPlayerCellId, actionId, championIds, excludedChampionIds, eligibilitySnapshot, isPickAction);
     }
 
     private static bool HasAvailableConfiguredChampion(
@@ -28,7 +28,7 @@ public partial class ChampSelect
         int actionId,
         IReadOnlyCollection<int> championIds,
         IReadOnlySet<int> excludedChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         bool isPickAction)
     {
         foreach (int championId in championIds)
@@ -37,7 +37,7 @@ public partial class ChampSelect
                 continue;
 
             string? unavailableStatus = isPickAction
-                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, ownershipSnapshot)
+                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, eligibilitySnapshot)
                 : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: true);
             if (unavailableStatus is null)
                 return true;
@@ -46,7 +46,7 @@ public partial class ChampSelect
         return false;
     }
 
-    private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, ChampionOwnershipSnapshot ownershipSnapshot, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
+    private async Task TryHoverChampionAsync(JsonElement root, int localPlayerCellId, int actionId, IReadOnlyCollection<int> championIds, HashSet<int> excludedChampionIds, ChampionEligibilitySnapshot eligibilitySnapshot, bool isPickAction, string actionLabel, CancellationToken cancellationToken)
     {
         foreach (var championId in championIds)
         {
@@ -54,7 +54,7 @@ public partial class ChampSelect
                 continue;
 
             string? unavailableStatus = isPickAction
-                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, ownershipSnapshot)
+                ? GetPickChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, eligibilitySnapshot)
                 : GetChampionUnavailableStatus(root, localPlayerCellId, actionId, championId, includeLocalPlayerTeamSelection: true);
             if (unavailableStatus is not null)
             {
@@ -120,17 +120,15 @@ public partial class ChampSelect
         return GetChampionUnavailableStatus(root, localPlayerCellId, localActionId, championId, includeLocalPlayerTeamSelection) is not null;
     }
 
-    private static string? GetPickChampionUnavailableStatus(JsonElement root, int localPlayerCellId, int localActionId, int championId, ChampionOwnershipSnapshot ownershipSnapshot)
+    private static string? GetPickChampionUnavailableStatus(JsonElement root, int localPlayerCellId, int localActionId, int championId, ChampionEligibilitySnapshot eligibilitySnapshot)
     {
         return GetChampionUnavailableStatus(root, localPlayerCellId, localActionId, championId)
-            ?? GetChampionOwnershipUnavailableStatus(ownershipSnapshot, championId);
+            ?? GetChampionEligibilityUnavailableStatus(eligibilitySnapshot, championId);
     }
 
-    private static string? GetChampionOwnershipUnavailableStatus(ChampionOwnershipSnapshot ownershipSnapshot, int championId)
+    private static string? GetChampionEligibilityUnavailableStatus(ChampionEligibilitySnapshot eligibilitySnapshot, int championId)
     {
-        return ownershipSnapshot.IsKnownUnowned(championId)
-            ? "Not owned"
-            : null;
+        return eligibilitySnapshot.GetUnavailableStatus(championId);
     }
 
     private static string GetUnavailableReasonKind(string? unavailableStatus)

@@ -12,7 +12,7 @@ public partial class ChampSelect : IPhaseHandler
     private readonly GeneralSettings _settings;
     private readonly RolePlanSettings _rolePlanSettings;
     private readonly SoundSettings _soundSettings;
-    private readonly LeagueChampionOwnershipService _ownershipService;
+    private readonly LeagueChampionEligibilityService _eligibilityService;
     private readonly Action<string>? _log;
     private readonly Action? _requestRefresh;
     private readonly Action<SoundAlertPlaybackRequest>? _playSoundAlert;
@@ -62,7 +62,7 @@ public partial class ChampSelect : IPhaseHandler
         _settings = settings;
         _rolePlanSettings = rolePlanSettings;
         _soundSettings = soundSettings;
-        _ownershipService = new LeagueChampionOwnershipService(http, log);
+        _eligibilityService = new LeagueChampionEligibilityService(http, log);
         _log = log;
         _requestRefresh = requestRefresh;
         _playSoundAlert = playSoundAlert;

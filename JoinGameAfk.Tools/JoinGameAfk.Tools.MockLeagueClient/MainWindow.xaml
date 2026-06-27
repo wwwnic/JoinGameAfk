@@ -561,6 +561,53 @@
 
                 <Border Style="{StaticResource PanelBorderStyle}">
                     <StackPanel>
+                        <TextBlock Text="Champion Ownership"
+                                   Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="Choose whether the mock reports every champion as owned or only the configured inventory. Restart Champion Select to make JoinGameAfk reload its per-session eligibility cache."
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,0,0,8" />
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Mode"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextMutedBrush}" />
+                            <ComboBox x:Name="ChampionOwnershipModeBox"
+                                      Grid.Column="1"
+                                      SelectionChanged="ChampionOwnershipModeBox_SelectionChanged">
+                                <ComboBoxItem Content="Configured inventory"
+                                              Tag="ConfiguredInventory" />
+                                <ComboBoxItem Content="All champions"
+                                              Tag="AllChampions" />
+                            </ComboBox>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="OwnedChampionBox"
+                                      Grid.Column="0"
+                                      Style="{StaticResource ChampionComboBoxStyle}"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedValuePath="ChampionId"
+                                      Margin="0,0,8,0" />
+                            <Button x:Name="AddOwnedChampionButton"
+                                    Grid.Column="1"
+                                    Content="Add owned"
+                                    Click="AddOwnedChampionButton_Click" />
+                        </Grid>
+                        <TextBlock x:Name="OwnedChampionStatusText"
+                                   Foreground="{DynamicResource TextMutedBrush}"
+                                   Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
                         <TextBlock Text="Queue"
                                    Style="{StaticResource SectionTitleStyle}" />
                         <Grid>

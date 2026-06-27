@@ -1,8 +1,11 @@
-Version: 1
+Version: 2
 QueueId: 400
 QueueName: Normal Draft
 LocalSlot: 1
 LocalRole: top
+# Default can be all or none. Add NotOwned entries to make exceptions to all.
+ChampionOwnership:
+  Default: all
 ActivePhase: Planning
 BlueTeam:
 - Cell: 1

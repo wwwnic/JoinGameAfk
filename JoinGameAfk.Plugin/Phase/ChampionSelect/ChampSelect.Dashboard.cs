@@ -16,7 +16,7 @@ public partial class ChampSelect
         IReadOnlyList<ChampionPlanChoice> banChoices,
         IReadOnlyCollection<int> pickChampionIds,
         IReadOnlyCollection<int> banChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         Position assignedPosition,
         string champSelectPhase,
         long timeLeftMs,
@@ -43,7 +43,7 @@ public partial class ChampSelect
                 pickActionId,
                 pickChoices,
                 _failedPickChampionIds,
-                ownershipSnapshot,
+                eligibilitySnapshot,
                 requiresOwnedChampion: true,
                 availableStatusText: "Pick",
                 completedActionType: DashboardDraftActionType.Pick,
@@ -54,7 +54,7 @@ public partial class ChampSelect
                 banActionId,
                 banChoices,
                 _failedBanChampionIds,
-                ChampionOwnershipSnapshot.Unknown,
+                ChampionEligibilitySnapshot.Unknown,
                 requiresOwnedChampion: false,
                 availableStatusText: "Ban",
                 completedActionType: DashboardDraftActionType.Ban,
@@ -71,7 +71,7 @@ public partial class ChampSelect
                 banActionId,
                 pickChampionIds,
                 banChampionIds,
-                ownershipSnapshot,
+                eligibilitySnapshot,
                 champSelectPhase,
                 localPlayerActiveActionType,
                 localPlayerPickCompleted,
@@ -114,7 +114,7 @@ public partial class ChampSelect
         int banActionId,
         IReadOnlyCollection<int> pickChampionIds,
         IReadOnlyCollection<int> banChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         string champSelectPhase,
         string? localPlayerActiveActionType,
         bool localPlayerPickCompleted,
@@ -130,7 +130,7 @@ public partial class ChampSelect
                 pickActionId,
                 pickChampionIds,
                 _failedPickChampionIds,
-                ownershipSnapshot,
+                eligibilitySnapshot,
                 _manualPickSelectionOverride,
                 isPickAction: true);
         }
@@ -145,7 +145,7 @@ public partial class ChampSelect
                 banActionId,
                 banChampionIds,
                 _failedBanChampionIds,
-                ChampionOwnershipSnapshot.Unknown,
+                ChampionEligibilitySnapshot.Unknown,
                 _manualBanSelectionOverride,
                 isPickAction: false);
         }
@@ -182,7 +182,7 @@ public partial class ChampSelect
         int actionId,
         IReadOnlyList<ChampionPlanChoice> championChoices,
         IReadOnlySet<int> failedChampionIds,
-        ChampionOwnershipSnapshot ownershipSnapshot,
+        ChampionEligibilitySnapshot eligibilitySnapshot,
         bool requiresOwnedChampion,
         string availableStatusText,
         string completedActionType = DashboardDraftActionType.None,
@@ -207,7 +207,7 @@ public partial class ChampSelect
 
                 if (unavailableStatus is null && requiresOwnedChampion)
                 {
-                    unavailableStatus = GetChampionOwnershipUnavailableStatus(ownershipSnapshot, choice.ChampionId);
+                    unavailableStatus = GetChampionEligibilityUnavailableStatus(eligibilitySnapshot, choice.ChampionId);
                     unavailableReasonKind = GetUnavailableReasonKind(unavailableStatus);
                 }
 

@@ -53,6 +53,7 @@ flowchart LR
         HTTP["LeagueClientHttp\nRead state and send actions"]
         EVENTS["LeagueClientEventStream\nSubscribe to OnJsonApiEvent"]
         CONTROLLER["PhaseController\nResolve ReadyCheck, ChampSelect,\nand gameflow state"]
+        ELIGIBILITY["ChampionEligibilityService\nLoad champion-select eligibility\nonce per session"]
         HANDLERS["ReadyCheck / ChampSelect\nAccept, hover, pick, ban, lock"]
 
         CLIENT -- "process command-line credentials" --> PROCESS
@@ -63,6 +64,8 @@ flowchart LR
         HTTP --> CONTROLLER
         EVENTS --> CONTROLLER
         CONTROLLER --> HANDLERS
+        HTTP --> ELIGIBILITY
+        ELIGIBILITY --> HANDLERS
         HANDLERS --> HTTP
     end
 
@@ -77,7 +80,8 @@ LCU routes currently used by JoinGameAfk:
 - Game state: `/lol-gameflow/v1/session`, `/lol-gameflow/v1/gameflow-phase`, `/lol-lobby/v2/lobby`
 - Queue: `/lol-matchmaking/v1/ready-check`, `/lol-matchmaking/v1/ready-check/accept`
 - Champion select: `/lol-champ-select/v1/session`, `/lol-champ-select/v1/session/actions/{actionId}`
-- Player and ownership: `/lol-summoner/v1/current-summoner`, champion inventory endpoints
+- Champion pick eligibility: `/lol-champ-select/v1/all-grid-champions` once per champion-select session when a pick plan exists. Its grid fields distinguish owned champions from global free-to-play, queue free-to-play, rentals, loyalty rewards, Xbox Game Pass rewards, and disabled champions.
+- Fallback ownership data: `/lol-champions/v1/owned-champions-minimal` only when the champion-select grid is unavailable. Unknown champions remain eligible in this fallback so a missing free-rotation flag cannot block a valid pick.
 - Locally installed game version: `/lol-patch/v1/game-version`
 - Live updates: WebSocket subscription to `OnJsonApiEvent`
 

@@ -47,10 +47,31 @@ public partial class ChampSelect
 
     private static string? GetSessionId(JsonElement root)
     {
-        if (root.TryGetProperty("multiUserChatId", out var chatIdProperty))
-            return chatIdProperty.GetString();
+        if (TryGetNonEmptyString(root, "multiUserChatId", out string? chatId))
+            return chatId;
 
-        return null;
+        if (TryGetNonEmptyString(root, "id", out string? sessionId))
+            return sessionId;
+
+        if (TryGetNumberAsInt64(root, "gameId", out long gameId) && gameId > 0)
+            return $"game:{gameId}";
+
+        // The handler is reset on every champion-select exit, so this still scopes
+        // eligibility to the active session on older clients that omit all IDs.
+        return "active-champ-select";
+    }
+
+    private static bool TryGetNonEmptyString(JsonElement element, string propertyName, out string? value)
+    {
+        value = null;
+        if (!element.TryGetProperty(propertyName, out JsonElement property)
+            || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString();
+        return !string.IsNullOrWhiteSpace(value);
     }
 
     private static bool TryGetInt32(JsonElement element, string propertyName, out int value)

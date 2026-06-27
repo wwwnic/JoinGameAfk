@@ -73,10 +73,20 @@ internal sealed class DraftYamlConfiguration
     public int? LocalPlayerCellId { get; set; }
     public string? LocalPlayerRole { get; set; }
     public bool RevealEnemyPickIntents { get; set; }
+    public DraftYamlChampionOwnershipConfiguration? ChampionOwnership { get; set; }
     public string ActivePhase { get; set; } = DraftPickStep.Planning.ToString();
     public List<DraftYamlTeamSlot> BlueTeam { get; set; } = [];
     public List<DraftYamlTeamSlot> RedTeam { get; set; } = [];
     public Dictionary<string, DraftYamlPhaseConfiguration> Phases { get; set; } = [];
+}
+
+internal sealed class DraftYamlChampionOwnershipConfiguration
+{
+    public string? Default { get; set; }
+    public List<string>? Owned { get; set; }
+    public List<string>? NotOwned { get; set; }
+    public string? Mode { get; set; }
+    public List<string>? Champions { get; set; }
 }
 
 internal sealed class DraftYamlTeamSlot

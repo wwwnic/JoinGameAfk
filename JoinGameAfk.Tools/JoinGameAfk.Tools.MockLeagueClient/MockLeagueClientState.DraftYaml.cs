@@ -19,6 +19,7 @@ internal sealed partial class MockLeagueClientState
                 LocalSlot = _localPlayerCellId,
                 LocalRole = _localPlayerAssignedPosition,
                 RevealEnemyPickIntents = _revealEnemyPickIntents,
+                ChampionOwnership = CreateYamlChampionOwnership(),
                 ActivePhase = _draftStep.ToString(),
                 BlueTeam = CreateYamlTeamSlots(_myTeam),
                 RedTeam = CreateYamlTeamSlots(_theirTeam),
@@ -40,11 +41,15 @@ internal sealed partial class MockLeagueClientState
     private void ApplyDraftYamlConfigurationCore(DraftYamlConfiguration configuration)
     {
         NormalizeYamlConfiguration(configuration);
+        ParsedYamlChampionOwnership? championOwnership = configuration.ChampionOwnership is null
+            ? null
+            : ParseYamlChampionOwnership(configuration.ChampionOwnership);
         _queueMode = MockQueueMode.DraftPick;
         SetQueueCore(configuration.QueueId, NormalizeText(configuration.QueueName, "Normal Draft"));
         _localPlayerCellId = NormalizeLocalPlayerCellId(GetYamlLocalSlot(configuration));
         _localPlayerAssignedPosition = MockLeagueClientRoles.NormalizeDisplayRole(GetYamlLocalRole(configuration));
         _revealEnemyPickIntents = configuration.RevealEnemyPickIntents;
+        ApplyYamlChampionOwnershipCore(championOwnership);
         _sharedDraftPickHoverChampionIds.Clear();
         _sharedDraftBanHoverChampionIds.Clear();
 
@@ -90,6 +95,106 @@ internal sealed partial class MockLeagueClientState
             phase.TimedActions ??= [];
             phase.OptionalTimedActions ??= [];
         }
+    }
+
+    private DraftYamlChampionOwnershipConfiguration CreateYamlChampionOwnership()
+    {
+        return new DraftYamlChampionOwnershipConfiguration
+        {
+            Default = _championOwnershipMode == MockChampionOwnershipMode.AllChampions ? "all" : "none",
+            Owned = _championOwnershipMode == MockChampionOwnershipMode.ConfiguredInventory
+                ? _ownedChampionIds
+                    .Except(_notOwnedChampionIds)
+                    .Order()
+                    .Select(championId => GetChampionName(championId) ?? championId.ToString())
+                    .ToList()
+                : null,
+            NotOwned = _notOwnedChampionIds.Count > 0
+                ? _notOwnedChampionIds
+                    .Order()
+                    .Select(championId => GetChampionName(championId) ?? championId.ToString())
+                    .ToList()
+                : null
+        };
+    }
+
+    private void ApplyYamlChampionOwnershipCore(ParsedYamlChampionOwnership? championOwnership)
+    {
+        if (championOwnership is null)
+            return;
+
+        _championOwnershipMode = championOwnership.DefaultMode;
+        _ownedChampionIds.Clear();
+        _ownedChampionIds.UnionWith(championOwnership.OwnedChampionIds);
+        _notOwnedChampionIds.Clear();
+        _notOwnedChampionIds.UnionWith(championOwnership.NotOwnedChampionIds);
+        _champSelectGridChampionOverrides.Clear();
+    }
+
+    private static ParsedYamlChampionOwnership ParseYamlChampionOwnership(
+        DraftYamlChampionOwnershipConfiguration configuration)
+    {
+        string defaultOwnership = NormalizeYamlToken(
+            string.IsNullOrWhiteSpace(configuration.Default)
+                ? configuration.Mode ?? "none"
+                : configuration.Default);
+        MockChampionOwnershipMode defaultMode = defaultOwnership switch
+        {
+            "ALL" or "ALLCHAMPIONS" => MockChampionOwnershipMode.AllChampions,
+            "NONE" or "LIST" or "CONFIGURED" or "CONFIGUREDINVENTORY" => MockChampionOwnershipMode.ConfiguredInventory,
+            _ => throw new InvalidOperationException(
+                "ChampionOwnership.Default must be either 'all' or 'none'.")
+        };
+
+        HashSet<int> ownedChampionIds = ParseYamlChampionIds(
+            configuration.Owned ?? configuration.Champions,
+            configuration.Owned is null && configuration.Champions is not null ? "Champions" : "Owned");
+        HashSet<int> notOwnedChampionIds = ParseYamlChampionIds(configuration.NotOwned, "NotOwned");
+        ownedChampionIds.ExceptWith(notOwnedChampionIds);
+
+        return new ParsedYamlChampionOwnership(defaultMode, ownedChampionIds, notOwnedChampionIds);
+    }
+
+    private static HashSet<int> ParseYamlChampionIds(IEnumerable<string>? championReferences, string listName)
+    {
+        var championIds = new HashSet<int>();
+        foreach (string? championReference in championReferences ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(championReference))
+                continue;
+
+            if (TryResolveYamlChampionId(championReference, out int championId))
+            {
+                championIds.Add(championId);
+                continue;
+            }
+
+            throw new InvalidOperationException(
+                $"ChampionOwnership.{listName} contains an unknown champion: '{championReference}'.");
+        }
+
+        return championIds;
+    }
+
+    private static bool TryResolveYamlChampionId(string championReference, out int championId)
+    {
+        if (int.TryParse(championReference, out int numericChampionId)
+            && ChampionCatalog.TryGetByKey(numericChampionId, out var championById)
+            && championById is not null)
+        {
+            championId = numericChampionId;
+            return true;
+        }
+
+        if (ChampionCatalog.TryGetByName(championReference, out var championByName)
+            && championByName is not null)
+        {
+            championId = championByName.Key;
+            return true;
+        }
+
+        championId = 0;
+        return false;
     }
 
     private static int GetYamlLocalSlot(DraftYamlConfiguration configuration)
