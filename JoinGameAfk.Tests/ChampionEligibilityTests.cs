@@ -23,7 +23,14 @@ public class ChampionEligibilityTests
               { "id": 11, "owned": false, "freeToPlay": true, "freeToPlayForQueue": false, "disabled": false },
               { "id": 12, "owned": false, "freeToPlay": false, "freeToPlayForQueue": true, "disabled": false },
               { "id": 13, "owned": false, "freeToPlay": false, "freeToPlayForQueue": false, "disabled": false },
-              { "id": 14, "owned": true, "freeToPlay": false, "freeToPlayForQueue": false, "disabled": true }
+              { "id": 14, "owned": true, "freeToPlay": false, "freeToPlayForQueue": false, "disabled": true },
+              { "id": 15, "loyaltyReward": true },
+              { "id": 16, "xboxGPReward": true },
+              { "id": 17, "rented": true },
+              { "id": 18, "ownership": { "owned": true } },
+              { "id": 19, "ownership": { "rental": { "rented": true } } },
+              { "id": 20, "name": "Unknown Access Signal" },
+              { "id": -1, "owned": false, "freeToPlay": false, "freeToPlayForQueue": false, "disabled": false }
             ]
             """;
 
@@ -35,6 +42,13 @@ public class ChampionEligibilityTests
             Assert.That(snapshot.GetUnavailableStatus(12), Is.Null, "Queue-specific free-to-play champions must be selectable.");
             Assert.That(snapshot.GetUnavailableStatus(13), Is.EqualTo("Not owned"));
             Assert.That(snapshot.GetUnavailableStatus(14), Is.EqualTo("Disabled"));
+            Assert.That(snapshot.GetUnavailableStatus(15), Is.Null, "Loyalty rewards must be selectable.");
+            Assert.That(snapshot.GetUnavailableStatus(16), Is.Null, "Xbox Game Pass rewards must be selectable.");
+            Assert.That(snapshot.GetUnavailableStatus(17), Is.Null, "Rentals must be selectable.");
+            Assert.That(snapshot.GetUnavailableStatus(18), Is.Null, "Nested ownership must be selectable.");
+            Assert.That(snapshot.GetUnavailableStatus(19), Is.Null, "Nested rental ownership must be selectable.");
+            Assert.That(snapshot.GetUnavailableStatus(20), Is.Null, "Missing access fields must remain unknown rather than blocked.");
+            Assert.That(snapshot.GetUnavailableStatus(-1), Is.Null, "The real grid includes a sentinel id that must be ignored.");
         });
     }
 
@@ -142,6 +156,51 @@ public class ChampionEligibilityTests
             Assert.That(
                 state.ExportDraftYamlConfiguration().ChampionOwnership?.NotOwned,
                 Is.EquivalentTo(new[] { "Yasuo" }));
+        });
+    }
+
+    [Test]
+    public void MockLeagueClient_DraftYamlChampionGrid_SupportsQueueFreeRotationAndDisabledFlags()
+    {
+        var state = new MockLeagueClientState();
+
+        state.ImportDraftYamlConfiguration(new DraftYamlConfiguration
+        {
+            ChampionOwnership = new DraftYamlChampionOwnershipConfiguration
+            {
+                Default = "none",
+                Owned = ["Darius"]
+            },
+            ChampionGrid = new DraftYamlChampionGridConfiguration
+            {
+                FreeToPlayForQueue = ["Gwen"],
+                FreeToPlay = ["Garen"],
+                Rented = ["Ahri"],
+                LoyaltyReward = ["Ashe"],
+                XboxGPReward = ["Yasuo"],
+                Disabled = ["Darius"]
+            }
+        });
+
+        using JsonDocument gridDocument = JsonDocument.Parse(JsonSerializer.Serialize(
+            state.GetChampSelectGridChampionsPayload(),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        ChampionEligibilitySnapshot snapshot = LeagueChampionEligibilityService.ParseChampSelectGrid(
+            JsonSerializer.Serialize(state.GetChampSelectGridChampionsPayload(), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        DraftYamlConfiguration exported = state.ExportDraftYamlConfiguration();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(GetGridChampionBoolean(gridDocument, 887, "freeToPlayForQueue"), Is.True, "Gwen should be queue free-to-play in the mock grid.");
+            Assert.That(snapshot.GetUnavailableStatus(887), Is.Null, "Queue free-to-play champions should remain selectable even when not owned.");
+            Assert.That(GetGridChampionBoolean(gridDocument, 86, "freeToPlay"), Is.True);
+            Assert.That(GetGridChampionBoolean(gridDocument, 103, "rented"), Is.True);
+            Assert.That(GetGridChampionBoolean(gridDocument, 22, "loyaltyReward"), Is.True);
+            Assert.That(GetGridChampionBoolean(gridDocument, 157, "xboxGPReward"), Is.True);
+            Assert.That(GetGridChampionBoolean(gridDocument, 122, "disabled"), Is.True);
+            Assert.That(snapshot.GetUnavailableStatus(122), Is.EqualTo("Disabled"), "Disabled should win over ownership.");
+            Assert.That(exported.ChampionGrid?.FreeToPlayForQueue, Is.EquivalentTo(new[] { "Gwen" }));
+            Assert.That(exported.ChampionGrid?.Disabled, Is.EquivalentTo(new[] { "Darius" }));
         });
     }
 
@@ -296,10 +355,15 @@ public class ChampionEligibilityTests
         using JsonDocument gridDocument = JsonDocument.Parse(JsonSerializer.Serialize(
             state.GetChampSelectGridChampionsPayload(),
             new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+        return GetGridChampionBoolean(gridDocument, championId, "owned");
+    }
+
+    private static bool GetGridChampionBoolean(JsonDocument gridDocument, int championId, string propertyName)
+    {
         return gridDocument.RootElement
             .EnumerateArray()
             .Single(champion => champion.GetProperty("id").GetInt32() == championId)
-            .GetProperty("owned")
+            .GetProperty(propertyName)
             .GetBoolean();
     }
 

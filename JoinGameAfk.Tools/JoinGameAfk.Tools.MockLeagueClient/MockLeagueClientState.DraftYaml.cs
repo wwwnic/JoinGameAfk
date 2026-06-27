@@ -20,6 +20,7 @@ internal sealed partial class MockLeagueClientState
                 LocalRole = _localPlayerAssignedPosition,
                 RevealEnemyPickIntents = _revealEnemyPickIntents,
                 ChampionOwnership = CreateYamlChampionOwnership(),
+                ChampionGrid = CreateYamlChampionGrid(),
                 ActivePhase = _draftStep.ToString(),
                 BlueTeam = CreateYamlTeamSlots(_myTeam),
                 RedTeam = CreateYamlTeamSlots(_theirTeam),
@@ -44,12 +45,16 @@ internal sealed partial class MockLeagueClientState
         ParsedYamlChampionOwnership? championOwnership = configuration.ChampionOwnership is null
             ? null
             : ParseYamlChampionOwnership(configuration.ChampionOwnership);
+        ParsedYamlChampionGrid? championGrid = configuration.ChampionGrid is null
+            ? null
+            : ParseYamlChampionGrid(configuration.ChampionGrid);
         _queueMode = MockQueueMode.DraftPick;
         SetQueueCore(configuration.QueueId, NormalizeText(configuration.QueueName, "Normal Draft"));
         _localPlayerCellId = NormalizeLocalPlayerCellId(GetYamlLocalSlot(configuration));
         _localPlayerAssignedPosition = MockLeagueClientRoles.NormalizeDisplayRole(GetYamlLocalRole(configuration));
         _revealEnemyPickIntents = configuration.RevealEnemyPickIntents;
         ApplyYamlChampionOwnershipCore(championOwnership);
+        ApplyYamlChampionGridCore(championGrid);
         _sharedDraftPickHoverChampionIds.Clear();
         _sharedDraftBanHoverChampionIds.Clear();
 
@@ -118,6 +123,43 @@ internal sealed partial class MockLeagueClientState
         };
     }
 
+    private DraftYamlChampionGridConfiguration? CreateYamlChampionGrid()
+    {
+        var overrides = _champSelectGridChampionOverrides.Values.ToList();
+        var championGrid = new DraftYamlChampionGridConfiguration
+        {
+            FreeToPlay = CreateYamlChampionGridList(overrides, champion => champion.FreeToPlay),
+            FreeToPlayForQueue = CreateYamlChampionGridList(overrides, champion => champion.FreeToPlayForQueue),
+            LoyaltyReward = CreateYamlChampionGridList(overrides, champion => champion.LoyaltyReward),
+            XboxGPReward = CreateYamlChampionGridList(overrides, champion => champion.XboxGPReward),
+            Rented = CreateYamlChampionGridList(overrides, champion => champion.Rented),
+            Disabled = CreateYamlChampionGridList(overrides, champion => champion.Disabled)
+        };
+
+        return championGrid.FreeToPlay is null
+            && championGrid.FreeToPlayForQueue is null
+            && championGrid.LoyaltyReward is null
+            && championGrid.XboxGPReward is null
+            && championGrid.Rented is null
+            && championGrid.Disabled is null
+            ? null
+            : championGrid;
+    }
+
+    private static List<string>? CreateYamlChampionGridList(
+        IEnumerable<MockChampSelectGridChampion> champions,
+        Func<MockChampSelectGridChampion, bool> selector)
+    {
+        var championNames = champions
+            .Where(selector)
+            .Select(champion => champion.Id)
+            .Order()
+            .Select(championId => GetChampionName(championId) ?? championId.ToString())
+            .ToList();
+
+        return championNames.Count == 0 ? null : championNames;
+    }
+
     private void ApplyYamlChampionOwnershipCore(ParsedYamlChampionOwnership? championOwnership)
     {
         if (championOwnership is null)
@@ -129,6 +171,43 @@ internal sealed partial class MockLeagueClientState
         _notOwnedChampionIds.Clear();
         _notOwnedChampionIds.UnionWith(championOwnership.NotOwnedChampionIds);
         _champSelectGridChampionOverrides.Clear();
+    }
+
+    private void ApplyYamlChampionGridCore(ParsedYamlChampionGrid? championGrid)
+    {
+        if (championGrid is null)
+            return;
+
+        _champSelectGridChampionOverrides.Clear();
+        var championIds = new HashSet<int>();
+        championIds.UnionWith(championGrid.FreeToPlayChampionIds);
+        championIds.UnionWith(championGrid.FreeToPlayForQueueChampionIds);
+        championIds.UnionWith(championGrid.LoyaltyRewardChampionIds);
+        championIds.UnionWith(championGrid.XboxGPRewardChampionIds);
+        championIds.UnionWith(championGrid.RentedChampionIds);
+        championIds.UnionWith(championGrid.DisabledChampionIds);
+
+        foreach (int championId in championIds)
+        {
+            _champSelectGridChampionOverrides[championId] = new MockChampSelectGridChampion(
+                championId,
+                IsYamlChampionOwned(championId),
+                championGrid.FreeToPlayChampionIds.Contains(championId),
+                championGrid.FreeToPlayForQueueChampionIds.Contains(championId),
+                championGrid.LoyaltyRewardChampionIds.Contains(championId),
+                championGrid.XboxGPRewardChampionIds.Contains(championId),
+                championGrid.RentedChampionIds.Contains(championId),
+                championGrid.DisabledChampionIds.Contains(championId));
+        }
+    }
+
+    private bool IsYamlChampionOwned(int championId)
+    {
+        if (_notOwnedChampionIds.Contains(championId))
+            return false;
+
+        return _championOwnershipMode == MockChampionOwnershipMode.AllChampions
+            || _ownedChampionIds.Contains(championId);
     }
 
     private static ParsedYamlChampionOwnership ParseYamlChampionOwnership(
@@ -155,7 +234,22 @@ internal sealed partial class MockLeagueClientState
         return new ParsedYamlChampionOwnership(defaultMode, ownedChampionIds, notOwnedChampionIds);
     }
 
-    private static HashSet<int> ParseYamlChampionIds(IEnumerable<string>? championReferences, string listName)
+    private static ParsedYamlChampionGrid ParseYamlChampionGrid(
+        DraftYamlChampionGridConfiguration configuration)
+    {
+        return new ParsedYamlChampionGrid(
+            ParseYamlChampionIds(configuration.FreeToPlay, "FreeToPlay", "ChampionGrid"),
+            ParseYamlChampionIds(configuration.FreeToPlayForQueue, "FreeToPlayForQueue", "ChampionGrid"),
+            ParseYamlChampionIds(configuration.LoyaltyReward, "LoyaltyReward", "ChampionGrid"),
+            ParseYamlChampionIds(configuration.XboxGPReward, "XboxGPReward", "ChampionGrid"),
+            ParseYamlChampionIds(configuration.Rented, "Rented", "ChampionGrid"),
+            ParseYamlChampionIds(configuration.Disabled, "Disabled", "ChampionGrid"));
+    }
+
+    private static HashSet<int> ParseYamlChampionIds(
+        IEnumerable<string>? championReferences,
+        string listName,
+        string sectionName = "ChampionOwnership")
     {
         var championIds = new HashSet<int>();
         foreach (string? championReference in championReferences ?? [])
@@ -170,7 +264,7 @@ internal sealed partial class MockLeagueClientState
             }
 
             throw new InvalidOperationException(
-                $"ChampionOwnership.{listName} contains an unknown champion: '{championReference}'.");
+                $"{sectionName}.{listName} contains an unknown champion: '{championReference}'.");
         }
 
         return championIds;

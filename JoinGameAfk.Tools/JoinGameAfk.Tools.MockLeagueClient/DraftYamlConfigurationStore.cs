@@ -74,6 +74,7 @@ internal sealed class DraftYamlConfiguration
     public string? LocalPlayerRole { get; set; }
     public bool RevealEnemyPickIntents { get; set; }
     public DraftYamlChampionOwnershipConfiguration? ChampionOwnership { get; set; }
+    public DraftYamlChampionGridConfiguration? ChampionGrid { get; set; }
     public string ActivePhase { get; set; } = DraftPickStep.Planning.ToString();
     public List<DraftYamlTeamSlot> BlueTeam { get; set; } = [];
     public List<DraftYamlTeamSlot> RedTeam { get; set; } = [];
@@ -87,6 +88,16 @@ internal sealed class DraftYamlChampionOwnershipConfiguration
     public List<string>? NotOwned { get; set; }
     public string? Mode { get; set; }
     public List<string>? Champions { get; set; }
+}
+
+internal sealed class DraftYamlChampionGridConfiguration
+{
+    public List<string>? FreeToPlay { get; set; }
+    public List<string>? FreeToPlayForQueue { get; set; }
+    public List<string>? LoyaltyReward { get; set; }
+    public List<string>? XboxGPReward { get; set; }
+    public List<string>? Rented { get; set; }
+    public List<string>? Disabled { get; set; }
 }
 
 internal sealed class DraftYamlTeamSlot

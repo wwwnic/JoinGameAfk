@@ -2017,6 +2017,14 @@ internal sealed record ParsedYamlChampionOwnership(
     IReadOnlyCollection<int> OwnedChampionIds,
     IReadOnlyCollection<int> NotOwnedChampionIds);
 
+internal sealed record ParsedYamlChampionGrid(
+    IReadOnlyCollection<int> FreeToPlayChampionIds,
+    IReadOnlyCollection<int> FreeToPlayForQueueChampionIds,
+    IReadOnlyCollection<int> LoyaltyRewardChampionIds,
+    IReadOnlyCollection<int> XboxGPRewardChampionIds,
+    IReadOnlyCollection<int> RentedChampionIds,
+    IReadOnlyCollection<int> DisabledChampionIds);
+
 internal sealed record DraftStepState(
     string TimerPhase,
     int TimeLeftSeconds,

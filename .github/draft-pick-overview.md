@@ -53,7 +53,9 @@ flowchart LR
         HTTP["LeagueClientHttp\nRead state and send actions"]
         EVENTS["LeagueClientEventStream\nSubscribe to OnJsonApiEvent"]
         CONTROLLER["PhaseController\nResolve ReadyCheck, ChampSelect,\nand gameflow state"]
-        ELIGIBILITY["ChampionEligibilityService\nLoad champion-select eligibility\nonce per session"]
+        GRID["GET /lol-champ-select/v1/all-grid-champions\nTeamBuilderDirect-ChampGridChampion\nowned/freeToPlay/freeToPlayForQueue\nloyaltyReward/xboxGPReward/rented/disabled"]
+        FALLBACK["GET /lol-champions/v1/owned-champions-minimal\nOwned subset fallback\nunknown champions stay allowed"]
+        ELIGIBILITY["ChampionEligibilityService\nLoad champion-select eligibility\nonce per session when a pick plan exists"]
         HANDLERS["ReadyCheck / ChampSelect\nAccept, hover, pick, ban, lock"]
 
         CLIENT -- "process command-line credentials" --> PROCESS
@@ -64,7 +66,10 @@ flowchart LR
         HTTP --> CONTROLLER
         EVENTS --> CONTROLLER
         CONTROLLER --> HANDLERS
-        HTTP --> ELIGIBILITY
+        HTTP --> GRID
+        HTTP --> FALLBACK
+        GRID --> ELIGIBILITY
+        FALLBACK --> ELIGIBILITY
         ELIGIBILITY --> HANDLERS
         HANDLERS --> HTTP
     end
@@ -82,8 +87,16 @@ LCU routes currently used by JoinGameAfk:
 - Champion select: `/lol-champ-select/v1/session`, `/lol-champ-select/v1/session/actions/{actionId}`
 - Champion pick eligibility: `/lol-champ-select/v1/all-grid-champions` once per champion-select session when a pick plan exists. Its grid fields distinguish owned champions from global free-to-play, queue free-to-play, rentals, loyalty rewards, Xbox Game Pass rewards, and disabled champions.
 - Fallback ownership data: `/lol-champions/v1/owned-champions-minimal` only when the champion-select grid is unavailable. Unknown champions remain eligible in this fallback so a missing free-rotation flag cannot block a valid pick.
+- Older per-queue inventory reference: `/lol-champions/v1/inventories/{summonerId}/{queueId}/champions-minimal-per-queue` exists, but JoinGameAfk does not use it because the champion-select grid already includes queue-specific `freeToPlayForQueue` data without an extra current-summoner lookup.
 - Locally installed game version: `/lol-patch/v1/game-version`
 - Live updates: WebSocket subscription to `OnJsonApiEvent`
+
+Champion eligibility reference details:
+
+- The LCU swagger maps `/lol-champ-select/v1/all-grid-champions` to `TeamBuilderDirect-ChampGridChampion`, whose relevant fields are `id`, `owned`, `freeToPlay`, `freeToPlayForQueue`, `loyaltyReward`, `xboxGPReward`, `rented`, and `disabled`.
+- Real-client probe while not in champion select: `/lol-champ-select/v1/all-grid-champions` returned a full grid including the sentinel champion id `-1`; parser ignores ids `<= 0`. `/lol-champ-select/v1/session`, `/lol-champ-select/v1/pickable-champion-ids`, and `/lol-champ-select/v1/disabled-champion-ids` returned no-active-delegate errors outside champion select.
+- Event decision: `OnJsonApiEvent` is useful to detect `/lol-champ-select/v1/session` creation/update and trigger the handler, but it is not a documented replacement for the all-grid payload. Current design keeps one HTTP grid fetch per champion-select session, with the event stream acting as the timing trigger and polling fallback as safety.
+- Reference URLs: [LCU API Docs](https://lcu.kebs.dev/), [KebsCS LCU swagger](https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/refs/heads/main/lcu/swagger.json), [KebsCS endpoint list](https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/refs/heads/main/lcu/data.json).
 
 ## YAML Schema
 
@@ -94,6 +107,15 @@ Root fields
 - LocalSlot: number (alias: LocalPlayerCellId)
 - LocalRole: string (alias: LocalPlayerRole)
 - RevealEnemyPickIntents: bool
+- ChampionOwnership:
+  - Default: `all` or `none`
+  - Owned: champion name/id list used when Default is `none`
+  - NotOwned: champion name/id list that overrides Owned and Default `all`
+- ChampionGrid:
+  - FreeToPlay: champion name/id list
+  - FreeToPlayForQueue: champion name/id list for queue-specific free rotation
+  - LoyaltyReward, XboxGPReward, Rented: champion name/id lists
+  - Disabled: champion name/id list that remains blocked even if owned or free-to-play
 - ActivePhase: string (one of the DraftPickStep names or display names)
 
 Teams
