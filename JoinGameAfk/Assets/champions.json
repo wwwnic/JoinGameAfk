@@ -1,11 +1,13 @@
 {
   "Version": 2,
-  "DataDragonVersion": "16.12.1",
+  "DataDragonVersion": "16.13.1",
   "Locale": "en_US",
+  "LastSyncedAtUtc": "2026-06-28T21:25:11.7519915Z",
   "Champions": [
     {
       "Key": 266,
       "Name": "Aatrox",
+      "EnglishName": "Aatrox",
       "Id": "Aatrox",
       "Roles": [
         "Top"
@@ -14,6 +16,7 @@
     {
       "Key": 103,
       "Name": "Ahri",
+      "EnglishName": "Ahri",
       "Id": "Ahri",
       "Roles": [
         "Mid"
@@ -22,6 +25,7 @@
     {
       "Key": 84,
       "Name": "Akali",
+      "EnglishName": "Akali",
       "Id": "Akali",
       "Roles": [
         "Top",
@@ -31,6 +35,7 @@
     {
       "Key": 166,
       "Name": "Akshan",
+      "EnglishName": "Akshan",
       "Id": "Akshan",
       "Roles": [
         "Top",
@@ -40,6 +45,7 @@
     {
       "Key": 12,
       "Name": "Alistar",
+      "EnglishName": "Alistar",
       "Id": "Alistar",
       "Roles": [
         "Support"
@@ -48,6 +54,7 @@
     {
       "Key": 799,
       "Name": "Ambessa",
+      "EnglishName": "Ambessa",
       "Id": "Ambessa",
       "Roles": [
         "Top",
@@ -57,6 +64,7 @@
     {
       "Key": 32,
       "Name": "Amumu",
+      "EnglishName": "Amumu",
       "Id": "Amumu",
       "Roles": [
         "Jungle",
@@ -66,6 +74,7 @@
     {
       "Key": 34,
       "Name": "Anivia",
+      "EnglishName": "Anivia",
       "Id": "Anivia",
       "Roles": [
         "Mid"
@@ -74,6 +83,7 @@
     {
       "Key": 1,
       "Name": "Annie",
+      "EnglishName": "Annie",
       "Id": "Annie",
       "Roles": [
         "Mid",
@@ -83,6 +93,7 @@
     {
       "Key": 523,
       "Name": "Aphelios",
+      "EnglishName": "Aphelios",
       "Id": "Aphelios",
       "Roles": [
         "Adc"
@@ -91,6 +102,7 @@
     {
       "Key": 22,
       "Name": "Ashe",
+      "EnglishName": "Ashe",
       "Id": "Ashe",
       "Roles": [
         "Adc",
@@ -100,6 +112,7 @@
     {
       "Key": 136,
       "Name": "Aurelion Sol",
+      "EnglishName": "Aurelion Sol",
       "Id": "AurelionSol",
       "Roles": [
         "Mid"
@@ -108,6 +121,7 @@
     {
       "Key": 893,
       "Name": "Aurora",
+      "EnglishName": "Aurora",
       "Id": "Aurora",
       "Roles": [
         "Top",
@@ -117,6 +131,7 @@
     {
       "Key": 268,
       "Name": "Azir",
+      "EnglishName": "Azir",
       "Id": "Azir",
       "Roles": [
         "Mid"
@@ -125,6 +140,7 @@
     {
       "Key": 432,
       "Name": "Bard",
+      "EnglishName": "Bard",
       "Id": "Bard",
       "Roles": [
         "Support"
@@ -132,7 +148,8 @@
     },
     {
       "Key": 200,
-      "Name": "Bel'Veth",
+      "Name": "Bel\u0027Veth",
+      "EnglishName": "Bel\u0027Veth",
       "Id": "Belveth",
       "Roles": [
         "Jungle"
@@ -141,6 +158,7 @@
     {
       "Key": 53,
       "Name": "Blitzcrank",
+      "EnglishName": "Blitzcrank",
       "Id": "Blitzcrank",
       "Roles": [
         "Support"
@@ -149,6 +167,7 @@
     {
       "Key": 63,
       "Name": "Brand",
+      "EnglishName": "Brand",
       "Id": "Brand",
       "Roles": [
         "Jungle",
@@ -159,6 +178,7 @@
     {
       "Key": 201,
       "Name": "Braum",
+      "EnglishName": "Braum",
       "Id": "Braum",
       "Roles": [
         "Support"
@@ -167,6 +187,7 @@
     {
       "Key": 233,
       "Name": "Briar",
+      "EnglishName": "Briar",
       "Id": "Briar",
       "Roles": [
         "Jungle"
@@ -175,6 +196,7 @@
     {
       "Key": 51,
       "Name": "Caitlyn",
+      "EnglishName": "Caitlyn",
       "Id": "Caitlyn",
       "Roles": [
         "Adc"
@@ -183,6 +205,7 @@
     {
       "Key": 164,
       "Name": "Camille",
+      "EnglishName": "Camille",
       "Id": "Camille",
       "Roles": [
         "Top"
@@ -191,6 +214,7 @@
     {
       "Key": 69,
       "Name": "Cassiopeia",
+      "EnglishName": "Cassiopeia",
       "Id": "Cassiopeia",
       "Roles": [
         "Top",
@@ -199,7 +223,8 @@
     },
     {
       "Key": 31,
-      "Name": "Cho'Gath",
+      "Name": "Cho\u0027Gath",
+      "EnglishName": "Cho\u0027Gath",
       "Id": "Chogath",
       "Roles": [
         "Top",
@@ -209,6 +234,7 @@
     {
       "Key": 42,
       "Name": "Corki",
+      "EnglishName": "Corki",
       "Id": "Corki",
       "Roles": [
         "Mid",
@@ -218,6 +244,7 @@
     {
       "Key": 122,
       "Name": "Darius",
+      "EnglishName": "Darius",
       "Id": "Darius",
       "Roles": [
         "Top"
@@ -226,6 +253,7 @@
     {
       "Key": 131,
       "Name": "Diana",
+      "EnglishName": "Diana",
       "Id": "Diana",
       "Roles": [
         "Jungle",
@@ -233,16 +261,9 @@
       ]
     },
     {
-      "Key": 119,
-      "Name": "Draven",
-      "Id": "Draven",
-      "Roles": [
-        "Adc"
-      ]
-    },
-    {
       "Key": 36,
       "Name": "Dr. Mundo",
+      "EnglishName": "Dr. Mundo",
       "Id": "DrMundo",
       "Roles": [
         "Top",
@@ -250,8 +271,18 @@
       ]
     },
     {
+      "Key": 119,
+      "Name": "Draven",
+      "EnglishName": "Draven",
+      "Id": "Draven",
+      "Roles": [
+        "Adc"
+      ]
+    },
+    {
       "Key": 245,
       "Name": "Ekko",
+      "EnglishName": "Ekko",
       "Id": "Ekko",
       "Roles": [
         "Jungle",
@@ -261,6 +292,7 @@
     {
       "Key": 60,
       "Name": "Elise",
+      "EnglishName": "Elise",
       "Id": "Elise",
       "Roles": [
         "Jungle"
@@ -269,6 +301,7 @@
     {
       "Key": 28,
       "Name": "Evelynn",
+      "EnglishName": "Evelynn",
       "Id": "Evelynn",
       "Roles": [
         "Jungle"
@@ -277,6 +310,7 @@
     {
       "Key": 81,
       "Name": "Ezreal",
+      "EnglishName": "Ezreal",
       "Id": "Ezreal",
       "Roles": [
         "Adc"
@@ -285,6 +319,7 @@
     {
       "Key": 9,
       "Name": "Fiddlesticks",
+      "EnglishName": "Fiddlesticks",
       "Id": "Fiddlesticks",
       "Roles": [
         "Jungle"
@@ -293,6 +328,7 @@
     {
       "Key": 114,
       "Name": "Fiora",
+      "EnglishName": "Fiora",
       "Id": "Fiora",
       "Roles": [
         "Top"
@@ -301,6 +337,7 @@
     {
       "Key": 105,
       "Name": "Fizz",
+      "EnglishName": "Fizz",
       "Id": "Fizz",
       "Roles": [
         "Mid"
@@ -309,6 +346,7 @@
     {
       "Key": 3,
       "Name": "Galio",
+      "EnglishName": "Galio",
       "Id": "Galio",
       "Roles": [
         "Mid",
@@ -318,6 +356,7 @@
     {
       "Key": 41,
       "Name": "Gangplank",
+      "EnglishName": "Gangplank",
       "Id": "Gangplank",
       "Roles": [
         "Top"
@@ -326,6 +365,7 @@
     {
       "Key": 86,
       "Name": "Garen",
+      "EnglishName": "Garen",
       "Id": "Garen",
       "Roles": [
         "Top"
@@ -334,6 +374,7 @@
     {
       "Key": 150,
       "Name": "Gnar",
+      "EnglishName": "Gnar",
       "Id": "Gnar",
       "Roles": [
         "Top"
@@ -342,6 +383,7 @@
     {
       "Key": 79,
       "Name": "Gragas",
+      "EnglishName": "Gragas",
       "Id": "Gragas",
       "Roles": [
         "Top",
@@ -352,6 +394,7 @@
     {
       "Key": 104,
       "Name": "Graves",
+      "EnglishName": "Graves",
       "Id": "Graves",
       "Roles": [
         "Jungle"
@@ -360,6 +403,7 @@
     {
       "Key": 887,
       "Name": "Gwen",
+      "EnglishName": "Gwen",
       "Id": "Gwen",
       "Roles": [
         "Top",
@@ -369,6 +413,7 @@
     {
       "Key": 120,
       "Name": "Hecarim",
+      "EnglishName": "Hecarim",
       "Id": "Hecarim",
       "Roles": [
         "Jungle"
@@ -377,6 +422,7 @@
     {
       "Key": 74,
       "Name": "Heimerdinger",
+      "EnglishName": "Heimerdinger",
       "Id": "Heimerdinger",
       "Roles": [
         "Top",
@@ -387,6 +433,7 @@
     {
       "Key": 910,
       "Name": "Hwei",
+      "EnglishName": "Hwei",
       "Id": "Hwei",
       "Roles": [
         "Mid",
@@ -396,6 +443,7 @@
     {
       "Key": 420,
       "Name": "Illaoi",
+      "EnglishName": "Illaoi",
       "Id": "Illaoi",
       "Roles": [
         "Top"
@@ -404,6 +452,7 @@
     {
       "Key": 39,
       "Name": "Irelia",
+      "EnglishName": "Irelia",
       "Id": "Irelia",
       "Roles": [
         "Top",
@@ -413,6 +462,7 @@
     {
       "Key": 427,
       "Name": "Ivern",
+      "EnglishName": "Ivern",
       "Id": "Ivern",
       "Roles": [
         "Jungle"
@@ -421,6 +471,7 @@
     {
       "Key": 40,
       "Name": "Janna",
+      "EnglishName": "Janna",
       "Id": "Janna",
       "Roles": [
         "Support"
@@ -429,6 +480,7 @@
     {
       "Key": 59,
       "Name": "Jarvan IV",
+      "EnglishName": "Jarvan IV",
       "Id": "JarvanIV",
       "Roles": [
         "Jungle",
@@ -438,6 +490,7 @@
     {
       "Key": 24,
       "Name": "Jax",
+      "EnglishName": "Jax",
       "Id": "Jax",
       "Roles": [
         "Top",
@@ -447,6 +500,7 @@
     {
       "Key": 126,
       "Name": "Jayce",
+      "EnglishName": "Jayce",
       "Id": "Jayce",
       "Roles": [
         "Top",
@@ -456,6 +510,7 @@
     {
       "Key": 202,
       "Name": "Jhin",
+      "EnglishName": "Jhin",
       "Id": "Jhin",
       "Roles": [
         "Adc"
@@ -464,14 +519,25 @@
     {
       "Key": 222,
       "Name": "Jinx",
+      "EnglishName": "Jinx",
       "Id": "Jinx",
       "Roles": [
         "Adc"
       ]
     },
     {
+      "Key": 897,
+      "Name": "K\u0027Sante",
+      "EnglishName": "K\u0027Sante",
+      "Id": "KSante",
+      "Roles": [
+        "Top"
+      ]
+    },
+    {
       "Key": 145,
-      "Name": "Kai'Sa",
+      "Name": "Kai\u0027Sa",
+      "EnglishName": "Kai\u0027Sa",
       "Id": "Kaisa",
       "Roles": [
         "Adc"
@@ -480,6 +546,7 @@
     {
       "Key": 429,
       "Name": "Kalista",
+      "EnglishName": "Kalista",
       "Id": "Kalista",
       "Roles": [
         "Adc"
@@ -488,6 +555,7 @@
     {
       "Key": 43,
       "Name": "Karma",
+      "EnglishName": "Karma",
       "Id": "Karma",
       "Roles": [
         "Top",
@@ -498,6 +566,7 @@
     {
       "Key": 30,
       "Name": "Karthus",
+      "EnglishName": "Karthus",
       "Id": "Karthus",
       "Roles": [
         "Jungle",
@@ -508,6 +577,7 @@
     {
       "Key": 38,
       "Name": "Kassadin",
+      "EnglishName": "Kassadin",
       "Id": "Kassadin",
       "Roles": [
         "Mid"
@@ -516,6 +586,7 @@
     {
       "Key": 55,
       "Name": "Katarina",
+      "EnglishName": "Katarina",
       "Id": "Katarina",
       "Roles": [
         "Mid"
@@ -524,6 +595,7 @@
     {
       "Key": 10,
       "Name": "Kayle",
+      "EnglishName": "Kayle",
       "Id": "Kayle",
       "Roles": [
         "Top",
@@ -533,6 +605,7 @@
     {
       "Key": 141,
       "Name": "Kayn",
+      "EnglishName": "Kayn",
       "Id": "Kayn",
       "Roles": [
         "Jungle"
@@ -541,6 +614,7 @@
     {
       "Key": 85,
       "Name": "Kennen",
+      "EnglishName": "Kennen",
       "Id": "Kennen",
       "Roles": [
         "Top",
@@ -549,7 +623,8 @@
     },
     {
       "Key": 121,
-      "Name": "Kha'Zix",
+      "Name": "Kha\u0027Zix",
+      "EnglishName": "Kha\u0027Zix",
       "Id": "Khazix",
       "Roles": [
         "Jungle"
@@ -558,6 +633,7 @@
     {
       "Key": 203,
       "Name": "Kindred",
+      "EnglishName": "Kindred",
       "Id": "Kindred",
       "Roles": [
         "Jungle"
@@ -566,6 +642,7 @@
     {
       "Key": 240,
       "Name": "Kled",
+      "EnglishName": "Kled",
       "Id": "Kled",
       "Roles": [
         "Top",
@@ -574,7 +651,8 @@
     },
     {
       "Key": 96,
-      "Name": "Kog'Maw",
+      "Name": "Kog\u0027Maw",
+      "EnglishName": "Kog\u0027Maw",
       "Id": "KogMaw",
       "Roles": [
         "Adc",
@@ -582,16 +660,9 @@
       ]
     },
     {
-      "Key": 897,
-      "Name": "K'Sante",
-      "Id": "KSante",
-      "Roles": [
-        "Top"
-      ]
-    },
-    {
       "Key": 7,
       "Name": "LeBlanc",
+      "EnglishName": "LeBlanc",
       "Id": "Leblanc",
       "Roles": [
         "Mid"
@@ -600,6 +671,7 @@
     {
       "Key": 64,
       "Name": "Lee Sin",
+      "EnglishName": "Lee Sin",
       "Id": "LeeSin",
       "Roles": [
         "Jungle"
@@ -608,6 +680,7 @@
     {
       "Key": 89,
       "Name": "Leona",
+      "EnglishName": "Leona",
       "Id": "Leona",
       "Roles": [
         "Support"
@@ -616,6 +689,7 @@
     {
       "Key": 876,
       "Name": "Lillia",
+      "EnglishName": "Lillia",
       "Id": "Lillia",
       "Roles": [
         "Top",
@@ -625,6 +699,7 @@
     {
       "Key": 127,
       "Name": "Lissandra",
+      "EnglishName": "Lissandra",
       "Id": "Lissandra",
       "Roles": [
         "Top",
@@ -632,8 +707,18 @@
       ]
     },
     {
+      "Key": 805,
+      "Name": "Locke",
+      "EnglishName": "Locke",
+      "Id": "Locke",
+      "Roles": [
+        "Mid"
+      ]
+    },
+    {
       "Key": 236,
       "Name": "Lucian",
+      "EnglishName": "Lucian",
       "Id": "Lucian",
       "Roles": [
         "Mid",
@@ -643,6 +728,7 @@
     {
       "Key": 117,
       "Name": "Lulu",
+      "EnglishName": "Lulu",
       "Id": "Lulu",
       "Roles": [
         "Top",
@@ -652,6 +738,7 @@
     {
       "Key": 99,
       "Name": "Lux",
+      "EnglishName": "Lux",
       "Id": "Lux",
       "Roles": [
         "Mid",
@@ -661,6 +748,7 @@
     {
       "Key": 54,
       "Name": "Malphite",
+      "EnglishName": "Malphite",
       "Id": "Malphite",
       "Roles": [
         "Top",
@@ -671,6 +759,7 @@
     {
       "Key": 90,
       "Name": "Malzahar",
+      "EnglishName": "Malzahar",
       "Id": "Malzahar",
       "Roles": [
         "Mid"
@@ -679,6 +768,7 @@
     {
       "Key": 57,
       "Name": "Maokai",
+      "EnglishName": "Maokai",
       "Id": "Maokai",
       "Roles": [
         "Top",
@@ -689,31 +779,44 @@
     {
       "Key": 11,
       "Name": "Master Yi",
+      "EnglishName": "Master Yi",
       "Id": "MasterYi",
       "Roles": [
         "Jungle"
       ]
     },
     {
+      "Key": 800,
+      "Name": "Mel",
+      "EnglishName": "Mel",
+      "Id": "Mel",
+      "Roles": [
+        "Mid",
+        "Support"
+      ]
+    },
+    {
+      "Key": 902,
+      "Name": "Milio",
+      "EnglishName": "Milio",
+      "Id": "Milio",
+      "Roles": [
+        "Support"
+      ]
+    },
+    {
       "Key": 21,
       "Name": "Miss Fortune",
+      "EnglishName": "Miss Fortune",
       "Id": "MissFortune",
       "Roles": [
         "Adc"
       ]
     },
     {
-      "Key": 62,
-      "Name": "Wukong",
-      "Id": "MonkeyKing",
-      "Roles": [
-        "Top",
-        "Jungle"
-      ]
-    },
-    {
       "Key": 82,
       "Name": "Mordekaiser",
+      "EnglishName": "Mordekaiser",
       "Id": "Mordekaiser",
       "Roles": [
         "Top",
@@ -723,6 +826,7 @@
     {
       "Key": 25,
       "Name": "Morgana",
+      "EnglishName": "Morgana",
       "Id": "Morgana",
       "Roles": [
         "Jungle",
@@ -733,6 +837,7 @@
     {
       "Key": 950,
       "Name": "Naafiri",
+      "EnglishName": "Naafiri",
       "Id": "Naafiri",
       "Roles": [
         "Top",
@@ -742,6 +847,7 @@
     {
       "Key": 267,
       "Name": "Nami",
+      "EnglishName": "Nami",
       "Id": "Nami",
       "Roles": [
         "Support"
@@ -750,6 +856,7 @@
     {
       "Key": 75,
       "Name": "Nasus",
+      "EnglishName": "Nasus",
       "Id": "Nasus",
       "Roles": [
         "Top"
@@ -758,6 +865,7 @@
     {
       "Key": 111,
       "Name": "Nautilus",
+      "EnglishName": "Nautilus",
       "Id": "Nautilus",
       "Roles": [
         "Jungle",
@@ -767,6 +875,7 @@
     {
       "Key": 518,
       "Name": "Neeko",
+      "EnglishName": "Neeko",
       "Id": "Neeko",
       "Roles": [
         "Mid",
@@ -776,6 +885,7 @@
     {
       "Key": 76,
       "Name": "Nidalee",
+      "EnglishName": "Nidalee",
       "Id": "Nidalee",
       "Roles": [
         "Jungle"
@@ -784,6 +894,7 @@
     {
       "Key": 895,
       "Name": "Nilah",
+      "EnglishName": "Nilah",
       "Id": "Nilah",
       "Roles": [
         "Adc"
@@ -792,6 +903,7 @@
     {
       "Key": 56,
       "Name": "Nocturne",
+      "EnglishName": "Nocturne",
       "Id": "Nocturne",
       "Roles": [
         "Jungle",
@@ -800,7 +912,8 @@
     },
     {
       "Key": 20,
-      "Name": "Nunu & Willump",
+      "Name": "Nunu \u0026 Willump",
+      "EnglishName": "Nunu \u0026 Willump",
       "Id": "Nunu",
       "Roles": [
         "Jungle",
@@ -810,6 +923,7 @@
     {
       "Key": 2,
       "Name": "Olaf",
+      "EnglishName": "Olaf",
       "Id": "Olaf",
       "Roles": [
         "Top",
@@ -819,6 +933,7 @@
     {
       "Key": 61,
       "Name": "Orianna",
+      "EnglishName": "Orianna",
       "Id": "Orianna",
       "Roles": [
         "Mid"
@@ -827,6 +942,7 @@
     {
       "Key": 516,
       "Name": "Ornn",
+      "EnglishName": "Ornn",
       "Id": "Ornn",
       "Roles": [
         "Top"
@@ -835,6 +951,7 @@
     {
       "Key": 80,
       "Name": "Pantheon",
+      "EnglishName": "Pantheon",
       "Id": "Pantheon",
       "Roles": [
         "Top",
@@ -845,6 +962,7 @@
     {
       "Key": 78,
       "Name": "Poppy",
+      "EnglishName": "Poppy",
       "Id": "Poppy",
       "Roles": [
         "Top",
@@ -855,6 +973,7 @@
     {
       "Key": 555,
       "Name": "Pyke",
+      "EnglishName": "Pyke",
       "Id": "Pyke",
       "Roles": [
         "Support"
@@ -863,6 +982,7 @@
     {
       "Key": 246,
       "Name": "Qiyana",
+      "EnglishName": "Qiyana",
       "Id": "Qiyana",
       "Roles": [
         "Jungle",
@@ -872,6 +992,7 @@
     {
       "Key": 133,
       "Name": "Quinn",
+      "EnglishName": "Quinn",
       "Id": "Quinn",
       "Roles": [
         "Top"
@@ -880,6 +1001,7 @@
     {
       "Key": 497,
       "Name": "Rakan",
+      "EnglishName": "Rakan",
       "Id": "Rakan",
       "Roles": [
         "Support"
@@ -888,6 +1010,7 @@
     {
       "Key": 33,
       "Name": "Rammus",
+      "EnglishName": "Rammus",
       "Id": "Rammus",
       "Roles": [
         "Top",
@@ -896,7 +1019,8 @@
     },
     {
       "Key": 421,
-      "Name": "Rek'Sai",
+      "Name": "Rek\u0027Sai",
+      "EnglishName": "Rek\u0027Sai",
       "Id": "RekSai",
       "Roles": [
         "Jungle"
@@ -905,6 +1029,7 @@
     {
       "Key": 526,
       "Name": "Rell",
+      "EnglishName": "Rell",
       "Id": "Rell",
       "Roles": [
         "Jungle",
@@ -914,6 +1039,7 @@
     {
       "Key": 888,
       "Name": "Renata Glasc",
+      "EnglishName": "Renata Glasc",
       "Id": "Renata",
       "Roles": [
         "Support"
@@ -922,6 +1048,7 @@
     {
       "Key": 58,
       "Name": "Renekton",
+      "EnglishName": "Renekton",
       "Id": "Renekton",
       "Roles": [
         "Top",
@@ -931,6 +1058,7 @@
     {
       "Key": 107,
       "Name": "Rengar",
+      "EnglishName": "Rengar",
       "Id": "Rengar",
       "Roles": [
         "Top",
@@ -940,6 +1068,7 @@
     {
       "Key": 92,
       "Name": "Riven",
+      "EnglishName": "Riven",
       "Id": "Riven",
       "Roles": [
         "Top"
@@ -948,6 +1077,7 @@
     {
       "Key": 68,
       "Name": "Rumble",
+      "EnglishName": "Rumble",
       "Id": "Rumble",
       "Roles": [
         "Top",
@@ -958,6 +1088,7 @@
     {
       "Key": 13,
       "Name": "Ryze",
+      "EnglishName": "Ryze",
       "Id": "Ryze",
       "Roles": [
         "Top",
@@ -967,6 +1098,7 @@
     {
       "Key": 360,
       "Name": "Samira",
+      "EnglishName": "Samira",
       "Id": "Samira",
       "Roles": [
         "Adc"
@@ -975,6 +1107,7 @@
     {
       "Key": 113,
       "Name": "Sejuani",
+      "EnglishName": "Sejuani",
       "Id": "Sejuani",
       "Roles": [
         "Top",
@@ -984,6 +1117,7 @@
     {
       "Key": 235,
       "Name": "Senna",
+      "EnglishName": "Senna",
       "Id": "Senna",
       "Roles": [
         "Adc",
@@ -993,6 +1127,7 @@
     {
       "Key": 147,
       "Name": "Seraphine",
+      "EnglishName": "Seraphine",
       "Id": "Seraphine",
       "Roles": [
         "Mid",
@@ -1003,6 +1138,7 @@
     {
       "Key": 875,
       "Name": "Sett",
+      "EnglishName": "Sett",
       "Id": "Sett",
       "Roles": [
         "Top",
@@ -1013,6 +1149,7 @@
     {
       "Key": 35,
       "Name": "Shaco",
+      "EnglishName": "Shaco",
       "Id": "Shaco",
       "Roles": [
         "Jungle",
@@ -1022,6 +1159,7 @@
     {
       "Key": 98,
       "Name": "Shen",
+      "EnglishName": "Shen",
       "Id": "Shen",
       "Roles": [
         "Top",
@@ -1031,6 +1169,7 @@
     {
       "Key": 102,
       "Name": "Shyvana",
+      "EnglishName": "Shyvana",
       "Id": "Shyvana",
       "Roles": [
         "Top",
@@ -1040,6 +1179,7 @@
     {
       "Key": 27,
       "Name": "Singed",
+      "EnglishName": "Singed",
       "Id": "Singed",
       "Roles": [
         "Top",
@@ -1049,6 +1189,7 @@
     {
       "Key": 14,
       "Name": "Sion",
+      "EnglishName": "Sion",
       "Id": "Sion",
       "Roles": [
         "Top"
@@ -1057,6 +1198,7 @@
     {
       "Key": 15,
       "Name": "Sivir",
+      "EnglishName": "Sivir",
       "Id": "Sivir",
       "Roles": [
         "Adc"
@@ -1065,6 +1207,7 @@
     {
       "Key": 72,
       "Name": "Skarner",
+      "EnglishName": "Skarner",
       "Id": "Skarner",
       "Roles": [
         "Top",
@@ -1072,8 +1215,18 @@
       ]
     },
     {
+      "Key": 901,
+      "Name": "Smolder",
+      "EnglishName": "Smolder",
+      "Id": "Smolder",
+      "Roles": [
+        "Adc"
+      ]
+    },
+    {
       "Key": 37,
       "Name": "Sona",
+      "EnglishName": "Sona",
       "Id": "Sona",
       "Roles": [
         "Support"
@@ -1082,6 +1235,7 @@
     {
       "Key": 16,
       "Name": "Soraka",
+      "EnglishName": "Soraka",
       "Id": "Soraka",
       "Roles": [
         "Support"
@@ -1090,6 +1244,7 @@
     {
       "Key": 50,
       "Name": "Swain",
+      "EnglishName": "Swain",
       "Id": "Swain",
       "Roles": [
         "Mid",
@@ -1100,6 +1255,7 @@
     {
       "Key": 517,
       "Name": "Sylas",
+      "EnglishName": "Sylas",
       "Id": "Sylas",
       "Roles": [
         "Top",
@@ -1110,6 +1266,7 @@
     {
       "Key": 134,
       "Name": "Syndra",
+      "EnglishName": "Syndra",
       "Id": "Syndra",
       "Roles": [
         "Mid"
@@ -1118,6 +1275,7 @@
     {
       "Key": 223,
       "Name": "Tahm Kench",
+      "EnglishName": "Tahm Kench",
       "Id": "TahmKench",
       "Roles": [
         "Top",
@@ -1127,6 +1285,7 @@
     {
       "Key": 163,
       "Name": "Taliyah",
+      "EnglishName": "Taliyah",
       "Id": "Taliyah",
       "Roles": [
         "Jungle",
@@ -1136,6 +1295,7 @@
     {
       "Key": 91,
       "Name": "Talon",
+      "EnglishName": "Talon",
       "Id": "Talon",
       "Roles": [
         "Jungle",
@@ -1145,6 +1305,7 @@
     {
       "Key": 44,
       "Name": "Taric",
+      "EnglishName": "Taric",
       "Id": "Taric",
       "Roles": [
         "Support"
@@ -1153,6 +1314,7 @@
     {
       "Key": 17,
       "Name": "Teemo",
+      "EnglishName": "Teemo",
       "Id": "Teemo",
       "Roles": [
         "Top"
@@ -1161,6 +1323,7 @@
     {
       "Key": 412,
       "Name": "Thresh",
+      "EnglishName": "Thresh",
       "Id": "Thresh",
       "Roles": [
         "Support"
@@ -1169,6 +1332,7 @@
     {
       "Key": 18,
       "Name": "Tristana",
+      "EnglishName": "Tristana",
       "Id": "Tristana",
       "Roles": [
         "Mid",
@@ -1178,6 +1342,7 @@
     {
       "Key": 48,
       "Name": "Trundle",
+      "EnglishName": "Trundle",
       "Id": "Trundle",
       "Roles": [
         "Top",
@@ -1187,6 +1352,7 @@
     {
       "Key": 23,
       "Name": "Tryndamere",
+      "EnglishName": "Tryndamere",
       "Id": "Tryndamere",
       "Roles": [
         "Top",
@@ -1196,6 +1362,7 @@
     {
       "Key": 4,
       "Name": "Twisted Fate",
+      "EnglishName": "Twisted Fate",
       "Id": "TwistedFate",
       "Roles": [
         "Mid"
@@ -1204,6 +1371,7 @@
     {
       "Key": 29,
       "Name": "Twitch",
+      "EnglishName": "Twitch",
       "Id": "Twitch",
       "Roles": [
         "Jungle",
@@ -1214,6 +1382,7 @@
     {
       "Key": 77,
       "Name": "Udyr",
+      "EnglishName": "Udyr",
       "Id": "Udyr",
       "Roles": [
         "Top",
@@ -1223,6 +1392,7 @@
     {
       "Key": 6,
       "Name": "Urgot",
+      "EnglishName": "Urgot",
       "Id": "Urgot",
       "Roles": [
         "Top"
@@ -1231,6 +1401,7 @@
     {
       "Key": 110,
       "Name": "Varus",
+      "EnglishName": "Varus",
       "Id": "Varus",
       "Roles": [
         "Adc"
@@ -1239,6 +1410,7 @@
     {
       "Key": 67,
       "Name": "Vayne",
+      "EnglishName": "Vayne",
       "Id": "Vayne",
       "Roles": [
         "Top",
@@ -1248,6 +1420,7 @@
     {
       "Key": 45,
       "Name": "Veigar",
+      "EnglishName": "Veigar",
       "Id": "Veigar",
       "Roles": [
         "Mid",
@@ -1257,7 +1430,8 @@
     },
     {
       "Key": 161,
-      "Name": "Vel'Koz",
+      "Name": "Vel\u0027Koz",
+      "EnglishName": "Vel\u0027Koz",
       "Id": "Velkoz",
       "Roles": [
         "Mid",
@@ -1267,6 +1441,7 @@
     {
       "Key": 711,
       "Name": "Vex",
+      "EnglishName": "Vex",
       "Id": "Vex",
       "Roles": [
         "Mid"
@@ -1275,6 +1450,7 @@
     {
       "Key": 254,
       "Name": "Vi",
+      "EnglishName": "Vi",
       "Id": "Vi",
       "Roles": [
         "Jungle"
@@ -1283,6 +1459,7 @@
     {
       "Key": 234,
       "Name": "Viego",
+      "EnglishName": "Viego",
       "Id": "Viego",
       "Roles": [
         "Jungle"
@@ -1291,6 +1468,7 @@
     {
       "Key": 112,
       "Name": "Viktor",
+      "EnglishName": "Viktor",
       "Id": "Viktor",
       "Roles": [
         "Mid"
@@ -1299,6 +1477,7 @@
     {
       "Key": 8,
       "Name": "Vladimir",
+      "EnglishName": "Vladimir",
       "Id": "Vladimir",
       "Roles": [
         "Top",
@@ -1308,6 +1487,7 @@
     {
       "Key": 106,
       "Name": "Volibear",
+      "EnglishName": "Volibear",
       "Id": "Volibear",
       "Roles": [
         "Top",
@@ -1317,7 +1497,18 @@
     {
       "Key": 19,
       "Name": "Warwick",
+      "EnglishName": "Warwick",
       "Id": "Warwick",
+      "Roles": [
+        "Top",
+        "Jungle"
+      ]
+    },
+    {
+      "Key": 62,
+      "Name": "Wukong",
+      "EnglishName": "Wukong",
+      "Id": "MonkeyKing",
       "Roles": [
         "Top",
         "Jungle"
@@ -1326,6 +1517,7 @@
     {
       "Key": 498,
       "Name": "Xayah",
+      "EnglishName": "Xayah",
       "Id": "Xayah",
       "Roles": [
         "Adc"
@@ -1334,6 +1526,7 @@
     {
       "Key": 101,
       "Name": "Xerath",
+      "EnglishName": "Xerath",
       "Id": "Xerath",
       "Roles": [
         "Mid",
@@ -1343,6 +1536,7 @@
     {
       "Key": 5,
       "Name": "Xin Zhao",
+      "EnglishName": "Xin Zhao",
       "Id": "XinZhao",
       "Roles": [
         "Jungle"
@@ -1351,6 +1545,7 @@
     {
       "Key": 157,
       "Name": "Yasuo",
+      "EnglishName": "Yasuo",
       "Id": "Yasuo",
       "Roles": [
         "Top",
@@ -1361,6 +1556,7 @@
     {
       "Key": 777,
       "Name": "Yone",
+      "EnglishName": "Yone",
       "Id": "Yone",
       "Roles": [
         "Top",
@@ -1370,22 +1566,43 @@
     {
       "Key": 83,
       "Name": "Yorick",
+      "EnglishName": "Yorick",
       "Id": "Yorick",
       "Roles": [
         "Top"
       ]
     },
     {
+      "Key": 804,
+      "Name": "Yunara",
+      "EnglishName": "Yunara",
+      "Id": "Yunara",
+      "Roles": [
+        "Adc"
+      ]
+    },
+    {
       "Key": 350,
       "Name": "Yuumi",
+      "EnglishName": "Yuumi",
       "Id": "Yuumi",
       "Roles": [
         "Support"
       ]
     },
     {
+      "Key": 904,
+      "Name": "Zaahen",
+      "EnglishName": "Zaahen",
+      "Id": "Zaahen",
+      "Roles": [
+        "Top"
+      ]
+    },
+    {
       "Key": 154,
       "Name": "Zac",
+      "EnglishName": "Zac",
       "Id": "Zac",
       "Roles": [
         "Top",
@@ -1396,6 +1613,7 @@
     {
       "Key": 238,
       "Name": "Zed",
+      "EnglishName": "Zed",
       "Id": "Zed",
       "Roles": [
         "Jungle",
@@ -1405,6 +1623,7 @@
     {
       "Key": 221,
       "Name": "Zeri",
+      "EnglishName": "Zeri",
       "Id": "Zeri",
       "Roles": [
         "Adc"
@@ -1413,6 +1632,7 @@
     {
       "Key": 115,
       "Name": "Ziggs",
+      "EnglishName": "Ziggs",
       "Id": "Ziggs",
       "Roles": [
         "Mid",
@@ -1422,6 +1642,7 @@
     {
       "Key": 26,
       "Name": "Zilean",
+      "EnglishName": "Zilean",
       "Id": "Zilean",
       "Roles": [
         "Mid",
@@ -1431,6 +1652,7 @@
     {
       "Key": 142,
       "Name": "Zoe",
+      "EnglishName": "Zoe",
       "Id": "Zoe",
       "Roles": [
         "Mid"
@@ -1439,6 +1661,7 @@
     {
       "Key": 143,
       "Name": "Zyra",
+      "EnglishName": "Zyra",
       "Id": "Zyra",
       "Roles": [
         "Jungle",
