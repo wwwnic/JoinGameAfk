@@ -1326,7 +1326,7 @@
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="Champion list"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="Keep your champion list current for the selected game region and language. Pictures are not downloaded here, use the pencil in Role Plans to add or refresh images."
+                                                <TextBlock Text="Keep your champion list current for the selected game region and language. Pictures are only downloaded here when new champions are detected and the option below is enabled."
                                                            Style="{StaticResource FieldHintStyle}"
                                                            TextWrapping="Wrap" />
                                             </StackPanel>
@@ -1338,6 +1338,28 @@
                                                     Padding="14,8"
                                                     HorizontalAlignment="Right" />
                                         </Grid>
+
+                                        <Grid Margin="0,12,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="14" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Download pictures for new champions"
+                                                           Style="{StaticResource FieldLabelStyle}" />
+                                                <TextBlock Text="When Update Champion List finds champion IDs that are not in your local list, download only those champions' Riot Data Dragon tile images."
+                                                           Style="{StaticResource FieldHintStyle}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <CheckBox x:Name="ChampionDataDownloadNewChampionPicturesCheckBox"
+                                                      Grid.Column="2"
+                                                      Style="{StaticResource AppCheckBoxStyle}"
+                                                      VerticalAlignment="Center"
+                                                      Checked="ChampionDataSettingCheckBox_Changed"
+                                                      Unchecked="ChampionDataSettingCheckBox_Changed" />
+                                        </Grid>
+
                                         <TextBlock x:Name="ChampionCatalogSyncStatusTextBlock"
                                                    Foreground="{DynamicResource TextSoftBrush}"
                                                    FontSize="12"

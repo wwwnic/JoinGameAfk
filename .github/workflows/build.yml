@@ -38,6 +38,29 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore JoinGameAfk/JoinGameAfk.csproj
 
+      - name: Resolve Data Dragon seed version
+        shell: pwsh
+        run: |
+          $versions = Invoke-RestMethod -Uri 'https://ddragon.leagueoflegends.com/api/versions.json'
+          $dataDragonVersion = $versions | Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($dataDragonVersion)) {
+            throw "Riot Data Dragon returned no versions."
+          }
+
+          $dataDragonVersion = $dataDragonVersion.Trim()
+          "DATA_DRAGON_VERSION=$dataDragonVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "Resolved Data Dragon seed version: $dataDragonVersion"
+
+      - name: Update bundled champion catalog
+        shell: pwsh
+        run: >
+          dotnet run --project JoinGameAfk.Tools/JoinGameAfk.Tools.ChampionCatalogSeeder/JoinGameAfk.Tools.ChampionCatalogSeeder.csproj --configuration Release --
+          --catalog-file "${{ github.workspace }}\JoinGameAfk\Assets\champions.json"
+          --version "$env:DATA_DRAGON_VERSION"
+          --platform "GLOBAL"
+          --locale "en_US"
+
       - name: Build solution
         run: dotnet build JoinGameAfk/JoinGameAfk.csproj --configuration Release --no-restore -p:Version=$env:APP_VERSION -p:InformationalVersion=$env:APP_VERSION
 
@@ -54,20 +77,6 @@ jobs:
           if (Test-Path $cacheFile) {
             Remove-Item -LiteralPath $cacheFile -Force
           }
-
-      - name: Resolve Data Dragon seed version
-        shell: pwsh
-        run: |
-          $versions = Invoke-RestMethod -Uri 'https://ddragon.leagueoflegends.com/api/versions.json'
-          $dataDragonVersion = $versions | Select-Object -First 1
-
-          if ([string]::IsNullOrWhiteSpace($dataDragonVersion)) {
-            throw "Riot Data Dragon returned no versions."
-          }
-
-          $dataDragonVersion = $dataDragonVersion.Trim()
-          "DATA_DRAGON_VERSION=$dataDragonVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          "Resolved Data Dragon seed version: $dataDragonVersion"
 
       - name: Generate champion tile seed cache
         shell: pwsh

@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{7D9FE7B5
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.Tests", "JoinGameAfk.Tests\JoinGameAfk.Tests.csproj", "{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JoinGameAfk.Tools.ChampionCatalogSeeder", "JoinGameAfk.Tools\JoinGameAfk.Tools.ChampionCatalogSeeder\JoinGameAfk.Tools.ChampionCatalogSeeder.csproj", "{315B474D-13A7-4F93-9731-BC0AAD00FF5F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -56,6 +58,10 @@ Global
 		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{794EE98C-E7A2-79EA-BAA9-4419A8A0188C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{315B474D-13A7-4F93-9731-BC0AAD00FF5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{315B474D-13A7-4F93-9731-BC0AAD00FF5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{315B474D-13A7-4F93-9731-BC0AAD00FF5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{315B474D-13A7-4F93-9731-BC0AAD00FF5F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,6 +70,7 @@ Global
 		{01E10F6D-E465-48EF-B4A9-4A0C0CD5B5FE} = {7D9FE7B5-8F58-48C7-B856-1A8E2C36F6C7}
 		{ABFF5239-3ED4-8094-EE28-A98329B88CD5} = {7D9FE7B5-8F58-48C7-B856-1A8E2C36F6C7}
 		{44ED2A1F-4CC4-46B7-B0D3-19D94AB3E358} = {7D9FE7B5-8F58-48C7-B856-1A8E2C36F6C7}
+		{315B474D-13A7-4F93-9731-BC0AAD00FF5F} = {7D9FE7B5-8F58-48C7-B856-1A8E2C36F6C7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32187A6F-A838-4679-BCD2-D02485ED1B51}

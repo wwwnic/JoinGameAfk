@@ -126,6 +126,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 ChampionDataPlatformIdBox.SelectedValue = _championDataSettings.PlatformId;
                 ChampionDataLocaleBox.SelectedValue = _championDataSettings.Locale;
                 ChampionDataAutoUpdateCatalogCheckBox.IsChecked = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
+                ChampionDataDownloadNewChampionPicturesCheckBox.IsChecked =
+                    _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate;
             }
             finally
             {
@@ -180,10 +182,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             string previousPlatformId = _championDataSettings.PlatformId;
             string previousLocale = _championDataSettings.Locale;
             bool previousAutoUpdate = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
+            bool previousDownloadNewChampionPictures = _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate;
 
             _championDataSettings.PlatformId = normalizedPlatformId;
             _championDataSettings.Locale = normalizedLocale;
             _championDataSettings.AutoUpdateChampionCatalogOnStartup = ChampionDataAutoUpdateCatalogCheckBox.IsChecked == true;
+            _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate =
+                ChampionDataDownloadNewChampionPicturesCheckBox.IsChecked == true;
 
             try
             {
@@ -194,6 +199,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 _championDataSettings.PlatformId = previousPlatformId;
                 _championDataSettings.Locale = previousLocale;
                 _championDataSettings.AutoUpdateChampionCatalogOnStartup = previousAutoUpdate;
+                _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate = previousDownloadNewChampionPictures;
                 ApplyChampionDataSettingsToControls();
                 MessageBox.Show(
                     Window.GetWindow(this),
@@ -227,18 +233,51 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             SetChampionDataOperationInProgress(true);
             SetChampionCatalogRefreshStatus("Updating champion list from Riot Data Dragon...", "TextSoftBrush", Brushes.SlateGray);
+            SetChampionPictureDownloadStatus(string.Empty, "TextSoftBrush", Brushes.SlateGray);
+            ChampionPictureDownloadProgressBar.Visibility = Visibility.Collapsed;
 
             try
             {
-                var result = await ChampionCatalog.RefreshFromDataDragonAsync(_championCatalogRemoteService);
+                var existingChampionKeys = ChampionCatalog.All
+                    .Select(champion => champion.Key)
+                    .ToHashSet();
+                var remoteCatalog = await _championCatalogRemoteService.FetchLatestChampionCatalogAsync();
+                var newChampionKeys = remoteCatalog.Champions
+                    .Where(champion => champion.Key > 0 && !existingChampionKeys.Contains(champion.Key))
+                    .Select(champion => champion.Key)
+                    .Distinct()
+                    .OrderBy(championKey => championKey)
+                    .ToList();
+                var result = ChampionCatalog.RefreshFromDataDragon(remoteCatalog);
                 _checkedChampionCatalogPlatformId = _championDataSettings.PlatformId;
                 _latestConfiguredRegionDataDragonVersion = result.DataDragonVersion;
                 RefreshChampionCatalogSyncStatus(result);
                 UpdateChampionCatalogVersionWarning();
                 SetChampionCatalogRefreshStatus(
-                    "Champion list updated.",
+                    CreateChampionCatalogRefreshStatusMessage(newChampionKeys),
                     "AccentGreenTextBrush",
                     Brushes.ForestGreen);
+
+                if (_championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate
+                    && newChampionKeys.Count > 0)
+                {
+                    var pictureResult = await DownloadNewChampionPicturesAsync(newChampionKeys);
+                    SetChampionPictureDownloadStatus(
+                        CreateNewChampionPictureDownloadStatusMessage(pictureResult),
+                        pictureResult.FailedChampionCount == 0 && pictureResult.FailedTileCount == 0
+                            ? "AccentGreenTextBrush"
+                            : "TextSoftBrush",
+                        pictureResult.FailedChampionCount == 0 && pictureResult.FailedTileCount == 0
+                            ? Brushes.ForestGreen
+                            : Brushes.SlateGray);
+                }
+                else if (newChampionKeys.Count > 0)
+                {
+                    SetChampionPictureDownloadStatus(
+                        $"Detected {FormatChampionList(newChampionKeys)}. Champion picture download is off, so existing local pictures were kept.",
+                        "TextSoftBrush",
+                        Brushes.SlateGray);
+                }
             }
             catch (Exception ex)
             {
@@ -251,6 +290,113 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 SetChampionDataOperationInProgress(false);
             }
+        }
+
+        private async Task<NewChampionPictureDownloadResult> DownloadNewChampionPicturesAsync(
+            IReadOnlyList<int> championKeys)
+        {
+            int downloadedTileCount = 0;
+            int unchangedTileCount = 0;
+            int failedTileCount = 0;
+            int failedChampionCount = 0;
+
+            ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
+            ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+            ChampionPictureDownloadProgressBar.Minimum = 0;
+            ChampionPictureDownloadProgressBar.Maximum = championKeys.Count;
+            ChampionPictureDownloadProgressBar.Value = 0;
+
+            for (int index = 0; index < championKeys.Count; index++)
+            {
+                int championKey = championKeys[index];
+                if (!ChampionCatalog.TryGetByKey(championKey, out var champion) || champion is null)
+                {
+                    failedChampionCount++;
+                    ChampionPictureDownloadProgressBar.Value = index + 1;
+                    continue;
+                }
+
+                SetChampionPictureDownloadStatus(
+                    $"Downloading pictures for new champion {champion.Name} ({index + 1}/{championKeys.Count})...",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+
+                var progress = new Progress<ChampionTileDownloadProgress>(snapshot =>
+                {
+                    if (snapshot.Message.StartsWith("Unable to download ", StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    SetChampionPictureDownloadStatus(
+                        snapshot.Message,
+                        "TextSoftBrush",
+                        Brushes.SlateGray);
+                });
+
+                try
+                {
+                    var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
+                        champion,
+                        progress,
+                        optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
+                        preferredLocale: _championDataSettings.Locale);
+                    downloadedTileCount += result.DownloadedTileCount;
+                    unchangedTileCount += result.UnchangedTileCount;
+                    failedTileCount += result.FailedTileCount;
+                    LogMessage(
+                        $"Downloaded pictures for new champion {result.ChampionName}. Downloaded {result.DownloadedTileCount}; unchanged {result.UnchangedTileCount}; failed {result.FailedTileCount}.");
+                }
+                catch (Exception ex)
+                {
+                    failedChampionCount++;
+                    LogErrorMessage(
+                        $"Unable to download pictures for new champion {champion.Name}. Existing local pictures were kept. {FormatException(ex)}");
+                }
+                finally
+                {
+                    ChampionPictureDownloadProgressBar.Value = index + 1;
+                }
+            }
+
+            ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+            return new NewChampionPictureDownloadResult(
+                championKeys.Count,
+                downloadedTileCount,
+                unchangedTileCount,
+                failedTileCount,
+                failedChampionCount);
+        }
+
+        private static string CreateChampionCatalogRefreshStatusMessage(IReadOnlyList<int> newChampionKeys)
+        {
+            if (newChampionKeys.Count == 0)
+                return "Champion list updated. No new champions detected.";
+
+            string championNoun = newChampionKeys.Count == 1 ? "new champion" : "new champions";
+            return $"Champion list updated. Detected {newChampionKeys.Count} {championNoun}: {FormatChampionList(newChampionKeys)}.";
+        }
+
+        private static string CreateNewChampionPictureDownloadStatusMessage(NewChampionPictureDownloadResult result)
+        {
+            string championNoun = result.ChampionCount == 1 ? "new champion" : "new champions";
+            if (result.FailedChampionCount == 0 && result.FailedTileCount == 0)
+            {
+                if (result.DownloadedTileCount == 0)
+                    return $"Pictures for {result.ChampionCount} {championNoun} are already up to date. {result.UnchangedTileCount} local pictures checked.";
+
+                return $"Downloaded {result.DownloadedTileCount} pictures for {result.ChampionCount} {championNoun}; {result.UnchangedTileCount} already up to date.";
+            }
+
+            return $"Finished picture downloads for {result.ChampionCount} {championNoun}. Downloaded {result.DownloadedTileCount}; unchanged {result.UnchangedTileCount}; failed tile requests {result.FailedTileCount}; failed champions {result.FailedChampionCount}.";
+        }
+
+        private static string FormatChampionList(IReadOnlyList<int> championKeys)
+        {
+            return string.Join(
+                ", ",
+                championKeys.Select(championKey =>
+                    ChampionCatalog.TryGetByKey(championKey, out var champion) && champion is not null
+                        ? champion.Name
+                        : $"champion {championKey}"));
         }
 
         private async void DownloadChampionPictureArchiveButton_Click(object sender, RoutedEventArgs e)
@@ -353,15 +499,20 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             bool enabled = !_isChampionDataOperationInProgress && !_isChampionPictureDownloadInProgress;
             ChampionDataConfigurationPanel.IsEnabled = enabled;
             ChampionDataAutoUpdateCatalogCheckBox.IsEnabled = enabled;
+            ChampionDataDownloadNewChampionPicturesCheckBox.IsEnabled = enabled;
             RefreshChampionCatalogButton.IsEnabled = enabled;
             DownloadChampionPictureArchiveButton.IsEnabled = enabled;
         }
 
         private bool ConfirmChampionCatalogRefresh()
         {
+            string pictureDownloadText = _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate
+                ? "If Riot lists champion IDs that are not in your local list, JoinGameAfk will also download tile images for only those new champions."
+                : "Champion pictures are not downloaded. Enable Download pictures for new champions first if you want new champion tiles fetched after the list update.";
+
             var result = MessageBox.Show(
                 Window.GetWindow(this),
-                "JoinGameAfk will connect to Riot to update the champion list for your selected game region and language.\n\nNo champion pictures are downloaded. To add or refresh pictures, use the pencil in Role Plans after updating the list.\n\nContinue?",
+                $"JoinGameAfk will connect to Riot to update the champion list for your selected game region and language.\n\n{pictureDownloadText}\n\nContinue?",
                 "Update Champion List",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Information,
@@ -607,5 +758,12 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         }
 
         private sealed record RegionLocaleSuggestion(string Code, string Name);
+
+        private sealed record NewChampionPictureDownloadResult(
+            int ChampionCount,
+            int DownloadedTileCount,
+            int UnchangedTileCount,
+            int FailedTileCount,
+            int FailedChampionCount);
     }
 }

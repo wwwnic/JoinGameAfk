@@ -299,9 +299,28 @@ namespace JoinGameAfk.Model
 
         public static ChampionCatalogRefreshResult RefreshFromDataDragon(ChampionCatalogRemoteData remoteCatalog)
         {
+            return RefreshFromDataDragon(remoteCatalog, AppStorage.ChampionFilePath, updateCurrentCatalog: true);
+        }
+
+        public static ChampionCatalogRefreshResult RefreshFileFromDataDragon(
+            ChampionCatalogRemoteData remoteCatalog,
+            string filePath)
+        {
+            return RefreshFromDataDragon(remoteCatalog, filePath, updateCurrentCatalog: false);
+        }
+
+        private static ChampionCatalogRefreshResult RefreshFromDataDragon(
+            ChampionCatalogRemoteData remoteCatalog,
+            string filePath,
+            bool updateCurrentCatalog)
+        {
             ArgumentNullException.ThrowIfNull(remoteCatalog);
 
-            var knownChampionsByKey = LoadKnownChampionsByKey();
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("Champion catalog file path is required.", nameof(filePath));
+
+            filePath = Path.GetFullPath(filePath);
+            var knownChampionsByKey = LoadKnownChampionsByKey(filePath);
             string dataDragonVersion = remoteCatalog.DataDragonVersion.Trim();
             string locale = RegionLocale.NormalizeLocale(remoteCatalog.Locale);
 
@@ -317,11 +336,11 @@ namespace JoinGameAfk.Model
             if (champions.Count == 0)
                 throw new InvalidOperationException("Riot Data Dragon returned no champions.");
 
-            AppStorage.EnsureDataDirectoryExists();
-            string filePath = AppStorage.ChampionFilePath;
             DateTime lastSyncedAtUtc = DateTime.UtcNow;
             SaveCatalogFile(filePath, champions, dataDragonVersion, locale, lastSyncedAtUtc);
-            SetCatalogState(champions);
+
+            if (updateCurrentCatalog)
+                SetCatalogState(champions);
 
             return new ChampionCatalogRefreshResult(dataDragonVersion, locale, champions.Count, filePath, lastSyncedAtUtc);
         }
@@ -361,6 +380,7 @@ namespace JoinGameAfk.Model
                     return null;
 
                 string json = File.ReadAllText(filePath);
+                json = RefreshLocalCatalogFromBundledCatalogIfNewer(filePath, json);
                 var catalogFile = DeserializeCatalogFile(json);
                 if (catalogFile is null || catalogFile.Champions.Count == 0)
                     return null;
@@ -410,12 +430,16 @@ namespace JoinGameAfk.Model
             };
         }
 
-        private static IReadOnlyDictionary<int, ChampionInfo> LoadKnownChampionsByKey()
+        private static IReadOnlyDictionary<int, ChampionInfo> LoadKnownChampionsByKey(string? preferredFilePath = null)
         {
             try
             {
-                string filePath = AppStorage.ChampionFilePath;
-                EnsureChampionFileExists(filePath);
+                string filePath = string.IsNullOrWhiteSpace(preferredFilePath)
+                    ? AppStorage.ChampionFilePath
+                    : Path.GetFullPath(preferredFilePath);
+
+                if (string.Equals(filePath, AppStorage.ChampionFilePath, StringComparison.OrdinalIgnoreCase))
+                    EnsureChampionFileExists(filePath);
 
                 if (File.Exists(filePath))
                 {
@@ -512,6 +536,91 @@ namespace JoinGameAfk.Model
             };
         }
 
+        private static string RefreshLocalCatalogFromBundledCatalogIfNewer(string filePath, string currentJson)
+        {
+            ChampionCatalogFile? localCatalog = DeserializeCatalogFile(currentJson);
+            if (localCatalog is null)
+                return currentJson;
+
+            string? bundledCatalogJson = LoadBundledChampionCatalogJson();
+            if (string.IsNullOrWhiteSpace(bundledCatalogJson))
+                return currentJson;
+
+            ChampionCatalogFile? bundledCatalog = DeserializeCatalogFile(bundledCatalogJson);
+            if (bundledCatalog is null || bundledCatalog.Champions.Count == 0)
+                return currentJson;
+
+            if (!ShouldReplaceLocalCatalogWithBundledCatalog(localCatalog, bundledCatalog))
+                return currentJson;
+
+            string refreshedJson = SerializeCatalogFile(
+                bundledCatalog.Champions,
+                bundledCatalog.DataDragonVersion,
+                bundledCatalog.Locale,
+                bundledCatalog.LastSyncedAtUtc);
+            File.WriteAllText(filePath, refreshedJson);
+            return refreshedJson;
+        }
+
+        private static bool ShouldReplaceLocalCatalogWithBundledCatalog(
+            ChampionCatalogFile localCatalog,
+            ChampionCatalogFile bundledCatalog)
+        {
+            string bundledLocale = RegionLocale.NormalizeLocale(bundledCatalog.Locale);
+            string? localLocale = string.IsNullOrWhiteSpace(localCatalog.Locale)
+                ? null
+                : RegionLocale.NormalizeLocale(localCatalog.Locale);
+
+            if (localLocale is not null
+                && !string.Equals(localLocale, bundledLocale, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(bundledCatalog.DataDragonVersion))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(localCatalog.DataDragonVersion))
+                return true;
+
+            int versionComparison = CompareDataDragonVersions(
+                bundledCatalog.DataDragonVersion,
+                localCatalog.DataDragonVersion);
+            if (versionComparison > 0)
+                return true;
+
+            return versionComparison == 0
+                && bundledCatalog.Champions.Count > localCatalog.Champions.Count;
+        }
+
+        private static int CompareDataDragonVersions(string? first, string? second)
+        {
+            int[] firstParts = ParseDataDragonVersionParts(first);
+            int[] secondParts = ParseDataDragonVersionParts(second);
+            int count = Math.Max(firstParts.Length, secondParts.Length);
+            for (int index = 0; index < count; index++)
+            {
+                int firstPart = index < firstParts.Length ? firstParts[index] : 0;
+                int secondPart = index < secondParts.Length ? secondParts[index] : 0;
+                int comparison = firstPart.CompareTo(secondPart);
+                if (comparison != 0)
+                    return comparison;
+            }
+
+            return string.Compare(first?.Trim(), second?.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int[] ParseDataDragonVersionParts(string? version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return [];
+
+            return version
+                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(part => int.TryParse(part, out int number) ? number : 0)
+                .ToArray();
+        }
+
         private static void SaveCatalogFile(
             string filePath,
             IReadOnlyList<ChampionInfo> champions,
@@ -519,6 +628,10 @@ namespace JoinGameAfk.Model
             string? locale = null,
             DateTime? lastSyncedAtUtc = null)
         {
+            string? directoryPath = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrWhiteSpace(directoryPath))
+                Directory.CreateDirectory(directoryPath);
+
             File.WriteAllText(filePath, SerializeCatalogFile(champions, dataDragonVersion, locale, lastSyncedAtUtc));
         }
 

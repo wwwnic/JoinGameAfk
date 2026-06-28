@@ -13,6 +13,8 @@ namespace JoinGameAfk.Model
 
         public bool AutoUpdateChampionCatalogOnStartup { get; set; }
 
+        public bool DownloadNewChampionPicturesAfterCatalogUpdate { get; set; }
+
         public bool DownloadRawChampionPictures { get; set; }
 
         public event Action? Saved;
