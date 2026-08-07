@@ -23,9 +23,13 @@ namespace JoinGameAfk.Theme
             new AppThemeDefinition("lavender-mint", "Lavender Mint", "Styles/Themes/LavenderMint.xaml"),
             new AppThemeDefinition("midnight-current", "Midnight Current", "Styles/Themes/MidnightCurrent.xaml"),
             new AppThemeDefinition("neon-circuit", "Neon Circuit", "Styles/Themes/NeonCircuit.xaml"),
+            new AppThemeDefinition("paper-lantern", "Paper Lantern", "Styles/Themes/PaperLantern.xaml"),
             new AppThemeDefinition("peach-sorbet", "Peach Sorbet", "Styles/Themes/PeachSorbet.xaml"),
+            new AppThemeDefinition("pastel-carousel", "Pastel Carousel", "Styles/Themes/PastelCarousel.xaml"),
             new AppThemeDefinition("rose-noir", "Rose Noir", "Styles/Themes/RoseNoir.xaml"),
-            new AppThemeDefinition("sakura-bloom", "Sakura Bloom", "Styles/Themes/SakuraBloom.xaml")
+            new AppThemeDefinition("sakura-bloom", "Sakura Bloom", "Styles/Themes/SakuraBloom.xaml"),
+            new AppThemeDefinition("signal-void", "Signal Void", "Styles/Themes/SignalVoid.xaml"),
+            new AppThemeDefinition("verdant-relic", "Verdant Relic", "Styles/Themes/VerdantRelic.xaml")
         ];
 
         public static event Action? ThemeChanged;

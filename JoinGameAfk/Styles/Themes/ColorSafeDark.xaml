@@ -38,7 +38,7 @@
     <SolidColorBrush x:Key="AccentAmberBrush" Color="#E69F00" />
 
     <SolidColorBrush x:Key="DangerBrush" Color="#E69F00" />
-    <SolidColorBrush x:Key="DangerStrongBrush" Color="#D55E00" />
+    <SolidColorBrush x:Key="DangerStrongBrush" Color="#C05500" />
     <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#2E2111" />
     <SolidColorBrush x:Key="DangerOverlayBrush" Color="#992E2111" />
     <SolidColorBrush x:Key="DangerSurfaceRaisedBrush" Color="#3B2A14" />
@@ -60,7 +60,7 @@
     <SolidColorBrush x:Key="TabInactiveBorderBrush" Color="#28363D" />
 
     <SolidColorBrush x:Key="WatcherStartBrush" Color="#0072B2" />
-    <SolidColorBrush x:Key="WatcherStopBrush" Color="#D55E00" />
+    <SolidColorBrush x:Key="WatcherStopBrush" Color="#C05500" />
     <SolidColorBrush x:Key="PhaseConnectedForegroundBrush" Color="#8EE6CE" />
     <SolidColorBrush x:Key="PhaseOfflineForegroundBrush" Color="#FFD98A" />
     <SolidColorBrush x:Key="PhaseLobbyBrush" Color="#56B4E9" />

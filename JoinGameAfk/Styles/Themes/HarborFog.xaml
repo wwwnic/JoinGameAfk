@@ -29,10 +29,10 @@
     <SolidColorBrush x:Key="AccentBlueTextBrush" Color="#ECFFF8" />
     <SolidColorBrush x:Key="AccentBlueDeepBrush" Color="#155E54" />
     <SolidColorBrush x:Key="AccentBlueStrongBrush" Color="#2CB69D" />
-    <SolidColorBrush x:Key="AccentBlueActionBrush" Color="#1F9D84" />
+    <SolidColorBrush x:Key="AccentBlueActionBrush" Color="#1A836F" />
     <SolidColorBrush x:Key="AccentBlueInfoBrush" Color="#102C28" />
 
-    <SolidColorBrush x:Key="AccentGreenBrush" Color="#41C98D" />
+    <SolidColorBrush x:Key="AccentGreenBrush" Color="#2B845D" />
     <SolidColorBrush x:Key="AccentGreenTextBrush" Color="#9AE6B4" />
     <SolidColorBrush x:Key="AccentConnectedBrush" Color="#5EE49B" />
     <SolidColorBrush x:Key="AccentAmberBrush" Color="#D6B45F" />
@@ -59,7 +59,7 @@
     <SolidColorBrush x:Key="TabActiveBorderBrush" Color="#7AE7C7" />
     <SolidColorBrush x:Key="TabInactiveBorderBrush" Color="#28453F" />
 
-    <SolidColorBrush x:Key="WatcherStartBrush" Color="#41C98D" />
+    <SolidColorBrush x:Key="WatcherStartBrush" Color="#2B845D" />
     <SolidColorBrush x:Key="WatcherStopBrush" Color="#BD3F4B" />
     <SolidColorBrush x:Key="PhaseConnectedForegroundBrush" Color="#5EE49B" />
     <SolidColorBrush x:Key="PhaseOfflineForegroundBrush" Color="#FFD5D9" />

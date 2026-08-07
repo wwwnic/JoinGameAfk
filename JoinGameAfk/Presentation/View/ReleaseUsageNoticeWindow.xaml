@@ -44,7 +44,7 @@
                                Text="If Riot Games publishes or sends a notice telling players to stop using JoinGameAfk or this type of automation, stop using it immediately and uninstall it before playing again."
                                TextWrapping="Wrap"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentAmberBrush}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                LineHeight="21" />
                 </StackPanel>
             </Border>
