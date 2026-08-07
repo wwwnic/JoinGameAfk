@@ -54,6 +54,7 @@ namespace JoinGameAfk
                 fMainWindow = CreateMainWindow(generalSettings, championDataSettings, soundSettings, rolePlanSettings, overlaySettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
+                ShowUsageNoticeIfNeeded();
                 LogBundledChampionTileSeedResult(bundledTileSeedResult, bundledTileSeedError);
 
                 if (overlaySettings.PickBanOverlayOpenOnStartup)
@@ -70,6 +71,20 @@ namespace JoinGameAfk
                 MessageBox.Show(ex.Message, "An error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 throw;
             }
+        }
+
+        private static void ShowUsageNoticeIfNeeded()
+        {
+            string appVersion = ReleaseUsageNoticeWindow.GetCurrentAppVersion();
+            if (AppStorage.HasAcknowledgedUsageNoticeForVersion(appVersion))
+                return;
+
+            var notice = new ReleaseUsageNoticeWindow(appVersion)
+            {
+                Owner = Current.MainWindow
+            };
+            notice.ShowDialog();
+            AppStorage.TryAcknowledgeUsageNoticeForVersion(appVersion);
         }
 
         private void LogBundledChampionTileSeedResult(ChampionTileSeedCacheResult? result, string? error)

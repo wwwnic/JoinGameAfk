@@ -25,6 +25,8 @@ namespace JoinGameAfk.Constant
         public const string ChampionTileDirectoryName = "ChampionTiles";
         public const string ChampionTileArchiveDirectoryName = "ChampionTileArchives";
         public const string ChampionTileCacheFileName = "champion-tile-cache.json";
+        public const string StateDirectoryName = "state";
+        public const string UsageNoticeVersionFileName = "usage-notice-version.txt";
 
         public static string DirectoryPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -37,6 +39,10 @@ namespace JoinGameAfk.Constant
         public static string DataDirectoryPath => Path.Combine(DirectoryPath, DataDirectoryName);
 
         public static string CacheDirectoryPath => Path.Combine(DirectoryPath, CacheDirectoryName);
+
+        public static string StateDirectoryPath => Path.Combine(DirectoryPath, StateDirectoryName);
+
+        public static string UsageNoticeVersionFilePath => Path.Combine(StateDirectoryPath, UsageNoticeVersionFileName);
 
         public static string GeneralSettingsFilePath => Path.Combine(SettingsDirectoryPath, GeneralSettingsFileName);
 
@@ -67,11 +73,62 @@ namespace JoinGameAfk.Constant
 
         public static void EnsureStorageLayoutExists()
         {
+            EnsureStateDirectoryExists();
             EnsureSettingsDirectoryExists();
             EnsureRolePlansDirectoryExists();
             EnsureDataDirectoryExists();
             EnsureChampionTileDirectoryExists();
             EnsureChampionTileArchiveDirectoryExists();
+        }
+
+        public static void EnsureStateDirectoryExists()
+        {
+            EnsureDirectoryExists();
+            Directory.CreateDirectory(StateDirectoryPath);
+        }
+
+        public static bool HasAcknowledgedUsageNoticeForVersion(string appVersion)
+        {
+            if (string.IsNullOrWhiteSpace(appVersion))
+                return false;
+
+            try
+            {
+                return File.Exists(UsageNoticeVersionFilePath)
+                    && string.Equals(
+                        File.ReadAllText(UsageNoticeVersionFilePath).Trim(),
+                        appVersion.Trim(),
+                        StringComparison.OrdinalIgnoreCase);
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
+        public static bool TryAcknowledgeUsageNoticeForVersion(string appVersion)
+        {
+            if (string.IsNullOrWhiteSpace(appVersion))
+                return false;
+
+            try
+            {
+                EnsureStateDirectoryExists();
+                File.WriteAllText(UsageNoticeVersionFilePath, appVersion.Trim());
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
         }
 
         public static void EnsureSettingsDirectoryExists()

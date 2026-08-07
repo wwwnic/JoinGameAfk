@@ -1,0 +1,76 @@
+<Window x:Class="JoinGameAfk.Presentation.View.ReleaseUsageNoticeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Important usage notice — JoinGameAfk"
+        Width="610"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource AppSurfaceBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{DynamicResource BaseFontFamily}">
+    <Border Margin="18"
+            Padding="28"
+            Background="{DynamicResource AppSurfaceRaisedBrush}"
+            BorderBrush="{DynamicResource AppStrongBorderBrush}"
+            BorderThickness="1"
+            CornerRadius="14">
+        <StackPanel>
+            <TextBlock Text="Automation and your account"
+                       FontSize="24"
+                       FontWeight="SemiBold" />
+            <TextBlock Margin="0,8,0,0"
+                       Text="JoinGameAfk can automatically accept ready checks and perform champion-select actions for you."
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       LineHeight="21" />
+            <Border Margin="0,18,0,0"
+                    Padding="16"
+                    Background="{DynamicResource AccentBlueInfoBrush}"
+                    BorderBrush="{DynamicResource AccentAmberBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel>
+                    <TextBlock Text="Riot's developer policies say third-party products should not remove player decisions. These automation features may therefore conflict with Riot's rules."
+                               TextWrapping="Wrap"
+                               LineHeight="21" />
+                    <TextBlock Margin="0,10,0,0"
+                               Text="Enforcement can change, and JoinGameAfk cannot guarantee that using automation is safe for your account. Use these features at your own risk."
+                               TextWrapping="Wrap"
+                               FontWeight="SemiBold"
+                               LineHeight="21" />
+                    <TextBlock Margin="0,10,0,0"
+                               Text="If Riot Games publishes or sends a notice telling players to stop using JoinGameAfk or this type of automation, stop using it immediately and uninstall it before playing again."
+                               TextWrapping="Wrap"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource AccentAmberBrush}"
+                               LineHeight="21" />
+                </StackPanel>
+            </Border>
+            <TextBlock Margin="0,10,0,0"
+                       Text="You can review or turn off automation features in Settings."
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+            <TextBlock x:Name="VersionTextBlock"
+                       Margin="0,14,0,0"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Margin="0,4,0,0"
+                       Text="This notice is shown once for each installed version."
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <StackPanel Margin="0,24,0,0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right">
+                <Button Content="Read Riot's policy"
+                        Click="PolicyButton_Click"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        Padding="18,9" />
+                <Button Content="Continue"
+                        Margin="10,0,0,0"
+                        Click="ContinueButton_Click"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Padding="22,9" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
