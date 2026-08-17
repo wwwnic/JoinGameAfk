@@ -4,6 +4,7 @@ using JoinGameAfk.Enums;
 using JoinGameAfk.Interface;
 using JoinGameAfk.Model;
 using JoinGameAfk.Presentation.View.Dashboard;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using LcuClient;
 
@@ -18,6 +19,7 @@ namespace JoinGameAfk.Presentation.Controller
         private readonly RolePlanSettings _rolePlanSettings;
         private readonly SoundSettings _soundSettings;
         private readonly NotificationSoundPlayer _notificationSoundPlayer;
+        private readonly LeagueClientConnectionContext _leagueClientConnection;
         private readonly List<IPhaseHandler> _phaseHandlers;
         private readonly Lcu.ProcessManager _processManager;
 
@@ -61,7 +63,8 @@ namespace JoinGameAfk.Presentation.Controller
             GeneralSettings generalSettings,
             ChampionDataSettings championDataSettings,
             RolePlanSettings rolePlanSettings,
-            SoundSettings soundSettings)
+            SoundSettings soundSettings,
+            LeagueClientConnectionContext leagueClientConnection)
         {
             fPhaseProgressionPage = phaseProgressionPage;
             _logsPage = logsPage;
@@ -69,6 +72,7 @@ namespace JoinGameAfk.Presentation.Controller
             _championDataSettings = championDataSettings;
             _rolePlanSettings = rolePlanSettings;
             _soundSettings = soundSettings;
+            _leagueClientConnection = leagueClientConnection;
             _notificationSoundPlayer = new NotificationSoundPlayer(LogError);
             _phaseHandlers = [];
             _processManager = new Lcu.ProcessManager(JoinGameAfkConstant.LeagueClient.ProcessName);
@@ -85,17 +89,12 @@ namespace JoinGameAfk.Presentation.Controller
             if (_isRunning || _runLoopTask is { IsCompleted: false })
                 return;
 
-            if (LeagueClientApiRegionPolicy.IsRestricted(_championDataSettings.PlatformId))
-            {
-                StopWatcherForRestrictedRegion();
-                return;
-            }
-
             _isShutdownRequested = false;
             _isRunning = true;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _isClientConnected = false;
+            _leagueClientConnection.SetDisconnected();
             _hasPendingChampSelectExitSound = false;
             ResetEventStreamState();
             _isWaitingForClient = false;
@@ -133,6 +132,7 @@ namespace JoinGameAfk.Presentation.Controller
                 return;
 
             _isRunning = false;
+            _leagueClientConnection.SetDisconnected();
             try
             {
                 _cts?.Cancel();
@@ -182,6 +182,24 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void UpdateRegionDisplayFromSettings()
         {
+            if (ChampionDataSourcePolicy.Resolve(_championDataSettings.SourceMode)
+                == ChampionDataSourceMode.LeagueClient)
+            {
+                if (_leagueClientConnection.TryGetRegionLocale(out LeagueClientRegionLocaleInfo? regionLocale)
+                    && regionLocale is not null)
+                {
+                    fPhaseProgressionPage.UpdateRegionDisplay(
+                        regionLocale.PlatformId,
+                        regionLocale.Locale);
+                }
+                else
+                {
+                    fPhaseProgressionPage.UpdateRegionDisplay(null, null);
+                }
+
+                return;
+            }
+
             fPhaseProgressionPage.UpdateRegionDisplay(
                 _championDataSettings.PlatformId,
                 _championDataSettings.Locale);

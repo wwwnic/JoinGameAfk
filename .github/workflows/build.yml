@@ -84,8 +84,8 @@ jobs:
           dotnet run --project JoinGameAfk.Tools/JoinGameAfk.Tools.ChampionTileSeeder/JoinGameAfk.Tools.ChampionTileSeeder.csproj --configuration Release --
           --tile-directory "${{ github.workspace }}\JoinGameAfk\Assets\ChampionTiles"
           --cache-file "${{ github.workspace }}\JoinGameAfk\Assets\champion-tile-cache.json"
-          --archive-directory "${{ runner.temp }}\JoinGameAfkChampionTileArchives"
           --version "$env:DATA_DRAGON_VERSION"
+          --locale "en_US"
           --resize-width 96
 
       - name: Publish self-contained single-file app
@@ -136,15 +136,6 @@ jobs:
       - name: Rename framework-dependent single-file executable
         run: Copy-Item -Path ${{ github.workspace }}\publish-framework-dependent-single-file\JoinGameAfk.exe -Destination ${{ github.workspace }}\JoinGameAfk-requires-dotnet-10.exe
 
-      - name: Clean downloaded Data Dragon archive
-        shell: pwsh
-        run: |
-          $archiveDirectory = Join-Path $env:RUNNER_TEMP 'JoinGameAfkChampionTileArchives'
-
-          if (Test-Path $archiveDirectory) {
-            Remove-Item -LiteralPath $archiveDirectory -Recurse -Force
-          }
-
       - name: Generate release notes
         shell: pwsh
         run: |
@@ -165,8 +156,8 @@ jobs:
           "Website and README: https://wwwnic.github.io/JoinGameAfk/" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Which Download Should I Use?" | Out-File release-notes.md -Append -Encoding utf8
-          '- Recommended: `JoinGameAfk.exe`. Includes every bundled champion picture and .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
-          '- `JoinGameAfk-requires-dotnet-10.exe`. Includes every bundled champion picture, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
+          '- Recommended: `JoinGameAfk.exe`. Includes one default picture for every champion and .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
+          '- `JoinGameAfk-requires-dotnet-10.exe`. Includes one default picture for every champion, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Windows warning:" | Out-File release-notes.md -Append -Encoding utf8
           'This app is not code-signed yet, so Windows may show a blue warning such as "Windows protected your PC". If you downloaded the file from this GitHub release and trust this project, click "More info" and then "Run anyway". Do not do this for copies downloaded from somewhere else.' | Out-File release-notes.md -Append -Encoding utf8

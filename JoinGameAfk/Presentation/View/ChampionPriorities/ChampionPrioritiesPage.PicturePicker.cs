@@ -113,7 +113,20 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            if (!ConfirmChampionPictureDownload(champion))
+            ChampionDataSourceMode source;
+            try
+            {
+                source = ResolveChampionDataSource();
+            }
+            catch (Exception ex)
+            {
+                string message = $"Unable to download {champion.Name} pictures. {ex.Message}";
+                SetChampionPicturePickerDownloadStatus(message, "DangerTextBrush", Brushes.IndianRed);
+                LogErrorMessage(message);
+                return;
+            }
+
+            if (!ConfirmChampionPictureDownload(champion, source))
             {
                 SetChampionPicturePickerDownloadStatus(
                     $"Picture download canceled for {champion.Name}.",
@@ -154,11 +167,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                             : Brushes.SlateGray);
                 });
 
-                var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
-                    champion,
-                    progress,
-                    optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
-                    preferredLocale: _championDataSettings.Locale);
+                var result = await DownloadChampionImagesAsync(champion, source, progress);
                 if (_selectedChampionPictureChampion?.Key != requestedChampionId
                     || ChampionPicturePickerOverlay.Visibility != Visibility.Visible)
                 {
@@ -175,6 +184,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
             catch (Exception ex)
             {
+                LogErrorMessage(
+                    $"Unable to download {champion.Name} pictures from {GetChampionDataSourceName(source)}. Existing local pictures were kept. {FormatException(ex)}");
                 if (_selectedChampionPictureChampion?.Key == requestedChampionId
                     && ChampionPicturePickerOverlay.Visibility == Visibility.Visible)
                 {
@@ -371,8 +382,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             SetChampionPicturePickerDownloadStatus(string.Empty, "TextSoftBrush", Brushes.SlateGray);
         }
 
-        private bool ConfirmChampionPictureDownload(ChampionInfo champion)
+        private bool ConfirmChampionPictureDownload(
+            ChampionInfo champion,
+            ChampionDataSourceMode source)
         {
+            if (source == ChampionDataSourceMode.LeagueClient)
+                return true;
+
             if (!ChampionImageSelectionStore.ShowChampionPictureDownloadWarning)
                 return true;
 

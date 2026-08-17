@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -253,6 +255,102 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
             LogRequest("GET", "/lol-champions/v1/owned-champions-minimal");
             return Results.Json(_state.GetChampionInventoryPayload(), JsonOptions);
         });
+
+        app.MapGet("/riotclient/region-locale", () =>
+        {
+            LogRequest("GET", "/riotclient/region-locale");
+            return Results.Json(new { locale = "en_US", region = "NA" }, JsonOptions);
+        });
+
+        app.MapGet("/lol-game-data/assets/v1/champion-summary.json", () =>
+        {
+            LogRequest("GET", "/lol-game-data/assets/v1/champion-summary.json");
+            var champions = ChampionCatalog.All
+                .Select(champion => new
+                {
+                    id = champion.Key,
+                    name = champion.Name,
+                    alias = champion.Id
+                })
+                .Append(new { id = 60001, name = "Classic mode variant", alias = (string?)"Jade_Test" });
+            return Results.Json(champions, JsonOptions);
+        });
+
+        app.MapGet("/lol-game-data/assets/v1/champions/{championId:int}.json", (int championId) =>
+        {
+            string endpoint = $"/lol-game-data/assets/v1/champions/{championId}.json";
+            LogRequest("GET", endpoint);
+            if (!ChampionCatalog.TryGetByKey(championId, out ChampionInfo? champion)
+                || champion is null)
+            {
+                return Results.NotFound();
+            }
+
+            int skinId = championId * 1000;
+            return Results.Json(new
+            {
+                id = championId,
+                name = champion.Name,
+                alias = champion.Id,
+                skins = new[]
+                {
+                    new
+                    {
+                        id = skinId,
+                        name = $"{champion.Name} (default)",
+                        tilePath = $"/lol-game-data/assets/ASSETS/Characters/{champion.Id}/Skins/Base/Images/{champion.Id}_splash_tile_0.jpg"
+                    }
+                }
+            }, JsonOptions);
+        });
+
+        app.MapGet(
+            "/lol-game-data/assets/ASSETS/Characters/{championAlias}/Skins/Base/Images/{fileName}",
+            (HttpContext context, string championAlias, string fileName) =>
+            {
+                string endpoint =
+                    $"/lol-game-data/assets/ASSETS/Characters/{championAlias}/Skins/Base/Images/{fileName}";
+                LogRequest("GET", endpoint);
+                string accept = context.Request.Headers.Accept.ToString();
+                if (!accept.Contains("*/*", StringComparison.Ordinal)
+                    && !accept.Contains("image/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest();
+                }
+
+                ChampionInfo? champion = ChampionCatalog.All.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Id, championAlias, StringComparison.OrdinalIgnoreCase));
+                return champion is null
+                    ? Results.NotFound()
+                    : Results.Bytes(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 }, "image/jpeg");
+            });
+
+        app.MapGet(
+            "/lol-game-data/assets/v1/champion-tiles/{championId:int}/{skinId:int}.jpg",
+            (HttpContext context, int championId, int skinId) =>
+            {
+                string endpoint = $"/lol-game-data/assets/v1/champion-tiles/{championId}/{skinId}.jpg";
+                LogRequest("GET", endpoint);
+                string accept = context.Request.Headers.Accept.ToString();
+                if (!accept.Contains("*/*", StringComparison.Ordinal)
+                    && !accept.Contains("image/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.BadRequest();
+                }
+
+                if (!ChampionCatalog.TryGetByKey(championId, out ChampionInfo? champion)
+                    || champion is null)
+                {
+                    return Results.NotFound();
+                }
+
+                string tilePath = Path.Combine(
+                    AppStorage.ChampionTileDirectoryPath,
+                    $"{champion.Id}_{skinId % 1000}.jpg");
+                return File.Exists(tilePath)
+                    ? Results.Bytes(File.ReadAllBytes(tilePath), "image/jpeg")
+                    : Results.Bytes(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 }, "image/jpeg");
+            });
 
     }
 

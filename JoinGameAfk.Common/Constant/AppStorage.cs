@@ -5,7 +5,7 @@ namespace JoinGameAfk.Constant
         public const int GeneralSettingsFileVersion = 1;
         public const int SoundSettingsFileVersion = 1;
         public const int RolePlanSettingsFileVersion = 1;
-        public const int ChampionDataSettingsFileVersion = 1;
+        public const int ChampionDataSettingsFileVersion = 2;
         public const int OverlaySettingsFileVersion = 1;
         public const int ChampionFileVersion = 2;
         public const int ChampionImageSelectionFileVersion = 1;

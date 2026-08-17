@@ -164,11 +164,47 @@ namespace JoinGameAfk.Services
         {
             var cacheSyncInfo = GetCacheSyncInfo();
             var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
-            string? preferredDataDragonVersion = !string.IsNullOrWhiteSpace(catalogSyncInfo.DataDragonVersion)
-                ? catalogSyncInfo.DataDragonVersion
-                : cacheSyncInfo.DataDragonVersion;
+            string? preferredDataDragonVersion = string.Equals(
+                    catalogSyncInfo.DataDragonVersion,
+                    ChampionCatalogSourceIds.LeagueClient,
+                    StringComparison.OrdinalIgnoreCase)
+                ? null
+                : !string.IsNullOrWhiteSpace(catalogSyncInfo.DataDragonVersion)
+                    ? catalogSyncInfo.DataDragonVersion
+                    : cacheSyncInfo.DataDragonVersion;
             var result = await DataDragonChampionTileDownloadService.DownloadChampionTilesAsync(
                     champion,
+                    preferredDataDragonVersion,
+                    TileDirectoryPath,
+                    progress,
+                    cancellationToken,
+                    optimizeForLocalCache,
+                    preferredLocale)
+                .ConfigureAwait(false);
+            Reload();
+            return result;
+        }
+
+        public static async Task<ChampionDefaultTileDownloadResult> DownloadDefaultImagesFromDataDragonAsync(
+            IReadOnlyList<ChampionInfo> champions,
+            IProgress<ChampionDefaultTileDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true,
+            string? preferredLocale = null)
+        {
+            var cacheSyncInfo = GetCacheSyncInfo();
+            var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
+            string? preferredDataDragonVersion = string.Equals(
+                    catalogSyncInfo.DataDragonVersion,
+                    ChampionCatalogSourceIds.LeagueClient,
+                    StringComparison.OrdinalIgnoreCase)
+                ? null
+                : !string.IsNullOrWhiteSpace(catalogSyncInfo.DataDragonVersion)
+                    ? catalogSyncInfo.DataDragonVersion
+                    : cacheSyncInfo.DataDragonVersion;
+            ChampionDefaultTileDownloadResult result = await DataDragonChampionTileDownloadService
+                .DownloadDefaultChampionTilesAsync(
+                    champions,
                     preferredDataDragonVersion,
                     TileDirectoryPath,
                     progress,

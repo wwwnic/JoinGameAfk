@@ -97,7 +97,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             if (fileCount <= 0)
             {
                 SetChampionPictureCacheStatus(
-                    $"Picture cache has Riot Data Dragon {syncInfo.DataDragonVersion} recorded, but no champion tile jpg files were found. Use Download Images in Role Plans to restore champion pictures.",
+                    $"Picture cache has Riot Data Dragon {syncInfo.DataDragonVersion} recorded, but no champion tile jpg files were found. Restore the bundled release cache, or use the pencil in Role Plans to download individual champion pictures.",
                     "DangerTextBrush",
                     Brushes.IndianRed);
                 return;
@@ -113,7 +113,7 @@ namespace JoinGameAfk.Presentation.View.Settings.General
             }
 
             SetChampionPictureCacheStatus(
-                $"Picture cache synced with Riot Data Dragon {syncInfo.DataDragonVersion}. Local folder currently has {fileCount} jpg files. Archive files are removed after extraction. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
+                $"Picture cache contains {fileCount} local jpg files from Riot Data Dragon {syncInfo.DataDragonVersion}. Last sync: {FormatLastSyncedAt(syncInfo.LastSyncedAtUtc)}.",
                 "TextSoftBrush",
                 Brushes.SlateGray);
         }

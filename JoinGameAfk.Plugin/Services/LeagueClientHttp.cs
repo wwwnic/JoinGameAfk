@@ -78,6 +78,39 @@ namespace LcuClient
                 return await GetAsync(endpoint, cancellationToken).ConfigureAwait(false);
             }
 
+            public Task<string> GetChampionSummaryAsync(CancellationToken cancellationToken = default)
+            {
+                return GetAsync("/lol-game-data/assets/v1/champion-summary.json", cancellationToken);
+            }
+
+            public Task<string> GetChampionDetailsAsync(
+                int championId,
+                CancellationToken cancellationToken = default)
+            {
+                if (championId <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(championId));
+
+                return GetAsync($"/lol-game-data/assets/v1/champions/{championId}.json", cancellationToken);
+            }
+
+            public Task<string> GetRegionLocaleAsync(CancellationToken cancellationToken = default)
+            {
+                return GetAsync("/riotclient/region-locale", cancellationToken);
+            }
+
+            public Task<byte[]> GetGameDataAssetAsync(
+                string assetPath,
+                CancellationToken cancellationToken = default)
+            {
+                if (string.IsNullOrWhiteSpace(assetPath)
+                    || !assetPath.StartsWith("/lol-game-data/assets/", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException("A local League Client game-data asset path is required.", nameof(assetPath));
+                }
+
+                return GetBytesAsync(assetPath, cancellationToken);
+            }
+
             public async Task<string> GetReadyCheckAsync(CancellationToken cancellationToken = default)
             {
                 string endpoint = "/lol-matchmaking/v1/ready-check";
@@ -115,6 +148,31 @@ namespace LcuClient
 
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            private async Task<byte[]> GetBytesAsync(string endpoint, CancellationToken cancellationToken)
+            {
+                ThrowIfDisposed();
+                LogRequest(HttpMethod.Get, endpoint, body: null);
+                using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                // The shared client defaults to application/json. Riot's local
+                // asset handler rejects that media type for images with HTTP 400.
+                request.Headers.Accept.Clear();
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+                request.Headers.CacheControl = new CacheControlHeaderValue
+                {
+                    NoCache = true,
+                    NoStore = true,
+                    MaxAge = TimeSpan.Zero
+                };
+                request.Headers.Pragma.Add(new NameValueHeaderValue("no-cache"));
+
+                using HttpResponseMessage response = await _httpClient
+                    .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
             }
 
             private async Task<string> PostAsync(string endpoint, object? body, CancellationToken cancellationToken)

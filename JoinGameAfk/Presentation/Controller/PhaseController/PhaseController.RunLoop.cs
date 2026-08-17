@@ -3,6 +3,7 @@ using System.Windows;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Phase;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Plugin.Phase.ReadyCheck;
 using JoinGameAfk.Services;
 using LcuClient;
@@ -83,6 +84,14 @@ namespace JoinGameAfk.Presentation.Controller
                             _isWaitingForClient = false;
                             http = new Lcu.LeagueClientHttp(auth, Log);
                             currentAuth = auth;
+                            LeagueClientRegionLocaleInfo regionLocale =
+                                await LeagueClientRegionLocaleService.FetchAsync(http, ct);
+                            if (LeagueClientApiRegionPolicy.IsRestricted(regionLocale.PlatformId))
+                            {
+                                fPhaseProgressionPage.Dispatcher.TryInvoke(StopWatcherForRestrictedRegion);
+                                return;
+                            }
+
                             ResetEventStreamState();
                             StartEventStreamIfEnabled(auth, ct);
                             InitializeHandlers(http);
@@ -90,7 +99,11 @@ namespace JoinGameAfk.Presentation.Controller
                             if (!_isClientConnected)
                             {
                                 _isClientConnected = true;
-                                Log("Connected to League Client.");
+                                _leagueClientConnection.SetConnected(auth, regionLocale);
+                                UpdateRegionDisplayFromSettings();
+                                Log(
+                                    $"Connected to League Client in {regionLocale.PlatformId} "
+                                    + $"with language {regionLocale.Locale}.");
                                 fPhaseProgressionPage.SetClientConnection(true);
                             }
                         }
@@ -229,6 +242,7 @@ namespace JoinGameAfk.Presentation.Controller
                 ClearPendingLcuEvents();
                 ResetQueueSupportState();
                 http?.Dispose();
+                _leagueClientConnection.SetDisconnected();
                 Log("Stopped watching.");
             }
         }
@@ -252,6 +266,7 @@ namespace JoinGameAfk.Presentation.Controller
             http = null;
             currentAuth = null;
             _isClientConnected = false;
+            _leagueClientConnection.SetDisconnected();
             _isWaitingForClient = false;
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
@@ -332,12 +347,6 @@ namespace JoinGameAfk.Presentation.Controller
                 && !_generalSettings.IsInQueueAutomationActive())
             {
                 _phaseHandlers.OfType<ReadyCheck>().FirstOrDefault()?.CancelPendingAccept();
-            }
-
-            if (_isRunning && LeagueClientApiRegionPolicy.IsRestricted(_championDataSettings.PlatformId))
-            {
-                StopWatcherForRestrictedRegion();
-                return;
             }
 
             UpdateRegionDisplayFromSettings();

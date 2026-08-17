@@ -331,7 +331,7 @@ namespace JoinGameAfk.Model
             string locale = RegionLocale.NormalizeLocale(remoteCatalog.Locale);
 
             if (string.IsNullOrWhiteSpace(dataDragonVersion))
-                throw new InvalidOperationException("Riot Data Dragon returned no version.");
+                throw new InvalidOperationException("The champion data source returned no version identifier.");
 
             var champions = remoteCatalog.Champions
                 .Select(champion => CreateChampionFromRemote(champion, knownChampionsByKey))
@@ -340,7 +340,7 @@ namespace JoinGameAfk.Model
                 .ToList();
 
             if (champions.Count == 0)
-                throw new InvalidOperationException("Riot Data Dragon returned no champions.");
+                throw new InvalidOperationException("The champion data source returned no champions.");
 
             DateTime lastSyncedAtUtc = DateTime.UtcNow;
             SaveCatalogFile(filePath, champions, dataDragonVersion, locale, lastSyncedAtUtc);

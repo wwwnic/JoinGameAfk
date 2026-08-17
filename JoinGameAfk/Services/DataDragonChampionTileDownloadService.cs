@@ -189,6 +189,112 @@ namespace JoinGameAfk.Services
                 DateTime.UtcNow);
         }
 
+        public static async Task<ChampionDefaultTileDownloadResult> DownloadDefaultChampionTilesAsync(
+            IReadOnlyList<ChampionInfo> champions,
+            string? preferredDataDragonVersion,
+            string tileDirectoryPath,
+            IProgress<ChampionDefaultTileDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true,
+            string? preferredLocale = null)
+        {
+            ArgumentNullException.ThrowIfNull(champions);
+            Directory.CreateDirectory(tileDirectoryPath);
+
+            using var httpClient = new HttpClient
+            {
+                Timeout = RequestTimeout
+            };
+            string dataDragonVersion = await ResolveDataDragonVersionAsync(
+                    httpClient,
+                    preferredDataDragonVersion,
+                    "default champion pictures",
+                    progress: null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            string locale = RegionLocale.NormalizeLocale(preferredLocale);
+            DataDragonChampionCatalog catalog = await FetchChampionCatalogAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    locale,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            var catalogByKey = catalog.Data.Values
+                .Where(champion => !string.IsNullOrWhiteSpace(champion.Key))
+                .GroupBy(champion => champion.Key!, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+            int downloadedCount = 0;
+            int unchangedCount = 0;
+            int failedCount = 0;
+            for (int index = 0; index < champions.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                ChampionInfo champion = champions[index];
+                int checkedCount = index + 1;
+                try
+                {
+                    string championKey = champion.Key.ToString(CultureInfo.InvariantCulture);
+                    if (!catalogByKey.TryGetValue(championKey, out DataDragonChampion? catalogChampion)
+                        || string.IsNullOrWhiteSpace(catalogChampion.Id))
+                    {
+                        throw new InvalidOperationException(
+                            $"Riot Data Dragon {dataDragonVersion} does not list {champion.Name} ({champion.Key}).");
+                    }
+
+                    string championId = catalogChampion.Id.Trim();
+                    string fileName = CreateChampionTileFileName(championId, skinNumber: 0);
+                    ChampionTileDownloadOutcome outcome = await DownloadChampionTileAsync(
+                            httpClient,
+                            championId,
+                            skinNumber: 0,
+                            tileDirectoryPath,
+                            fileName,
+                            optimizeForLocalCache,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    if (outcome == ChampionTileDownloadOutcome.Downloaded)
+                        downloadedCount++;
+                    else
+                        unchangedCount++;
+
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        dataDragonVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        champions.Count,
+                        $"Downloading default champion pictures {checkedCount}/{champions.Count}..."));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failedCount++;
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        dataDragonVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        champions.Count,
+                        $"Unable to download the default picture for {champion.Name}: {FormatException(ex)}"));
+                }
+            }
+
+            return new ChampionDefaultTileDownloadResult(
+                dataDragonVersion,
+                champions.Count,
+                downloadedCount,
+                unchangedCount,
+                failedCount,
+                tileDirectoryPath,
+                DateTime.UtcNow);
+        }
+
         private static async Task<string> ResolveDataDragonVersionAsync(
             HttpClient httpClient,
             string? preferredDataDragonVersion,
@@ -228,23 +334,47 @@ namespace JoinGameAfk.Services
             ChampionInfo champion,
             CancellationToken cancellationToken)
         {
+            DataDragonChampionCatalog catalog = await FetchChampionCatalogAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    locale,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return FindCatalogChampion(catalog, champion, dataDragonVersion);
+        }
+
+        private static async Task<DataDragonChampionCatalog> FetchChampionCatalogAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string locale,
+            CancellationToken cancellationToken)
+        {
             if (string.IsNullOrWhiteSpace(locale))
-                locale = "en_US";
+                locale = RegionLocale.DefaultLocale;
 
-            string championCatalogUrl = string.Format(CultureInfo.InvariantCulture, ChampionCatalogUrlFormat, dataDragonVersion, locale);
-
+            string championCatalogUrl = string.Format(
+                CultureInfo.InvariantCulture,
+                ChampionCatalogUrlFormat,
+                dataDragonVersion,
+                locale);
             using var response = await httpClient.GetAsync(championCatalogUrl, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                championCatalogUrl = string.Format(CultureInfo.InvariantCulture, ChampionCatalogUrlFormat, dataDragonVersion, "en_US");
+                championCatalogUrl = string.Format(
+                    CultureInfo.InvariantCulture,
+                    ChampionCatalogUrlFormat,
+                    dataDragonVersion,
+                    RegionLocale.DefaultLocale);
                 using var fallback = await httpClient.GetAsync(championCatalogUrl, cancellationToken).ConfigureAwait(false);
                 fallback.EnsureSuccessStatusCode();
-                await using var fallbackStream = await fallback.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                return await DeserializeCatalogChampionAsync(fallbackStream, champion, dataDragonVersion, cancellationToken).ConfigureAwait(false);
+                await using var fallbackStream = await fallback.Content
+                    .ReadAsStreamAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                return await DeserializeChampionCatalogAsync(fallbackStream, cancellationToken).ConfigureAwait(false);
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            return await DeserializeCatalogChampionAsync(stream, champion, dataDragonVersion, cancellationToken).ConfigureAwait(false);
+            return await DeserializeChampionCatalogAsync(stream, cancellationToken).ConfigureAwait(false);
         }
 
         private static async Task<DataDragonChampionDetail> FetchChampionDetailAsync(
@@ -283,7 +413,9 @@ namespace JoinGameAfk.Services
             return await DeserializeChampionDetailAsync(stream, dataDragonVersion, dataDragonChampionId, cancellationToken).ConfigureAwait(false);
         }
 
-        private static async Task<DataDragonChampion> DeserializeCatalogChampionAsync(Stream stream, ChampionInfo champion, string dataDragonVersion, CancellationToken cancellationToken)
+        private static async Task<DataDragonChampionCatalog> DeserializeChampionCatalogAsync(
+            Stream stream,
+            CancellationToken cancellationToken)
         {
             var catalog = await JsonSerializer.DeserializeAsync<DataDragonChampionCatalog>(
                     stream,
@@ -291,8 +423,19 @@ namespace JoinGameAfk.Services
                     cancellationToken)
                 .ConfigureAwait(false);
 
+            if (catalog is null || catalog.Data.Count == 0)
+                throw new InvalidOperationException("Riot Data Dragon returned an empty champion catalog.");
+
+            return catalog;
+        }
+
+        private static DataDragonChampion FindCatalogChampion(
+            DataDragonChampionCatalog catalog,
+            ChampionInfo champion,
+            string dataDragonVersion)
+        {
             string championKey = champion.Key.ToString(CultureInfo.InvariantCulture);
-            var match = catalog?.Data.Values.FirstOrDefault(candidate =>
+            var match = catalog.Data.Values.FirstOrDefault(candidate =>
                 string.Equals(candidate.Key, championKey, StringComparison.Ordinal));
 
             if (match is null)
@@ -332,10 +475,11 @@ namespace JoinGameAfk.Services
             bool optimizeForLocalCache,
             CancellationToken cancellationToken)
         {
+            string tileChampionId = NormalizeTileChampionId(dataDragonChampionId);
             string tileUrl = string.Format(
                 CultureInfo.InvariantCulture,
                 ChampionTileUrlFormat,
-                Uri.EscapeDataString(dataDragonChampionId),
+                Uri.EscapeDataString(tileChampionId),
                 skinNumber);
             string destinationFilePath = Path.Combine(tileDirectoryPath, fileName);
             string temporaryFilePath = Path.Combine(tileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
@@ -375,7 +519,8 @@ namespace JoinGameAfk.Services
 
         private static string CreateChampionTileFileName(string dataDragonChampionId, int skinNumber)
         {
-            string fileName = $"{dataDragonChampionId}_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
+            string tileChampionId = NormalizeTileChampionId(dataDragonChampionId);
+            string fileName = $"{tileChampionId}_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
             string safeFileName = Path.GetFileName(fileName);
             if (!string.Equals(fileName, safeFileName, StringComparison.Ordinal)
                 || !safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -384,6 +529,13 @@ namespace JoinGameAfk.Services
             }
 
             return safeFileName;
+        }
+
+        private static string NormalizeTileChampionId(string dataDragonChampionId)
+        {
+            return string.Equals(dataDragonChampionId, "Fiddlesticks", StringComparison.OrdinalIgnoreCase)
+                ? "FiddleSticks"
+                : dataDragonChampionId;
         }
 
         private static bool FilesHaveSameSha256(string firstFilePath, string secondFilePath)

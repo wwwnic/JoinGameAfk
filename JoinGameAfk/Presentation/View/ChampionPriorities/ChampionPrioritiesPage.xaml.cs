@@ -6,7 +6,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
-using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 using JoinGameAfk.Theme;
 
@@ -23,11 +22,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private readonly ChampionDataSettings _championDataSettings;
         private readonly RolePlanSettings _rolePlanSettings;
+        private readonly LeagueClientConnectionContext _leagueClientConnection;
         private readonly Action<string>? _logMessage;
         private readonly Action<string>? _logErrorMessage;
-        private readonly DataDragonChampionCatalogService _championCatalogRemoteService;
+        private readonly ChampionCatalogSyncCoordinator _championCatalogSyncCoordinator;
         private readonly ObservableCollection<RegionLocaleSuggestion> _platformOptions = new(PlatformSuggestions);
         private readonly ObservableCollection<RegionLocaleSuggestion> _localeOptions = new(LocaleSuggestions);
+        private readonly ObservableCollection<ChampionDataSourceOption> _championDataSourceOptions = new(ChampionDataSourceOptions);
         private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private List<ChampionReferenceItem> _filteredChampionReferences;
@@ -70,7 +71,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private bool _isChampionPictureDownloadInProgress;
         private bool _isApplyingChampionDataSettings;
         private bool _isChampionDataOperationInProgress;
-        private CancellationTokenSource? _championCatalogVersionCheckCancellation;
         private string? _checkedChampionCatalogPlatformId;
         private string? _latestConfiguredRegionDataDragonVersion;
 
@@ -161,21 +161,23 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         public ChampionPrioritiesPage(
             ChampionDataSettings championDataSettings,
             RolePlanSettings rolePlanSettings,
+            LeagueClientConnectionContext leagueClientConnection,
+            ChampionCatalogSyncCoordinator championCatalogSyncCoordinator,
             Action<string>? logMessage = null,
             Action<string>? logErrorMessage = null)
         {
             InitializeComponent();
             _championDataSettings = championDataSettings;
             _rolePlanSettings = rolePlanSettings;
+            _leagueClientConnection = leagueClientConnection;
+            _championCatalogSyncCoordinator = championCatalogSyncCoordinator;
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
-            _championCatalogRemoteService = new DataDragonChampionCatalogService(
-                () => _championDataSettings.Locale,
-                () => _championDataSettings.PlatformId);
             EnsureConfiguredOption(_platformOptions, _championDataSettings.PlatformId);
             EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
             ChampionDataPlatformIdBox.ItemsSource = _platformOptions;
             ChampionDataLocaleBox.ItemsSource = _localeOptions;
+            ChampionDataSourceModeBox.ItemsSource = _championDataSourceOptions;
             ApplyChampionDataSettingsToControls();
             RefreshChampionCatalogSyncStatus();
             ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
@@ -281,9 +283,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
             _championDataSettings.Saved -= ChampionDataSettings_Saved;
-            _championCatalogVersionCheckCancellation?.Cancel();
-            _championCatalogVersionCheckCancellation?.Dispose();
-            _championCatalogVersionCheckCancellation = null;
         }
     }
 }

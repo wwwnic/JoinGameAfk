@@ -1081,7 +1081,7 @@
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Full-resolution champion tiles (enthusiast option)"
                                        Style="{StaticResource FieldLabelStyle}" />
-                            <TextBlock Text="Off is strongly recommended. JoinGameAfk displays champion tiles at small sizes, so most users will see no noticeable difference. Enabling this keeps Riot's original JPGs for both pencil downloads and full-cache rebuilds, and a complete collection can use 500 MB+ more disk space and RAM."
+                            <TextBlock Text="Off is strongly recommended. JoinGameAfk displays champion tiles at small sizes, so most users will see no noticeable difference. Enabling this keeps Riot's original JPGs for both pencil downloads and default-picture downloads, and a complete collection can use 500 MB+ more disk space and RAM."
                                        Style="{StaticResource FieldHintStyle}"
                                        TextWrapping="Wrap"
                                        Margin="0,3,0,0" />
@@ -1096,7 +1096,7 @@
                                   VerticalAlignment="Center"
                                   Checked="DownloadRawChampionPicturesCheckBox_Changed"
                                   Unchecked="DownloadRawChampionPicturesCheckBox_Changed"
-                                  ToolTip="Keep Riot's original JPG files for future pencil downloads and full-cache rebuilds." />
+                                  ToolTip="Keep Riot's original JPG files for future pencil downloads and default-picture downloads." />
                     </Grid>
                 </Border>
             </StackPanel>

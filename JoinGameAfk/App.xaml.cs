@@ -3,7 +3,6 @@ using System.Windows.Media.Animation;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
-using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Presentation.Controller;
 using JoinGameAfk.Presentation.View;
 using JoinGameAfk.Presentation.View.ChampionPriorities;
@@ -25,6 +24,8 @@ namespace JoinGameAfk
         private SoundSettings? fSoundSettings;
         private RolePlanSettings? fRolePlanSettings;
         private OverlaySettings? fOverlaySettings;
+        private readonly LeagueClientConnectionContext fLeagueClientConnection = new();
+        private ChampionCatalogSyncCoordinator? fChampionCatalogSyncCoordinator;
         private static readonly Duration ThemePreviewTransitionDuration = new(TimeSpan.FromMilliseconds(140));
 
         private void Application_Startup(object sender, StartupEventArgs e)
@@ -51,6 +52,11 @@ namespace JoinGameAfk
                     bundledTileSeedError = FormatException(ex);
                 }
 
+                fChampionCatalogSyncCoordinator = new ChampionCatalogSyncCoordinator(
+                    championDataSettings,
+                    fLeagueClientConnection,
+                    message => fLogsPage?.WriteLine(message));
+                fLeagueClientConnection.Connected += LeagueClientConnection_Connected;
                 fMainWindow = CreateMainWindow(generalSettings, championDataSettings, soundSettings, rolePlanSettings, overlaySettings);
                 MainWindow = fMainWindow;
                 fMainWindow.Show();
@@ -64,7 +70,6 @@ namespace JoinGameAfk
                     fPhaseController?.Start();
 
                 LogChampionTileArchiveCleanup(ChampionTileCatalog.DeleteDownloadedArchives());
-                _ = AutoSyncChampionListOnStartupAsync(championDataSettings);
             }
             catch (Exception ex)
             {
@@ -103,6 +108,7 @@ namespace JoinGameAfk
 
         private void Application_Exit(object sender, ExitEventArgs e)
         {
+            fLeagueClientConnection.Connected -= LeagueClientConnection_Connected;
             fPhaseController?.Dispose();
             fPhaseController = null;
         }
@@ -134,11 +140,15 @@ namespace JoinGameAfk
                 generalSettings,
                 championDataSettings,
                 rolePlanSettings,
-                soundSettings);
+                soundSettings,
+                fLeagueClientConnection);
 
             var championPrioritiesPage = new ChampionPrioritiesPage(
                 championDataSettings,
                 rolePlanSettings,
+                fLeagueClientConnection,
+                fChampionCatalogSyncCoordinator
+                    ?? throw new InvalidOperationException("Champion catalog synchronization is not initialized."),
                 logsPage.WriteLine,
                 logsPage.WriteErrorLine);
             var settingsPage = new SettingsPage(
@@ -157,9 +167,17 @@ namespace JoinGameAfk
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
             fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
             fDashboardPage.ChampSelectSubPhaseChanged += mainWindow.UpdateChampSelectSubPhase;
-            fDashboardPage.UpdateRegionDisplay(
-                championDataSettings.PlatformId,
-                championDataSettings.Locale);
+            if (ChampionDataSourcePolicy.Resolve(championDataSettings.SourceMode)
+                == ChampionDataSourceMode.LeagueClient)
+            {
+                fDashboardPage.UpdateRegionDisplay(null, null);
+            }
+            else
+            {
+                fDashboardPage.UpdateRegionDisplay(
+                    championDataSettings.PlatformId,
+                    championDataSettings.Locale);
+            }
             mainWindow.UpdatePhaseIndicator(ClientPhase.Unknown);
             mainWindow.SetWatcherState(false);
             mainWindow.SetClientConnection(false);
@@ -169,61 +187,37 @@ namespace JoinGameAfk
             return mainWindow;
         }
 
-        private async Task AutoSyncChampionListOnStartupAsync(ChampionDataSettings championDataSettings)
+        private async void LeagueClientConnection_Connected(object? sender, EventArgs e)
         {
-            if (!championDataSettings.AutoUpdateChampionCatalogOnStartup)
+            ChampionCatalogSyncCoordinator? coordinator = fChampionCatalogSyncCoordinator;
+            if (coordinator is null)
                 return;
-
-            var remoteService = new DataDragonChampionCatalogService(
-                () => championDataSettings.Locale,
-                () => championDataSettings.PlatformId);
-            string latestDataDragonVersion;
-
-            fLogsPage?.WriteLine($"Champion list startup update check is enabled. Checking Riot Data Dragon for {championDataSettings.PlatformId}.");
 
             try
             {
-                latestDataDragonVersion = await remoteService.FetchLatestDataDragonVersionAsync();
+                LeagueClientChampionCatalogAutoSyncResult? syncResult =
+                    await coordinator.RefreshLeagueClientIfDueAsync();
+                if (syncResult is null)
+                    return;
+
+                if (syncResult.Refreshed && syncResult.RefreshResult is { } refreshResult)
+                {
+                    fLogsPage?.WriteLine(
+                        $"Automatic local champion-list sync completed in League Client language {refreshResult.Locale} "
+                        + $"({refreshResult.ChampionCount} champions). Next check is allowed in 12 hours.");
+                }
+                else if (syncResult.NextRefreshAtUtc is DateTime nextRefreshAtUtc)
+                {
+                    fLogsPage?.WriteLine(
+                        $"Skipped automatic League Client champion-list sync; the local list was checked within the last 12 hours. Next check: {nextRefreshAtUtc.ToLocalTime():g}.");
+                }
             }
             catch (Exception ex)
             {
-                fLogsPage?.WriteErrorLine($"Champion list startup update check failed. Existing local champion list was kept. {FormatException(ex)}");
-                return;
+                fLogsPage?.WriteErrorLine(
+                    "Automatic League Client champion-list sync failed. Existing local champion data was kept, and Data Dragon was not used as a fallback. "
+                    + FormatException(ex));
             }
-
-            var catalogSyncInfo = ChampionCatalog.GetLocalSyncInfo();
-            bool championListNeedsUpdate =
-                !IsDataDragonVersionCurrent(catalogSyncInfo.DataDragonVersion, latestDataDragonVersion)
-                || !IsChampionCatalogLocaleCurrent(catalogSyncInfo.Locale, championDataSettings.Locale);
-            if (championListNeedsUpdate)
-            {
-                try
-                {
-                    fLogsPage?.WriteLine(
-                        $"Champion list update available. Local version/language: {FormatDataDragonVersion(catalogSyncInfo.DataDragonVersion)} / {FormatChampionCatalogLocale(catalogSyncInfo.Locale)}; "
-                        + $"configured version/language: {latestDataDragonVersion} / {championDataSettings.Locale}.");
-                    var remoteCatalog = await remoteService.FetchChampionCatalogAsync(latestDataDragonVersion);
-                    var result = ChampionCatalog.RefreshFromDataDragon(remoteCatalog);
-                    fLogsPage?.WriteLine(
-                        $"Champion list updated to Riot Data Dragon {result.DataDragonVersion} in {result.Locale} "
-                        + $"({result.ChampionCount} champions). Last sync: {result.LastSyncedAtUtc.ToLocalTime():g}.");
-                }
-                catch (Exception ex)
-                {
-                    fLogsPage?.WriteErrorLine($"Champion list update failed. Existing local champion list was kept. {FormatException(ex)}");
-                }
-            }
-            else
-            {
-                fLogsPage?.WriteLine(
-                    $"Champion list is already current with Riot Data Dragon {latestDataDragonVersion} in {championDataSettings.Locale}.");
-            }
-        }
-
-        private static bool IsDataDragonVersionCurrent(string? localVersion, string latestVersion)
-        {
-            return !string.IsNullOrWhiteSpace(localVersion)
-                && string.Equals(localVersion.Trim(), latestVersion.Trim(), StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FormatDataDragonVersion(string? dataDragonVersion)
@@ -233,21 +227,6 @@ namespace JoinGameAfk
                 : dataDragonVersion.Trim();
         }
 
-        private static bool IsChampionCatalogLocaleCurrent(string? localLocale, string configuredLocale)
-        {
-            return !string.IsNullOrWhiteSpace(localLocale)
-                && string.Equals(
-                    RegionLocale.NormalizeLocale(localLocale),
-                    RegionLocale.NormalizeLocale(configuredLocale),
-                    StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string FormatChampionCatalogLocale(string? locale)
-        {
-            return string.IsNullOrWhiteSpace(locale)
-                ? "unknown"
-                : RegionLocale.NormalizeLocale(locale);
-        }
 
         private void LogChampionTileArchiveCleanup(ChampionTileArchiveCleanupResult cleanupResult)
         {

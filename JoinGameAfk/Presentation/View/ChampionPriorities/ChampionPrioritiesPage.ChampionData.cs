@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using JoinGameAfk.Constant;
 using JoinGameAfk.Model;
+using JoinGameAfk.Plugin.Services;
 using JoinGameAfk.Services;
 
 namespace JoinGameAfk.Presentation.View.ChampionPriorities
@@ -63,6 +64,12 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             new("id_ID", "Indonesian"),
             new("th_TH", "Thai"),
             new("vi_VN", "Vietnamese")
+        ];
+
+        private static readonly IReadOnlyList<ChampionDataSourceOption> ChampionDataSourceOptions =
+        [
+            new(ChampionDataSourceMode.LeagueClient, "LeagueClient (LCU) — local, automatic every 12 hours"),
+            new(ChampionDataSourceMode.DataDragon, "DataDragon (Riot) — internet")
         ];
 
         public void OpenChampionDataManager()
@@ -125,9 +132,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
                 ChampionDataPlatformIdBox.SelectedValue = _championDataSettings.PlatformId;
                 ChampionDataLocaleBox.SelectedValue = _championDataSettings.Locale;
-                ChampionDataAutoUpdateCatalogCheckBox.IsChecked = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
+                ChampionDataSourceModeBox.SelectedValue = _championDataSettings.SourceMode;
                 ChampionDataDownloadNewChampionPicturesCheckBox.IsChecked =
                     _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate;
+                UpdateChampionDataSourceControlState();
             }
             finally
             {
@@ -140,23 +148,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (_isApplyingChampionDataSettings)
                 return;
 
-            if (ReferenceEquals(sender, ChampionDataAutoUpdateCatalogCheckBox)
-                && ChampionDataAutoUpdateCatalogCheckBox.IsChecked == true
-                && !ConfirmChampionCatalogAutoUpdate())
-            {
-                _isApplyingChampionDataSettings = true;
-                try
-                {
-                    ChampionDataAutoUpdateCatalogCheckBox.IsChecked = false;
-                }
-                finally
-                {
-                    _isApplyingChampionDataSettings = false;
-                }
-
-                return;
-            }
-
             SaveChampionDataSettingsFromControls();
         }
 
@@ -166,27 +157,68 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
 
             SaveChampionDataSettingsFromControls();
+            UpdateChampionDataSourceControlState();
+            if (ReferenceEquals(sender, ChampionDataSourceModeBox)
+                && _championDataSettings.SourceMode == ChampionDataSourceMode.LeagueClient
+                && _leagueClientConnection.IsConnected)
+            {
+                _ = RefreshLeagueClientAfterSourceSelectionAsync();
+            }
+        }
+
+        private async Task RefreshLeagueClientAfterSourceSelectionAsync()
+        {
+            try
+            {
+                LeagueClientChampionCatalogAutoSyncResult? syncResult =
+                    await _championCatalogSyncCoordinator.RefreshLeagueClientIfDueAsync();
+                UpdateChampionDataSourceControlState();
+                if (syncResult?.Refreshed == true && syncResult.RefreshResult is { } refreshResult)
+                {
+                    RefreshChampionCatalogSyncStatus(refreshResult, ChampionDataSourceMode.LeagueClient);
+                    SetChampionCatalogRefreshStatus(
+                        "League Client champion list synchronized after changing the data source.",
+                        "AccentGreenTextBrush",
+                        Brushes.ForestGreen);
+                    LogMessage("League Client champion list synchronized after changing the data source.");
+                }
+            }
+            catch (Exception ex)
+            {
+                string message = "Automatic League Client champion-list sync failed after changing the data source. "
+                    + $"Existing local data was kept. {FormatException(ex)}";
+                SetChampionCatalogRefreshStatus(message, "DangerTextBrush", Brushes.IndianRed);
+                LogErrorMessage(message);
+            }
         }
 
         private void SaveChampionDataSettingsFromControls()
         {
-            string platformId = ChampionDataPlatformIdBox.SelectedValue?.ToString() ?? string.Empty;
-            string locale = ChampionDataLocaleBox.SelectedValue?.ToString() ?? string.Empty;
-            if (!RegionLocale.TryNormalizePlatformId(platformId, out string normalizedPlatformId)
-                || !RegionLocale.TryNormalizeLocale(locale, out string normalizedLocale))
+            ChampionDataSourceMode sourceMode = ChampionDataSourceModeBox.SelectedValue is ChampionDataSourceMode selected
+                ? selected
+                : ChampionDataSourceMode.LeagueClient;
+            string normalizedPlatformId = _championDataSettings.PlatformId;
+            string normalizedLocale = _championDataSettings.Locale;
+            if (sourceMode == ChampionDataSourceMode.DataDragon)
             {
-                ApplyChampionDataSettingsToControls();
-                return;
+                string platformId = ChampionDataPlatformIdBox.SelectedValue?.ToString() ?? string.Empty;
+                string locale = ChampionDataLocaleBox.SelectedValue?.ToString() ?? string.Empty;
+                if (!RegionLocale.TryNormalizePlatformId(platformId, out normalizedPlatformId)
+                    || !RegionLocale.TryNormalizeLocale(locale, out normalizedLocale))
+                {
+                    ApplyChampionDataSettingsToControls();
+                    return;
+                }
             }
 
             string previousPlatformId = _championDataSettings.PlatformId;
             string previousLocale = _championDataSettings.Locale;
-            bool previousAutoUpdate = _championDataSettings.AutoUpdateChampionCatalogOnStartup;
             bool previousDownloadNewChampionPictures = _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate;
+            ChampionDataSourceMode previousSourceMode = _championDataSettings.SourceMode;
 
             _championDataSettings.PlatformId = normalizedPlatformId;
             _championDataSettings.Locale = normalizedLocale;
-            _championDataSettings.AutoUpdateChampionCatalogOnStartup = ChampionDataAutoUpdateCatalogCheckBox.IsChecked == true;
+            _championDataSettings.SourceMode = sourceMode;
             _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate =
                 ChampionDataDownloadNewChampionPicturesCheckBox.IsChecked == true;
 
@@ -198,8 +230,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 _championDataSettings.PlatformId = previousPlatformId;
                 _championDataSettings.Locale = previousLocale;
-                _championDataSettings.AutoUpdateChampionCatalogOnStartup = previousAutoUpdate;
                 _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate = previousDownloadNewChampionPictures;
+                _championDataSettings.SourceMode = previousSourceMode;
                 ApplyChampionDataSettingsToControls();
                 MessageBox.Show(
                     Window.GetWindow(this),
@@ -220,19 +252,115 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             options.Add(new RegionLocaleSuggestion(configuredCode, "Custom value from settings file"));
         }
 
+        private void UpdateChampionDataSourceControlState()
+        {
+            ChampionDataSourceMode source = ChampionDataSourceModeBox.SelectedValue is ChampionDataSourceMode selected
+                ? selected
+                : ChampionDataSourceMode.LeagueClient;
+            ChampionDataLeagueClientConfigurationPanel.Visibility = source == ChampionDataSourceMode.LeagueClient
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            ChampionDataDataDragonConfigurationPanel.Visibility = source == ChampionDataSourceMode.DataDragon
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            if (_leagueClientConnection.TryGetRegionLocale(out LeagueClientRegionLocaleInfo? regionLocale)
+                && regionLocale is not null)
+            {
+                ChampionDataLeagueClientRegionLocaleTextBlock.Text =
+                    $"Detected from the connected League Client: {regionLocale.PlatformId} · {regionLocale.Locale}. "
+                    + "Data Dragon settings are ignored while LCU is selected.";
+            }
+            else
+            {
+                ChampionDataLeagueClientRegionLocaleTextBlock.Text =
+                    "Start the watcher to detect the League Client region and language. "
+                    + "Data Dragon settings are ignored while LCU is selected.";
+            }
+        }
+
+        private ChampionDataSourceMode ResolveChampionDataSource()
+        {
+            ChampionDataSourceMode source = ChampionDataSourcePolicy.Resolve(
+                _championDataSettings.SourceMode);
+            if (source == ChampionDataSourceMode.LeagueClient && !_leagueClientConnection.IsConnected)
+            {
+                throw new InvalidOperationException(
+                    "LeagueClient (LCU) is selected, but the watcher is not connected to the League Client.");
+            }
+
+            return source;
+        }
+
+        private Task<ChampionCatalogRefreshResult> RefreshChampionCatalogAsync(
+            ChampionDataSourceMode source,
+            CancellationToken cancellationToken = default)
+        {
+            return _championCatalogSyncCoordinator.RefreshAsync(source, cancellationToken);
+        }
+
+        private async Task<ChampionTileDownloadResult> DownloadChampionImagesAsync(
+            ChampionInfo champion,
+            ChampionDataSourceMode source,
+            IProgress<ChampionTileDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (source == ChampionDataSourceMode.DataDragon)
+            {
+                return await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
+                    champion,
+                    progress,
+                    cancellationToken,
+                    optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
+                    preferredLocale: _championDataSettings.Locale);
+            }
+
+            using var http = _leagueClientConnection.CreateHttpClient(LogMessage);
+            ChampionTileDownloadResult result = await LeagueClientChampionTileDownloadService
+                .DownloadChampionTilesAsync(
+                    http,
+                    champion,
+                    ChampionTileCatalog.TileDirectoryPath,
+                    progress,
+                    cancellationToken,
+                    optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures);
+            ChampionTileCatalog.Reload();
+            return result;
+        }
+
+        private static string GetChampionDataSourceName(ChampionDataSourceMode source)
+        {
+            return source == ChampionDataSourceMode.LeagueClient
+                ? "League Client (LCU)"
+                : "Riot Data Dragon";
+        }
+
         private async void RefreshChampionCatalogButton_Click(object sender, RoutedEventArgs e)
         {
             if (_isChampionDataOperationInProgress || _isChampionPictureDownloadInProgress)
                 return;
 
-            if (!ConfirmChampionCatalogRefresh())
+            ChampionDataSourceMode source;
+            try
+            {
+                source = ResolveChampionDataSource();
+            }
+            catch (Exception ex)
+            {
+                string message = $"Champion list update failed before starting. {ex.Message}";
+                SetChampionCatalogRefreshStatus(message, "DangerTextBrush", Brushes.IndianRed);
+                LogErrorMessage(message);
+                return;
+            }
+
+            if (!ConfirmChampionCatalogRefresh(source))
             {
                 SetChampionCatalogRefreshStatus("Update canceled.", "TextSoftBrush", Brushes.SlateGray);
                 return;
             }
 
             SetChampionDataOperationInProgress(true);
-            SetChampionCatalogRefreshStatus("Updating champion list from Riot Data Dragon...", "TextSoftBrush", Brushes.SlateGray);
+            SetChampionCatalogRefreshStatus($"Updating champion list from {GetChampionDataSourceName(source)}...", "TextSoftBrush", Brushes.SlateGray);
             SetChampionPictureDownloadStatus(string.Empty, "TextSoftBrush", Brushes.SlateGray);
             ChampionPictureDownloadProgressBar.Visibility = Visibility.Collapsed;
 
@@ -241,17 +369,21 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 var existingChampionKeys = ChampionCatalog.All
                     .Select(champion => champion.Key)
                     .ToHashSet();
-                var remoteCatalog = await _championCatalogRemoteService.FetchLatestChampionCatalogAsync();
-                var newChampionKeys = remoteCatalog.Champions
+                var result = await RefreshChampionCatalogAsync(source);
+                UpdateChampionDataSourceControlState();
+                var newChampionKeys = ChampionCatalog.All
                     .Where(champion => champion.Key > 0 && !existingChampionKeys.Contains(champion.Key))
                     .Select(champion => champion.Key)
                     .Distinct()
                     .OrderBy(championKey => championKey)
                     .ToList();
-                var result = ChampionCatalog.RefreshFromDataDragon(remoteCatalog);
-                _checkedChampionCatalogPlatformId = _championDataSettings.PlatformId;
-                _latestConfiguredRegionDataDragonVersion = result.DataDragonVersion;
-                RefreshChampionCatalogSyncStatus(result);
+                _checkedChampionCatalogPlatformId = source == ChampionDataSourceMode.DataDragon
+                    ? _championDataSettings.PlatformId
+                    : null;
+                _latestConfiguredRegionDataDragonVersion = source == ChampionDataSourceMode.DataDragon
+                    ? result.DataDragonVersion
+                    : null;
+                RefreshChampionCatalogSyncStatus(result, source);
                 UpdateChampionCatalogVersionWarning();
                 SetChampionCatalogRefreshStatus(
                     CreateChampionCatalogRefreshStatusMessage(newChampionKeys),
@@ -261,7 +393,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 if (_championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate
                     && newChampionKeys.Count > 0)
                 {
-                    var pictureResult = await DownloadNewChampionPicturesAsync(newChampionKeys);
+                    var pictureResult = await DownloadNewChampionPicturesAsync(newChampionKeys, source);
                     SetChampionPictureDownloadStatus(
                         CreateNewChampionPictureDownloadStatusMessage(pictureResult),
                         pictureResult.FailedChampionCount == 0 && pictureResult.FailedTileCount == 0
@@ -281,6 +413,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
             catch (Exception ex)
             {
+                LogErrorMessage(
+                    $"Champion list update from {GetChampionDataSourceName(source)} failed. Existing local file was kept. {FormatException(ex)}");
                 SetChampionCatalogRefreshStatus(
                     $"Champion list update failed. Existing local file was kept. {ex.Message}",
                     "DangerTextBrush",
@@ -293,7 +427,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         }
 
         private async Task<NewChampionPictureDownloadResult> DownloadNewChampionPicturesAsync(
-            IReadOnlyList<int> championKeys)
+            IReadOnlyList<int> championKeys,
+            ChampionDataSourceMode source)
         {
             int downloadedTileCount = 0;
             int unchangedTileCount = 0;
@@ -334,11 +469,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
                 try
                 {
-                    var result = await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
-                        champion,
-                        progress,
-                        optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
-                        preferredLocale: _championDataSettings.Locale);
+                    var result = await DownloadChampionImagesAsync(champion, source, progress);
                     downloadedTileCount += result.DownloadedTileCount;
                     unchangedTileCount += result.UnchangedTileCount;
                     failedTileCount += result.FailedTileCount;
@@ -389,6 +520,109 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             return $"Finished picture downloads for {result.ChampionCount} {championNoun}. Downloaded {result.DownloadedTileCount}; unchanged {result.UnchangedTileCount}; failed tile requests {result.FailedTileCount}; failed champions {result.FailedChampionCount}.";
         }
 
+        private async void DownloadDefaultChampionPicturesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isChampionDataOperationInProgress || _isChampionPictureDownloadInProgress)
+                return;
+
+            ChampionDataSourceMode source;
+            try
+            {
+                source = ResolveChampionDataSource();
+            }
+            catch (Exception ex)
+            {
+                string message = $"Default picture download failed before starting. {ex.Message}";
+                SetChampionPictureDownloadStatus(message, "DangerTextBrush", Brushes.IndianRed);
+                LogErrorMessage(message);
+                return;
+            }
+
+            if (!ConfirmDefaultChampionPictureDownload(source))
+            {
+                SetChampionPictureDownloadStatus(
+                    "Default champion picture download canceled.",
+                    "TextSoftBrush",
+                    Brushes.SlateGray);
+                return;
+            }
+
+            IReadOnlyList<ChampionInfo> champions = ChampionCatalog.All
+                .Where(champion => champion.Key > 0)
+                .OrderBy(champion => champion.Key)
+                .ToList();
+            SetChampionDataOperationInProgress(true);
+            ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
+            ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+            ChampionPictureDownloadProgressBar.Minimum = 0;
+            ChampionPictureDownloadProgressBar.Maximum = Math.Max(1, champions.Count);
+            ChampionPictureDownloadProgressBar.Value = 0;
+            SetChampionPictureDownloadStatus(
+                $"Preparing {champions.Count} default champion pictures from {GetChampionDataSourceName(source)}...",
+                "TextSoftBrush",
+                Brushes.SlateGray);
+
+            try
+            {
+                var progress = new Progress<ChampionDefaultTileDownloadProgress>(snapshot =>
+                {
+                    ChampionPictureDownloadProgressBar.Value = snapshot.CheckedChampionCount;
+                    SetChampionPictureDownloadStatus(
+                        snapshot.Message,
+                        snapshot.FailedTileCount == 0 ? "TextSoftBrush" : "DangerTextBrush",
+                        snapshot.FailedTileCount == 0 ? Brushes.SlateGray : Brushes.IndianRed);
+                    if (snapshot.Message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase))
+                        LogErrorMessage(snapshot.Message);
+                });
+
+                ChampionDefaultTileDownloadResult result;
+                if (source == ChampionDataSourceMode.DataDragon)
+                {
+                    result = await ChampionTileCatalog.DownloadDefaultImagesFromDataDragonAsync(
+                        champions,
+                        progress,
+                        optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
+                        preferredLocale: _championDataSettings.Locale);
+                }
+                else
+                {
+                    using var http = _leagueClientConnection.CreateHttpClient(LogMessage);
+                    result = await LeagueClientChampionTileDownloadService.DownloadDefaultChampionTilesAsync(
+                        http,
+                        champions,
+                        ChampionTileCatalog.TileDirectoryPath,
+                        progress,
+                        optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures);
+                    ChampionTileCatalog.Reload();
+                }
+
+                ChampionPictureDownloadProgressBar.Value = champions.Count;
+                string message =
+                    $"Default pictures completed. Updated {result.DownloadedTileCount}; "
+                    + $"unchanged {result.UnchangedTileCount}; failed {result.FailedTileCount}.";
+                SetChampionPictureDownloadStatus(
+                    message,
+                    result.FailedTileCount == 0 ? "AccentGreenTextBrush" : "DangerTextBrush",
+                    result.FailedTileCount == 0 ? Brushes.ForestGreen : Brushes.IndianRed);
+                LogMessage(
+                    $"Default champion pictures completed from {GetChampionDataSourceName(source)}. "
+                    + $"Checked {result.ChampionCount}; updated {result.DownloadedTileCount}; "
+                    + $"unchanged {result.UnchangedTileCount}; failed {result.FailedTileCount}.");
+            }
+            catch (Exception ex)
+            {
+                string message =
+                    $"Default champion picture download failed. Existing pictures were kept. {FormatException(ex)}";
+                SetChampionPictureDownloadStatus(message, "DangerTextBrush", Brushes.IndianRed);
+                LogErrorMessage(message);
+            }
+            finally
+            {
+                ChampionPictureDownloadProgressBar.IsIndeterminate = false;
+                SetChampionDataOperationInProgress(false);
+            }
+        }
+
         private static string FormatChampionList(IReadOnlyList<int> championKeys)
         {
             return string.Join(
@@ -397,94 +631,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                     ChampionCatalog.TryGetByKey(championKey, out var champion) && champion is not null
                         ? champion.Name
                         : $"champion {championKey}"));
-        }
-
-        private async void DownloadChampionPictureArchiveButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_isChampionDataOperationInProgress || _isChampionPictureDownloadInProgress)
-                return;
-
-            if (!ConfirmChampionPictureRefresh())
-            {
-                SetChampionPictureDownloadStatus(
-                    "Data Dragon archive download canceled.",
-                    "TextSoftBrush",
-                    Brushes.SlateGray);
-                LogMessage("Champion picture archive download canceled by user.");
-                return;
-            }
-
-            LogMessage("Manual champion picture archive install started.");
-            SetChampionDataOperationInProgress(true);
-            ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
-            ChampionPictureDownloadProgressBar.IsIndeterminate = true;
-            ChampionPictureDownloadProgressBar.Value = 0;
-            SetChampionPictureDownloadStatus(
-                "Preparing Riot Data Dragon archive download...",
-                "TextSoftBrush",
-                Brushes.SlateGray);
-
-            try
-            {
-                string? lastLoggedArchiveProgressMessage = null;
-                var progress = new Progress<ChampionTileArchiveProgress>(snapshot =>
-                {
-                    ChampionPictureDownloadStatusLabel.Text = snapshot.Message;
-                    if (ShouldLogChampionTileArchiveProgress(snapshot.Message)
-                        && !string.Equals(snapshot.Message, lastLoggedArchiveProgressMessage, StringComparison.Ordinal))
-                    {
-                        lastLoggedArchiveProgressMessage = snapshot.Message;
-                        if (IsChampionTileArchiveWarning(snapshot.Message))
-                            LogErrorMessage(snapshot.Message);
-                        else
-                            LogMessage(snapshot.Message);
-                    }
-
-                    if (snapshot.TotalBytes is long totalBytes && totalBytes > 0)
-                    {
-                        ChampionPictureDownloadProgressBar.IsIndeterminate = false;
-                        ChampionPictureDownloadProgressBar.Maximum = totalBytes;
-                        ChampionPictureDownloadProgressBar.Value = Math.Min(snapshot.BytesCompleted, totalBytes);
-                    }
-                    else
-                    {
-                        ChampionPictureDownloadProgressBar.IsIndeterminate = true;
-                    }
-                });
-
-                string regionalDataDragonVersion =
-                    await _championCatalogRemoteService.FetchLatestDataDragonVersionAsync();
-                var result = await ChampionTileCatalog.InstallDataDragonArchiveAsync(
-                    regionalDataDragonVersion,
-                    progress,
-                    optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures);
-                string archiveCleanupText = result.ArchiveDeleted
-                    ? "then removed the archive"
-                    : $"but could not remove the archive ({result.ArchiveDeleteError})";
-                string pictureModeText = _championDataSettings.DownloadRawChampionPictures
-                    ? "kept raw originals"
-                    : "stored compact resized copies";
-                SetChampionPictureDownloadStatus(
-                    $"Data Dragon archive {result.DataDragonVersion} installed. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}, checked {result.CheckedTileCount} champion tiles, updated {result.UpdatedTileCount}, unchanged {result.UnchangedTileCount}, {archiveCleanupText}, {pictureModeText}. Cache now has {result.CachedTileCount} jpg files.",
-                    result.ArchiveDeleted ? "AccentGreenTextBrush" : "DangerTextBrush",
-                    result.ArchiveDeleted ? Brushes.ForestGreen : Brushes.IndianRed);
-                LogMessage($"Manual champion picture archive install completed for Riot Data Dragon {result.DataDragonVersion}. Downloaded {FormatByteCount(result.ArchiveSizeBytes)}; checked {result.CheckedTileCount} champion tiles; updated {result.UpdatedTileCount}; unchanged {result.UnchangedTileCount}; {pictureModeText}; cache now has {result.CachedTileCount} jpg files.");
-                if (!result.ArchiveDeleted)
-                    LogErrorMessage($"Champion picture archive cleanup failed after successful extraction. {result.ArchiveDeleteError}");
-            }
-            catch (Exception ex)
-            {
-                SetChampionPictureDownloadStatus(
-                    $"Data Dragon archive install failed. Existing cache was kept. {ex.Message}",
-                    "DangerTextBrush",
-                    Brushes.IndianRed);
-                LogErrorMessage($"Manual champion picture archive install failed. Existing cache was kept. {FormatException(ex)}");
-            }
-            finally
-            {
-                ChampionPictureDownloadProgressBar.IsIndeterminate = false;
-                SetChampionDataOperationInProgress(false);
-            }
         }
 
         private void SetChampionDataOperationInProgress(bool isInProgress)
@@ -498,14 +644,32 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             bool enabled = !_isChampionDataOperationInProgress && !_isChampionPictureDownloadInProgress;
             ChampionDataConfigurationPanel.IsEnabled = enabled;
-            ChampionDataAutoUpdateCatalogCheckBox.IsEnabled = enabled;
             ChampionDataDownloadNewChampionPicturesCheckBox.IsEnabled = enabled;
             RefreshChampionCatalogButton.IsEnabled = enabled;
-            DownloadChampionPictureArchiveButton.IsEnabled = enabled;
+            DownloadDefaultChampionPicturesButton.IsEnabled = enabled;
         }
 
-        private bool ConfirmChampionCatalogRefresh()
+        private bool ConfirmDefaultChampionPictureDownload(ChampionDataSourceMode source)
         {
+            if (source == ChampionDataSourceMode.LeagueClient)
+                return true;
+
+            MessageBoxResult result = MessageBox.Show(
+                Window.GetWindow(this),
+                "JoinGameAfk will connect to Riot Data Dragon and download one default tile for every champion. "
+                    + "It will not download the full archive or additional skins.\n\nContinue?",
+                "Download Default Champion Pictures",
+                MessageBoxButton.OKCancel,
+                MessageBoxImage.Information,
+                MessageBoxResult.Cancel);
+            return result == MessageBoxResult.OK;
+        }
+
+        private bool ConfirmChampionCatalogRefresh(ChampionDataSourceMode source)
+        {
+            if (source == ChampionDataSourceMode.LeagueClient)
+                return true;
+
             string pictureDownloadText = _championDataSettings.DownloadNewChampionPicturesAfterCatalogUpdate
                 ? "If Riot lists champion IDs that are not in your local list, JoinGameAfk will also download tile images for only those new champions."
                 : "Champion pictures are not downloaded. Enable Download pictures for new champions first if you want new champion tiles fetched after the list update.";
@@ -521,37 +685,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             return result == MessageBoxResult.OK;
         }
 
-        private bool ConfirmChampionCatalogAutoUpdate()
-        {
-            var result = MessageBox.Show(
-                Window.GetWindow(this),
-                "Check for champion-list updates when JoinGameAfk starts?\n\nWhen enabled, JoinGameAfk connects to Riot at startup and keeps the champion list current for your selected game region and language. Champion pictures are not downloaded automatically. Use the pencil in Role Plans to add or refresh pictures.",
-                "Allow Startup Champion List Update Check",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Information,
-                MessageBoxResult.Cancel);
-
-            return result == MessageBoxResult.OK;
-        }
-
-        private bool ConfirmChampionPictureRefresh()
-        {
-            string cacheModeText = _championDataSettings.DownloadRawChampionPictures
-                ? "Full-resolution enthusiast mode is enabled. Every tile will keep Riot's original JPG. This usually has no noticeable visual benefit in JoinGameAfk and can add 500 MB+ of disk and RAM usage across a complete cache."
-                : "Compact picture mode is enabled, so extracted jpg files are resized to 96px-wide cache copies at maximum JPEG quality.";
-
-            var result = MessageBox.Show(
-                Window.GetWindow(this),
-                $"Official JoinGameAfk releases already include a prepared champion picture cache. This download is intended for self-built installations, repairing or replacing the full cache, or retrieving Riot's original-resolution pictures.\n\nJoinGameAfk will download the Riot Data Dragon dragontail archive currently deployed in your selected game region. The archive can exceed 2 GB. Afterward, the app extracts every champion tile into the local cache and removes the archive.\n\nFor a small update, cancel and use the pencil in Role Plans instead.\n\n{cacheModeText}\n\nDownload all champion images?",
-                "Download Champion Images",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Information,
-                MessageBoxResult.Cancel);
-
-            return result == MessageBoxResult.OK;
-        }
-
-        private void RefreshChampionCatalogSyncStatus(ChampionCatalogRefreshResult? refreshResult = null)
+        private void RefreshChampionCatalogSyncStatus(
+            ChampionCatalogRefreshResult? refreshResult = null,
+            ChampionDataSourceMode? source = null)
         {
             string? dataDragonVersion = refreshResult?.DataDragonVersion;
             string? locale = refreshResult?.Locale;
@@ -567,75 +703,57 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 lastSyncedAtUtc = syncInfo.LastSyncedAtUtc;
             }
 
+            string sourceName = source is not null
+                ? GetChampionDataSourceName(source.Value)
+                : string.Equals(
+                    dataDragonVersion,
+                    LeagueClientChampionCatalogService.LocalCatalogVersion,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? GetChampionDataSourceName(ChampionDataSourceMode.LeagueClient)
+                    : string.IsNullOrWhiteSpace(dataDragonVersion)
+                        ? "champion data"
+                        : GetChampionDataSourceName(ChampionDataSourceMode.DataDragon);
+            string versionText = string.Equals(
+                    dataDragonVersion,
+                    LeagueClientChampionCatalogService.LocalCatalogVersion,
+                    StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : $" {dataDragonVersion}";
             SetChampionCatalogSyncStatus(
                 string.IsNullOrWhiteSpace(dataDragonVersion)
-                    ? "Champion list has never been synced with Riot Data Dragon."
-                    : $"Synced with Riot Data Dragon {dataDragonVersion} in "
+                    ? "Champion list has never been synced."
+                    : $"Synced from {sourceName}{versionText} in "
                         + $"{(string.IsNullOrWhiteSpace(locale) ? "an unknown language" : RegionLocale.NormalizeLocale(locale))} "
                         + $"({championCount} champions). Last sync: {FormatLastSyncedAt(lastSyncedAtUtc)}.",
                 "TextSoftBrush",
                 Brushes.SlateGray);
         }
 
-        private async Task RefreshChampionCatalogVersionWarningAsync()
+        private Task RefreshChampionCatalogVersionWarningAsync()
         {
-            string platformId = _championDataSettings.PlatformId;
-            if (string.Equals(
-                    _checkedChampionCatalogPlatformId,
-                    platformId,
-                    StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(_latestConfiguredRegionDataDragonVersion))
+            ChampionDataSourceMode source = ChampionDataSourcePolicy.Resolve(
+                _championDataSettings.SourceMode);
+            if (source == ChampionDataSourceMode.LeagueClient)
             {
-                UpdateChampionCatalogVersionWarning();
-                return;
+                HideChampionCatalogVersionWarning();
+                return Task.CompletedTask;
             }
 
-            _checkedChampionCatalogPlatformId = null;
-            _latestConfiguredRegionDataDragonVersion = null;
-            _championCatalogVersionCheckCancellation?.Cancel();
-            _championCatalogVersionCheckCancellation?.Dispose();
-            var cancellation = new CancellationTokenSource();
-            _championCatalogVersionCheckCancellation = cancellation;
-
+            // Opening the manager must not make an external request. A Data Dragon
+            // version is checked only after the user-approved update operation.
             UpdateChampionCatalogVersionWarning();
-
-            try
-            {
-                string latestVersion = await _championCatalogRemoteService
-                    .FetchLatestDataDragonVersionAsync(cancellation.Token);
-                if (cancellation.IsCancellationRequested
-                    || !string.Equals(
-                        platformId,
-                        _championDataSettings.PlatformId,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                _checkedChampionCatalogPlatformId = platformId;
-                _latestConfiguredRegionDataDragonVersion = latestVersion;
-                UpdateChampionCatalogVersionWarning();
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch
-            {
-                if (!cancellation.IsCancellationRequested)
-                    UpdateChampionCatalogVersionWarning();
-            }
-            finally
-            {
-                if (ReferenceEquals(_championCatalogVersionCheckCancellation, cancellation))
-                {
-                    _championCatalogVersionCheckCancellation.Dispose();
-                    _championCatalogVersionCheckCancellation = null;
-                }
-            }
+            return Task.CompletedTask;
         }
 
         private void UpdateChampionCatalogVersionWarning()
         {
+            if (ChampionDataSourcePolicy.Resolve(_championDataSettings.SourceMode)
+                == ChampionDataSourceMode.LeagueClient)
+            {
+                HideChampionCatalogVersionWarning();
+                return;
+            }
+
             var syncInfo = ChampionCatalog.GetLocalSyncInfo();
             string? localVersion = syncInfo.DataDragonVersion?.Trim();
             string? localLocale = syncInfo.Locale;
@@ -726,17 +844,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             _logErrorMessage?.Invoke(message);
         }
 
-        private static bool ShouldLogChampionTileArchiveProgress(string message)
-        {
-            return !string.IsNullOrWhiteSpace(message)
-                && !message.StartsWith("Downloading Data Dragon archive:", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsChampionTileArchiveWarning(string message)
-        {
-            return message.StartsWith("Unable to ", StringComparison.OrdinalIgnoreCase);
-        }
-
         private static string FormatLastSyncedAt(DateTime? lastSyncedAtUtc)
         {
             if (lastSyncedAtUtc is null)
@@ -747,17 +854,14 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 .ToString("g");
         }
 
-        private static string FormatByteCount(long bytes)
-        {
-            return $"{bytes / 1024d / 1024d:0.0} MB";
-        }
-
         private static string FormatException(Exception ex)
         {
             return $"{ex.GetType().Name}: {ex.Message}";
         }
 
         private sealed record RegionLocaleSuggestion(string Code, string Name);
+
+        private sealed record ChampionDataSourceOption(ChampionDataSourceMode Mode, string Name);
 
         private sealed record NewChampionPictureDownloadResult(
             int ChampionCount,

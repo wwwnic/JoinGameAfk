@@ -28,6 +28,31 @@ namespace JoinGameAfk.Model
                 ["VN2"] = "vn"
             };
 
+        /// <summary>
+        /// Korea is ignored because LCU usage is not allowed in Korea.
+        /// </summary>
+        private static readonly IReadOnlyDictionary<string, string> LeagueClientPlatformsByRegion =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["NA"] = "NA1",
+                ["BR"] = "BR1",
+                ["EUNE"] = "EUN1",
+                ["EUW"] = "EUW1",
+                ["JP"] = "JP1",
+                ["LAN"] = "LA1",
+                ["LAS"] = "LA2",
+                ["ME"] = "ME1",
+                ["OCE"] = "OC1",
+                ["PBE"] = "PBE1",
+                ["PH"] = "PH2",
+                ["RU"] = "RU",
+                ["SG"] = "SG2",
+                ["TH"] = "TH2",
+                ["TR"] = "TR1",
+                ["TW"] = "TW2",
+                ["VN"] = "VN2"
+            };
+
         public static string NormalizePlatformId(string? platformId)
         {
             return TryNormalizePlatformId(platformId, out string normalized)
@@ -62,6 +87,23 @@ namespace JoinGameAfk.Model
             }
 
             realm = mappedRealm;
+            return true;
+        }
+
+        public static bool TryNormalizeLeagueClientRegion(
+            string? region,
+            out string normalizedRegion,
+            out string platformId)
+        {
+            normalizedRegion = string.Empty;
+            platformId = DefaultPlatformId;
+            if (!TryNormalizePlatformId(region, out string candidate))
+                return false;
+
+            normalizedRegion = candidate;
+            platformId = LeagueClientPlatformsByRegion.TryGetValue(candidate, out string? mappedPlatformId)
+                ? mappedPlatformId
+                : candidate;
             return true;
         }
 
