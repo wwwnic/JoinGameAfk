@@ -47,6 +47,19 @@ namespace JoinGameAfk.Model
             Saved?.Invoke();
         }
 
+        public void ReplacePreferences(IReadOnlyDictionary<Position, PositionPreference> preferences)
+        {
+            ArgumentNullException.ThrowIfNull(preferences);
+            Preferences = preferences.ToDictionary(
+                entry => entry.Key,
+                entry => new PositionPreference
+                {
+                    PickChampionIds = [.. entry.Value?.PickChampionIds ?? []],
+                    BanChampionIds = [.. entry.Value?.BanChampionIds ?? []]
+                });
+            NormalizeSettings(this);
+        }
+
         public static RolePlanSettings Load()
         {
             return JsonSettingsStore.Load(AppStorage.RolePlanSettingsFilePath, () => new RolePlanSettings(), NormalizeSettings);

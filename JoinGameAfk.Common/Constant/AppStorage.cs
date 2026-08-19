@@ -9,6 +9,7 @@ namespace JoinGameAfk.Constant
         public const int OverlaySettingsFileVersion = 1;
         public const int ChampionFileVersion = 2;
         public const int ChampionImageSelectionFileVersion = 1;
+        public const int RolePlanProfilesFileVersion = 1;
 
         public const string SettingsDirectoryName = "settings";
         public const string RolePlansDirectoryName = "role-plans";
@@ -21,6 +22,8 @@ namespace JoinGameAfk.Constant
         public const string OverlaySettingsFileName = "overlays.json";
         public const string ChampionFileName = "champions.json";
         public const string ChampionImageSelectionFileName = "champion-image-selections.json";
+        public const string RolePlanProfilesFileName = "profiles.json";
+        public const string RolePlanProfileIconsDirectoryName = "profile-icons";
         public const string ChampionChipLabelBreaksFileName = "champion-chip-label-breaks.json";
         public const string ChampionTileDirectoryName = "ChampionTiles";
         public const string ChampionTileArchiveDirectoryName = "ChampionTileArchives";
@@ -55,6 +58,10 @@ namespace JoinGameAfk.Constant
         public static string ChampionDataSettingsFilePath => Path.Combine(RolePlansDirectoryPath, ChampionDataSettingsFileName);
 
         public static string ChampionImageSelectionFilePath => Path.Combine(RolePlansDirectoryPath, ChampionImageSelectionFileName);
+
+        public static string RolePlanProfilesFilePath => Path.Combine(RolePlansDirectoryPath, RolePlanProfilesFileName);
+
+        public static string RolePlanProfileIconsDirectoryPath => Path.Combine(RolePlansDirectoryPath, RolePlanProfileIconsDirectoryName);
 
         public static string ChampionChipLabelBreaksFilePath => Path.Combine(RolePlansDirectoryPath, ChampionChipLabelBreaksFileName);
 
@@ -141,6 +148,12 @@ namespace JoinGameAfk.Constant
         {
             EnsureDirectoryExists();
             Directory.CreateDirectory(RolePlansDirectoryPath);
+        }
+
+        public static void EnsureRolePlanProfileIconsDirectoryExists()
+        {
+            EnsureRolePlansDirectoryExists();
+            Directory.CreateDirectory(RolePlanProfileIconsDirectoryPath);
         }
 
         public static void EnsureDataDirectoryExists()

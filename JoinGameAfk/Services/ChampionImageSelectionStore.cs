@@ -102,6 +102,27 @@ namespace JoinGameAfk.Services
             RaiseSelectionsChanged();
         }
 
+        public static void ReplaceSelections(IReadOnlyDictionary<int, string> selections)
+        {
+            ArgumentNullException.ThrowIfNull(selections);
+            Dictionary<int, string> normalizedSelections = NormalizeSelections(selections);
+
+            bool changed;
+            lock (SyncRoot)
+            {
+                EnsureLoaded();
+                changed = !_selections!.OrderBy(entry => entry.Key)
+                    .SequenceEqual(normalizedSelections.OrderBy(entry => entry.Key));
+                if (!changed)
+                    return;
+
+                _selections = normalizedSelections;
+                SaveLoadedFile();
+            }
+
+            RaiseSelectionsChanged();
+        }
+
         public static void SetShowChampionPictureDownloadWarning(bool showWarning)
         {
             lock (SyncRoot)

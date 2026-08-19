@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
@@ -22,6 +23,22 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private void Page_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (Keyboard.Modifiers == ModifierKeys.Control
+                && e.Key == Key.A
+                && Keyboard.FocusedElement is TextBox textBox)
+            {
+                textBox.SelectAll();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Escape && ProfilesOverlay.Visibility == Visibility.Visible)
+            {
+                CloseProfiles();
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Key.Escape && ChampionDataOverlay.Visibility == Visibility.Visible)
             {
                 CloseChampionDataManager();

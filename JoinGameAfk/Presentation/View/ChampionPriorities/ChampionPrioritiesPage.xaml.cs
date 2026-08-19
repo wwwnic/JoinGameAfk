@@ -26,9 +26,12 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private readonly Action<string>? _logMessage;
         private readonly Action<string>? _logErrorMessage;
         private readonly ChampionCatalogSyncCoordinator _championCatalogSyncCoordinator;
+        private readonly RolePlanProfileStore _rolePlanProfileStore = new();
         private readonly ObservableCollection<RegionLocaleSuggestion> _platformOptions = new(PlatformSuggestions);
         private readonly ObservableCollection<RegionLocaleSuggestion> _localeOptions = new(LocaleSuggestions);
         private readonly ObservableCollection<ChampionDataSourceOption> _championDataSourceOptions = new(ChampionDataSourceOptions);
+        private readonly ObservableCollection<RolePlanProfileListItem> _profiles = [];
+        private readonly DispatcherTimer _profileStatusTimer;
         private List<ChampionInfo> _allChampions;
         private List<ChampionInfo> _filteredChampions;
         private List<ChampionReferenceItem> _filteredChampionReferences;
@@ -73,6 +76,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private bool _isChampionDataOperationInProgress;
         private string? _checkedChampionCatalogPlatformId;
         private string? _latestConfiguredRegionDataDragonVersion;
+        private ChampionInfo? _selectedProfileIconChampion;
+        private Guid? _editingProfileId;
+        private bool _isReloadingProfiles;
 
         public static readonly DependencyProperty IsChampionSelectLockActiveProperty = DependencyProperty.Register(
             nameof(IsChampionSelectLockActive),
@@ -167,6 +173,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             Action<string>? logErrorMessage = null)
         {
             InitializeComponent();
+            _profileStatusTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
+            _profileStatusTimer.Tick += (_, _) => HideProfileStatus();
             _championDataSettings = championDataSettings;
             _rolePlanSettings = rolePlanSettings;
             _leagueClientConnection = leagueClientConnection;
