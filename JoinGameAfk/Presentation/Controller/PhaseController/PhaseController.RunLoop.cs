@@ -271,6 +271,7 @@ namespace JoinGameAfk.Presentation.Controller
             _lastObservedPhase = ClientPhase.Unknown;
             _lastHandledPhase = ClientPhase.Unknown;
             _hasPendingChampSelectExitSound = false;
+            _verifyPhaseAfterChampSelectSessionUnavailable = false;
             fPhaseProgressionPage.SetClientConnection(false);
             UpdateRegionDisplayFromSettings();
             fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);

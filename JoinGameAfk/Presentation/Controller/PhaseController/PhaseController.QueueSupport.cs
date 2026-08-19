@@ -10,39 +10,41 @@ namespace JoinGameAfk.Presentation.Controller
     {
         private const int CustomQueueIdMinimum = 3000;
 
-        private static readonly IReadOnlyDictionary<int, string> SupportedQueueNames = new Dictionary<int, string>
+        private static readonly IReadOnlyDictionary<LeagueQueueId, string> SupportedQueueNames = new Dictionary<LeagueQueueId, string>
         {
-            [400] = "Normal Draft",
-            [420] = "Ranked Solo/Duo",
-            [430] = "Blind Pick",
-            [440] = "Ranked Flex",
-            [3110] = "Custom Game Draft"
+            [LeagueQueueId.NormalDraft] = "Normal Draft",
+            [LeagueQueueId.RankedSoloDuo] = "Ranked Solo/Duo",
+            [LeagueQueueId.BlindPick] = "Blind Pick",
+            [LeagueQueueId.RankedFlex] = "Ranked Flex",
+            [LeagueQueueId.CustomDraft] = "Custom Game Draft",
+            [LeagueQueueId.LeagueClassicCustomDraft] = "League Classic Custom Draft",
+            [LeagueQueueId.LeagueClassicPvpDraft] = "League Classic"
         };
 
-        private static readonly IReadOnlyDictionary<int, string> KnownQueueNames = new Dictionary<int, string>
+        private static readonly IReadOnlyDictionary<LeagueQueueId, string> KnownQueueNames = new Dictionary<LeagueQueueId, string>
         {
-            [400] = "Normal Draft",
-            [420] = "Ranked Solo/Duo",
-            [430] = "Blind Pick",
-            [440] = "Ranked Flex",
-            [450] = "ARAM",
-            [480] = "Swiftplay",
-            [490] = "Quickplay",
-            [700] = "Clash",
-            [720] = "ARAM Clash",
-            [870] = "Intro Bots",
-            [880] = "Beginner Bots",
-            [890] = "Intermediate Bots",
-            [900] = "ARURF",
-            [1020] = "One for All",
-            [1400] = "Ultimate Spellbook",
-            [1700] = "Arena",
-            [1710] = "Arena",
-            [1900] = "Pick URF",
-            [2300] = "Brawl",
-            [2400] = "ARAM: Mayhem",
-            [3110] = "Custom Game Draft",
-            [3120] = "Custom Game Classic"
+            [LeagueQueueId.NormalDraft] = "Normal Draft",
+            [LeagueQueueId.RankedSoloDuo] = "Ranked Solo/Duo",
+            [LeagueQueueId.BlindPick] = "Blind Pick",
+            [LeagueQueueId.RankedFlex] = "Ranked Flex",
+            [LeagueQueueId.Aram] = "ARAM",
+            [LeagueQueueId.Swiftplay] = "Swiftplay",
+            [LeagueQueueId.Quickplay] = "Quickplay",
+            [LeagueQueueId.Clash] = "Clash",
+            [LeagueQueueId.AramClash] = "ARAM Clash",
+            [LeagueQueueId.IntroBots] = "Intro Bots",
+            [LeagueQueueId.BeginnerBots] = "Beginner Bots",
+            [LeagueQueueId.IntermediateBots] = "Intermediate Bots",
+            [LeagueQueueId.Arurf] = "ARURF",
+            [LeagueQueueId.OneForAll] = "One for All",
+            [LeagueQueueId.UltimateSpellbook] = "Ultimate Spellbook",
+            [LeagueQueueId.Arena] = "Arena",
+            [LeagueQueueId.ArenaAlternate] = "Arena",
+            [LeagueQueueId.PickUrf] = "Pick URF",
+            [LeagueQueueId.Brawl] = "Brawl",
+            [LeagueQueueId.AramMayhem] = "ARAM: Mayhem",
+            [LeagueQueueId.CustomDraft] = "Custom Game Draft",
+            [LeagueQueueId.CustomClassic] = "Custom Game Classic"
         };
 
         private async Task<QueueSupportState> ResolveQueueSupportStateAsync(
@@ -316,16 +318,17 @@ namespace JoinGameAfk.Presentation.Controller
 
         private static bool IsSupportedQueueId(int queueId)
         {
-            return SupportedQueueNames.ContainsKey(queueId);
+            return SupportedQueueNames.ContainsKey((LeagueQueueId)queueId);
         }
 
         private static string GetQueueName(int queueId, string queueDescription)
         {
-            if (SupportedQueueNames.TryGetValue(queueId, out string? supportedName)
+            var knownQueueId = (LeagueQueueId)queueId;
+            if (SupportedQueueNames.TryGetValue(knownQueueId, out string? supportedName)
                 && !string.IsNullOrWhiteSpace(supportedName))
                 return supportedName;
 
-            if (KnownQueueNames.TryGetValue(queueId, out string? knownName))
+            if (KnownQueueNames.TryGetValue(knownQueueId, out string? knownName))
                 return knownName;
 
             if (IsCustomQueueId(queueId))
@@ -394,7 +397,10 @@ namespace JoinGameAfk.Presentation.Controller
 
         private static bool IsCustomQueueId(int queueId)
         {
-            return queueId >= CustomQueueIdMinimum;
+            // Riot's public League Classic queue lives in the otherwise custom-game
+            // queue-id range, but it still uses the regular matchmaking ready check.
+            return queueId >= CustomQueueIdMinimum
+                && queueId != (int)LeagueQueueId.LeagueClassicPvpDraft;
         }
 
         private static string FormatUnsupportedQueueLogText(QueueSupportState queueSupportState)
@@ -407,7 +413,7 @@ namespace JoinGameAfk.Presentation.Controller
         private static string FormatUnsupportedModeText(QueueSupportState queueSupportState)
         {
             string modeText = FormatUnsupportedQueueLogText(queueSupportState);
-            return $"{modeText} is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, or Ranked Flex; auto-accept can still work here.";
+            return $"{modeText} is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, Ranked Flex, or League Classic; auto-accept can still work here.";
         }
 
         private void LogUnsupportedQueueIfNeeded(QueueSupportState queueSupportState)

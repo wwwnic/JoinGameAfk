@@ -1,3 +1,4 @@
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Tools.MockLeagueClient;
@@ -14,7 +15,7 @@ internal sealed partial class MockLeagueClientState
             return new DraftYamlConfiguration
             {
                 Version = 1,
-                QueueId = _queueMode == MockQueueMode.DraftPick ? _queueId : 400,
+                QueueId = _queueMode == MockQueueMode.DraftPick ? _queueId : (int)LeagueQueueId.NormalDraft,
                 QueueName = _queueMode == MockQueueMode.DraftPick ? _queueName : "Normal Draft",
                 LocalSlot = _localPlayerCellId,
                 LocalRole = _localPlayerAssignedPosition,

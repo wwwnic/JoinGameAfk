@@ -19,6 +19,8 @@ public partial class ChampSelect
             _lastSessionId = sessionId;
         }
 
+        _usesClassicChampionIds = UsesClassicChampionIds(root);
+
         if (!TryGetInt32(root, "localPlayerCellId", out int localPlayerCellId))
             return;
 
@@ -74,7 +76,7 @@ public partial class ChampSelect
                             ? completedActionIdValue
                             : null;
                         int completedChampionId = TryGetInt32(action, "championId", out int completedChampionIdValue)
-                            ? completedChampionIdValue
+                            ? FromLeagueClientChampionId(completedChampionIdValue)
                             : 0;
 
                         if (type == "pick")
@@ -97,7 +99,7 @@ public partial class ChampSelect
 
                     bool isInProgress = TryGetBool(action, "isInProgress", out bool inProgress) && inProgress;
                     int currentChampionId = TryGetInt32(action, "championId", out int championId)
-                        ? championId
+                        ? FromLeagueClientChampionId(championId)
                         : 0;
 
                     if (isInProgress && localPlayerActiveActionType is null)
@@ -226,6 +228,7 @@ public partial class ChampSelect
         _banHoverReadyAtUtc = DateTime.MinValue;
         _pickRetryStateActionId = 0;
         _banRetryStateActionId = 0;
+        _usesClassicChampionIds = false;
         _failedPickChampionIds.Clear();
         _failedBanChampionIds.Clear();
         _playedSoundAlertKeys.Clear();

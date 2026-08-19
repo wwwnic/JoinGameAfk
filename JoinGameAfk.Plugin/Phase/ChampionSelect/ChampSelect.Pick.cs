@@ -145,7 +145,7 @@ public partial class ChampSelect
         {
             CancelScheduledPickLock();
             LogStatus(ref _lastPickStatusMessage, $"Pick lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
-            await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
+            await _http.CompleteActionAsync(actionId, ToLeagueClientChampionId(championIdToLock), cancellationToken);
             _hasPicked = true;
             TryPlayLockCompleteSoundAlert(sessionId, actionId, championIdToLock, isPickAction: true);
             Log($"Pick locked successfully. Champion={FormatChampion(championIdToLock)}, actionId={actionId}.");

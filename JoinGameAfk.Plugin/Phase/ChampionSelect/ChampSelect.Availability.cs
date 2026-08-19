@@ -65,7 +65,7 @@ public partial class ChampSelect
             try
             {
                 Log($"{actionLabel}: trying {FormatChampion(championId)} on actionId={actionId}.");
-                await _http.HoverChampionAsync(actionId, championId, cancellationToken);
+                await _http.HoverChampionAsync(actionId, ToLeagueClientChampionId(championId), cancellationToken);
 
                 if (isPickAction)
                 {
@@ -158,7 +158,8 @@ public partial class ChampSelect
 
                 foreach (var action in actionGroup.EnumerateArray())
                 {
-                    if (!TryGetInt32(action, "championId", out int actionChampionId) || actionChampionId != championId)
+                    if (!TryGetInt32(action, "championId", out int actionChampionId)
+                        || FromLeagueClientChampionId(actionChampionId) != championId)
                         continue;
 
                     if (TryGetInt32(action, "actorCellId", out int actorCellId)
@@ -204,10 +205,12 @@ public partial class ChampSelect
             if (!includeLocalPlayer && TryGetInt32(member, "cellId", out int cellId) && cellId == localPlayerCellId)
                 continue;
 
-            if (TryGetInt32(member, "championId", out int memberChampionId) && memberChampionId == championId)
+            if (TryGetInt32(member, "championId", out int memberChampionId)
+                && FromLeagueClientChampionId(memberChampionId) == championId)
                 return "Locked";
 
-            if (TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent == championId)
+            if (TryGetInt32(member, "championPickIntent", out int championPickIntent)
+                && FromLeagueClientChampionId(championPickIntent) == championId)
                 return "Picked";
         }
 

@@ -1,3 +1,4 @@
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Tools.MockLeagueClient;
@@ -59,7 +60,7 @@ internal sealed partial class MockLeagueClientState
     private MockClientPhase _phase = MockClientPhase.Unknown;
     private MockQueueMode _queueMode = MockQueueMode.DraftPick;
     private DraftPickStep _draftStep = DraftPickStep.Planning;
-    private int _queueId = 400;
+    private int _queueId = (int)LeagueQueueId.NormalDraft;
     private string _queueName = "Normal Draft";
     private string _readyCheckState = "InProgress";
     private string _readyCheckResponse = "None";
@@ -205,7 +206,7 @@ internal sealed partial class MockLeagueClientState
                 case MockLeagueClientScenario.UnsupportedQuickplay:
                     ResetBlindPickCore();
                     _phase = MockClientPhase.ChampSelect;
-                    SetQueueCore(490, "Quickplay");
+                    SetQueueCore((int)LeagueQueueId.Quickplay, "Quickplay");
                     _timerPhase = "BAN_PICK";
                     _timeLeftSeconds = DefaultChampSelectTimeLeftSeconds;
                     _totalTimeInPhaseSeconds = GetDefaultTotalTimeInPhaseSeconds(_timerPhase);
@@ -272,9 +273,15 @@ internal sealed partial class MockLeagueClientState
         lock (_lock)
         {
             var previousQueueMode = _queueMode;
-            if (queueId == 430)
+            var leagueQueueId = (LeagueQueueId)queueId;
+            if (leagueQueueId == LeagueQueueId.BlindPick)
                 _queueMode = MockQueueMode.BlindPick;
-            else if (queueId is 400 or 420 or 440 or 3110)
+            else if (leagueQueueId is LeagueQueueId.NormalDraft
+                     or LeagueQueueId.RankedSoloDuo
+                     or LeagueQueueId.RankedFlex
+                     or LeagueQueueId.CustomDraft
+                     or LeagueQueueId.LeagueClassicCustomDraft
+                     or LeagueQueueId.LeagueClassicPvpDraft)
                 _queueMode = MockQueueMode.DraftPick;
 
             if (previousQueueMode != _queueMode)
@@ -594,6 +601,7 @@ internal sealed partial class MockLeagueClientState
             {
                 localPlayerCellId = _localPlayerCellId,
                 multiUserChatId = _sessionId,
+                queueId = _queueId,
                 timer = CreateTimerPayload(nowMs),
                 myTeam = localTeam.Select(slot => CreateTeamMemberPayload(slot, revealPickIntent: true, revealAssignedPosition: true)).ToArray(),
                 theirTeam = enemyTeam.Select(slot => CreateTeamMemberPayload(slot, revealEnemyPickIntents, revealAssignedPosition: false)).ToArray(),
@@ -760,7 +768,13 @@ internal sealed partial class MockLeagueClientState
                     : champion;
             }
 
-            return champions.Values.OrderBy(champion => champion.Id).ToArray();
+            return champions.Values
+                .OrderBy(champion => champion.Id)
+                .Select(champion => (LeagueQueueId)_queueId is LeagueQueueId.LeagueClassicCustomDraft
+                    or LeagueQueueId.LeagueClassicPvpDraft
+                    ? champion with { Id = LeagueChampionId.ToClassicVariant(champion.Id) }
+                    : champion)
+                .ToArray();
         }
     }
 
@@ -888,7 +902,7 @@ internal sealed partial class MockLeagueClientState
             if (resetSession)
                 ResetDraftPickCore();
             else
-                SetQueueCore(400, "Normal Draft");
+                SetQueueCore((int)LeagueQueueId.NormalDraft, "Normal Draft");
 
             return;
         }
@@ -896,7 +910,7 @@ internal sealed partial class MockLeagueClientState
         if (resetSession)
             ResetBlindPickCore();
         else
-            SetQueueCore(430, "Blind Pick");
+            SetQueueCore((int)LeagueQueueId.BlindPick, "Blind Pick");
     }
 
     private void EnsureDraftModeCore()
@@ -912,7 +926,7 @@ internal sealed partial class MockLeagueClientState
     {
         _queueMode = MockQueueMode.DraftPick;
         _draftStep = DraftPickStep.Planning;
-        SetQueueCore(400, "Normal Draft");
+        SetQueueCore((int)LeagueQueueId.NormalDraft, "Normal Draft");
         _sessionId = CreateSessionId();
         _draftStepStates.Clear();
         _sharedDraftPickHoverChampionIds.Clear();
@@ -928,7 +942,7 @@ internal sealed partial class MockLeagueClientState
         _queueMode = MockQueueMode.BlindPick;
         _draftStep = DraftPickStep.Planning;
         _phase = MockClientPhase.Planning;
-        SetQueueCore(430, "Blind Pick");
+        SetQueueCore((int)LeagueQueueId.BlindPick, "Blind Pick");
         ResetSessionCore();
 
         _myTeam.AddRange(

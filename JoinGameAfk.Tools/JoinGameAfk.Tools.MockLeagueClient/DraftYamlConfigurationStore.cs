@@ -1,5 +1,6 @@
 using System.IO;
 using JoinGameAfk.Constant;
+using JoinGameAfk.Enums;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -66,7 +67,7 @@ internal static class DraftYamlConfigurationStore
 internal sealed class DraftYamlConfiguration
 {
     public int Version { get; set; } = 1;
-    public int QueueId { get; set; } = 400;
+    public int QueueId { get; set; } = (int)LeagueQueueId.NormalDraft;
     public string QueueName { get; set; } = "Normal Draft";
     public int? LocalSlot { get; set; }
     public string? LocalRole { get; set; }

@@ -239,7 +239,7 @@ namespace JoinGameAfk.Presentation.View.Dashboard
             if (!EnsureCanApply())
                 return;
 
-            const string unsupportedModeText = "Quickplay (queue 490) is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, or Ranked Flex; auto-accept can still work here.";
+            const string unsupportedModeText = "Quickplay (queue 490) is not supported for draft tools. Use Normal Draft, Ranked Solo/Duo, Ranked Flex, or League Classic; auto-accept can still work here.";
             _logsPage.WriteLine($"Unsupported queue detected: {unsupportedModeText}");
         }
 

@@ -38,12 +38,9 @@ namespace JoinGameAfk.Presentation.Controller
             }
             catch (HttpRequestException ex)
             {
-                Log($"Champ Select session unavailable. Returning to phase detection. {ex.Message}");
-                _lastObservedPhase = ClientPhase.Unknown;
+                Log($"Champ Select session unavailable. Verifying the current phase before retrying. {ex.Message}");
+                _verifyPhaseAfterChampSelectSessionUnavailable = true;
                 _lastHandledPhase = ClientPhase.Unknown;
-                fPhaseProgressionPage.UpdatePhase(ClientPhase.Unknown);
-                fPhaseProgressionPage.UpdateDashboardStatus(new DashboardStatus());
-                champSelect.Reset();
                 return false;
             }
         }

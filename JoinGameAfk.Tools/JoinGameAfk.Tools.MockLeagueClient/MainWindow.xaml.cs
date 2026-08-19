@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using JoinGameAfk.Enums;
 using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
@@ -223,7 +224,7 @@ public partial class MainWindow : Window
     {
         SetQueueModeBoxSilently(MockQueueMode.DraftPick);
         _state.UpdateQueueMode(MockQueueMode.DraftPick);
-        QueueIdBox.Text = "400";
+        QueueIdBox.Text = ((int)LeagueQueueId.NormalDraft).ToString();
         QueueNameBox.Text = "Normal Draft";
         await ApplyQueueAsync();
     }
@@ -232,14 +233,14 @@ public partial class MainWindow : Window
     {
         SetQueueModeBoxSilently(MockQueueMode.BlindPick);
         _state.UpdateQueueMode(MockQueueMode.BlindPick);
-        QueueIdBox.Text = "430";
+        QueueIdBox.Text = ((int)LeagueQueueId.BlindPick).ToString();
         QueueNameBox.Text = "Blind Pick";
         await ApplyQueueAsync();
     }
 
     private async void QuickplayButton_Click(object sender, RoutedEventArgs e)
     {
-        QueueIdBox.Text = "490";
+        QueueIdBox.Text = ((int)LeagueQueueId.Quickplay).ToString();
         QueueNameBox.Text = "Quickplay";
         await ApplyQueueAsync();
     }

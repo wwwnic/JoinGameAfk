@@ -331,7 +331,7 @@ public partial class ChampSelect
     private static int GetLockedPickChampionId(JsonElement member)
     {
         if (TryGetInt32(member, "championId", out int championId) && championId > 0)
-            return championId;
+            return FromLeagueClientChampionId(championId);
 
         return 0;
     }
@@ -339,7 +339,7 @@ public partial class ChampSelect
     private static int GetHoverPickChampionId(JsonElement member)
     {
         return TryGetInt32(member, "championPickIntent", out int championPickIntent) && championPickIntent > 0
-            ? championPickIntent
+            ? FromLeagueClientChampionId(championPickIntent)
             : 0;
     }
 
@@ -534,7 +534,7 @@ public partial class ChampSelect
                     continue;
 
                 int championId = TryGetInt32(action, "championId", out int actionChampionId)
-                    ? Math.Max(0, actionChampionId)
+                    ? Math.Max(0, FromLeagueClientChampionId(actionChampionId))
                     : 0;
                 bool completed = TryGetBool(action, "completed", out bool completedValue) && completedValue;
                 bool inProgress = TryGetBool(action, "isInProgress", out bool inProgressValue) && inProgressValue;
@@ -609,13 +609,14 @@ public partial class ChampSelect
         {
             if (championIdElement.ValueKind != JsonValueKind.Number
                 || !championIdElement.TryGetInt32(out int championId)
-                || championId <= 0
-                || !seenChampionIds.Add(championId))
+                || championId <= 0)
             {
                 continue;
             }
 
-            championIds.Add(championId);
+            int canonicalChampionId = FromLeagueClientChampionId(championId);
+            if (seenChampionIds.Add(canonicalChampionId))
+                championIds.Add(canonicalChampionId);
         }
 
         return championIds;

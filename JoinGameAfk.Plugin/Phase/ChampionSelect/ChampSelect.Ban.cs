@@ -132,7 +132,7 @@ public partial class ChampSelect
         {
             CancelScheduledBanLock();
             LogStatus(ref _lastBanStatusMessage, $"Ban lock window reached. Locking {FormatChampion(championIdToLock)} on actionId={actionId}. Time left: {FormatTimeLeft(timeLeftMs)}.");
-            await _http.CompleteActionAsync(actionId, championIdToLock, cancellationToken);
+            await _http.CompleteActionAsync(actionId, ToLeagueClientChampionId(championIdToLock), cancellationToken);
             _hasBanned = true;
             TryPlayLockCompleteSoundAlert(sessionId, actionId, championIdToLock, isPickAction: false);
             Log($"Ban locked successfully. Champion={FormatChampion(championIdToLock)}, actionId={actionId}.");

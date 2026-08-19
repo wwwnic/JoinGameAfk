@@ -51,6 +51,7 @@ public partial class ChampSelect : IPhaseHandler
     private int _scheduledHoverWakeActionId;
     private string _scheduledHoverWakePhase = string.Empty;
     private DateTime _scheduledHoverWakeAtUtc;
+    private bool _usesClassicChampionIds;
 
     public ClientPhase ClientPhase => ClientPhase.ChampSelect;
 

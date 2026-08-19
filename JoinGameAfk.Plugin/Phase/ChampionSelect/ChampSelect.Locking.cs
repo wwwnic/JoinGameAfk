@@ -85,7 +85,10 @@ public partial class ChampSelect
 
         StopLockSoundChannel(scheduledLock, isPickAction);
         Log($"{actionLabel} scheduled lock window reached. Locking {FormatChampion(scheduledLock.ChampionId)} on actionId={scheduledLock.ActionId}.");
-        await _http.CompleteActionAsync(scheduledLock.ActionId, scheduledLock.ChampionId, cancellationToken);
+        await _http.CompleteActionAsync(
+            scheduledLock.ActionId,
+            ToLeagueClientChampionId(scheduledLock.ChampionId),
+            cancellationToken);
 
         if (isPickAction)
             _hasPicked = true;

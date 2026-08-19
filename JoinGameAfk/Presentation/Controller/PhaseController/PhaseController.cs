@@ -51,6 +51,7 @@ namespace JoinGameAfk.Presentation.Controller
         private DateTime _nextEventStreamRetryAtUtc;
         private bool _hasReceivedPhaseResponse;
         private bool _hasPendingChampSelectExitSound;
+        private bool _verifyPhaseAfterChampSelectSessionUnavailable;
         private bool _isWaitingForClient;
         private bool _isShutdownRequested;
         private bool _disposed;
@@ -96,6 +97,7 @@ namespace JoinGameAfk.Presentation.Controller
             _isClientConnected = false;
             _leagueClientConnection.SetDisconnected();
             _hasPendingChampSelectExitSound = false;
+            _verifyPhaseAfterChampSelectSessionUnavailable = false;
             ResetEventStreamState();
             _isWaitingForClient = false;
             ResetLcuEventSignal();
@@ -145,6 +147,7 @@ namespace JoinGameAfk.Presentation.Controller
             SignalLcuEvent();
             ResetEventStreamState();
             _hasPendingChampSelectExitSound = false;
+            _verifyPhaseAfterChampSelectSessionUnavailable = false;
             ClearClientDisconnectRequest();
             ClearPendingLcuEvents();
             ResetQueueSupportState();

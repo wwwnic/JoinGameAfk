@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Phase;
@@ -26,7 +27,26 @@ public partial class ChampSelect
 
     private static string FormatChampion(int championId)
     {
-        return ChampionCatalog.FormatWithName(championId);
+        return ChampionCatalog.FormatWithName(LeagueChampionId.ToCanonical(championId));
+    }
+
+    private static int FromLeagueClientChampionId(int championId)
+    {
+        return LeagueChampionId.ToCanonical(championId);
+    }
+
+    private int ToLeagueClientChampionId(int championId)
+    {
+        return _usesClassicChampionIds
+            ? LeagueChampionId.ToClassicVariant(championId)
+            : championId;
+    }
+
+    private static bool UsesClassicChampionIds(JsonElement root)
+    {
+        return TryGetInt32(root, "queueId", out int queueId)
+            && (LeagueQueueId)queueId is LeagueQueueId.LeagueClassicCustomDraft
+                or LeagueQueueId.LeagueClassicPvpDraft;
     }
 
     private static string FormatTimeLeft(long timeLeftMs)

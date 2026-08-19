@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JoinGameAfk.Model;
 
 namespace LcuClient
 {
@@ -198,7 +199,7 @@ namespace LcuClient
                 if (!hasAccessSignal && !isDisabled)
                     continue;
 
-                champions[championId] = new ChampionEligibility(isSelectable && !isDisabled, isDisabled);
+                champions[LeagueChampionId.ToCanonical(championId)] = new ChampionEligibility(isSelectable && !isDisabled, isDisabled);
             }
 
             return new ChampionEligibilitySnapshot(
@@ -223,7 +224,7 @@ namespace LcuClient
                 {
                     // This endpoint returns the owned subset. Entries not returned remain unknown rather
                     // than being treated as unavailable, preserving a safe fallback for free rotations.
-                    champions[championId] = new ChampionEligibility(IsSelectable: true, IsDisabled: false);
+                    champions[LeagueChampionId.ToCanonical(championId)] = new ChampionEligibility(IsSelectable: true, IsDisabled: false);
                 }
             }
 

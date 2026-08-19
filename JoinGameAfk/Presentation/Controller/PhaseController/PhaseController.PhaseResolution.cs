@@ -12,16 +12,23 @@ namespace JoinGameAfk.Presentation.Controller
             CancellationToken cancellationToken)
         {
             if (eventSnapshot.Phase is ClientPhase eventPhase)
+            {
+                _verifyPhaseAfterChampSelectSessionUnavailable = false;
                 return eventPhase;
+            }
 
             if (eventSnapshot.HasChampSelectSession)
             {
+                _verifyPhaseAfterChampSelectSessionUnavailable = false;
                 return IsChampSelectFlow(_lastObservedPhase)
                     ? _lastObservedPhase
                     : ClientPhase.ChampSelect;
             }
 
-            if (IsChampSelectFlow(_lastObservedPhase))
+            bool verifyChampSelectPhase = _verifyPhaseAfterChampSelectSessionUnavailable;
+            _verifyPhaseAfterChampSelectSessionUnavailable = false;
+
+            if (IsChampSelectFlow(_lastObservedPhase) && !verifyChampSelectPhase)
                 return _lastObservedPhase;
 
             var result = await TryGetCurrentPhaseAsync(http, cancellationToken);
@@ -30,6 +37,9 @@ namespace JoinGameAfk.Presentation.Controller
                 _hasReceivedPhaseResponse = true;
                 return result.Phase;
             }
+
+            if (verifyChampSelectPhase && IsChampSelectFlow(_lastObservedPhase))
+                return _lastObservedPhase;
 
             return ClientPhase.Unknown;
         }
