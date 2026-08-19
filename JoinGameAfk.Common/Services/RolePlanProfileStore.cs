@@ -33,10 +33,7 @@ namespace JoinGameAfk.Services
             lock (_syncRoot)
             {
                 var file = LoadFile();
-                return file.Profiles
-                    .OrderByDescending(profile => profile.UpdatedAtUtc)
-                    .Select(CloneProfile)
-                    .ToList();
+                return file.Profiles.Select(CloneProfile).ToList();
             }
         }
 
@@ -88,7 +85,7 @@ namespace JoinGameAfk.Services
                     }
 
                     var file = LoadFile();
-                    file.Profiles.Add(CloneProfile(profile));
+                    file.Profiles.Insert(0, CloneProfile(profile));
                     SaveFile(file);
                 }
                 catch
@@ -204,6 +201,33 @@ namespace JoinGameAfk.Services
                 SaveFile(file);
                 TryDelete(GetIconPath(profile));
                 return true;
+            }
+        }
+
+        public RolePlanProfile MoveProfile(Guid profileId, int offset)
+        {
+            if (profileId == Guid.Empty)
+                throw new ArgumentException("A profile ID is required.", nameof(profileId));
+
+            if (offset == 0)
+                throw new ArgumentOutOfRangeException(nameof(offset), "A profile must move up or down.");
+
+            lock (_syncRoot)
+            {
+                var file = LoadFile();
+                int currentIndex = file.Profiles.FindIndex(profile => profile.Id == profileId);
+                if (currentIndex < 0)
+                    throw new InvalidOperationException("The selected profile no longer exists.");
+
+                int targetIndex = Math.Clamp(currentIndex + Math.Sign(offset), 0, file.Profiles.Count - 1);
+                RolePlanProfile profile = file.Profiles[currentIndex];
+                if (targetIndex == currentIndex)
+                    return CloneProfile(profile);
+
+                file.Profiles.RemoveAt(currentIndex);
+                file.Profiles.Insert(targetIndex, profile);
+                SaveFile(file);
+                return CloneProfile(profile);
             }
         }
 

@@ -62,6 +62,27 @@ namespace JoinGameAfk.Tests
         }
 
         [Test]
+        public void MoveProfile_PersistsCustomOrder()
+        {
+            var store = CreateStore();
+            var plans = CreatePlans(103, 238);
+            RolePlanProfile first = store.AddProfile("First", RolePlanProfileSections.RolePlans, plans, null);
+            RolePlanProfile second = store.AddProfile("Second", RolePlanProfileSections.RolePlans, plans, null);
+            RolePlanProfile third = store.AddProfile("Third", RolePlanProfileSections.RolePlans, plans, null);
+
+            Assert.That(
+                store.LoadProfiles().Select(profile => profile.Id),
+                Is.EqualTo(new[] { third.Id, second.Id, first.Id }));
+
+            store.MoveProfile(first.Id, -1);
+
+            var reloadedStore = CreateStore();
+            Assert.That(
+                reloadedStore.LoadProfiles().Select(profile => profile.Id),
+                Is.EqualTo(new[] { third.Id, first.Id, second.Id }));
+        }
+
+        [Test]
         public void AddProfile_CopiesExactIconAndOnlyIncludedSection()
         {
             Directory.CreateDirectory(_testDirectory);

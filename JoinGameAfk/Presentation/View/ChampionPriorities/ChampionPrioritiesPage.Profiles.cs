@@ -121,8 +121,40 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
         private void RefreshProfileSelectionActionStates()
         {
-            bool hasSelection = ProfilesListBox.SelectedItem is RolePlanProfileListItem;
+            int selectedIndex = ProfilesListBox.SelectedIndex;
+            bool hasSelection = selectedIndex >= 0;
             DeleteProfileButton.IsEnabled = hasSelection;
+            MoveProfileUpButton.IsEnabled = selectedIndex > 0;
+            MoveProfileDownButton.IsEnabled = selectedIndex >= 0 && selectedIndex < _profiles.Count - 1;
+        }
+
+        private void MoveProfileUpButton_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedProfile(-1);
+            e.Handled = true;
+        }
+
+        private void MoveProfileDownButton_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedProfile(1);
+            e.Handled = true;
+        }
+
+        private void MoveSelectedProfile(int offset)
+        {
+            if (ProfilesListBox.SelectedItem is not RolePlanProfileListItem item)
+                return;
+
+            try
+            {
+                _rolePlanProfileStore.MoveProfile(item.Profile.Id, offset);
+                ReloadProfiles(item.Profile.Id);
+            }
+            catch (Exception ex)
+            {
+                ShowProfileStatus($"Unable to move this profile: {ex.Message}", isError: true);
+                _logErrorMessage?.Invoke($"Unable to move role plan profile: {ex}");
+            }
         }
 
         private void AddProfileButton_Click(object sender, RoutedEventArgs e)
@@ -299,6 +331,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
 
             iconSourcePath = Path.Combine(ChampionTileCatalog.TileDirectoryPath, selectedTile.FileName);
+            if (_editingProfileId is Guid profileId && !ConfirmProfileUpdate(profileId))
+            {
+                e.Handled = true;
+                return;
+            }
 
             try
             {
@@ -341,6 +378,34 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
 
             e.Handled = true;
+        }
+
+        private bool ConfirmProfileUpdate(Guid profileId)
+        {
+            RolePlanProfile? existingProfile = _profiles
+                .FirstOrDefault(item => item.Profile.Id == profileId)
+                ?.Profile;
+            string profileName = existingProfile?.Name ?? ProfileNameTextBox.Text.Trim();
+            string message =
+                $"Save changes to “{profileName}”?\n\n"
+                + "This replaces its saved name, included sections, identifying tile, role plans, and champion pictures with the current setup. Unchecked sections are removed. This cannot be undone.";
+
+            Window? owner = Window.GetWindow(this);
+            MessageBoxResult result = owner is null
+                ? MessageBox.Show(
+                    message,
+                    "Save Profile Changes",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No)
+                : MessageBox.Show(
+                    owner,
+                    message,
+                    "Save Profile Changes",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning,
+                    MessageBoxResult.No);
+            return result == MessageBoxResult.Yes;
         }
 
         private void ShowAddProfileValidation(string message)

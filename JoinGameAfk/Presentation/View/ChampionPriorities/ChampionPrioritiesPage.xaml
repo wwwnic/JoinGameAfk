@@ -876,26 +876,8 @@
                     <Border Grid.Row="0"
                             MinHeight="42"
                             Style="{StaticResource RoleFilterBarStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MinWidth="0" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <TextBlock Grid.Column="0"
-                                       VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextMutedBrush}"
-                                       FontSize="11"
-                                       FontWeight="Bold"
-                                       Text="Drag tiles"
-                                       TextTrimming="CharacterEllipsis" />
-
-                            <StackPanel Grid.Column="2"
-                                        Orientation="Horizontal"
-                                        HorizontalAlignment="Right">
+                        <UniformGrid Rows="1" Columns="5">
                                 <Button x:Name="OpenProfilesButton"
-                                        Width="34"
                                         Height="32"
                                         MinHeight="32"
                                         Margin="0,0,6,0"
@@ -925,7 +907,6 @@
                                 </Button>
 
                                 <Button x:Name="OpenChampionDataButton"
-                                        Width="34"
                                         Height="32"
                                         MinHeight="32"
                                         Margin="0,0,6,0"
@@ -954,7 +935,6 @@
                                 </Button>
 
                                 <Button x:Name="ToggleChampionPictureEditModeButton"
-                                        Width="34"
                                         Height="32"
                                         MinHeight="32"
                                         Margin="0,0,6,0"
@@ -991,7 +971,6 @@
                                 </Button>
 
                                 <Button x:Name="DeleteSelectedButton"
-                                        Width="72"
                                         Height="32"
                                         Margin="0,0,6,0"
                                         Padding="0"
@@ -1023,6 +1002,7 @@
 
                                 <Button Width="26"
                                         Height="26"
+                                        HorizontalAlignment="Center"
                                         Content="?"
                                         Style="{StaticResource InfoIndicatorStyle}">
                                     <Button.ToolTip>
@@ -1066,8 +1046,7 @@
                                         </StackPanel>
                                     </Button.ToolTip>
                                 </Button>
-                            </StackPanel>
-                        </Grid>
+                        </UniformGrid>
                     </Border>
 
                     <Grid Grid.Row="2">
@@ -1473,6 +1452,10 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="6" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="6" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Button x:Name="AddProfileButton"
                                                 Width="36"
@@ -1510,6 +1493,44 @@
                                                   StrokeEndLineCap="Round"
                                                   StrokeLineJoin="Round"
                                                   Data="M4,6 H20 M9,6 V4 H15 V6 M7,6 L8,20 H16 L17,6 M10,10 V17 M14,10 V17" />
+                                        </Button>
+                                        <Button x:Name="MoveProfileUpButton"
+                                                Grid.Column="4"
+                                                Width="36"
+                                                Height="34"
+                                                Padding="0"
+                                                Click="MoveProfileUpButton_Click"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Move selected profile up"
+                                                AutomationProperties.Name="Move selected profile up">
+                                            <Path Width="13"
+                                                  Height="13"
+                                                  Stretch="Uniform"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M5,14 L12,7 L19,14" />
+                                        </Button>
+                                        <Button x:Name="MoveProfileDownButton"
+                                                Grid.Column="6"
+                                                Width="36"
+                                                Height="34"
+                                                Padding="0"
+                                                Click="MoveProfileDownButton_Click"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Move selected profile down"
+                                                AutomationProperties.Name="Move selected profile down">
+                                            <Path Width="13"
+                                                  Height="13"
+                                                  Stretch="Uniform"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M5,10 L12,17 L19,10" />
                                         </Button>
                                     </Grid>
                                 </Grid>
