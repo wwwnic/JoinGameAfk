@@ -1281,10 +1281,15 @@
             <Border x:Name="ProfilesOverlay"
                     Grid.ColumnSpan="3"
                     Panel.ZIndex="40"
-                    Background="#80000000"
                     Visibility="Collapsed"
                     MouseDown="ProfilesOverlay_MouseDown">
-                <Border MaxWidth="900"
+                <Border.Background>
+                    <SolidColorBrush x:Name="ProfilesBackdropBrush"
+                                     Color="#000000"
+                                     Opacity="0.5" />
+                </Border.Background>
+                <Border x:Name="ProfilesDialogBorder"
+                        MaxWidth="900"
                         MaxHeight="680"
                         Margin="24"
                         HorizontalAlignment="Stretch"
@@ -1304,7 +1309,9 @@
                         <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
@@ -1316,8 +1323,40 @@
                                            TextWrapping="Wrap"
                                            Margin="0,3,0,0" />
                             </StackPanel>
+                            <Grid Grid.Column="2"
+                                  Width="190"
+                                  VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="42" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Opacity"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold" />
+                                <Slider x:Name="ProfilesOpacitySlider"
+                                        Grid.Column="2"
+                                        Minimum="40"
+                                        Maximum="100"
+                                        Value="100"
+                                        TickFrequency="5"
+                                        IsSnapToTickEnabled="True"
+                                        VerticalAlignment="Center"
+                                        ValueChanged="ProfilesOpacitySlider_ValueChanged" />
+                                <TextBlock x:Name="ProfilesOpacityValueTextBlock"
+                                           Grid.Column="3"
+                                           Text="100%"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextMutedBrush}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           TextAlignment="Right" />
+                            </Grid>
                             <Button x:Name="ProfilesCloseButton"
-                                    Grid.Column="2"
+                                    Grid.Column="4"
                                     Width="30"
                                     Height="30"
                                     Padding="0"

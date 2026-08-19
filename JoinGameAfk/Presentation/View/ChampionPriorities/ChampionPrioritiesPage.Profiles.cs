@@ -13,6 +13,19 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 {
     public partial class ChampionPrioritiesPage
     {
+        private void ProfilesOpacitySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (ProfilesDialogBorder is null || ProfilesBackdropBrush is null)
+                return;
+
+            double opacityPercent = Math.Clamp(e.NewValue, 40, 100);
+            double dialogOpacity = opacityPercent / 100d;
+            ProfilesDialogBorder.Opacity = dialogOpacity;
+            ProfilesBackdropBrush.Opacity = 0.5 * ((dialogOpacity - 0.4) / 0.6);
+            if (ProfilesOpacityValueTextBlock is not null)
+                ProfilesOpacityValueTextBlock.Text = $"{opacityPercent:0}%";
+        }
+
         private void OpenProfilesButton_Click(object sender, RoutedEventArgs e)
         {
             if (!IsPriorityEditingEnabled)
