@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Services;
 
@@ -37,7 +38,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private void OpenChampionPicturePicker(ChampionInfo champion)
         {
             _selectedChampionPictureChampion = champion;
-            _originalChampionPictureFileName = ChampionImageSelectionStore.GetSelection(champion.Key);
+            _originalChampionPictureFileName = ChampionImageSelectionStore.GetSelection(
+                champion.Key,
+                _activeRolePlanMode);
             _pendingChampionPictureFileName = _originalChampionPictureFileName;
 
             var chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
@@ -95,8 +98,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             _pendingChampionPictureFileName = null;
             ClearChampionPicturePickerDownloadStatus();
-            var options = ChampionTileCatalog.GetOptions(champion).ToList();
-            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion);
+            var options = ChampionTileCatalog.GetOptions(champion, _activeRolePlanMode).ToList();
+            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion, _activeRolePlanMode);
             SelectChampionPicturePickerOption(defaultOption, scrollIntoView: true);
             UpdateChampionPicturePickerPreview(champion, defaultOption, options.Count);
             e.Handled = true;
@@ -261,7 +264,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            var options = ChampionTileCatalog.GetOptions(champion).ToList();
+            var options = ChampionTileCatalog.GetOptions(champion, _activeRolePlanMode).ToList();
             ChampionTileOption? selectedOption = GetPendingChampionPictureOption(champion, options);
 
             _isUpdatingChampionPicturePicker = true;
@@ -295,7 +298,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                     return pendingOption;
             }
 
-            return ChampionTileCatalog.GetDefaultOption(champion);
+            return ChampionTileCatalog.GetDefaultOption(champion, _activeRolePlanMode);
         }
 
         private void SelectChampionPicturePickerOption(ChampionTileOption? selectedOption, bool scrollIntoView)
@@ -327,7 +330,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (optionCount == 0)
             {
                 SetChampionPicturePickerStatus(
-                    $"No local pictures found for {champion.Name}. Use Download All Images to fetch this champion's pictures.",
+                    $"No local pictures found for {champion.Name}. Use Download Images to fetch this champion's pictures.",
                     "TextSoftBrush",
                     Brushes.SlateGray);
                 return;
@@ -404,9 +407,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             return confirmed;
         }
 
-        private static bool IsDefaultChampionPictureOption(ChampionInfo champion, ChampionTileOption selectedOption)
+        private bool IsDefaultChampionPictureOption(ChampionInfo champion, ChampionTileOption selectedOption)
         {
-            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion);
+            ChampionTileOption? defaultOption = ChampionTileCatalog.GetDefaultOption(champion, _activeRolePlanMode);
             return defaultOption is not null
                 && string.Equals(defaultOption.FileName, selectedOption.FileName, StringComparison.OrdinalIgnoreCase);
         }
@@ -419,18 +422,22 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 StringComparison.OrdinalIgnoreCase);
         }
 
-        private static void SaveChampionPictureSelection(ChampionInfo champion, string? fileName)
+        private static void SaveChampionPictureSelection(
+            ChampionInfo champion,
+            string? fileName,
+            LeagueGameMode gameMode)
         {
             if (string.IsNullOrWhiteSpace(fileName))
-                ChampionImageSelectionStore.ClearSelection(champion.Key);
+                ChampionImageSelectionStore.ClearSelection(champion.Key, gameMode);
             else
-                ChampionImageSelectionStore.SetSelection(champion.Key, fileName);
+                ChampionImageSelectionStore.SetSelection(champion.Key, fileName, gameMode);
         }
 
         private void QueueChampionPictureSelectionSave(ChampionInfo champion, string? fileName)
         {
+            LeagueGameMode gameMode = _activeRolePlanMode;
             Dispatcher.InvokeAsync(
-                () => SaveChampionPictureSelection(champion, fileName),
+                () => SaveChampionPictureSelection(champion, fileName, gameMode),
                 DispatcherPriority.ContextIdle);
         }
     }

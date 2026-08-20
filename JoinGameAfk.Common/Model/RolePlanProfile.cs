@@ -20,6 +20,8 @@ namespace JoinGameAfk.Model
 
         public RolePlanProfileSections IncludedSections { get; set; }
 
+        public LeagueGameMode GameMode { get; set; } = LeagueGameMode.Modern;
+
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
         public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

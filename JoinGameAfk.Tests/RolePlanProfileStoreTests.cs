@@ -12,6 +12,25 @@ namespace JoinGameAfk.Tests
     [TestFixture]
     public sealed class RolePlanProfileStoreTests
     {
+        [Test]
+        public void AddProfile_PreservesLeagueClassicMode()
+        {
+            RolePlanProfileStore store = CreateStore();
+
+            RolePlanProfile saved = store.AddProfile(
+                "Classic plan",
+                RolePlanProfileSections.RolePlans,
+                CreatePlans(103, 86),
+                null,
+                gameMode: LeagueGameMode.Classic);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(saved.GameMode, Is.EqualTo(LeagueGameMode.Classic));
+                Assert.That(store.LoadProfiles().Single().GameMode, Is.EqualTo(LeagueGameMode.Classic));
+            });
+        }
+
         private string _testDirectory = null!;
         private string _profileFilePath = null!;
         private string _iconDirectoryPath = null!;

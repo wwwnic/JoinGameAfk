@@ -12,6 +12,8 @@ namespace JoinGameAfk.Model
 
         public string? Id { get; init; }
 
+        public bool? SupportsLeagueClassic { get; init; }
+
         public List<Position> Roles { get; init; } = [];
     }
 
@@ -25,7 +27,8 @@ namespace JoinGameAfk.Model
         int Key,
         string Name,
         string? EnglishName = null,
-        string? Id = null);
+        string? Id = null,
+        bool? SupportsLeagueClassic = null);
 
     public interface IChampionCatalogRemoteService
     {
@@ -432,6 +435,8 @@ namespace JoinGameAfk.Model
                 Id = string.IsNullOrWhiteSpace(champion.Id)
                     ? null
                     : champion.Id.Trim(),
+                SupportsLeagueClassic = champion.SupportsLeagueClassic
+                    ?? knownChampion?.SupportsLeagueClassic,
                 Roles = knownChampion?.Roles.ToList() ?? []
             };
         }
@@ -750,6 +755,9 @@ namespace JoinGameAfk.Model
                 Name = champion.Name.Trim(),
                 EnglishName = englishName,
                 Id = id,
+                SupportsLeagueClassic = champion.SupportsLeagueClassic
+                    ?? defaultChampion?.SupportsLeagueClassic
+                    ?? LeagueClassicChampionRoster.Contains(champion.Key),
                 Roles = roles
             };
         }
@@ -779,6 +787,7 @@ namespace JoinGameAfk.Model
             return new ChampionInfo(key, name)
             {
                 EnglishName = name,
+                SupportsLeagueClassic = LeagueClassicChampionRoster.Contains(key),
                 Roles = roles.ToList()
             };
         }
@@ -822,12 +831,14 @@ namespace JoinGameAfk.Model
                 ? legacyId.GetString()
                 : ReadString(root, "AssetId");
             string? englishName = ReadString(root, "EnglishName");
+            bool? supportsLeagueClassic = ReadBoolean(root, nameof(ChampionInfo.SupportsLeagueClassic));
             List<Position> roles = ReadRoles(root, options);
 
             return new ChampionInfo(key, name)
             {
                 EnglishName = englishName,
                 Id = id,
+                SupportsLeagueClassic = supportsLeagueClassic,
                 Roles = roles
             };
         }
@@ -843,6 +854,13 @@ namespace JoinGameAfk.Model
 
             if (!string.IsNullOrWhiteSpace(value.Id))
                 writer.WriteString(nameof(ChampionInfo.Id), value.Id);
+
+            if (value.SupportsLeagueClassic.HasValue)
+            {
+                writer.WriteBoolean(
+                    nameof(ChampionInfo.SupportsLeagueClassic),
+                    value.SupportsLeagueClassic.Value);
+            }
 
             writer.WritePropertyName(nameof(ChampionInfo.Roles));
             JsonSerializer.Serialize(writer, value.Roles, options);
@@ -881,6 +899,17 @@ namespace JoinGameAfk.Model
             return property.ValueKind == JsonValueKind.String
                 ? property.GetString()
                 : null;
+        }
+
+        private static bool? ReadBoolean(JsonElement root, string propertyName)
+        {
+            JsonElement property = GetProperty(root, propertyName);
+            return property.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => null
+            };
         }
 
         private static List<Position> ReadRoles(JsonElement root, JsonSerializerOptions options)

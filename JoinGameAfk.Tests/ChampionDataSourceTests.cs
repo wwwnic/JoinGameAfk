@@ -114,6 +114,9 @@ public class ChampionDataSourceTests
             Assert.That(result.Champions, Is.Not.Empty);
             Assert.That(result.Champions.All(champion => champion.Key < 60000), Is.True);
             Assert.That(result.Champions.Any(champion => champion.Key == 60001), Is.False);
+            Assert.That(result.Champions.Single(champion => champion.Key == 103).SupportsLeagueClassic, Is.True);
+            Assert.That(result.Champions.Single(champion => champion.Key == 86).SupportsLeagueClassic, Is.True);
+            Assert.That(result.Champions.Single(champion => champion.Key == 1).SupportsLeagueClassic, Is.False);
             Assert.That(logs.Any(line => line.Contains("/lol-game-data/assets/v1/champion-summary.json", StringComparison.Ordinal)), Is.True);
             Assert.That(logs.Any(line => line.Contains("/riotclient/region-locale", StringComparison.Ordinal)), Is.True);
         });

@@ -156,8 +156,8 @@ jobs:
           "Website and README: https://wwwnic.github.io/JoinGameAfk/" | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Which Download Should I Use?" | Out-File release-notes.md -Append -Encoding utf8
-          '- Recommended: `JoinGameAfk.exe`. Includes one default picture for every champion and .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
-          '- `JoinGameAfk-requires-dotnet-10.exe`. Includes one default picture for every champion, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
+          '- Recommended: `JoinGameAfk.exe`. Includes LoL default pictures, League Classic default pictures, and .NET, so it runs without installing the .NET Desktop Runtime.' | Out-File release-notes.md -Append -Encoding utf8
+          '- `JoinGameAfk-requires-dotnet-10.exe`. Includes LoL and League Classic default pictures, but requires the .NET 10 Desktop Runtime x64.' | Out-File release-notes.md -Append -Encoding utf8
           "" | Out-File release-notes.md -Append -Encoding utf8
           "Windows warning:" | Out-File release-notes.md -Append -Encoding utf8
           'This app is not code-signed yet, so Windows may show a blue warning such as "Windows protected your PC". If you downloaded the file from this GitHub release and trust this project, click "More info" and then "Run anyway". Do not do this for copies downloaded from somewhere else.' | Out-File release-notes.md -Append -Encoding utf8

@@ -59,22 +59,46 @@ namespace JoinGameAfk.Services
             }
         }
 
+        public static void SaveImageBytesAsJpeg(
+            byte[] imageBytes,
+            string filePath,
+            bool resizeForLocalCache,
+            CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(imageBytes);
+            if (imageBytes.Length == 0)
+                throw new ArgumentException("Image bytes are required.", nameof(imageBytes));
+
+            cancellationToken.ThrowIfCancellationRequested();
+            using var input = new MemoryStream(imageBytes, writable: false);
+            BitmapSource source = LoadBitmap(
+                input,
+                resizeForLocalCache ? ResizeWidth : null);
+            cancellationToken.ThrowIfCancellationRequested();
+            SaveJpeg(source, filePath, JpegQuality);
+        }
+
         private static BitmapSource LoadBitmap(string filePath, int resizeWidth)
         {
             using var input = File.OpenRead(filePath);
+            return LoadBitmap(input, resizeWidth);
+        }
+
+        private static BitmapSource LoadBitmap(Stream input, int? resizeWidth)
+        {
             var decoder = BitmapDecoder.Create(
                 input,
                 BitmapCreateOptions.PreservePixelFormat,
                 BitmapCacheOption.OnLoad);
 
             BitmapSource source = decoder.Frames[0];
-            if (source.PixelWidth <= resizeWidth)
+            if (resizeWidth is null || source.PixelWidth <= resizeWidth.Value)
             {
                 source.Freeze();
                 return source;
             }
 
-            double scale = resizeWidth / (double)source.PixelWidth;
+            double scale = resizeWidth.Value / (double)source.PixelWidth;
             var resized = new TransformedBitmap(source, new ScaleTransform(scale, scale));
             resized.Freeze();
             return resized;

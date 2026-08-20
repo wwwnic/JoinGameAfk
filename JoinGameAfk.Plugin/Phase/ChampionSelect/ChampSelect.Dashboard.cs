@@ -32,6 +32,7 @@ public partial class ChampSelect
 
         return new DashboardStatus
         {
+            GameMode = _usesClassicChampionIds ? LeagueGameMode.Classic : LeagueGameMode.Modern,
             CurrentPosition = assignedPosition,
             MyTeamSlots = BuildTeamSlotItems(root, "myTeam", localPlayerCellId, draftActionStates, suppressPickIntentActionState: isPlanningPhase),
             TheirTeamSlots = BuildTeamSlotItems(root, "theirTeam", localPlayerCellId, draftActionStates, suppressPickIntentActionState: isPlanningPhase),
@@ -243,13 +244,17 @@ public partial class ChampSelect
     private IReadOnlyList<ChampionPlanChoice> GetMergedChampionChoices(Position position, Func<PositionPreference, List<int>> selector)
     {
         position = NormalizePreferencePosition(position);
+        LeagueGameMode gameMode = _usesClassicChampionIds
+            ? LeagueGameMode.Classic
+            : LeagueGameMode.Modern;
+        Dictionary<Position, PositionPreference> preferences = _rolePlanSettings.GetPreferences(gameMode);
 
         var roleIds = position != Position.Default
-            && _rolePlanSettings.Preferences.TryGetValue(position, out var rolePreference)
+            && preferences.TryGetValue(position, out var rolePreference)
             ? selector(rolePreference)
             : [];
 
-        var defaultIds = _rolePlanSettings.Preferences.TryGetValue(Position.Default, out var defaultPreference)
+        var defaultIds = preferences.TryGetValue(Position.Default, out var defaultPreference)
             ? selector(defaultPreference)
             : [];
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Plugin.Services;
 using LcuClient;
@@ -27,14 +28,30 @@ namespace JoinGameAfk.Services
             ArgumentNullException.ThrowIfNull(champions);
             Directory.CreateDirectory(tileDirectoryPath);
 
+            string summaryJson = await http.GetChampionSummaryAsync(cancellationToken).ConfigureAwait(false);
+            var summaries = JsonSerializer.Deserialize<List<LeagueClientChampionSummary>>(
+                    summaryJson,
+                    SerializerOptions)
+                ?? [];
+            Dictionary<int, LeagueClientChampionSummary> classicSummariesByCanonicalId = summaries
+                .Where(summary =>
+                    LeagueChampionId.IsClassicVariant(summary.Id)
+                    && summary.Alias?.StartsWith("Jade_", StringComparison.OrdinalIgnoreCase) == true)
+                .GroupBy(summary => LeagueChampionId.ToCanonical(summary.Id))
+                .ToDictionary(group => group.Key, group => group.First());
+            IReadOnlyList<ChampionInfo> classicChampions = champions
+                .Where(champion => champion.SupportsLeagueClassic == true)
+                .ToList();
             int downloadedCount = 0;
             int unchangedCount = 0;
             int failedCount = 0;
+            int checkedCount = 0;
+            int totalTileCount = champions.Count + classicChampions.Count;
             for (int index = 0; index < champions.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ChampionInfo champion = champions[index];
-                int checkedCount = index + 1;
+                checkedCount++;
                 try
                 {
                     if (champion.Key <= 0 || string.IsNullOrWhiteSpace(champion.Name))
@@ -78,8 +95,8 @@ namespace JoinGameAfk.Services
                         downloadedCount,
                         unchangedCount,
                         failedCount,
-                        champions.Count,
-                        $"Reading default champion pictures from League Client {checkedCount}/{champions.Count}..."));
+                        totalTileCount,
+                        $"Reading LoL default pictures from League Client {checkedCount}/{totalTileCount}..."));
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -94,14 +111,69 @@ namespace JoinGameAfk.Services
                         downloadedCount,
                         unchangedCount,
                         failedCount,
-                        champions.Count,
-                        $"Unable to read the default picture for {champion.Name}: {ex.GetType().Name}: {ex.Message}"));
+                        totalTileCount,
+                        $"Unable to read the LoL default picture for {champion.Name}: {ex.GetType().Name}: {ex.Message}"));
+                }
+            }
+
+            foreach (ChampionInfo champion in classicChampions)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                checkedCount++;
+                try
+                {
+                    if (!classicSummariesByCanonicalId.TryGetValue(
+                            champion.Key,
+                            out LeagueClientChampionSummary? classicChampion))
+                    {
+                        throw new InvalidOperationException(
+                            $"League Client does not list {champion.Name} in League Classic.");
+                    }
+
+                    string iconPath = $"/lol-game-data/assets/v1/champion-icons/{classicChampion.Id}.png";
+                    byte[] bytes = await http.GetGameDataAssetAsync(iconPath, cancellationToken)
+                        .ConfigureAwait(false);
+                    ChampionTileDownloadOutcome outcome = SaveImageTile(
+                        tileDirectoryPath,
+                        CreateClassicFileName(champion, skinNumber: 0),
+                        bytes,
+                        optimizeForLocalCache,
+                        cancellationToken);
+                    if (outcome == ChampionTileDownloadOutcome.Downloaded)
+                        downloadedCount++;
+                    else
+                        unchangedCount++;
+
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        LeagueClientChampionCatalogService.LocalCatalogVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        totalTileCount,
+                        $"Reading League Classic default pictures from League Client {checkedCount}/{totalTileCount}..."));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failedCount++;
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        LeagueClientChampionCatalogService.LocalCatalogVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        totalTileCount,
+                        $"Unable to read the League Classic default picture for {champion.Name}: {ex.GetType().Name}: {ex.Message}"));
                 }
             }
 
             return new ChampionDefaultTileDownloadResult(
                 LeagueClientChampionCatalogService.LocalCatalogVersion,
-                champions.Count,
+                totalTileCount,
                 downloadedCount,
                 unchangedCount,
                 failedCount,
@@ -112,6 +184,7 @@ namespace JoinGameAfk.Services
         public static async Task<ChampionTileDownloadResult> DownloadChampionTilesAsync(
             Lcu.LeagueClientHttp http,
             ChampionInfo champion,
+            LeagueGameMode gameMode,
             string tileDirectoryPath,
             IProgress<ChampionTileDownloadProgress>? progress = null,
             CancellationToken cancellationToken = default,
@@ -126,7 +199,17 @@ namespace JoinGameAfk.Services
             Report(progress, champion.Name, 0, 0, 0, 0, null,
                 $"Reading {champion.Name} pictures from the local League Client...");
 
-            string detailsJson = await http.GetChampionDetailsAsync(champion.Key, cancellationToken)
+            LeagueClientChampionSummary? classicChampion = gameMode == LeagueGameMode.Classic
+                ? await TryGetClassicChampionAsync(http, champion, cancellationToken).ConfigureAwait(false)
+                : null;
+            if (gameMode == LeagueGameMode.Classic && classicChampion is null)
+            {
+                throw new InvalidOperationException(
+                    $"League Client does not list {champion.Name} in League Classic.");
+            }
+
+            int detailsChampionId = classicChampion?.Id ?? champion.Key;
+            string detailsJson = await http.GetChampionDetailsAsync(detailsChampionId, cancellationToken)
                 .ConfigureAwait(false);
             var details = JsonSerializer.Deserialize<LeagueClientChampionDetails>(detailsJson, SerializerOptions);
             var skins = details?.Skins
@@ -139,6 +222,8 @@ namespace JoinGameAfk.Services
             if (skins.Count == 0)
                 throw new InvalidOperationException($"League Client returned no local champion pictures for {champion.Name}.");
 
+            int totalTileCount = skins.Count;
+
             int checkedCount = 0;
             int downloadedCount = 0;
             int unchangedCount = 0;
@@ -148,21 +233,39 @@ namespace JoinGameAfk.Services
                 cancellationToken.ThrowIfCancellationRequested();
                 checkedCount++;
                 int skinNumber = GetSkinNumber(skin.Id);
-                string fileName = CreateFileName(champion, skinNumber);
-                string assetPath = ResolveTilePath(champion.Key, skin);
-                Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, skins.Count,
-                    $"Copying {champion.Name} pictures from League Client {checkedCount}/{skins.Count}...");
+                string fileName = gameMode == LeagueGameMode.Classic
+                    ? CreateClassicFileName(champion, skinNumber)
+                    : CreateFileName(champion, skinNumber);
+                Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, totalTileCount,
+                    $"Copying {champion.Name} pictures from League Client {checkedCount}/{totalTileCount}...");
 
                 try
                 {
-                    byte[] bytes = await http.GetGameDataAssetAsync(assetPath, cancellationToken).ConfigureAwait(false);
-                    ValidateJpeg(bytes, champion.Name);
-                    ChampionTileDownloadOutcome outcome = SaveTile(
-                        tileDirectoryPath,
-                        fileName,
-                        bytes,
-                        optimizeForLocalCache,
-                        cancellationToken);
+                    ChampionTileDownloadOutcome outcome;
+                    if (gameMode == LeagueGameMode.Classic && skinNumber == 0)
+                    {
+                        string iconPath = $"/lol-game-data/assets/v1/champion-icons/{detailsChampionId}.png";
+                        byte[] bytes = await http.GetGameDataAssetAsync(iconPath, cancellationToken).ConfigureAwait(false);
+                        outcome = SaveImageTile(
+                            tileDirectoryPath,
+                            fileName,
+                            bytes,
+                            optimizeForLocalCache,
+                            cancellationToken);
+                    }
+                    else
+                    {
+                        string assetPath = ResolveTilePath(detailsChampionId, skin);
+                        byte[] bytes = await http.GetGameDataAssetAsync(assetPath, cancellationToken).ConfigureAwait(false);
+                        ValidateJpeg(bytes, champion.Name);
+                        outcome = SaveTile(
+                            tileDirectoryPath,
+                            fileName,
+                            bytes,
+                            optimizeForLocalCache,
+                            cancellationToken);
+                    }
+
                     if (outcome == ChampionTileDownloadOutcome.Downloaded)
                         downloadedCount++;
                     else
@@ -175,12 +278,12 @@ namespace JoinGameAfk.Services
                 catch (Exception ex)
                 {
                     failedCount++;
-                    Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, skins.Count,
+                    Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, totalTileCount,
                         $"Unable to copy {fileName} from League Client: {ex.GetType().Name}: {ex.Message}");
                 }
             }
 
-            Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, skins.Count,
+            Report(progress, champion.Name, checkedCount, downloadedCount, unchangedCount, failedCount, totalTileCount,
                 $"Finished copying {champion.Name} pictures from League Client. Updated {downloadedCount}; unchanged {unchangedCount}; failed {failedCount}.");
             return new ChampionTileDownloadResult(
                 LeagueClientChampionCatalogService.LocalCatalogVersion,
@@ -191,6 +294,23 @@ namespace JoinGameAfk.Services
                 failedCount,
                 tileDirectoryPath,
                 DateTime.UtcNow);
+        }
+
+        private static async Task<LeagueClientChampionSummary?> TryGetClassicChampionAsync(
+            Lcu.LeagueClientHttp http,
+            ChampionInfo champion,
+            CancellationToken cancellationToken)
+        {
+            string summaryJson = await http.GetChampionSummaryAsync(cancellationToken).ConfigureAwait(false);
+            var summaries = JsonSerializer.Deserialize<List<LeagueClientChampionSummary>>(
+                    summaryJson,
+                    SerializerOptions)
+                ?? [];
+
+            return summaries.FirstOrDefault(candidate =>
+                LeagueChampionId.IsClassicVariant(candidate.Id)
+                && LeagueChampionId.ToCanonical(candidate.Id) == champion.Key
+                && candidate.Alias?.StartsWith("Jade_", StringComparison.OrdinalIgnoreCase) == true);
         }
 
         private static string ResolveTilePath(int championId, LeagueClientChampionSkin skin)
@@ -209,6 +329,20 @@ namespace JoinGameAfk.Services
 
         private static string CreateFileName(ChampionInfo champion, int skinNumber)
         {
+            string safeId = GetSafeChampionImageId(champion);
+            return $"{safeId}_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
+        }
+
+        private static string CreateClassicFileName(ChampionInfo champion, int skinNumber)
+        {
+            string safeId = GetSafeChampionImageId(champion);
+            return skinNumber == 0
+                ? $"{safeId}_classic.jpg"
+                : $"{safeId}_classic_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
+        }
+
+        private static string GetSafeChampionImageId(ChampionInfo champion)
+        {
             string id = !string.IsNullOrWhiteSpace(champion.Id)
                 ? champion.Id
                 : !string.IsNullOrWhiteSpace(champion.EnglishName)
@@ -218,7 +352,7 @@ namespace JoinGameAfk.Services
             if (string.IsNullOrWhiteSpace(safeId))
                 throw new InvalidOperationException($"Champion {champion.Name} has no safe image identifier.");
 
-            return $"{safeId}_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
+            return safeId;
         }
 
         private static ChampionTileDownloadOutcome SaveTile(
@@ -235,6 +369,35 @@ namespace JoinGameAfk.Services
                 File.WriteAllBytes(temporaryPath, bytes);
                 if (optimizeForLocalCache)
                     ChampionTileCacheImageOptimizer.TryOptimizeJpegInPlace(temporaryPath, cancellationToken);
+
+                if (File.Exists(destinationPath) && FilesHaveSameSha256(destinationPath, temporaryPath))
+                    return ChampionTileDownloadOutcome.Unchanged;
+
+                File.Move(temporaryPath, destinationPath, overwrite: true);
+                return ChampionTileDownloadOutcome.Downloaded;
+            }
+            finally
+            {
+                TryDeleteFile(temporaryPath);
+            }
+        }
+
+        private static ChampionTileDownloadOutcome SaveImageTile(
+            string tileDirectoryPath,
+            string fileName,
+            byte[] bytes,
+            bool optimizeForLocalCache,
+            CancellationToken cancellationToken)
+        {
+            string destinationPath = Path.Combine(tileDirectoryPath, fileName);
+            string temporaryPath = Path.Combine(tileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                ChampionTileCacheImageOptimizer.SaveImageBytesAsJpeg(
+                    bytes,
+                    temporaryPath,
+                    optimizeForLocalCache,
+                    cancellationToken);
 
                 if (File.Exists(destinationPath) && FilesHaveSameSha256(destinationPath, temporaryPath))
                     return ChampionTileDownloadOutcome.Unchanged;
@@ -304,6 +467,13 @@ namespace JoinGameAfk.Services
             public int Id { get; set; }
 
             public string? TilePath { get; set; }
+        }
+
+        private sealed class LeagueClientChampionSummary
+        {
+            public int Id { get; set; }
+
+            public string? Alias { get; set; }
         }
 
         private enum ChampionTileDownloadOutcome

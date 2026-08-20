@@ -43,7 +43,8 @@ namespace JoinGameAfk.Services
             IReadOnlyDictionary<Position, PositionPreference>? rolePlans,
             IReadOnlyDictionary<int, string>? championPictures,
             int? iconChampionId = null,
-            string? iconSourcePath = null)
+            string? iconSourcePath = null,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             string normalizedName = NormalizeName(name);
             includedSections &= SupportedSections;
@@ -62,6 +63,7 @@ namespace JoinGameAfk.Services
                 Id = Guid.NewGuid(),
                 Name = normalizedName,
                 IncludedSections = includedSections,
+                GameMode = gameMode,
                 CreatedAtUtc = savedAtUtc,
                 UpdatedAtUtc = savedAtUtc,
                 IconChampionId = iconChampionId is > 0 ? iconChampionId : null,
@@ -105,7 +107,8 @@ namespace JoinGameAfk.Services
             IReadOnlyDictionary<Position, PositionPreference>? rolePlans,
             IReadOnlyDictionary<int, string>? championPictures,
             int iconChampionId,
-            string iconSourcePath)
+            string iconSourcePath,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             if (profileId == Guid.Empty)
                 throw new ArgumentException("A profile ID is required.", nameof(profileId));
@@ -160,6 +163,7 @@ namespace JoinGameAfk.Services
 
                     profile.Name = normalizedName;
                     profile.IncludedSections = includedSections;
+                    profile.GameMode = gameMode;
                     profile.RolePlans = includedSections.HasFlag(RolePlanProfileSections.RolePlans)
                         ? ClonePreferences(rolePlans)
                         : null;
@@ -310,6 +314,9 @@ namespace JoinGameAfk.Services
             if (profile.IncludedSections == RolePlanProfileSections.None)
                 return null;
 
+            if (!Enum.IsDefined(profile.GameMode))
+                profile.GameMode = LeagueGameMode.Modern;
+
             if (profile.CreatedAtUtc == default)
                 profile.CreatedAtUtc = DateTime.UtcNow;
 
@@ -406,6 +413,7 @@ namespace JoinGameAfk.Services
                 Id = profile.Id,
                 Name = profile.Name,
                 IncludedSections = profile.IncludedSections,
+                GameMode = profile.GameMode,
                 CreatedAtUtc = profile.CreatedAtUtc,
                 UpdatedAtUtc = profile.UpdatedAtUtc,
                 IconChampionId = profile.IconChampionId,

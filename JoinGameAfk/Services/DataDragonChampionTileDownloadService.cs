@@ -1,9 +1,11 @@
 using System.Globalization;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
 using JoinGameAfk.Model;
+using JoinGameAfk.Enums;
 
 namespace JoinGameAfk.Services
 {
@@ -31,8 +33,11 @@ namespace JoinGameAfk.Services
     {
         private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
         private const string ChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion.json";
+        private const string ClassicChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/mode/classic/champion.json";
         private const string ChampionDetailUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion/{2}.json";
+        private const string ClassicChampionDetailUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/mode/classic/champion/{2}.json";
         private const string ChampionTileUrlFormat = "https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/{0}_{1}.jpg";
+        private const string ClassicChampionTileUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/img/mode/classic/champion/{1}";
         private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(45);
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -42,6 +47,7 @@ namespace JoinGameAfk.Services
 
         public static async Task<ChampionTileDownloadResult> DownloadChampionTilesAsync(
             ChampionInfo champion,
+            LeagueGameMode gameMode,
             string? preferredDataDragonVersion,
             string tileDirectoryPath,
             IProgress<ChampionTileDownloadProgress>? progress = null,
@@ -89,13 +95,44 @@ namespace JoinGameAfk.Services
                     cancellationToken)
                 .ConfigureAwait(false);
 
-            var championDetail = await FetchChampionDetailAsync(
-                    httpClient,
-                    dataDragonVersion,
-                    locale,
-                    catalogChampion.Id!,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            DataDragonClassicChampion? classicChampion = null;
+            string tileChampionId = catalogChampion.Id!;
+            DataDragonChampionDetail championDetail;
+            if (gameMode == LeagueGameMode.Classic)
+            {
+                classicChampion = await FetchClassicChampionAsync(
+                        httpClient,
+                        dataDragonVersion,
+                        locale,
+                        champion,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                    ?? throw new InvalidOperationException(
+                        $"Riot Data Dragon does not list {champion.Name} in League Classic.");
+                if (string.IsNullOrWhiteSpace(classicChampion.Id))
+                    throw new InvalidOperationException($"Riot Data Dragon returned no League Classic id for {champion.Name}.");
+
+                tileChampionId = classicChampion.Id.Trim();
+                championDetail = await FetchChampionDetailAsync(
+                        httpClient,
+                        dataDragonVersion,
+                        locale,
+                        tileChampionId,
+                        ClassicChampionDetailUrlFormat,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                championDetail = await FetchChampionDetailAsync(
+                        httpClient,
+                        dataDragonVersion,
+                        locale,
+                        tileChampionId,
+                        ChampionDetailUrlFormat,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
 
             var skinNumbers = championDetail.Skins
                 .Where(skin => skin.ParentSkin is null)
@@ -108,6 +145,8 @@ namespace JoinGameAfk.Services
             if (skinNumbers.Count == 0)
                 throw new InvalidOperationException($"Riot Data Dragon returned no champion pictures for {champion.Name}.");
 
+            int totalTileCount = skinNumbers.Count;
+
             int checkedTileCount = 0;
             int downloadedTileCount = 0;
             int unchangedTileCount = 0;
@@ -118,7 +157,9 @@ namespace JoinGameAfk.Services
                 cancellationToken.ThrowIfCancellationRequested();
 
                 checkedTileCount++;
-                string fileName = CreateChampionTileFileName(catalogChampion.Id!, skinNumber);
+                string fileName = gameMode == LeagueGameMode.Classic
+                    ? CreateClassicChampionTileFileName(catalogChampion.Id!, skinNumber)
+                    : CreateChampionTileFileName(catalogChampion.Id!, skinNumber);
                 Report(
                     progress,
                     dataDragonVersion,
@@ -127,20 +168,36 @@ namespace JoinGameAfk.Services
                     downloadedTileCount,
                     unchangedTileCount,
                     failedTileCount,
-                    skinNumbers.Count,
-                    $"Downloading {champion.Name} pictures {checkedTileCount}/{skinNumbers.Count}...");
+                    totalTileCount,
+                    $"Downloading {champion.Name} pictures {checkedTileCount}/{totalTileCount}...");
 
                 try
                 {
-                    var outcome = await DownloadChampionTileAsync(
-                            httpClient,
-                            catalogChampion.Id!,
-                            skinNumber,
-                            tileDirectoryPath,
-                            fileName,
-                            optimizeForLocalCache,
-                            cancellationToken)
-                        .ConfigureAwait(false);
+                    ChampionTileDownloadOutcome outcome;
+                    if (gameMode == LeagueGameMode.Classic && skinNumber == 0)
+                    {
+                        outcome = await DownloadClassicChampionTileAsync(
+                                httpClient,
+                                dataDragonVersion,
+                                classicChampion!.ImageFileName,
+                                tileDirectoryPath,
+                                fileName,
+                                optimizeForLocalCache,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        outcome = await DownloadChampionTileAsync(
+                                httpClient,
+                                tileChampionId,
+                                skinNumber,
+                                tileDirectoryPath,
+                                fileName,
+                                optimizeForLocalCache,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                    }
 
                     if (outcome == ChampionTileDownloadOutcome.Downloaded)
                         downloadedTileCount++;
@@ -162,7 +219,7 @@ namespace JoinGameAfk.Services
                         downloadedTileCount,
                         unchangedTileCount,
                         failedTileCount,
-                        skinNumbers.Count,
+                        totalTileCount,
                         $"Unable to download {fileName}: {FormatException(ex)}");
                 }
             }
@@ -175,7 +232,7 @@ namespace JoinGameAfk.Services
                 downloadedTileCount,
                 unchangedTileCount,
                 failedTileCount,
-                skinNumbers.Count,
+                totalTileCount,
                 $"Finished downloading {champion.Name} pictures. Downloaded {downloadedTileCount}; unchanged {unchangedTileCount}; failed {failedTileCount}.");
 
             return new ChampionTileDownloadResult(
@@ -223,15 +280,61 @@ namespace JoinGameAfk.Services
                 .Where(champion => !string.IsNullOrWhiteSpace(champion.Key))
                 .GroupBy(champion => champion.Key!, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            DataDragonClassicChampionCatalog classicCatalog = await FetchClassicChampionCatalogForDefaultsAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    locale,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            Dictionary<int, ChampionInfo> requestedChampionsByKey = champions
+                .Where(champion => champion.Key > 0)
+                .GroupBy(champion => champion.Key)
+                .ToDictionary(group => group.Key, group => group.First());
+            var classicDefaultTiles = new List<(ChampionInfo Champion, string ChampionId, string ImageFileName)>();
+            foreach (DataDragonClassicChampion classicChampion in classicCatalog.Data.Values)
+            {
+                if (!int.TryParse(
+                        classicChampion.Key,
+                        NumberStyles.None,
+                        CultureInfo.InvariantCulture,
+                        out int modeChampionId)
+                    || !LeagueChampionId.IsClassicVariant(modeChampionId))
+                {
+                    continue;
+                }
+
+                int canonicalChampionId = LeagueChampionId.ToCanonical(modeChampionId);
+                if (!requestedChampionsByKey.TryGetValue(canonicalChampionId, out ChampionInfo? champion)
+                    || !catalogByKey.TryGetValue(
+                        canonicalChampionId.ToString(CultureInfo.InvariantCulture),
+                        out DataDragonChampion? catalogChampion)
+                    || string.IsNullOrWhiteSpace(catalogChampion.Id))
+                {
+                    continue;
+                }
+
+                string imageFileName = classicChampion.Image?.Full?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(imageFileName)
+                    || !string.Equals(imageFileName, Path.GetFileName(imageFileName), StringComparison.Ordinal)
+                    || !imageFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Riot Data Dragon returned an unsafe League Classic image name for {champion.Name}.");
+                }
+
+                classicDefaultTiles.Add((champion, catalogChampion.Id.Trim(), imageFileName));
+            }
 
             int downloadedCount = 0;
             int unchangedCount = 0;
             int failedCount = 0;
+            int checkedCount = 0;
+            int totalTileCount = champions.Count + classicDefaultTiles.Count;
             for (int index = 0; index < champions.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ChampionInfo champion = champions[index];
-                int checkedCount = index + 1;
+                checkedCount++;
                 try
                 {
                     string championKey = champion.Key.ToString(CultureInfo.InvariantCulture);
@@ -264,8 +367,8 @@ namespace JoinGameAfk.Services
                         downloadedCount,
                         unchangedCount,
                         failedCount,
-                        champions.Count,
-                        $"Downloading default champion pictures {checkedCount}/{champions.Count}..."));
+                        totalTileCount,
+                        $"Downloading LoL default pictures {checkedCount}/{totalTileCount}..."));
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -280,19 +383,105 @@ namespace JoinGameAfk.Services
                         downloadedCount,
                         unchangedCount,
                         failedCount,
-                        champions.Count,
-                        $"Unable to download the default picture for {champion.Name}: {FormatException(ex)}"));
+                        totalTileCount,
+                        $"Unable to download the LoL default picture for {champion.Name}: {FormatException(ex)}"));
+                }
+            }
+
+            foreach (var classicTile in classicDefaultTiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                checkedCount++;
+                try
+                {
+                    ChampionTileDownloadOutcome outcome = await DownloadClassicChampionTileAsync(
+                            httpClient,
+                            dataDragonVersion,
+                            classicTile.ImageFileName,
+                            tileDirectoryPath,
+                            CreateClassicChampionTileFileName(classicTile.ChampionId, skinNumber: 0),
+                            optimizeForLocalCache,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                    if (outcome == ChampionTileDownloadOutcome.Downloaded)
+                        downloadedCount++;
+                    else
+                        unchangedCount++;
+
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        dataDragonVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        totalTileCount,
+                        $"Downloading League Classic default pictures {checkedCount}/{totalTileCount}..."));
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failedCount++;
+                    progress?.Report(new ChampionDefaultTileDownloadProgress(
+                        dataDragonVersion,
+                        checkedCount,
+                        downloadedCount,
+                        unchangedCount,
+                        failedCount,
+                        totalTileCount,
+                        $"Unable to download the League Classic default picture for {classicTile.Champion.Name}: {FormatException(ex)}"));
                 }
             }
 
             return new ChampionDefaultTileDownloadResult(
                 dataDragonVersion,
-                champions.Count,
+                totalTileCount,
                 downloadedCount,
                 unchangedCount,
                 failedCount,
                 tileDirectoryPath,
                 DateTime.UtcNow);
+        }
+
+        private static async Task<DataDragonClassicChampionCatalog> FetchClassicChampionCatalogForDefaultsAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string locale,
+            CancellationToken cancellationToken)
+        {
+            string[] locales =
+            [
+                RegionLocale.NormalizeLocale(locale),
+                RegionLocale.DefaultLocale
+            ];
+
+            foreach (string catalogLocale in locales.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string catalogUrl = string.Format(
+                    CultureInfo.InvariantCulture,
+                    ClassicChampionCatalogUrlFormat,
+                    dataDragonVersion,
+                    catalogLocale);
+                using var response = await httpClient.GetAsync(catalogUrl, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                    continue;
+
+                await using var stream = await response.Content
+                    .ReadAsStreamAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var catalog = await JsonSerializer.DeserializeAsync<DataDragonClassicChampionCatalog>(
+                        stream,
+                        SerializerOptions,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (catalog?.Data.Count > 0)
+                    return catalog;
+            }
+
+            throw new InvalidOperationException(
+                $"Riot Data Dragon {dataDragonVersion} returned no League Classic champion catalog.");
         }
 
         private static async Task<string> ResolveDataDragonVersionAsync(
@@ -377,11 +566,68 @@ namespace JoinGameAfk.Services
             return await DeserializeChampionCatalogAsync(stream, cancellationToken).ConfigureAwait(false);
         }
 
+        private static async Task<DataDragonClassicChampion?> FetchClassicChampionAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string locale,
+            ChampionInfo champion,
+            CancellationToken cancellationToken)
+        {
+            string[] locales =
+            [
+                RegionLocale.NormalizeLocale(locale),
+                RegionLocale.DefaultLocale
+            ];
+
+            foreach (string catalogLocale in locales.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                string catalogUrl = string.Format(
+                    CultureInfo.InvariantCulture,
+                    ClassicChampionCatalogUrlFormat,
+                    dataDragonVersion,
+                    catalogLocale);
+                using var response = await httpClient.GetAsync(catalogUrl, cancellationToken).ConfigureAwait(false);
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    continue;
+
+                response.EnsureSuccessStatusCode();
+                await using var stream = await response.Content
+                    .ReadAsStreamAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var catalog = await JsonSerializer.DeserializeAsync<DataDragonClassicChampionCatalog>(
+                        stream,
+                        SerializerOptions,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                DataDragonClassicChampion? match = catalog?.Data.Values.FirstOrDefault(candidate =>
+                    int.TryParse(candidate.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int modeChampionId)
+                    && LeagueChampionId.IsClassicVariant(modeChampionId)
+                    && LeagueChampionId.ToCanonical(modeChampionId) == champion.Key);
+                if (match is null)
+                    return null;
+
+                string imageFileName = match.Image?.Full?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(imageFileName)
+                    || !string.Equals(imageFileName, Path.GetFileName(imageFileName), StringComparison.Ordinal)
+                    || !imageFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Riot Data Dragon returned an unsafe League Classic image name for {champion.Name}.");
+                }
+
+                return match with { ImageFileName = imageFileName };
+            }
+
+            return null;
+        }
+
         private static async Task<DataDragonChampionDetail> FetchChampionDetailAsync(
             HttpClient httpClient,
             string dataDragonVersion,
             string locale,
             string dataDragonChampionId,
+            string detailUrlFormat,
             CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(locale))
@@ -389,7 +635,7 @@ namespace JoinGameAfk.Services
 
             string championDetailUrl = string.Format(
                 CultureInfo.InvariantCulture,
-                ChampionDetailUrlFormat,
+                detailUrlFormat,
                 dataDragonVersion,
                 locale,
                 Uri.EscapeDataString(dataDragonChampionId));
@@ -399,7 +645,7 @@ namespace JoinGameAfk.Services
             {
                 championDetailUrl = string.Format(
                     CultureInfo.InvariantCulture,
-                    ChampionDetailUrlFormat,
+                    detailUrlFormat,
                     dataDragonVersion,
                     "en_US",
                     Uri.EscapeDataString(dataDragonChampionId));
@@ -517,6 +763,50 @@ namespace JoinGameAfk.Services
             }
         }
 
+        private static async Task<ChampionTileDownloadOutcome> DownloadClassicChampionTileAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string imageFileName,
+            string tileDirectoryPath,
+            string fileName,
+            bool optimizeForLocalCache,
+            CancellationToken cancellationToken)
+        {
+            string tileUrl = string.Format(
+                CultureInfo.InvariantCulture,
+                ClassicChampionTileUrlFormat,
+                Uri.EscapeDataString(dataDragonVersion),
+                Uri.EscapeDataString(imageFileName));
+            string destinationFilePath = Path.Combine(tileDirectoryPath, fileName);
+            string temporaryFilePath = Path.Combine(tileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
+
+            try
+            {
+                using var response = await httpClient.GetAsync(tileUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                byte[] imageBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+                ChampionTileCacheImageOptimizer.SaveImageBytesAsJpeg(
+                    imageBytes,
+                    temporaryFilePath,
+                    optimizeForLocalCache,
+                    cancellationToken);
+
+                if (File.Exists(destinationFilePath)
+                    && FilesHaveSameSha256(destinationFilePath, temporaryFilePath))
+                {
+                    return ChampionTileDownloadOutcome.Unchanged;
+                }
+
+                File.Move(temporaryFilePath, destinationFilePath, overwrite: true);
+                return ChampionTileDownloadOutcome.Downloaded;
+            }
+            finally
+            {
+                TryDeleteFile(temporaryFilePath);
+            }
+        }
+
         private static string CreateChampionTileFileName(string dataDragonChampionId, int skinNumber)
         {
             string tileChampionId = NormalizeTileChampionId(dataDragonChampionId);
@@ -526,6 +816,24 @@ namespace JoinGameAfk.Services
                 || !safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException($"Riot Data Dragon returned an unsafe champion tile name '{fileName}'.");
+            }
+
+            return safeFileName;
+        }
+
+        private static string CreateClassicChampionTileFileName(
+            string dataDragonChampionId,
+            int skinNumber)
+        {
+            string tileChampionId = NormalizeTileChampionId(dataDragonChampionId);
+            string fileName = skinNumber == 0
+                ? $"{tileChampionId}_classic.jpg"
+                : $"{tileChampionId}_classic_{skinNumber.ToString(CultureInfo.InvariantCulture)}.jpg";
+            string safeFileName = Path.GetFileName(fileName);
+            if (!string.Equals(fileName, safeFileName, StringComparison.Ordinal)
+                || !safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"Riot Data Dragon returned an unsafe League Classic tile name '{fileName}'.");
             }
 
             return safeFileName;
@@ -603,6 +911,27 @@ namespace JoinGameAfk.Services
             public string? Id { get; set; }
 
             public string? Key { get; set; }
+        }
+
+        private sealed class DataDragonClassicChampionCatalog
+        {
+            public Dictionary<string, DataDragonClassicChampion> Data { get; set; } = [];
+        }
+
+        private sealed record DataDragonClassicChampion
+        {
+            public string? Id { get; init; }
+
+            public string? Key { get; init; }
+
+            public DataDragonChampionImage? Image { get; init; }
+
+            public string ImageFileName { get; init; } = string.Empty;
+        }
+
+        private sealed class DataDragonChampionImage
+        {
+            public string? Full { get; set; }
         }
 
         private sealed class DataDragonChampionDetailCatalog

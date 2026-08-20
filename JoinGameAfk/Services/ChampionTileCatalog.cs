@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using JoinGameAfk.Constant;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Services
@@ -60,7 +61,9 @@ namespace JoinGameAfk.Services
 
         public static string TileDirectoryPath => AppStorage.ChampionTileDirectoryPath;
 
-        public static IReadOnlyList<ChampionTileOption> GetOptions(ChampionInfo champion)
+        public static IReadOnlyList<ChampionTileOption> GetOptions(
+            ChampionInfo champion,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             string championId = !string.IsNullOrWhiteSpace(champion.Id)
                 ? NormalizeChampionId(champion.Id)
@@ -68,9 +71,12 @@ namespace JoinGameAfk.Services
                     string.IsNullOrWhiteSpace(champion.EnglishName)
                         ? champion.Name
                         : champion.EnglishName);
-            return OptionsByChampionId.TryGetValue(championId, out var options)
-                ? options
-                : [];
+            if (!OptionsByChampionId.TryGetValue(championId, out var options))
+                return [];
+
+            return CreateChampionTileOptions(options
+                .Select(option => option.FileName)
+                .Where(fileName => IsClassicTile(fileName) == (gameMode == LeagueGameMode.Classic)));
         }
 
         public static int GetTileFileCount()
@@ -157,6 +163,7 @@ namespace JoinGameAfk.Services
 
         public static async Task<ChampionTileDownloadResult> DownloadAllImagesForChampionAsync(
             ChampionInfo champion,
+            LeagueGameMode gameMode = LeagueGameMode.Modern,
             IProgress<ChampionTileDownloadProgress>? progress = null,
             CancellationToken cancellationToken = default,
             bool optimizeForLocalCache = true,
@@ -174,6 +181,7 @@ namespace JoinGameAfk.Services
                     : cacheSyncInfo.DataDragonVersion;
             var result = await DataDragonChampionTileDownloadService.DownloadChampionTilesAsync(
                     champion,
+                    gameMode,
                     preferredDataDragonVersion,
                     TileDirectoryPath,
                     progress,
@@ -234,9 +242,6 @@ namespace JoinGameAfk.Services
         public static ChampionTileSeedCacheResult InstallBundledSeedCacheIfNeeded()
         {
             var syncInfo = GetCacheSyncInfo();
-            if (syncInfo.CachedTileCount > 0)
-                return new ChampionTileSeedCacheResult(false, 0, syncInfo.DataDragonVersion, TileDirectoryPath);
-
             Assembly assembly = typeof(ChampionTileCatalog).Assembly;
             var resourceNames = assembly.GetManifestResourceNames()
                 .Where(name => name.StartsWith(BundledChampionTileResourcePrefix, StringComparison.Ordinal)
@@ -245,7 +250,7 @@ namespace JoinGameAfk.Services
                 .ToList();
 
             if (resourceNames.Count == 0)
-                return new ChampionTileSeedCacheResult(false, 0, null, TileDirectoryPath);
+                return new ChampionTileSeedCacheResult(false, 0, syncInfo.DataDragonVersion, TileDirectoryPath);
 
             AppStorage.EnsureChampionTileDirectoryExists();
 
@@ -256,11 +261,14 @@ namespace JoinGameAfk.Services
                 if (!TryGetSafeFileName(fileName, out fileName))
                     continue;
 
+                string destinationFilePath = Path.Combine(TileDirectoryPath, fileName);
+                if (File.Exists(destinationFilePath))
+                    continue;
+
                 using Stream? sourceStream = assembly.GetManifestResourceStream(resourceName);
                 if (sourceStream is null)
                     continue;
 
-                string destinationFilePath = Path.Combine(TileDirectoryPath, fileName);
                 string temporaryTileFilePath = Path.Combine(TileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
 
                 try
@@ -270,7 +278,7 @@ namespace JoinGameAfk.Services
                         sourceStream.CopyTo(outputStream);
                     }
 
-                    File.Move(temporaryTileFilePath, destinationFilePath, overwrite: true);
+                    File.Move(temporaryTileFilePath, destinationFilePath, overwrite: false);
                     importedCount++;
                 }
                 finally
@@ -280,7 +288,7 @@ namespace JoinGameAfk.Services
             }
 
             if (importedCount <= 0)
-                return new ChampionTileSeedCacheResult(false, 0, null, TileDirectoryPath);
+                return new ChampionTileSeedCacheResult(false, 0, syncInfo.DataDragonVersion, TileDirectoryPath);
 
             var seedMetadata = LoadBundledSeedCacheMetadata(assembly);
             var installResult = new ChampionTileArchiveInstallResult(
@@ -315,23 +323,30 @@ namespace JoinGameAfk.Services
             TileCatalogChanged?.Invoke(null, EventArgs.Empty);
         }
 
-        public static ChampionTileOption? GetDefaultOption(ChampionInfo champion)
+        public static ChampionTileOption? GetDefaultOption(
+            ChampionInfo champion,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
-            var options = GetOptions(champion);
+            var options = GetOptions(champion, gameMode);
             if (options.Count == 0)
                 return null;
 
             return options.FirstOrDefault(option => IsDefaultTile(option.FileName)) ?? options[0];
         }
 
-        public static ChampionTileOption? GetSelectedOption(ChampionInfo champion)
+        public static ChampionTileOption? GetSelectedOption(
+            ChampionInfo champion,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
-            return GetSelectedOption(champion, ChampionImageSelectionStore.Selections);
+            return GetSelectedOption(champion, ChampionImageSelectionStore.GetSelections(gameMode), gameMode);
         }
 
-        public static ChampionTileOption? GetSelectedOption(ChampionInfo champion, IReadOnlyDictionary<int, string> selections)
+        public static ChampionTileOption? GetSelectedOption(
+            ChampionInfo champion,
+            IReadOnlyDictionary<int, string> selections,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
-            var options = GetOptions(champion);
+            var options = GetOptions(champion, gameMode);
             if (options.Count == 0)
                 return null;
 
@@ -345,24 +360,27 @@ namespace JoinGameAfk.Services
                     return selectedOption;
             }
 
-            return GetDefaultOption(champion);
+            return GetDefaultOption(champion, gameMode);
         }
 
-        public static ImageSource? GetSelectedImageSource(int championKey)
+        public static ImageSource? GetSelectedImageSource(
+            int championKey,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             return ChampionCatalog.TryGetByKey(championKey, out var champion)
-                ? GetSelectedOption(champion!)?.ImageSource
+                ? GetSelectedOption(champion!, gameMode)?.ImageSource
                 : null;
         }
 
         public static Task<int> PreloadSelectedImageSourcesAsync(
             IEnumerable<ChampionInfo> champions,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             ArgumentNullException.ThrowIfNull(champions);
 
             var championSnapshot = champions.ToList();
-            return Task.Run(() => PreloadSelectedImageSources(championSnapshot, cancellationToken), cancellationToken);
+            return Task.Run(() => PreloadSelectedImageSources(championSnapshot, cancellationToken, gameMode), cancellationToken);
         }
 
         public static ImageSource? GetImageSource(string? fileName)
@@ -388,13 +406,14 @@ namespace JoinGameAfk.Services
 
         private static int PreloadSelectedImageSources(
             IEnumerable<ChampionInfo> champions,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            LeagueGameMode gameMode)
         {
             int loadedCount = 0;
             foreach (var champion in champions)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (GetSelectedOption(champion)?.ImageSource is not null)
+                if (GetSelectedOption(champion, gameMode)?.ImageSource is not null)
                     loadedCount++;
             }
 
@@ -429,12 +448,27 @@ namespace JoinGameAfk.Services
                 .GroupBy(tile => NormalizeChampionId(tile.Prefix), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(
                     group => group.Key,
-                    group => (IReadOnlyList<ChampionTileOption>)group
-                        .OrderBy(option => GetTileNumber(option.FileName))
-                        .ThenBy(option => option.FileName, StringComparer.OrdinalIgnoreCase)
-                        .Select((tile, index) => new ChampionTileOption(tile.FileName, CreateDisplayName(tile.FileName, index)))
-                        .ToList(),
+                    group => CreateChampionTileOptions(group.Select(tile => tile.FileName)),
                     StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static IReadOnlyList<ChampionTileOption> CreateChampionTileOptions(
+            IEnumerable<string> fileNames)
+        {
+            var orderedFileNames = fileNames
+                .OrderBy(GetTileSortGroup)
+                .ThenBy(GetTileNumber)
+                .ThenBy(fileName => fileName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            int variantIndex = 0;
+            return orderedFileNames
+                .Select(fileName => new ChampionTileOption(
+                    fileName,
+                    CreateDisplayName(
+                        fileName,
+                        IsDefaultTile(fileName) ? 0 : ++variantIndex)))
+                .ToList();
         }
 
         private static ImageSource? LoadImageSource(string fileName)
@@ -515,18 +549,32 @@ namespace JoinGameAfk.Services
 
         private static string GetTilePrefix(string fileNameWithoutExtension)
         {
+            int classicMarkerIndex = fileNameWithoutExtension.IndexOf(
+                "_classic",
+                StringComparison.OrdinalIgnoreCase);
+            if (classicMarkerIndex > 0)
+                return fileNameWithoutExtension[..classicMarkerIndex];
+
             int separatorIndex = fileNameWithoutExtension.LastIndexOf('_');
             return separatorIndex > 0
                 ? fileNameWithoutExtension[..separatorIndex]
                 : fileNameWithoutExtension;
         }
 
-        private static string CreateDisplayName(string fileName, int sortedIndex)
+        private static string CreateDisplayName(string fileName, int variantIndex)
         {
             int tileNumber = GetTileNumber(fileName);
             return tileNumber == 0
                 ? $"Default ({fileName})"
-                : $"Variant {Math.Max(1, sortedIndex)} ({fileName})";
+                : $"Variant {Math.Max(1, variantIndex)} ({fileName})";
+        }
+
+        private static int GetTileSortGroup(string fileName)
+        {
+            if (IsDefaultTile(fileName))
+                return 0;
+
+            return 1;
         }
 
         private static bool IsDefaultTile(string fileName)
@@ -534,9 +582,23 @@ namespace JoinGameAfk.Services
             return GetTileNumber(fileName) == 0;
         }
 
+        private static bool IsClassicTile(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            int markerIndex = name.IndexOf("_classic", StringComparison.OrdinalIgnoreCase);
+            if (markerIndex <= 0)
+                return false;
+
+            int suffixIndex = markerIndex + "_classic".Length;
+            return suffixIndex == name.Length || name[suffixIndex] == '_';
+        }
+
         private static int GetTileNumber(string fileName)
         {
             string nameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+            if (nameWithoutExtension.EndsWith("_classic", StringComparison.OrdinalIgnoreCase))
+                return 0;
+
             int separatorIndex = nameWithoutExtension.LastIndexOf('_');
             return separatorIndex >= 0
                 && int.TryParse(nameWithoutExtension[(separatorIndex + 1)..], out int number)

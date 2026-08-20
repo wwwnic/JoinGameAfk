@@ -8,11 +8,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
     {
         private void SaveChampionPreferences()
         {
-            _rolePlanSettings.Preferences.Remove(Position.None);
+            Dictionary<Position, PositionPreference> preferences =
+                _rolePlanSettings.GetPreferences(_activeRolePlanMode);
+            preferences.Remove(Position.None);
 
             foreach (var row in _rows)
             {
-                _rolePlanSettings.Preferences[row.Position] = new PositionPreference
+                preferences[row.Position] = new PositionPreference
                 {
                     PickChampionIds = row.PickChampions.Select(champion => champion.ChampionId).ToList(),
                     BanChampionIds = row.BanChampions.Select(champion => champion.ChampionId).ToList()

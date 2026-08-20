@@ -25,7 +25,7 @@ try
     int? resizeWidth = arguments.GetOptionalPositiveInt32("--resize-width");
     int? jpegQuality = arguments.GetOptionalRangeInt32("--jpeg-quality", 1, 100);
 
-    Console.WriteLine("Generating bundled default champion tile seed cache.");
+    Console.WriteLine("Generating bundled LoL and League Classic default champion tile seed cache.");
     Console.WriteLine($"Tile directory: {tileDirectoryPath}");
     Console.WriteLine($"Cache metadata: {cacheFilePath}");
     Console.WriteLine($"Locale: {locale}");
@@ -132,7 +132,9 @@ file static class DataDragonDefaultTileSeeder
 {
     private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
     private const string ChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion.json";
+    private const string ClassicChampionCatalogUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/mode/classic/champion.json";
     private const string ChampionTileUrlFormat = "https://ddragon.leagueoflegends.com/cdn/img/champion/tiles/{0}_0.jpg";
+    private const string ClassicChampionTileUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/img/mode/classic/champion/{1}";
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(45);
     private static readonly JsonSerializerOptions SerializerOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -153,15 +155,24 @@ file static class DataDragonDefaultTileSeeder
                 locale,
                 cancellationToken)
             .ConfigureAwait(false);
+        List<DataDragonClassicSeedChampion> classicChampions = await FetchClassicCatalogAsync(
+                httpClient,
+                dataDragonVersion,
+                locale,
+                champions,
+                cancellationToken)
+            .ConfigureAwait(false);
 
         int downloaded = 0;
         int unchanged = 0;
         int failed = 0;
+        int totalTileCount = champions.Count + classicChampions.Count;
+        int checkedCount = 0;
         for (int index = 0; index < champions.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DataDragonSeedChampion champion = champions[index];
-            int checkedCount = index + 1;
+            checkedCount++;
             try
             {
                 ChampionSeedTileOutcome outcome = await DownloadTileAsync(
@@ -181,8 +192,8 @@ file static class DataDragonDefaultTileSeeder
                     downloaded,
                     unchanged,
                     failed,
-                    champions.Count,
-                    $"Downloading default champion pictures {checkedCount}/{champions.Count}..."));
+                    totalTileCount,
+                    $"Downloading LoL default champion pictures {checkedCount}/{totalTileCount}..."));
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -196,12 +207,56 @@ file static class DataDragonDefaultTileSeeder
                     downloaded,
                     unchanged,
                     failed,
-                    champions.Count,
-                    $"Unable to download the default picture for {champion.Id}: {ex.GetType().Name}: {ex.Message}"));
+                    totalTileCount,
+                    $"Unable to download the LoL default picture for {champion.Id}: {ex.GetType().Name}: {ex.Message}"));
             }
         }
 
-        return new ChampionDefaultTileSeedResult(dataDragonVersion, champions.Count, downloaded, unchanged, failed);
+        foreach (DataDragonClassicSeedChampion champion in classicChampions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            checkedCount++;
+            try
+            {
+                ChampionSeedTileOutcome outcome = await DownloadClassicTileAsync(
+                        httpClient,
+                        dataDragonVersion,
+                        champion.ImageFileName,
+                        tileDirectoryPath,
+                        CreateClassicTileFileName(champion.CanonicalChampionId),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (outcome == ChampionSeedTileOutcome.Downloaded)
+                    downloaded++;
+                else
+                    unchanged++;
+
+                progress?.Report(new ChampionDefaultTileSeedProgress(
+                    checkedCount,
+                    downloaded,
+                    unchanged,
+                    failed,
+                    totalTileCount,
+                    $"Downloading League Classic default champion pictures {checkedCount}/{totalTileCount}..."));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                progress?.Report(new ChampionDefaultTileSeedProgress(
+                    checkedCount,
+                    downloaded,
+                    unchanged,
+                    failed,
+                    totalTileCount,
+                    $"Unable to download the League Classic default picture for {champion.CanonicalChampionId}: {ex.GetType().Name}: {ex.Message}"));
+            }
+        }
+
+        return new ChampionDefaultTileSeedResult(dataDragonVersion, totalTileCount, downloaded, unchanged, failed);
     }
 
     private static async Task<string> ResolveVersionAsync(
@@ -252,6 +307,71 @@ file static class DataDragonDefaultTileSeeder
             : throw new InvalidOperationException("Riot Data Dragon returned an empty champion catalog.");
     }
 
+    private static async Task<List<DataDragonClassicSeedChampion>> FetchClassicCatalogAsync(
+        HttpClient httpClient,
+        string version,
+        string locale,
+        IReadOnlyList<DataDragonSeedChampion> champions,
+        CancellationToken cancellationToken)
+    {
+        string catalogUrl = string.Format(
+            CultureInfo.InvariantCulture,
+            ClassicChampionCatalogUrlFormat,
+            version,
+            locale);
+        using HttpResponseMessage response = await httpClient.GetAsync(catalogUrl, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        DataDragonClassicSeedCatalog? catalog = await JsonSerializer.DeserializeAsync<DataDragonClassicSeedCatalog>(
+                stream,
+                SerializerOptions,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        Dictionary<int, DataDragonSeedChampion> championsByKey = champions
+            .Where(champion => ParseChampionKey(champion.Key) != int.MaxValue)
+            .GroupBy(champion => ParseChampionKey(champion.Key))
+            .ToDictionary(group => group.Key, group => group.First());
+        var classicChampions = new List<DataDragonClassicSeedChampion>();
+        IEnumerable<DataDragonClassicSeedChampion> candidates = catalog?.Data.Values
+            ?? Enumerable.Empty<DataDragonClassicSeedChampion>();
+        foreach (DataDragonClassicSeedChampion candidate in candidates)
+        {
+            int modeChampionId = ParseChampionKey(candidate.Key);
+            if (!LeagueChampionId.IsClassicVariant(modeChampionId))
+                continue;
+
+            int canonicalChampionId = LeagueChampionId.ToCanonical(modeChampionId);
+            if (!championsByKey.TryGetValue(canonicalChampionId, out DataDragonSeedChampion? canonicalChampion)
+                || string.IsNullOrWhiteSpace(canonicalChampion.Id))
+            {
+                throw new InvalidOperationException(
+                    $"League Classic champion {modeChampionId} has no matching LoL champion in Riot Data Dragon.");
+            }
+
+            string imageFileName = candidate.Image?.Full?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(imageFileName)
+                || !string.Equals(imageFileName, Path.GetFileName(imageFileName), StringComparison.Ordinal)
+                || !imageFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Riot Data Dragon returned an unsafe League Classic image name for champion {modeChampionId}.");
+            }
+
+            classicChampions.Add(candidate with
+            {
+                CanonicalChampionId = canonicalChampion.Id.Trim(),
+                ImageFileName = imageFileName
+            });
+        }
+
+        return classicChampions.Count > 0
+            ? classicChampions
+                .OrderBy(champion => LeagueChampionId.ToCanonical(ParseChampionKey(champion.Key)))
+                .ToList()
+            : throw new InvalidOperationException("Riot Data Dragon returned an empty League Classic champion catalog.");
+    }
+
     private static async Task<ChampionSeedTileOutcome> DownloadTileAsync(
         HttpClient httpClient,
         string championId,
@@ -292,9 +412,72 @@ file static class DataDragonDefaultTileSeeder
         }
     }
 
+    private static async Task<ChampionSeedTileOutcome> DownloadClassicTileAsync(
+        HttpClient httpClient,
+        string version,
+        string imageFileName,
+        string tileDirectoryPath,
+        string fileName,
+        CancellationToken cancellationToken)
+    {
+        string tileUrl = string.Format(
+            CultureInfo.InvariantCulture,
+            ClassicChampionTileUrlFormat,
+            Uri.EscapeDataString(version),
+            Uri.EscapeDataString(imageFileName));
+        string destinationPath = Path.Combine(tileDirectoryPath, fileName);
+        string temporaryPath = Path.Combine(tileDirectoryPath, $"{fileName}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            using HttpResponseMessage response = await httpClient.GetAsync(
+                    tileUrl,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            byte[] imageBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            using var source = new MemoryStream(imageBytes, writable: false);
+            BitmapSource bitmap = BitmapDecoder.Create(
+                source,
+                BitmapCreateOptions.PreservePixelFormat,
+                BitmapCacheOption.OnLoad).Frames[0];
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var encoder = new JpegBitmapEncoder { QualityLevel = ChampionTileSeedOptimizer.DefaultJpegQuality };
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using (FileStream destination = File.Create(temporaryPath))
+                encoder.Save(destination);
+
+            ValidateJpeg(temporaryPath, imageFileName);
+            if (File.Exists(destinationPath) && FilesHaveSameSha256(destinationPath, temporaryPath))
+                return ChampionSeedTileOutcome.Unchanged;
+
+            File.Move(temporaryPath, destinationPath, overwrite: true);
+            return ChampionSeedTileOutcome.Downloaded;
+        }
+        finally
+        {
+            TryDeleteFile(temporaryPath);
+        }
+    }
+
     private static string CreateTileFileName(string championId)
     {
         string fileName = $"{NormalizeTileChampionId(championId)}_0.jpg";
+        string safeFileName = Path.GetFileName(fileName);
+        if (!string.Equals(fileName, safeFileName, StringComparison.Ordinal)
+            || !safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Riot Data Dragon returned an unsafe champion id '{championId}'.");
+        }
+
+        return safeFileName;
+    }
+
+    private static string CreateClassicTileFileName(string championId)
+    {
+        string fileName = $"{NormalizeTileChampionId(championId)}_classic.jpg";
         string safeFileName = Path.GetFileName(fileName);
         if (!string.Equals(fileName, safeFileName, StringComparison.Ordinal)
             || !safeFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
@@ -354,6 +537,24 @@ file static class DataDragonDefaultTileSeeder
     {
         public string? Id { get; init; }
         public string? Key { get; init; }
+    }
+
+    private sealed class DataDragonClassicSeedCatalog
+    {
+        public Dictionary<string, DataDragonClassicSeedChampion> Data { get; set; } = [];
+    }
+
+    private sealed record DataDragonClassicSeedChampion
+    {
+        public string? Key { get; init; }
+        public DataDragonClassicSeedImage? Image { get; init; }
+        public string CanonicalChampionId { get; init; } = string.Empty;
+        public string ImageFileName { get; init; } = string.Empty;
+    }
+
+    private sealed record DataDragonClassicSeedImage
+    {
+        public string? Full { get; init; }
     }
 }
 

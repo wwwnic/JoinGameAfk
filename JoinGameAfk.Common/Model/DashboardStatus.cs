@@ -61,6 +61,7 @@ namespace JoinGameAfk.Model
 
     public sealed record DashboardStatus
     {
+        public LeagueGameMode GameMode { get; init; } = LeagueGameMode.Modern;
         public Position CurrentPosition { get; init; } = Position.None;
         public IReadOnlyList<DashboardTeamSlotItem> MyTeamSlots { get; init; } = [];
         public IReadOnlyList<DashboardTeamSlotItem> TheirTeamSlots { get; init; } = [];

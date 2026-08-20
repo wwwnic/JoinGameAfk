@@ -9,6 +9,7 @@ namespace JoinGameAfk.Plugin.Services
         private const string VersionsUrl = "https://ddragon.leagueoflegends.com/api/versions.json";
         private const string RealmUrlFormat = "https://ddragon.leagueoflegends.com/realms/{0}.json";
         private const string ChampionUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/champion.json";
+        private const string ClassicChampionUrlFormat = "https://ddragon.leagueoflegends.com/cdn/{0}/data/{1}/mode/classic/champion.json";
         private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
 
         private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -175,9 +176,39 @@ namespace JoinGameAfk.Plugin.Services
                 fetchedLocale,
                 RegionLocale.DefaultLocale,
                 StringComparison.OrdinalIgnoreCase);
+            DataDragonChampionCatalog? classicCatalog = await TryFetchClassicChampionCatalogAsync(
+                    httpClient,
+                    dataDragonVersion,
+                    fetchedLocale,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (classicCatalog is null
+                && !string.Equals(fetchedLocale, RegionLocale.DefaultLocale, StringComparison.OrdinalIgnoreCase))
+            {
+                classicCatalog = await TryFetchClassicChampionCatalogAsync(
+                        httpClient,
+                        dataDragonVersion,
+                        RegionLocale.DefaultLocale,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            HashSet<int>? classicChampionIds = classicCatalog is null
+                ? null
+                : classicCatalog.Data.Values
+                    .Select(champion => int.TryParse(
+                            champion.Key,
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out int modeChampionId)
+                        ? modeChampionId
+                        : 0)
+                    .Where(LeagueChampionId.IsClassicVariant)
+                    .Select(LeagueChampionId.ToCanonical)
+                    .ToHashSet();
             return new FetchedChampionCatalog(
                 RegionLocale.NormalizeLocale(fetchedLocale),
-                CreateRemoteChampions(catalog, hasEnglishNames));
+                CreateRemoteChampions(catalog, hasEnglishNames, classicChampionIds));
         }
 
         private static async Task<DataDragonChampionCatalog?> TryFetchChampionCatalogAsync(
@@ -189,6 +220,26 @@ namespace JoinGameAfk.Plugin.Services
             string championUrl = string.Format(
                 CultureInfo.InvariantCulture,
                 ChampionUrlFormat,
+                dataDragonVersion,
+                locale);
+
+            using var response = await httpClient.GetAsync(championUrl, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            return await DeserializeChampionCatalogAsync(stream, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<DataDragonChampionCatalog?> TryFetchClassicChampionCatalogAsync(
+            HttpClient httpClient,
+            string dataDragonVersion,
+            string locale,
+            CancellationToken cancellationToken)
+        {
+            string championUrl = string.Format(
+                CultureInfo.InvariantCulture,
+                ClassicChampionUrlFormat,
                 dataDragonVersion,
                 locale);
 
@@ -218,10 +269,11 @@ namespace JoinGameAfk.Plugin.Services
 
         private static IReadOnlyList<ChampionCatalogRemoteChampion> CreateRemoteChampions(
             DataDragonChampionCatalog catalog,
-            bool hasEnglishNames)
+            bool hasEnglishNames,
+            IReadOnlySet<int>? classicChampionIds)
         {
             return catalog.Data.Values
-                .Select(champion => CreateRemoteChampion(champion, hasEnglishNames))
+                .Select(champion => CreateRemoteChampion(champion, hasEnglishNames, classicChampionIds))
                 .Where(champion => champion is not null)
                 .Select(champion => champion!)
                 .ToList();
@@ -239,7 +291,8 @@ namespace JoinGameAfk.Plugin.Services
 
         private static ChampionCatalogRemoteChampion? CreateRemoteChampion(
             DataDragonChampion champion,
-            bool hasEnglishName)
+            bool hasEnglishName,
+            IReadOnlySet<int>? classicChampionIds)
         {
             if (string.IsNullOrWhiteSpace(champion.Key)
                 || !int.TryParse(champion.Key, NumberStyles.Integer, CultureInfo.InvariantCulture, out int championKey)
@@ -258,7 +311,8 @@ namespace JoinGameAfk.Plugin.Services
                 championKey,
                 name,
                 EnglishName: hasEnglishName ? name : null,
-                Id: id);
+                Id: id,
+                SupportsLeagueClassic: classicChampionIds?.Contains(championKey));
         }
 
         private sealed class DataDragonChampionCatalog

@@ -575,7 +575,9 @@ namespace JoinGameAfk.Presentation.View.Dashboard
 
         private void UpdateChampionPriorityList(ItemsControl itemsControl, TextBlock placeholderText, IReadOnlyList<DashboardChampionPlanItem> champions, string fallbackText)
         {
-            itemsControl.ItemsSource = DashboardChampionPlanDisplay.CreateList(champions);
+            itemsControl.ItemsSource = DashboardChampionPlanDisplay.CreateList(
+                champions,
+                _lastDashboardStatus.GameMode);
 
             bool hasChampions = champions.Count > 0;
             placeholderText.Visibility = hasChampions ? Visibility.Collapsed : Visibility.Visible;
@@ -699,10 +701,10 @@ namespace JoinGameAfk.Presentation.View.Dashboard
         private ImageSource? GetChampionPortrait(int championId, string championName)
         {
             if (championId > 0)
-                return ChampionTileCatalog.GetSelectedImageSource(championId);
+                return ChampionTileCatalog.GetSelectedImageSource(championId, _lastDashboardStatus.GameMode);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key, _lastDashboardStatus.GameMode)
                 : null;
         }
 

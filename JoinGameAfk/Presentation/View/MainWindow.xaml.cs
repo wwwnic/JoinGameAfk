@@ -540,6 +540,7 @@ namespace JoinGameAfk.Presentation.View
             Dispatcher.TryInvoke(() =>
             {
                 _lastDashboardStatus = status;
+                _championPrioritiesPage.SetChampionSelectGameMode(status.GameMode);
                 _readyCheckResponse = status.ReadyCheckResponse;
                 RefreshPhaseIndicator();
                 RefreshPhaseText();

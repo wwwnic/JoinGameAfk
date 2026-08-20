@@ -18,11 +18,14 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
     {
         private readonly ChampionChipLabel _chipLabel;
 
-        public ChampionReferenceItem(ChampionInfo champion, bool isPictureEditMode)
+        public ChampionReferenceItem(
+            ChampionInfo champion,
+            bool isPictureEditMode,
+            LeagueGameMode gameMode)
         {
             Champion = champion;
             _chipLabel = ChampionChipLabelFormatter.Format(champion.Name);
-            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource;
+            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion, gameMode)?.ImageSource;
             ToolTipText = isPictureEditMode
                 ? $"{_chipLabel.ToolTipName}\nClick to change this champion picture."
                 : $"{_chipLabel.ToolTipName}\nClick to add to the selected list, or drag into a pick/ban list.";
@@ -169,7 +172,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         public Position Position { get; }
         public string DisplayText { get; }
         public string IconText { get; }
-
         public string AutomationName => Position == JoinGameAfk.Enums.Position.None
             ? "Show all champions"
             : $"Filter {DisplayText} champions";

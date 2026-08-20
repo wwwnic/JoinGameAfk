@@ -52,7 +52,8 @@ public class LeagueClassicChampionIdTests
                 AutoLockSelectionEnabled = false
             };
             var rolePlans = new RolePlanSettings();
-            rolePlans.Preferences[JoinGameAfk.Enums.Position.Default].PickChampionIds = [103];
+            rolePlans.ClassicPreferences[JoinGameAfk.Enums.Position.Default].PickChampionIds = [103];
+            rolePlans.Preferences[JoinGameAfk.Enums.Position.Default].PickChampionIds = [86];
             var champSelect = new ChampSelect(http, settings, rolePlans, new SoundSettings(), logs.Enqueue);
 
             string initialSessionJson = JsonSerializer.Serialize(state.GetChampSelectSessionPayload());
@@ -69,6 +70,7 @@ public class LeagueClassicChampionIdTests
                     line.Contains("\"championId\":60103", StringComparison.Ordinal)));
                 Assert.That(localPlayer.ChampionId, Is.EqualTo(103));
                 Assert.That(localPlayer.ChampionName, Does.Contain("Ahri"));
+                Assert.That(champSelect.LastDashboardStatus.GameMode, Is.EqualTo(LeagueGameMode.Classic));
                 Assert.That(champSelect.LastDashboardStatus.PickChampionPriority.Single().IsAvailable, Is.True,
                     "Classic 60xxx grid IDs must match canonical role-plan IDs.");
             });

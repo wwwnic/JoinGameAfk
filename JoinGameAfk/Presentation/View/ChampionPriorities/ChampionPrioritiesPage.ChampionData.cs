@@ -309,6 +309,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 return await ChampionTileCatalog.DownloadAllImagesForChampionAsync(
                     champion,
+                    _activeRolePlanMode,
                     progress,
                     cancellationToken,
                     optimizeForLocalCache: !_championDataSettings.DownloadRawChampionPictures,
@@ -320,6 +321,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 .DownloadChampionTilesAsync(
                     http,
                     champion,
+                    _activeRolePlanMode,
                     ChampionTileCatalog.TileDirectoryPath,
                     progress,
                     cancellationToken,
@@ -541,7 +543,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (!ConfirmDefaultChampionPictureDownload(source))
             {
                 SetChampionPictureDownloadStatus(
-                    "Default champion picture download canceled.",
+                    "LoL and League Classic default picture download canceled.",
                     "TextSoftBrush",
                     Brushes.SlateGray);
                 return;
@@ -551,14 +553,16 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 .Where(champion => champion.Key > 0)
                 .OrderBy(champion => champion.Key)
                 .ToList();
+            int expectedDefaultTileCount = champions.Count
+                + champions.Count(champion => champion.SupportsLeagueClassic == true);
             SetChampionDataOperationInProgress(true);
             ChampionPictureDownloadProgressBar.Visibility = Visibility.Visible;
             ChampionPictureDownloadProgressBar.IsIndeterminate = false;
             ChampionPictureDownloadProgressBar.Minimum = 0;
-            ChampionPictureDownloadProgressBar.Maximum = Math.Max(1, champions.Count);
+            ChampionPictureDownloadProgressBar.Maximum = Math.Max(1, expectedDefaultTileCount);
             ChampionPictureDownloadProgressBar.Value = 0;
             SetChampionPictureDownloadStatus(
-                $"Preparing {champions.Count} default champion pictures from {GetChampionDataSourceName(source)}...",
+                $"Preparing up to {expectedDefaultTileCount} LoL and League Classic default pictures from {GetChampionDataSourceName(source)}...",
                 "TextSoftBrush",
                 Brushes.SlateGray);
 
@@ -566,7 +570,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 var progress = new Progress<ChampionDefaultTileDownloadProgress>(snapshot =>
                 {
-                    ChampionPictureDownloadProgressBar.Value = snapshot.CheckedChampionCount;
+                    ChampionPictureDownloadProgressBar.Maximum = Math.Max(1, snapshot.TotalTileCount);
+                    ChampionPictureDownloadProgressBar.Value = snapshot.CheckedTileCount;
                     SetChampionPictureDownloadStatus(
                         snapshot.Message,
                         snapshot.FailedTileCount == 0 ? "TextSoftBrush" : "DangerTextBrush",
@@ -596,17 +601,18 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                     ChampionTileCatalog.Reload();
                 }
 
-                ChampionPictureDownloadProgressBar.Value = champions.Count;
+                ChampionPictureDownloadProgressBar.Maximum = Math.Max(1, result.TileCount);
+                ChampionPictureDownloadProgressBar.Value = result.TileCount;
                 string message =
-                    $"Default pictures completed. Updated {result.DownloadedTileCount}; "
+                    $"LoL and League Classic default pictures completed. Updated {result.DownloadedTileCount}; "
                     + $"unchanged {result.UnchangedTileCount}; failed {result.FailedTileCount}.";
                 SetChampionPictureDownloadStatus(
                     message,
                     result.FailedTileCount == 0 ? "AccentGreenTextBrush" : "DangerTextBrush",
                     result.FailedTileCount == 0 ? Brushes.ForestGreen : Brushes.IndianRed);
                 LogMessage(
-                    $"Default champion pictures completed from {GetChampionDataSourceName(source)}. "
-                    + $"Checked {result.ChampionCount}; updated {result.DownloadedTileCount}; "
+                    $"LoL and League Classic default pictures completed from {GetChampionDataSourceName(source)}. "
+                    + $"Checked {result.TileCount}; updated {result.DownloadedTileCount}; "
                     + $"unchanged {result.UnchangedTileCount}; failed {result.FailedTileCount}.");
             }
             catch (Exception ex)
@@ -656,7 +662,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             MessageBoxResult result = MessageBox.Show(
                 Window.GetWindow(this),
-                "JoinGameAfk will connect to Riot Data Dragon and download one default tile for every champion. "
+                "JoinGameAfk will connect to Riot Data Dragon and download one LoL default tile for every champion, "
+                    + "plus one Classic default tile for every champion available in League Classic. "
                     + "It will not download the full archive or additional skins.\n\nContinue?",
                 "Download Default Champion Pictures",
                 MessageBoxButton.OKCancel,

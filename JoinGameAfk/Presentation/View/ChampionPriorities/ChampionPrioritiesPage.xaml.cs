@@ -38,6 +38,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private readonly List<PositionRow> _rows;
         private readonly ObservableCollection<RoleFilterOption> _roleFilters;
         private readonly HashSet<Position> _activeRoleFilters = [];
+        private LeagueGameMode _activeRolePlanMode = LeagueGameMode.Modern;
         private Brush _activeTargetBrush = Brushes.DodgerBlue;
         private Brush _inactiveTargetBrush = Brushes.SlateGray;
         private Brush _dropHoverTargetBrush = Brushes.DeepSkyBlue;
@@ -74,6 +75,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private bool _isChampionPictureDownloadInProgress;
         private bool _isApplyingChampionDataSettings;
         private bool _isChampionDataOperationInProgress;
+        private bool _hasSynchronizedChampionSelectGameMode;
         private string? _checkedChampionCatalogPlatformId;
         private string? _latestConfiguredRegionDataDragonVersion;
         private ChampionInfo? _selectedProfileIconChampion;
@@ -164,6 +166,18 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             private set => SetValue(IsChampionPictureEditModeProperty, value);
         }
 
+        public static readonly DependencyProperty IsLeagueClassicPlanModeProperty = DependencyProperty.Register(
+            nameof(IsLeagueClassicPlanMode),
+            typeof(bool),
+            typeof(ChampionPrioritiesPage),
+            new PropertyMetadata(false));
+
+        public bool IsLeagueClassicPlanMode
+        {
+            get => (bool)GetValue(IsLeagueClassicPlanModeProperty);
+            private set => SetValue(IsLeagueClassicPlanModeProperty, value);
+        }
+
         public ChampionPrioritiesPage(
             ChampionDataSettings championDataSettings,
             RolePlanSettings rolePlanSettings,
@@ -218,25 +232,12 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             _rows = [];
             foreach (Position position in Enum.GetValues<Position>().Where(position => position != Position.None))
             {
-                var pref = _rolePlanSettings.Preferences.GetValueOrDefault(position) ?? new PositionPreference();
                 var row = new PositionRow
                 {
                     Position = position,
                     PositionName = position.ToString()
                 };
 
-                foreach (int championId in pref.PickChampionIds)
-                {
-                    row.PickChampions.Add(CreateSelectionItem(row, championId, isPick: true));
-                }
-
-                foreach (int championId in pref.BanChampionIds)
-                {
-                    row.BanChampions.Add(CreateSelectionItem(row, championId, isPick: false));
-                }
-
-                UpdateRowTextFromCollection(row, isPick: true);
-                UpdateRowTextFromCollection(row, isPick: false);
                 row.PickBorderBrush = _inactiveTargetBrush;
                 row.BanBorderBrush = _inactiveTargetBrush;
                 row.PickBackgroundBrush = _inactiveTargetBackgroundBrush;
@@ -245,10 +246,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
 
             PositionList.ItemsSource = _rows;
-            if (_rows.Count > 0)
-            {
-                SetActiveTarget(_rows[0], isPick: true, focusSearch: false);
-            }
+            ReloadRolePlanRows();
 
             ChampionCatalog.CatalogChanged += ChampionCatalog_CatalogChanged;
             ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
@@ -280,6 +278,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 IsChampionSelectLockActive = isActive;
                 IsPriorityEditingEnabled = !isActive;
                 AllowDrop = !isActive;
+                _hasSynchronizedChampionSelectGameMode = false;
                 RefreshTargetBrushes();
             });
         }

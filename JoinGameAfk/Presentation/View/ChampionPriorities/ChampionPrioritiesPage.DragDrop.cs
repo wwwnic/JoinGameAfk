@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 using JoinGameAfk.Presentation.View.Controls;
 using JoinGameAfk.Services;
@@ -54,7 +55,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             var champion = _draggedReferenceChampion;
             _suppressReferenceChampionClick = true;
-            StartChampionDrag((DependencyObject)sender, ChampionDragData.FromReference(champion), currentPosition);
+            StartChampionDrag(
+                (DependencyObject)sender,
+                ChampionDragData.FromReference(champion, _activeRolePlanMode),
+                currentPosition);
 
             e.Handled = true;
         }
@@ -1532,13 +1536,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 };
             }
 
-            public static ChampionDragData FromReference(ChampionInfo champion)
+            public static ChampionDragData FromReference(ChampionInfo champion, LeagueGameMode gameMode)
             {
                 return new ChampionDragData
                 {
                     ChampionId = champion.Key,
                     ChampionName = champion.Name,
-                    PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource
+                    PreviewImageSource = ChampionTileCatalog.GetSelectedOption(champion, gameMode)?.ImageSource
                 };
             }
 

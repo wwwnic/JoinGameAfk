@@ -34,14 +34,17 @@ namespace JoinGameAfk.Presentation.View.Dashboard
     internal static class DashboardChampionPlanDisplay
     {
         public static IReadOnlyList<DashboardChampionPlanDisplayItem> CreateList(
-            IEnumerable<DashboardChampionPlanItem> champions)
+            IEnumerable<DashboardChampionPlanItem> champions,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             return champions
-                .Select(CreateItem)
+                .Select(champion => CreateItem(champion, gameMode))
                 .ToList();
         }
 
-        private static DashboardChampionPlanDisplayItem CreateItem(DashboardChampionPlanItem champion)
+        private static DashboardChampionPlanDisplayItem CreateItem(
+            DashboardChampionPlanItem champion,
+            LeagueGameMode gameMode)
         {
             string championName = GetChampionDisplayName(champion.ChampionId, champion.Name);
             ChampionChipLabel chipLabel = ChampionChipLabelFormatter.Format(championName);
@@ -64,20 +67,23 @@ namespace JoinGameAfk.Presentation.View.Dashboard
                 IsBanHover = IsBanSelection(champion, DashboardDraftSelectionState.Hover),
                 IsLockedBan = IsBanSelection(champion, DashboardDraftSelectionState.Locked),
                 ActionBadgeText = GetActionBadgeText(champion.ActionType, champion.SelectionState),
-                PortraitImageSource = GetChampionPortrait(champion.ChampionId, championName),
+                PortraitImageSource = GetChampionPortrait(champion.ChampionId, championName, gameMode),
                 ChipDisplayText = chipLabel.Text,
                 ChipDisplayFontSize = chipLabel.FontSize,
                 ToolTipText = BuildToolTip(chipLabel.ToolTipName, champion.StatusText, champion.PlanReferenceText)
             };
         }
 
-        private static ImageSource? GetChampionPortrait(int championId, string championName)
+        private static ImageSource? GetChampionPortrait(
+            int championId,
+            string championName,
+            LeagueGameMode gameMode)
         {
             if (championId > 0)
-                return ChampionTileCatalog.GetSelectedImageSource(championId);
+                return ChampionTileCatalog.GetSelectedImageSource(championId, gameMode);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key, gameMode)
                 : null;
         }
 

@@ -16,7 +16,8 @@ public class ChampionCatalogSchemaTests
         var champion = new ChampionInfo(888, "Renata Glasc")
         {
             EnglishName = "Renata Glasc",
-            Id = "Renata"
+            Id = "Renata",
+            SupportsLeagueClassic = true
         };
 
         string json = JsonSerializer.Serialize(champion);
@@ -32,6 +33,7 @@ public class ChampionCatalogSchemaTests
             Assert.That(restored.Name, Is.EqualTo("Renata Glasc"));
             Assert.That(restored.EnglishName, Is.EqualTo("Renata Glasc"));
             Assert.That(restored.Id, Is.EqualTo("Renata"));
+            Assert.That(restored.SupportsLeagueClassic, Is.True);
         });
     }
 
@@ -145,6 +147,8 @@ public class ChampionCatalogSchemaTests
                     Is.EquivalentTo(new[] { "Support" }));
                 Assert.That(newChampion.GetProperty("Name").GetString(), Is.EqualTo("New Champ"));
                 Assert.That(newChampion.GetProperty("Id").GetString(), Is.EqualTo("NewChamp"));
+                Assert.That(ahri.GetProperty("SupportsLeagueClassic").GetBoolean(), Is.True);
+                Assert.That(newChampion.GetProperty("SupportsLeagueClassic").GetBoolean(), Is.False);
             });
         }
         finally

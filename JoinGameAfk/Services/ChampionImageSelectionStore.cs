@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using JoinGameAfk.Constant;
+using JoinGameAfk.Enums;
 using JoinGameAfk.Model;
 
 namespace JoinGameAfk.Services
@@ -16,19 +17,20 @@ namespace JoinGameAfk.Services
 
         private static readonly object SyncRoot = new();
         private static Dictionary<int, string>? _selections;
+        private static Dictionary<int, string>? _classicSelections;
         private static bool _showChampionPictureDownloadWarning = true;
 
         public static event EventHandler? SelectionsChanged;
 
         public static IReadOnlyDictionary<int, string> Selections
+            => GetSelections(LeagueGameMode.Modern);
+
+        public static IReadOnlyDictionary<int, string> GetSelections(LeagueGameMode gameMode)
         {
-            get
+            lock (SyncRoot)
             {
-                lock (SyncRoot)
-                {
-                    EnsureLoaded();
-                    return new Dictionary<int, string>(_selections!);
-                }
+                EnsureLoaded();
+                return new Dictionary<int, string>(GetLoadedSelections(gameMode));
             }
         }
 
@@ -44,27 +46,30 @@ namespace JoinGameAfk.Services
             }
         }
 
-        public static bool HasSelection(int championId)
+        public static bool HasSelection(int championId, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             lock (SyncRoot)
             {
                 EnsureLoaded();
-                return _selections!.ContainsKey(championId);
+                return GetLoadedSelections(gameMode).ContainsKey(championId);
             }
         }
 
-        public static string? GetSelection(int championId)
+        public static string? GetSelection(int championId, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             lock (SyncRoot)
             {
                 EnsureLoaded();
-                return _selections!.TryGetValue(championId, out string? fileName)
+                return GetLoadedSelections(gameMode).TryGetValue(championId, out string? fileName)
                     ? fileName
                     : null;
             }
         }
 
-        public static void SetSelection(int championId, string fileName)
+        public static void SetSelection(
+            int championId,
+            string fileName,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             if (!IsValidChampionId(championId) || !TryGetSafeFileName(fileName, out string safeFileName))
                 return;
@@ -73,26 +78,27 @@ namespace JoinGameAfk.Services
             lock (SyncRoot)
             {
                 EnsureLoaded();
-                changed = !_selections!.TryGetValue(championId, out string? existingFileName)
+                Dictionary<int, string> selections = GetLoadedSelections(gameMode);
+                changed = !selections.TryGetValue(championId, out string? existingFileName)
                     || !string.Equals(existingFileName, safeFileName, StringComparison.OrdinalIgnoreCase);
 
                 if (!changed)
                     return;
 
-                _selections![championId] = safeFileName;
+                selections[championId] = safeFileName;
                 SaveLoadedFile();
             }
 
             RaiseSelectionsChanged();
         }
 
-        public static void ClearSelection(int championId)
+        public static void ClearSelection(int championId, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             bool changed;
             lock (SyncRoot)
             {
                 EnsureLoaded();
-                changed = _selections!.Remove(championId);
+                changed = GetLoadedSelections(gameMode).Remove(championId);
                 if (!changed)
                     return;
 
@@ -102,7 +108,9 @@ namespace JoinGameAfk.Services
             RaiseSelectionsChanged();
         }
 
-        public static void ReplaceSelections(IReadOnlyDictionary<int, string> selections)
+        public static void ReplaceSelections(
+            IReadOnlyDictionary<int, string> selections,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             ArgumentNullException.ThrowIfNull(selections);
             Dictionary<int, string> normalizedSelections = NormalizeSelections(selections);
@@ -111,12 +119,16 @@ namespace JoinGameAfk.Services
             lock (SyncRoot)
             {
                 EnsureLoaded();
-                changed = !_selections!.OrderBy(entry => entry.Key)
+                Dictionary<int, string> currentSelections = GetLoadedSelections(gameMode);
+                changed = !currentSelections.OrderBy(entry => entry.Key)
                     .SequenceEqual(normalizedSelections.OrderBy(entry => entry.Key));
                 if (!changed)
                     return;
 
-                _selections = normalizedSelections;
+                if (gameMode == LeagueGameMode.Classic)
+                    _classicSelections = normalizedSelections;
+                else
+                    _selections = normalizedSelections;
                 SaveLoadedFile();
             }
 
@@ -141,6 +153,7 @@ namespace JoinGameAfk.Services
             lock (SyncRoot)
             {
                 _selections = null;
+                _classicSelections = null;
                 _showChampionPictureDownloadWarning = true;
                 EnsureLoaded();
             }
@@ -150,12 +163,25 @@ namespace JoinGameAfk.Services
 
         private static void EnsureLoaded()
         {
-            if (_selections is not null)
+            if (_selections is not null && _classicSelections is not null)
                 return;
 
             var file = LoadFile();
             _selections = NormalizeSelections(file.ChampionImageFileNames);
+            _classicSelections = NormalizeSelections(file.ClassicChampionImageFileNames);
+            bool migratedClassicSelections = false;
+            foreach (var entry in _selections
+                         .Where(entry => IsClassicImageFileName(entry.Value))
+                         .ToList())
+            {
+                _classicSelections.TryAdd(entry.Key, entry.Value);
+                _selections.Remove(entry.Key);
+                migratedClassicSelections = true;
+            }
+
             _showChampionPictureDownloadWarning = file.ShowChampionPictureDownloadWarning;
+            if (migratedClassicSelections)
+                SaveLoadedFile();
         }
 
         private static ChampionImageSelectionFile LoadFile()
@@ -192,7 +218,8 @@ namespace JoinGameAfk.Services
             {
                 Version = AppStorage.ChampionImageSelectionFileVersion,
                 ShowChampionPictureDownloadWarning = _showChampionPictureDownloadWarning,
-                ChampionImageFileNames = NormalizeSelections(_selections)
+                ChampionImageFileNames = NormalizeSelections(_selections),
+                ClassicChampionImageFileNames = NormalizeSelections(_classicSelections)
             });
         }
 
@@ -207,7 +234,13 @@ namespace JoinGameAfk.Services
         {
             file.Version = AppStorage.ChampionImageSelectionFileVersion;
             file.ChampionImageFileNames = NormalizeSelections(file.ChampionImageFileNames);
+            file.ClassicChampionImageFileNames = NormalizeSelections(file.ClassicChampionImageFileNames);
             return file;
+        }
+
+        private static Dictionary<int, string> GetLoadedSelections(LeagueGameMode gameMode)
+        {
+            return gameMode == LeagueGameMode.Classic ? _classicSelections! : _selections!;
         }
 
         private static Dictionary<int, string> NormalizeSelections(IReadOnlyDictionary<int, string>? selections)
@@ -248,13 +281,25 @@ namespace JoinGameAfk.Services
             return true;
         }
 
+        private static bool IsClassicImageFileName(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            int markerIndex = name.IndexOf("_classic", StringComparison.OrdinalIgnoreCase);
+            if (markerIndex <= 0)
+                return false;
+
+            int suffixIndex = markerIndex + "_classic".Length;
+            return suffixIndex == name.Length || name[suffixIndex] == '_';
+        }
+
         private static ChampionImageSelectionFile CreateDefaultFile()
         {
             return new ChampionImageSelectionFile
             {
                 Version = AppStorage.ChampionImageSelectionFileVersion,
                 ShowChampionPictureDownloadWarning = true,
-                ChampionImageFileNames = []
+                ChampionImageFileNames = [],
+                ClassicChampionImageFileNames = []
             };
         }
 
@@ -294,6 +339,8 @@ namespace JoinGameAfk.Services
             public bool ShowChampionPictureDownloadWarning { get; set; } = true;
 
             public Dictionary<int, string> ChampionImageFileNames { get; set; } = [];
+
+            public Dictionary<int, string> ClassicChampionImageFileNames { get; set; } = [];
         }
     }
 }

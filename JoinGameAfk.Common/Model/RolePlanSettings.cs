@@ -16,29 +16,37 @@ namespace JoinGameAfk.Model
 
         public Dictionary<Position, PositionPreference> Preferences { get; set; } = CreateDefaultPreferences();
 
+        public Dictionary<Position, PositionPreference> ClassicPreferences { get; set; } = CreateDefaultPreferences();
+
         public event Action? Saved;
 
-        public PositionPreference GetPreference(Position position)
+        public Dictionary<Position, PositionPreference> GetPreferences(LeagueGameMode gameMode)
+        {
+            return gameMode == LeagueGameMode.Classic ? ClassicPreferences : Preferences;
+        }
+
+        public PositionPreference GetPreference(Position position, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             position = NormalizePreferencePosition(position);
+            Dictionary<Position, PositionPreference> preferences = GetPreferences(gameMode);
 
-            if (Preferences.TryGetValue(position, out var pref)
+            if (preferences.TryGetValue(position, out var pref)
                 && (pref.PickChampionIds.Count > 0 || pref.BanChampionIds.Count > 0))
             {
                 return pref;
             }
 
-            return Preferences.GetValueOrDefault(Position.Default) ?? new PositionPreference();
+            return preferences.GetValueOrDefault(Position.Default) ?? new PositionPreference();
         }
 
-        public List<int> GetMergedPickChampionIds(Position position)
+        public List<int> GetMergedPickChampionIds(Position position, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
-            return GetMergedChampionIds(position, pref => pref.PickChampionIds);
+            return GetMergedChampionIds(position, gameMode, pref => pref.PickChampionIds);
         }
 
-        public List<int> GetMergedBanChampionIds(Position position)
+        public List<int> GetMergedBanChampionIds(Position position, LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
-            return GetMergedChampionIds(position, pref => pref.BanChampionIds);
+            return GetMergedChampionIds(position, gameMode, pref => pref.BanChampionIds);
         }
 
         public void Save()
@@ -47,16 +55,22 @@ namespace JoinGameAfk.Model
             Saved?.Invoke();
         }
 
-        public void ReplacePreferences(IReadOnlyDictionary<Position, PositionPreference> preferences)
+        public void ReplacePreferences(
+            IReadOnlyDictionary<Position, PositionPreference> preferences,
+            LeagueGameMode gameMode = LeagueGameMode.Modern)
         {
             ArgumentNullException.ThrowIfNull(preferences);
-            Preferences = preferences.ToDictionary(
+            Dictionary<Position, PositionPreference> replacement = preferences.ToDictionary(
                 entry => entry.Key,
                 entry => new PositionPreference
                 {
                     PickChampionIds = [.. entry.Value?.PickChampionIds ?? []],
                     BanChampionIds = [.. entry.Value?.BanChampionIds ?? []]
                 });
+            if (gameMode == LeagueGameMode.Classic)
+                ClassicPreferences = replacement;
+            else
+                Preferences = replacement;
             NormalizeSettings(this);
         }
 
@@ -65,16 +79,20 @@ namespace JoinGameAfk.Model
             return JsonSettingsStore.Load(AppStorage.RolePlanSettingsFilePath, () => new RolePlanSettings(), NormalizeSettings);
         }
 
-        private List<int> GetMergedChampionIds(Position position, Func<PositionPreference, List<int>> selector)
+        private List<int> GetMergedChampionIds(
+            Position position,
+            LeagueGameMode gameMode,
+            Func<PositionPreference, List<int>> selector)
         {
             position = NormalizePreferencePosition(position);
+            Dictionary<Position, PositionPreference> preferences = GetPreferences(gameMode);
 
             var rolePref = position != Position.Default
-                && Preferences.TryGetValue(position, out var rp)
+                && preferences.TryGetValue(position, out var rp)
                 ? selector(rp)
                 : [];
 
-            var defaultPref = Preferences.TryGetValue(Position.Default, out var dp)
+            var defaultPref = preferences.TryGetValue(Position.Default, out var dp)
                 ? selector(dp)
                 : [];
 
@@ -103,12 +121,19 @@ namespace JoinGameAfk.Model
         {
             settings.Version = AppStorage.RolePlanSettingsFileVersion;
             settings.Preferences ??= CreateDefaultPreferences();
-            settings.Preferences.Remove(Position.None);
+            settings.ClassicPreferences ??= CreateDefaultPreferences();
+            NormalizePreferences(settings.Preferences);
+            NormalizePreferences(settings.ClassicPreferences);
+        }
+
+        private static void NormalizePreferences(Dictionary<Position, PositionPreference> preferences)
+        {
+            preferences.Remove(Position.None);
 
             foreach (Position position in Enum.GetValues<Position>().Where(position => position != Position.None))
             {
-                if (!settings.Preferences.TryGetValue(position, out var preference) || preference is null)
-                    settings.Preferences[position] = new PositionPreference();
+                if (!preferences.TryGetValue(position, out var preference) || preference is null)
+                    preferences[position] = new PositionPreference();
                 else
                 {
                     preference.PickChampionIds ??= [];

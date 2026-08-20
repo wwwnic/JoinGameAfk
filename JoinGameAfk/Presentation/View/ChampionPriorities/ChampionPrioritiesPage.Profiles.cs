@@ -191,7 +191,8 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             UpdateProfileIconChampionSearchResults();
             AddProfileValidationTextBlock.Text = string.Empty;
             ProfileEditorTitleTextBlock.Text = "Create profile";
-            ProfileEditorDescriptionTextBlock.Text = "Create a named copy of the current Role Plan page.";
+            ProfileEditorDescriptionTextBlock.Text =
+                $"Create a named copy of the current {GetGameModeDisplayName(_activeRolePlanMode)} Role Plan page.";
             SaveProfileButton.Content = "Create profile";
             SaveProfileButton.ToolTip = "Save the current Role Plan page as a new profile.";
 
@@ -215,7 +216,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             AddProfileValidationTextBlock.Text = string.Empty;
             ProfileEditorTitleTextBlock.Text = "Update profile";
             ProfileEditorDescriptionTextBlock.Text =
-                "Edit this profile, or save the current Role Plan page over its stored content.";
+                $"Edit this {GetGameModeDisplayName(profile.GameMode)} profile, or save the current page over its stored content.";
             SaveProfileButton.Content = "Save changes";
             SaveProfileButton.ToolTip =
                 "Update this profile with these fields and the current Role Plan page.";
@@ -236,10 +237,13 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
 
             string search = ProfileIconChampionSearchTextBox?.Text.Trim() ?? string.Empty;
-            IEnumerable<ChampionInfo> matches = _allChampions;
+            IEnumerable<ChampionInfo> availableChampions = _activeRolePlanMode == LeagueGameMode.Classic
+                ? _allChampions.Where(champion => champion.SupportsLeagueClassic == true)
+                : _allChampions;
+            IEnumerable<ChampionInfo> matches = availableChampions;
             if (string.IsNullOrWhiteSpace(search))
             {
-                IEnumerable<ChampionInfo> randomized = _allChampions
+                IEnumerable<ChampionInfo> randomized = availableChampions
                     .Where(champion => champion.Key != _selectedProfileIconChampion?.Key)
                     .OrderBy(_ => Random.Shared.Next());
                 matches = _selectedProfileIconChampion is null
@@ -262,7 +266,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
 
             var items = matches
                 .Take(3)
-                .Select(champion => new ProfileChampionSearchItem(champion))
+                .Select(champion => new ProfileChampionSearchItem(champion, _activeRolePlanMode))
                 .ToList();
             ProfileIconChampionResultsListBox.ItemsSource = items;
             ProfileChampionSearchItem? selectedItem = _selectedProfileIconChampion is null
@@ -336,7 +340,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             }
 
             string? iconSourcePath = null;
-            ChampionTileOption? selectedTile = ChampionTileCatalog.GetSelectedOption(iconChampion);
+            ChampionTileOption? selectedTile = ChampionTileCatalog.GetSelectedOption(
+                iconChampion,
+                _activeRolePlanMode);
             if (selectedTile is null)
             {
                 ShowAddProfileValidation("The selected champion does not have a local picture yet.");
@@ -363,9 +369,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                         name,
                         sections,
                         CaptureCurrentRolePlans(),
-                        ChampionImageSelectionStore.Selections,
+                        ChampionImageSelectionStore.GetSelections(_activeRolePlanMode),
                         iconChampion.Key,
-                        iconSourcePath);
+                        iconSourcePath,
+                        _activeRolePlanMode);
                 }
                 else
                 {
@@ -374,9 +381,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                         name,
                         sections,
                         CaptureCurrentRolePlans(),
-                        ChampionImageSelectionStore.Selections,
+                        ChampionImageSelectionStore.GetSelections(_activeRolePlanMode),
                         iconChampion.Key,
-                        iconSourcePath);
+                        iconSourcePath,
+                        _activeRolePlanMode);
                 }
 
                 ReloadProfiles(profile.Id);
@@ -507,8 +515,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (!IsPriorityEditingEnabled)
                 return;
 
+            SetRolePlanMode(profile.GameMode);
+            ShowUpdateProfileEditor(profile, clearStatus: false);
             Dictionary<Position, PositionPreference> previousPlans = CaptureCurrentRolePlans();
-            IReadOnlyDictionary<int, string> previousPictures = ChampionImageSelectionStore.Selections;
+            IReadOnlyDictionary<int, string> previousPictures =
+                ChampionImageSelectionStore.GetSelections(_activeRolePlanMode);
             bool plansWereApplied = false;
             bool picturesWereApplied = false;
             try
@@ -517,7 +528,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 if (profile.IncludedSections.HasFlag(RolePlanProfileSections.RolePlans))
                 {
                     plansWereApplied = true;
-                    _rolePlanSettings.ReplacePreferences(profile.RolePlans ?? []);
+                    _rolePlanSettings.ReplacePreferences(profile.RolePlans ?? [], _activeRolePlanMode);
                     _rolePlanSettings.Save();
                     ReloadRolePlanRows();
                 }
@@ -525,7 +536,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 if (profile.IncludedSections.HasFlag(RolePlanProfileSections.ChampionPictures))
                 {
                     picturesWereApplied = true;
-                    ChampionImageSelectionStore.ReplaceSelections(profile.ChampionPictures ?? []);
+                    ChampionImageSelectionStore.ReplaceSelections(
+                        profile.ChampionPictures ?? [],
+                        _activeRolePlanMode);
                 }
 
                 RefreshChampionImages();
@@ -557,7 +570,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 try
                 {
-                    _rolePlanSettings.ReplacePreferences(previousPlans);
+                    _rolePlanSettings.ReplacePreferences(previousPlans, _activeRolePlanMode);
                     _rolePlanSettings.Save();
                     ReloadRolePlanRows();
                 }
@@ -572,7 +585,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 try
                 {
-                    ChampionImageSelectionStore.ReplaceSelections(previousPictures);
+                    ChampionImageSelectionStore.ReplaceSelections(previousPictures, _activeRolePlanMode);
                 }
                 catch (Exception rollbackException)
                 {
@@ -585,13 +598,20 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             return succeeded;
         }
 
+        private static string GetGameModeDisplayName(LeagueGameMode gameMode)
+        {
+            return gameMode == LeagueGameMode.Classic ? "LoL Classic" : "LoL";
+        }
+
         private void ReloadRolePlanRows()
         {
             ClearChampionSelection();
             ClearInsertionIndicator();
             foreach (var row in _rows)
             {
-                PositionPreference preference = _rolePlanSettings.Preferences.GetValueOrDefault(row.Position)
+                PositionPreference preference = _rolePlanSettings
+                    .GetPreferences(_activeRolePlanMode)
+                    .GetValueOrDefault(row.Position)
                     ?? new PositionPreference();
                 row.PickChampions.Clear();
                 row.BanChampions.Clear();
@@ -642,20 +662,21 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         public string Name => Profile.Name;
         public ImageSource? ThumbnailImageSource { get; }
         public string ListsActionText => Profile.IncludedSections.HasFlag(RolePlanProfileSections.RolePlans)
-            ? "Lists: change"
+            ? $"{(Profile.GameMode == LeagueGameMode.Classic ? "Classic" : "LoL")} lists: change"
             : "Lists: unchanged";
         public string TilesActionText => Profile.IncludedSections.HasFlag(RolePlanProfileSections.ChampionPictures)
             ? "Tiles: change"
             : "Tiles: unchanged";
-        public string SavedText => $"Saved {Profile.UpdatedAtUtc.ToLocalTime():g}";
+        public string SavedText =>
+            $"{(Profile.GameMode == LeagueGameMode.Classic ? "LoL Classic" : "LoL")} · Saved {Profile.UpdatedAtUtc.ToLocalTime():g}";
     }
 
     internal sealed class ProfileChampionSearchItem
     {
-        public ProfileChampionSearchItem(ChampionInfo champion)
+        public ProfileChampionSearchItem(ChampionInfo champion, LeagueGameMode gameMode)
         {
             Champion = champion;
-            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion)?.ImageSource;
+            PortraitImageSource = ChampionTileCatalog.GetSelectedOption(champion, gameMode)?.ImageSource;
         }
 
         public ChampionInfo Champion { get; }

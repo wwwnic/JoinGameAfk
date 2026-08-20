@@ -135,8 +135,12 @@ namespace JoinGameAfk.Presentation.View.Overlays
 
         private void RenderDashboardStatus(DashboardStatus status)
         {
-            var pickDisplayItems = DashboardChampionPlanDisplay.CreateList(status.PickChampionPriority);
-            var banDisplayItems = DashboardChampionPlanDisplay.CreateList(status.BanChampionPriority);
+            var pickDisplayItems = DashboardChampionPlanDisplay.CreateList(
+                status.PickChampionPriority,
+                status.GameMode);
+            var banDisplayItems = DashboardChampionPlanDisplay.CreateList(
+                status.BanChampionPriority,
+                status.GameMode);
 
             PickPlanList.ItemsSource = pickDisplayItems;
             BanPlanList.ItemsSource = banDisplayItems;
@@ -282,10 +286,10 @@ namespace JoinGameAfk.Presentation.View.Overlays
         private ImageSource? GetChampionPortrait(int championId, string championName)
         {
             if (championId > 0)
-                return ChampionTileCatalog.GetSelectedImageSource(championId);
+                return ChampionTileCatalog.GetSelectedImageSource(championId, _lastDashboardStatus.GameMode);
 
             return ChampionCatalog.TryGetByName(championName, out var champion)
-                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key)
+                ? ChampionTileCatalog.GetSelectedImageSource(champion!.Key, _lastDashboardStatus.GameMode)
                 : null;
         }
 

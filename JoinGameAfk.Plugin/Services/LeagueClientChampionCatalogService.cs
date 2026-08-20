@@ -38,6 +38,12 @@ namespace JoinGameAfk.Plugin.Services
                 ?? [];
             string locale = regionLocale.Locale;
             bool isEnglish = locale.StartsWith("en_", StringComparison.OrdinalIgnoreCase);
+            var classicChampionIds = summaries
+                .Where(champion =>
+                    LeagueChampionId.IsClassicVariant(champion.Id)
+                    && champion.Alias?.StartsWith("Jade_", StringComparison.OrdinalIgnoreCase) == true)
+                .Select(champion => LeagueChampionId.ToCanonical(champion.Id))
+                .ToHashSet();
 
             var champions = summaries
                 // Mode-specific duplicates such as League Classic/Jade use 600xx IDs.
@@ -49,7 +55,8 @@ namespace JoinGameAfk.Plugin.Services
                     champion.Id,
                     champion.Name!.Trim(),
                     isEnglish ? champion.Name.Trim() : null,
-                    string.IsNullOrWhiteSpace(champion.Alias) ? null : champion.Alias.Trim()))
+                    string.IsNullOrWhiteSpace(champion.Alias) ? null : champion.Alias.Trim(),
+                    SupportsLeagueClassic: classicChampionIds.Contains(champion.Id)))
                 .OrderBy(champion => champion.Key)
                 .ToList();
 

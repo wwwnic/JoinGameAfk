@@ -402,6 +402,69 @@
             </Setter>
         </Style>
 
+        <Style x:Key="RolePlanModeToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="210" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceInsetBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppStrongBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="17">
+                            <Grid Margin="2">
+                                <Border x:Name="ModeThumb"
+                                        Width="101"
+                                        HorizontalAlignment="Left"
+                                        Background="{DynamicResource AccentBlueBrush}"
+                                        CornerRadius="14" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="ModernModeText"
+                                               Grid.Column="0"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextInverseBrush}"
+                                               Text="LoL" />
+                                    <TextBlock x:Name="ClassicModeText"
+                                               Grid.Column="1"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="11"
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               Text="LoL Classic" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ModeThumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="ModernModeText" Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                <Setter TargetName="ClassicModeText" Property="Foreground" Value="{DynamicResource TextInverseBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentBlueBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="SearchClearButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="24" />
             <Setter Property="Height" Value="24" />
@@ -514,6 +577,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="6" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -537,7 +601,17 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid Grid.Row="1"
+                    <ToggleButton x:Name="RolePlanModeToggle"
+                                  Grid.Row="1"
+                                  Margin="4,4,4,8"
+                                  HorizontalAlignment="Center"
+                                  AutomationProperties.Name="Switch between League and League Classic role plans"
+                                  Click="RolePlanModeToggle_Click"
+                                  IsChecked="{Binding ElementName=RootPage, Path=IsLeagueClassicPlanMode, Mode=OneWay}"
+                                  Style="{StaticResource RolePlanModeToggleStyle}"
+                                  ToolTip="Switch between independent League and League Classic plans. You can still inspect either plan while champion select is active." />
+
+                    <Grid Grid.Row="2"
                           Margin="4,0,4,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -554,7 +628,7 @@
                     </Grid>
 
                     <ScrollViewer x:Name="PriorityListScrollViewer"
-                                  Grid.Row="3"
+                                  Grid.Row="4"
                                   Style="{StaticResource StableVerticalScrollViewerStyle}">
                         <ItemsControl x:Name="PositionList">
                             <ItemsControl.ItemsPanel>
@@ -1011,6 +1085,8 @@
                                                        Style="{StaticResource ChampionHelpTooltipTitleStyle}" />
                                             <TextBlock Text="- Use the download button to manage champion data, regions, and the picture cache."
                                                        Style="{StaticResource ChampionHelpTooltipLineStyle}" />
+                                            <TextBlock Text="- Use the LoL / LoL Classic switch to edit the independent plan and picture set for each game."
+                                                       Style="{StaticResource ChampionHelpTooltipLineStyle}" />
 
                                             <TextBlock Text="Add champions"
                                                        Style="{StaticResource ChampionHelpTooltipSectionStyle}" />
@@ -1116,7 +1192,7 @@
                             <Border Grid.Column="0"
                                     Width="20"
                                     Height="28"
-                                    ToolTip="Role filters">
+                                    ToolTip="Champion filters">
                                 <Path Width="14"
                                       Height="14"
                                       HorizontalAlignment="Center"
@@ -2044,7 +2120,7 @@
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="Default champion pictures"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="Download only the base tile for every champion from the selected source. This populates self-built installs without downloading the full picture archive or every skin."
+                                                <TextBlock Text="Download the LoL base tile for every champion and the Classic base tile for every available League Classic champion. This populates self-built installs without downloading the full picture archive or every skin."
                                                            Style="{StaticResource FieldHintStyle}"
                                                            TextWrapping="Wrap" />
                                             </StackPanel>
@@ -2204,12 +2280,12 @@
                                         Orientation="Horizontal"
                                         VerticalAlignment="Center">
                                 <Button x:Name="ChampionPicturePickerDownloadAllButton"
-                                        Content="Download All Images"
+                                        Content="Download Images"
                                         Click="ChampionPicturePickerDownloadAllButton_Click"
                                         Style="{StaticResource AccentButtonStyle}"
                                         Padding="12,8"
                                         MinWidth="146"
-                                        ToolTip="Download every available Riot Data Dragon picture for this champion." />
+                                        ToolTip="Download all available pictures for this champion in the currently selected game." />
                                 <Button x:Name="ChampionPicturePickerUseDefaultButton"
                                         Content="Use Default"
                                         Click="ChampionPicturePickerUseDefaultButton_Click"

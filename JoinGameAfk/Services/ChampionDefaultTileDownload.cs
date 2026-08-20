@@ -2,16 +2,16 @@ namespace JoinGameAfk.Services
 {
     public sealed record ChampionDefaultTileDownloadProgress(
         string SourceVersion,
-        int CheckedChampionCount,
+        int CheckedTileCount,
         int DownloadedTileCount,
         int UnchangedTileCount,
         int FailedTileCount,
-        int TotalChampionCount,
+        int TotalTileCount,
         string Message);
 
     public sealed record ChampionDefaultTileDownloadResult(
         string SourceVersion,
-        int ChampionCount,
+        int TileCount,
         int DownloadedTileCount,
         int UnchangedTileCount,
         int FailedTileCount,

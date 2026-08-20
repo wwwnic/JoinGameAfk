@@ -50,7 +50,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         {
             foreach (var champion in _rows.SelectMany(row => row.PickChampions.Concat(row.BanChampions)))
             {
-                champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(champion.ChampionId);
+                champion.PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(
+                    champion.ChampionId,
+                    _activeRolePlanMode);
             }
 
             _filteredChampionReferences = CreateChampionReferenceItems(_filteredChampions);
@@ -220,7 +222,10 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private void UpdateChampionFilter()
         {
             string search = ChampionSearchBox.Text.Trim();
-            var roleFilteredChampions = _allChampions.Where(MatchesActiveRoleFilter);
+            var roleFilteredChampions = _allChampions
+                .Where(champion => _activeRolePlanMode != LeagueGameMode.Classic
+                    || champion.SupportsLeagueClassic == true)
+                .Where(MatchesActiveRoleFilter);
 
             _filteredChampions = string.IsNullOrWhiteSpace(search)
                 ? [.. roleFilteredChampions]
@@ -243,14 +248,18 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private List<ChampionReferenceItem> CreateChampionReferenceItems(IEnumerable<ChampionInfo> champions)
         {
             return champions
-                .Select(champion => new ChampionReferenceItem(champion, IsChampionPictureEditMode))
+                .Select(champion => new ChampionReferenceItem(
+                    champion,
+                    IsChampionPictureEditMode,
+                    _activeRolePlanMode))
                 .ToList();
         }
 
         private bool MatchesActiveRoleFilter(ChampionInfo champion)
         {
-            return _activeRoleFilters.Count == 0
+            bool matchesRole = _activeRoleFilters.Count == 0
                 || champion.Roles.Any(_activeRoleFilters.Contains);
+            return matchesRole;
         }
 
         private static int GetChampionSearchScore(ChampionInfo champion, string search)

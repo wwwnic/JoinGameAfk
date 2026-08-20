@@ -573,7 +573,9 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             {
                 ChampionId = championId,
                 DisplayText = ChampionCatalog.FormatWithName(championId),
-                PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(championId),
+                PortraitImageSource = ChampionTileCatalog.GetSelectedImageSource(
+                    championId,
+                    _activeRolePlanMode),
                 Row = row,
                 IsPick = isPick
             };

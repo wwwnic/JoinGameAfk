@@ -272,33 +272,59 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
                     name = champion.Name,
                     alias = champion.Id
                 })
-                .Append(new { id = 60001, name = "Classic mode variant", alias = (string?)"Jade_Test" });
+                .Concat(ChampionCatalog.All
+                    .Where(champion => champion.Key is 86 or 103)
+                    .Select(champion => new
+                    {
+                        id = LeagueChampionId.ToClassicVariant(champion.Key),
+                        name = champion.Name,
+                        alias = (string?)$"Jade_{champion.Id}"
+                    }));
             return Results.Json(champions, JsonOptions);
+        });
+
+        app.MapGet("/lol-game-data/assets/v1/champion-icons/{championId:int}.png", (int championId) =>
+        {
+            string endpoint = $"/lol-game-data/assets/v1/champion-icons/{championId}.png";
+            LogRequest("GET", endpoint);
+            if (!LeagueChampionId.IsClassicVariant(championId)
+                || LeagueChampionId.ToCanonical(championId) is not (86 or 103))
+            {
+                return Results.NotFound();
+            }
+
+            byte[] png = Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+            return Results.Bytes(png, "image/png");
         });
 
         app.MapGet("/lol-game-data/assets/v1/champions/{championId:int}.json", (int championId) =>
         {
             string endpoint = $"/lol-game-data/assets/v1/champions/{championId}.json";
             LogRequest("GET", endpoint);
-            if (!ChampionCatalog.TryGetByKey(championId, out ChampionInfo? champion)
+            int canonicalChampionId = LeagueChampionId.ToCanonical(championId);
+            if (!ChampionCatalog.TryGetByKey(canonicalChampionId, out ChampionInfo? champion)
                 || champion is null)
             {
                 return Results.NotFound();
             }
 
+            bool isClassic = LeagueChampionId.IsClassicVariant(championId);
+            string championAlias = isClassic ? $"Jade_{champion.Id}" : champion.Id!;
             int skinId = championId * 1000;
             return Results.Json(new
             {
                 id = championId,
                 name = champion.Name,
-                alias = champion.Id,
+                alias = championAlias,
                 skins = new[]
                 {
                     new
                     {
                         id = skinId,
                         name = $"{champion.Name} (default)",
-                        tilePath = $"/lol-game-data/assets/ASSETS/Characters/{champion.Id}/Skins/Base/Images/{champion.Id}_splash_tile_0.jpg"
+                        isBase = true,
+                        tilePath = $"/lol-game-data/assets/ASSETS/Characters/{championAlias}/Skins/Base/Images/{championAlias}_splash_tile_0.jpg"
                     }
                 }
             }, JsonOptions);
@@ -318,8 +344,11 @@ internal sealed class MockLeagueClientServer : IAsyncDisposable
                     return Results.BadRequest();
                 }
 
+                string canonicalAlias = championAlias.StartsWith("Jade_", StringComparison.OrdinalIgnoreCase)
+                    ? championAlias["Jade_".Length..]
+                    : championAlias;
                 ChampionInfo? champion = ChampionCatalog.All.FirstOrDefault(candidate =>
-                    string.Equals(candidate.Id, championAlias, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(candidate.Id, canonicalAlias, StringComparison.OrdinalIgnoreCase));
                 return champion is null
                     ? Results.NotFound()
                     : Results.Bytes(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 }, "image/jpeg");
