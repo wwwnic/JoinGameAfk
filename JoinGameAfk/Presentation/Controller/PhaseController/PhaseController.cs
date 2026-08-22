@@ -185,7 +185,7 @@ namespace JoinGameAfk.Presentation.Controller
 
         private void UpdateRegionDisplayFromSettings()
         {
-            if (ChampionDataSourcePolicy.Resolve(_championDataSettings.SourceMode)
+            if (ChampionDataSourcePolicy.Resolve(_leagueClientConnection.IsConnected)
                 == ChampionDataSourceMode.LeagueClient)
             {
                 if (_leagueClientConnection.TryGetRegionLocale(out LeagueClientRegionLocaleInfo? regionLocale)

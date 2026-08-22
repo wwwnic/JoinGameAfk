@@ -167,7 +167,7 @@ namespace JoinGameAfk
             fDashboardPage.WatcherStateChanged += mainWindow.SetWatcherState;
             fDashboardPage.ClientConnectionChanged += mainWindow.SetClientConnection;
             fDashboardPage.ChampSelectSubPhaseChanged += mainWindow.UpdateChampSelectSubPhase;
-            if (ChampionDataSourcePolicy.Resolve(championDataSettings.SourceMode)
+            if (ChampionDataSourcePolicy.Resolve(fLeagueClientConnection.IsConnected)
                 == ChampionDataSourceMode.LeagueClient)
             {
                 fDashboardPage.UpdateRegionDisplay(null, null);
@@ -190,8 +190,14 @@ namespace JoinGameAfk
         private async void LeagueClientConnection_Connected(object? sender, EventArgs e)
         {
             ChampionCatalogSyncCoordinator? coordinator = fChampionCatalogSyncCoordinator;
-            if (coordinator is null)
+            ChampionDataSettings? settings = fChampionDataSettings;
+            if (coordinator is null || settings is null)
                 return;
+
+            if (Dispatcher.CheckAccess())
+                SynchronizeChampionDataRegionLocale(settings);
+            else
+                Dispatcher.Invoke(() => SynchronizeChampionDataRegionLocale(settings));
 
             try
             {
@@ -216,6 +222,35 @@ namespace JoinGameAfk
             {
                 fLogsPage?.WriteErrorLine(
                     "Automatic League Client champion-list sync failed. Existing local champion data was kept, and Data Dragon was not used as a fallback. "
+                    + FormatException(ex));
+            }
+        }
+
+        private void SynchronizeChampionDataRegionLocale(ChampionDataSettings settings)
+        {
+            if (!fLeagueClientConnection.TryGetRegionLocale(out var regionLocale)
+                || regionLocale is null)
+            {
+                return;
+            }
+
+            string previousPlatformId = settings.PlatformId;
+            string previousLocale = settings.Locale;
+            if (!settings.ApplyLeagueClientRegionLocale(regionLocale.PlatformId, regionLocale.Locale))
+                return;
+
+            try
+            {
+                settings.Save();
+                fLogsPage?.WriteLine(
+                    $"Champion data region and language updated from League Client: {settings.PlatformId} · {settings.Locale}.");
+            }
+            catch (Exception ex)
+            {
+                settings.PlatformId = previousPlatformId;
+                settings.Locale = previousLocale;
+                fLogsPage?.WriteErrorLine(
+                    "Unable to save the League Client region and language for automatic Data Dragon requests. "
                     + FormatException(ex));
             }
         }

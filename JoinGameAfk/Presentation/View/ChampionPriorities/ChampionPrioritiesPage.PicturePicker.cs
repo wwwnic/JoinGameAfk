@@ -116,18 +116,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
                 return;
             }
 
-            ChampionDataSourceMode source;
-            try
-            {
-                source = ResolveChampionDataSource();
-            }
-            catch (Exception ex)
-            {
-                string message = $"Unable to download {champion.Name} pictures. {ex.Message}";
-                SetChampionPicturePickerDownloadStatus(message, "DangerTextBrush", Brushes.IndianRed);
-                LogErrorMessage(message);
-                return;
-            }
+            ChampionDataSourceMode source = ResolveChampionDataSource();
 
             if (!ConfirmChampionPictureDownload(champion, source))
             {
@@ -395,7 +384,11 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             if (!ChampionImageSelectionStore.ShowChampionPictureDownloadWarning)
                 return true;
 
-            var dialog = new ChampionPictureDownloadWarningWindow(champion.Name, _championDataSettings.DownloadRawChampionPictures)
+            var dialog = new ChampionPictureDownloadWarningWindow(
+                champion.Name,
+                _championDataSettings.DownloadRawChampionPictures,
+                _championDataSettings.PlatformId,
+                _championDataSettings.Locale)
             {
                 Owner = Window.GetWindow(this)
             };

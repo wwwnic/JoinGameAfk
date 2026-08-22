@@ -17,4 +17,24 @@ namespace JoinGameAfk.Services
         int FailedTileCount,
         string CacheDirectory,
         DateTime LastDownloadedAtUtc);
+
+    public sealed record ChampionCollectionTileDownloadProgress(
+        int CheckedChampionCount,
+        int TotalChampionCount,
+        int CheckedTileCount,
+        int DownloadedTileCount,
+        int UnchangedTileCount,
+        int FailedTileCount,
+        int FailedChampionCount,
+        string Message);
+
+    public sealed record ChampionCollectionTileDownloadResult(
+        int ChampionCount,
+        int TileCount,
+        int DownloadedTileCount,
+        int UnchangedTileCount,
+        int FailedTileCount,
+        int FailedChampionCount,
+        string CacheDirectory,
+        DateTime LastDownloadedAtUtc);
 }

@@ -27,9 +27,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
         private readonly Action<string>? _logErrorMessage;
         private readonly ChampionCatalogSyncCoordinator _championCatalogSyncCoordinator;
         private readonly RolePlanProfileStore _rolePlanProfileStore = new();
-        private readonly ObservableCollection<RegionLocaleSuggestion> _platformOptions = new(PlatformSuggestions);
-        private readonly ObservableCollection<RegionLocaleSuggestion> _localeOptions = new(LocaleSuggestions);
-        private readonly ObservableCollection<ChampionDataSourceOption> _championDataSourceOptions = new(ChampionDataSourceOptions);
         private readonly ObservableCollection<RolePlanProfileListItem> _profiles = [];
         private readonly DispatcherTimer _profileStatusTimer;
         private List<ChampionInfo> _allChampions;
@@ -198,11 +195,6 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             _championCatalogSyncCoordinator = championCatalogSyncCoordinator;
             _logMessage = logMessage;
             _logErrorMessage = logErrorMessage;
-            EnsureConfiguredOption(_platformOptions, _championDataSettings.PlatformId);
-            EnsureConfiguredOption(_localeOptions, _championDataSettings.Locale);
-            ChampionDataPlatformIdBox.ItemsSource = _platformOptions;
-            ChampionDataLocaleBox.ItemsSource = _localeOptions;
-            ChampionDataSourceModeBox.ItemsSource = _championDataSourceOptions;
             ApplyChampionDataSettingsToControls();
             RefreshChampionCatalogSyncStatus();
             ChampionSearchBox.SizeChanged += ChampionSearchBox_SizeChanged;
@@ -252,6 +244,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionImageSelectionStore.SelectionsChanged += ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged += ChampionTileCatalog_TileCatalogChanged;
             _championDataSettings.Saved += ChampionDataSettings_Saved;
+            _leagueClientConnection.ConnectionChanged += LeagueClientConnection_ConnectionChanged;
         }
 
         public void SetChampionSelectActive(bool isActive)
@@ -293,6 +286,7 @@ namespace JoinGameAfk.Presentation.View.ChampionPriorities
             ChampionImageSelectionStore.SelectionsChanged -= ChampionImageSelectionStore_SelectionsChanged;
             ChampionTileCatalog.TileCatalogChanged -= ChampionTileCatalog_TileCatalogChanged;
             _championDataSettings.Saved -= ChampionDataSettings_Saved;
+            _leagueClientConnection.ConnectionChanged -= LeagueClientConnection_ConnectionChanged;
         }
     }
 }

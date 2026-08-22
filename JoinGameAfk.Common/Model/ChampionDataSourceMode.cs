@@ -13,20 +13,31 @@ namespace JoinGameAfk.Model
 
     public static class ChampionDataSourcePolicy
     {
-        public static ChampionDataSourceMode Resolve(ChampionDataSourceMode configuredMode)
+        public static ChampionDataSourceMode Resolve(bool isLeagueClientConnected)
         {
-            return configuredMode == ChampionDataSourceMode.DataDragon
-                ? ChampionDataSourceMode.DataDragon
-                : ChampionDataSourceMode.LeagueClient;
+            return isLeagueClientConnected
+                ? ChampionDataSourceMode.LeagueClient
+                : ChampionDataSourceMode.DataDragon;
         }
 
         public static readonly TimeSpan LeagueClientRefreshInterval = TimeSpan.FromHours(12);
 
         public static bool IsLeagueClientRefreshDue(
             ChampionCatalogSyncInfo syncInfo,
-            DateTime utcNow)
+            DateTime utcNow,
+            string? requiredLocale = null)
         {
             ArgumentNullException.ThrowIfNull(syncInfo);
+            if (!string.IsNullOrWhiteSpace(requiredLocale)
+                && (string.IsNullOrWhiteSpace(syncInfo.Locale)
+                    || !string.Equals(
+                        RegionLocale.NormalizeLocale(syncInfo.Locale),
+                        RegionLocale.NormalizeLocale(requiredLocale),
+                        StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
             utcNow = utcNow.Kind == DateTimeKind.Utc ? utcNow : utcNow.ToUniversalTime();
             if (!string.Equals(
                     syncInfo.DataDragonVersion,

@@ -1114,7 +1114,7 @@
 
                 <Border Style="{StaticResource SettingRowStyle}">
                     <StackPanel>
-                        <TextBlock Text="JoinGameAfk uses public champion names from Riot Data Dragon to identify player-configured pick/ban preferences. Champion pictures, when configured, are Riot Games-owned assets provided through Riot Data Dragon and loaded from your local app storage."
+                        <TextBlock Text="JoinGameAfk uses champion names from the local League Client or Riot Data Dragon to identify player-configured pick/ban preferences. Champion pictures, when configured, are Riot Games-owned assets provided through either source and loaded from your local app storage."
                                    Style="{StaticResource FieldHintStyle}"
                                    TextWrapping="Wrap" />
                         <TextBlock Text="JoinGameAfk was created under Riot Games' Legal Jibber Jabber policy using assets owned by Riot Games. Riot Games does not endorse or sponsor this project."

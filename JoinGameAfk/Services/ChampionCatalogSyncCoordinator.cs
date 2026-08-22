@@ -44,9 +44,7 @@ namespace JoinGameAfk.Services
         public async Task<LeagueClientChampionCatalogAutoSyncResult?>
             RefreshLeagueClientIfDueAsync(CancellationToken cancellationToken = default)
         {
-            if (ChampionDataSourcePolicy.Resolve(_settings.SourceMode)
-                != ChampionDataSourceMode.LeagueClient
-                || !_leagueClientConnection.IsConnected)
+            if (!_leagueClientConnection.IsConnected)
             {
                 return null;
             }
@@ -55,7 +53,14 @@ namespace JoinGameAfk.Services
             try
             {
                 ChampionCatalogSyncInfo syncInfo = ChampionCatalog.GetLocalSyncInfo();
-                if (!ChampionDataSourcePolicy.IsLeagueClientRefreshDue(syncInfo, DateTime.UtcNow))
+                string? requiredLocale = _leagueClientConnection.TryGetRegionLocale(
+                    out LeagueClientRegionLocaleInfo? regionLocale)
+                    ? regionLocale?.Locale
+                    : null;
+                if (!ChampionDataSourcePolicy.IsLeagueClientRefreshDue(
+                        syncInfo,
+                        DateTime.UtcNow,
+                        requiredLocale))
                 {
                     return new LeagueClientChampionCatalogAutoSyncResult(
                         false,
@@ -93,8 +98,8 @@ namespace JoinGameAfk.Services
             else
             {
                 using var http = _leagueClientConnection.CreateHttpClient(_log);
-                // Read this for every forced LCU refresh. The client language can be
-                // changed without changing the Data Dragon configuration.
+                // Read this for every forced LCU refresh so a client-language change
+                // also becomes the authoritative Data Dragon fallback language.
                 LeagueClientRegionLocaleInfo regionLocale = await LeagueClientRegionLocaleService
                     .FetchAsync(http, cancellationToken)
                     .ConfigureAwait(false);

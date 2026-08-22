@@ -11,13 +11,26 @@ namespace JoinGameAfk.Model
 
         public string Locale { get; set; } = RegionLocale.DefaultLocale;
 
-        public ChampionDataSourceMode SourceMode { get; set; } = ChampionDataSourceMode.LeagueClient;
-
         public bool DownloadNewChampionPicturesAfterCatalogUpdate { get; set; } = true;
 
         public bool DownloadRawChampionPictures { get; set; }
 
         public event Action? Saved;
+
+        public bool ApplyLeagueClientRegionLocale(string? platformId, string? locale)
+        {
+            string normalizedPlatformId = RegionLocale.NormalizePlatformId(platformId);
+            string normalizedLocale = RegionLocale.NormalizeLocale(locale);
+            if (string.Equals(PlatformId, normalizedPlatformId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(Locale, normalizedLocale, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            PlatformId = normalizedPlatformId;
+            Locale = normalizedLocale;
+            return true;
+        }
 
         public void Save()
         {
@@ -45,11 +58,6 @@ namespace JoinGameAfk.Model
             settings.Version = AppStorage.ChampionDataSettingsFileVersion;
             settings.PlatformId = RegionLocale.NormalizePlatformId(settings.PlatformId);
             settings.Locale = RegionLocale.NormalizeLocale(settings.Locale);
-
-            if (!Enum.IsDefined(settings.SourceMode))
-            {
-                settings.SourceMode = ChampionDataSourceMode.LeagueClient;
-            }
         }
     }
 }

@@ -18,35 +18,18 @@ namespace JoinGameAfk.Tests;
 [TestFixture]
 public class ChampionDataSourceTests
 {
-    [TestCase(ChampionDataSourceMode.LeagueClient, ChampionDataSourceMode.LeagueClient)]
-    [TestCase(ChampionDataSourceMode.DataDragon, ChampionDataSourceMode.DataDragon)]
-    public void Resolve_UsesConfiguredSourcePolicy(
-        ChampionDataSourceMode configured,
+    [TestCase(true, ChampionDataSourceMode.LeagueClient)]
+    [TestCase(false, ChampionDataSourceMode.DataDragon)]
+    public void Resolve_AutomaticallyUsesAvailableLocalSource(
+        bool isLeagueClientConnected,
         ChampionDataSourceMode expected)
     {
-        Assert.That(ChampionDataSourcePolicy.Resolve(configured), Is.EqualTo(expected));
+        Assert.That(ChampionDataSourcePolicy.Resolve(isLeagueClientConnected), Is.EqualTo(expected));
     }
 
-    [Test]
-    public void Resolve_InvalidModeUsesLeagueClientDefault()
-    {
-        var invalid = (ChampionDataSourceMode)999;
-
-        Assert.That(
-            ChampionDataSourcePolicy.Resolve(invalid),
-            Is.EqualTo(ChampionDataSourceMode.LeagueClient));
-    }
-
-    [Test]
-    public void ChampionDataSettings_DefaultsToLeagueClient()
-    {
-        Assert.That(
-            new ChampionDataSettings().SourceMode,
-            Is.EqualTo(ChampionDataSourceMode.LeagueClient));
-    }
-
-    [Test]
-    public void ChampionDataSettings_MigratesAutoToLeagueClient()
+    [TestCase(0)]
+    [TestCase(1)]
+    public void ChampionDataSettings_IgnoresLegacyPermanentSourceChoice(int legacySourceMode)
     {
         string filePath = Path.Combine(
             TestContext.CurrentContext.WorkDirectory,
@@ -55,17 +38,48 @@ public class ChampionDataSourceTests
         {
             File.WriteAllText(
                 filePath,
-                "{\"Version\":2,\"PlatformId\":\"NA1\",\"Locale\":\"en_US\",\"SourceMode\":0}");
+                $"{{\"Version\":2,\"PlatformId\":\"NA1\",\"Locale\":\"en_US\",\"SourceMode\":{legacySourceMode}}}");
 
             ChampionDataSettings settings = ChampionDataSettings.Load(filePath);
+            settings.Save(filePath);
+            using JsonDocument saved = JsonDocument.Parse(File.ReadAllText(filePath));
 
-            Assert.That(settings.SourceMode, Is.EqualTo(ChampionDataSourceMode.LeagueClient));
+            Assert.Multiple(() =>
+            {
+                Assert.That(settings.PlatformId, Is.EqualTo("NA1"));
+                Assert.That(settings.Locale, Is.EqualTo("en_US"));
+                Assert.That(
+                    typeof(ChampionDataSettings).GetProperty("SourceMode"),
+                    Is.Null);
+                Assert.That(saved.RootElement.TryGetProperty("SourceMode", out _), Is.False);
+            });
         }
         finally
         {
             if (File.Exists(filePath))
                 File.Delete(filePath);
         }
+    }
+
+    [Test]
+    public void ChampionDataSettings_LeagueClientRegionLocaleAlwaysBecomesFallback()
+    {
+        var settings = new ChampionDataSettings
+        {
+            PlatformId = "EUW1",
+            Locale = "en_GB"
+        };
+
+        bool changed = settings.ApplyLeagueClientRegionLocale("na1", "fr-fr");
+        bool unchanged = settings.ApplyLeagueClientRegionLocale("NA1", "fr_FR");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(changed, Is.True);
+            Assert.That(unchanged, Is.False);
+            Assert.That(settings.PlatformId, Is.EqualTo("NA1"));
+            Assert.That(settings.Locale, Is.EqualTo("fr_FR"));
+        });
     }
 
     [TestCase(ChampionCatalogSourceIds.LeagueClient, 11, false)]
@@ -87,6 +101,25 @@ public class ChampionDataSourceTests
         Assert.That(
             ChampionDataSourcePolicy.IsLeagueClientRefreshDue(syncInfo, now),
             Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void LeagueClientRefreshDue_LanguageChangeBypassesTwelveHourWindow()
+    {
+        DateTime now = new(2026, 8, 16, 12, 0, 0, DateTimeKind.Utc);
+        var syncInfo = new ChampionCatalogSyncInfo(
+            ChampionCatalogSourceIds.LeagueClient,
+            "en_US",
+            170,
+            "champions.json",
+            now.AddMinutes(-5));
+
+        Assert.That(
+            ChampionDataSourcePolicy.IsLeagueClientRefreshDue(syncInfo, now, "fr_FR"),
+            Is.True);
+        Assert.That(
+            ChampionDataSourcePolicy.IsLeagueClientRefreshDue(syncInfo, now, "en_US"),
+            Is.False);
     }
 
     [Test]

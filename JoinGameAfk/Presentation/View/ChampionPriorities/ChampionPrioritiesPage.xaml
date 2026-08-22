@@ -544,22 +544,6 @@
             </Setter>
         </Style>
 
-        <DataTemplate x:Key="ChampionDataRegionLocaleSuggestionTemplate">
-            <Grid MinWidth="220"
-                  Margin="2,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="64" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Code}"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Grid.Column="1"
-                           Text="{Binding Name}"
-                           Foreground="{DynamicResource TextMutedBrush}"
-                           TextTrimming="CharacterEllipsis" />
-            </Grid>
-        </DataTemplate>
     </Page.Resources>
 
     <Grid x:Name="ContentGrid"
@@ -1952,44 +1936,40 @@
                                     <StackPanel x:Name="ChampionDataConfigurationPanel">
                                         <TextBlock Text="Champion data source"
                                                    Style="{StaticResource FieldLabelStyle}" />
-                                        <TextBlock Text="League Client is the local default and uses the language loaded by your client. It checks the champion list at most once every 12 hours when the watcher connects. Data Dragon is manual and uses the region and language below."
+                                        <TextBlock Text="Automatic always prefers the faster, local League Client. When it is unavailable, an approved download uses Riot Data Dragon without changing a permanent setting."
                                                    Style="{StaticResource FieldHintStyle}"
                                                    TextWrapping="Wrap" />
 
-                                        <ComboBox x:Name="ChampionDataSourceModeBox"
-                                                  Margin="0,10,0,0"
-                                                  Width="Auto"
-                                                  HorizontalAlignment="Stretch"
-                                                  Style="{StaticResource AppComboBoxStyle}"
-                                                  DisplayMemberPath="Name"
-                                                  SelectedValuePath="Mode"
-                                                  SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
-                                                  AutomationProperties.Name="Champion data source" />
+                                        <Border Margin="0,10,0,0"
+                                                Padding="10,8"
+                                                Background="{DynamicResource AppSurfaceInsetBrush}"
+                                                BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6">
+                                            <StackPanel>
+                                                <TextBlock x:Name="ChampionDataActiveSourceTextBlock"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold" />
+                                                <TextBlock x:Name="ChampionDataActiveSourceDescriptionTextBlock"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,3,0,0" />
+                                            </StackPanel>
+                                        </Border>
 
-                                        <StackPanel x:Name="ChampionDataLeagueClientConfigurationPanel">
-                                            <Border Height="1"
-                                                    Margin="0,14,0,12"
-                                                    Background="{DynamicResource AppSubtleBorderBrush}" />
+                                        <Border Height="1"
+                                                Margin="0,14,0,12"
+                                                Background="{DynamicResource AppSubtleBorderBrush}" />
 
-                                            <TextBlock Text="League Client region and language"
-                                                       Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBlock x:Name="ChampionDataLeagueClientRegionLocaleTextBlock"
-                                                       Style="{StaticResource FieldHintStyle}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
+                                        <TextBlock Text="Automatic region and language"
+                                                   Style="{StaticResource FieldLabelStyle}" />
+                                        <TextBlock x:Name="ChampionDataRegionLocaleDescriptionTextBlock"
+                                                   Style="{StaticResource FieldHintStyle}"
+                                                   TextWrapping="Wrap" />
 
-                                        <StackPanel x:Name="ChampionDataDataDragonConfigurationPanel">
-                                            <Border Height="1"
-                                                    Margin="0,14,0,12"
-                                                    Background="{DynamicResource AppSubtleBorderBrush}" />
-
-                                            <TextBlock Text="Data Dragon region and language"
-                                                       Style="{StaticResource FieldLabelStyle}" />
-                                            <TextBlock Text="These values are used only for manual Data Dragon requests."
-                                                       Style="{StaticResource FieldHintStyle}"
-                                                       TextWrapping="Wrap" />
-
-                                            <Grid Margin="0,12,0,8">
+                                        <Grid Margin="0,10,0,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="12" />
@@ -2000,37 +1980,32 @@
                                                 <TextBlock Text="Game region"
                                                            Style="{StaticResource FieldHintStyle}"
                                                            Margin="0,0,0,4" />
-                                                <ComboBox x:Name="ChampionDataPlatformIdBox"
-                                                          Width="Auto"
-                                                          HorizontalAlignment="Stretch"
-                                                          Style="{StaticResource AppComboBoxStyle}"
-                                                          ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
-                                                          SelectedValuePath="Code"
-                                                          TextSearch.TextPath="Code"
-                                                          SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
-                                                          ToolTip="League platform used to check the region's deployed Data Dragon version." />
+                                                <Border Padding="10,7"
+                                                        Background="{DynamicResource AppSurfaceInsetBrush}"
+                                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="5">
+                                                    <TextBlock x:Name="ChampionDataPlatformIdTextBlock"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               FontWeight="SemiBold" />
+                                                </Border>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="2">
                                                 <TextBlock Text="Champion data language"
                                                            Style="{StaticResource FieldHintStyle}"
                                                            Margin="0,0,0,4" />
-                                                <ComboBox x:Name="ChampionDataLocaleBox"
-                                                          Width="Auto"
-                                                          HorizontalAlignment="Stretch"
-                                                          Style="{StaticResource AppComboBoxStyle}"
-                                                          ItemTemplate="{StaticResource ChampionDataRegionLocaleSuggestionTemplate}"
-                                                          SelectedValuePath="Code"
-                                                          TextSearch.TextPath="Code"
-                                                          SelectionChanged="ChampionDataRegionLocale_SelectionChanged"
-                                                          ToolTip="Riot locale used for downloaded champion names and metadata." />
+                                                <Border Padding="10,7"
+                                                        Background="{DynamicResource AppSurfaceInsetBrush}"
+                                                        BorderBrush="{DynamicResource AppMutedBorderBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="5">
+                                                    <TextBlock x:Name="ChampionDataLocaleTextBlock"
+                                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               FontWeight="SemiBold" />
+                                                </Border>
                                             </StackPanel>
-                                            </Grid>
-
-                                            <TextBlock Text="Custom platform IDs can be configured in role-plans/downloadSettings.json."
-                                                       Style="{StaticResource FieldHintStyle}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
 
@@ -2095,7 +2070,7 @@
                                             <StackPanel Grid.Column="0">
                                                 <TextBlock Text="Download pictures for new champions"
                                                            Style="{StaticResource FieldLabelStyle}" />
-                                                <TextBlock Text="When Update Champion List finds champion IDs that are not in your local list, download only those champions' images from the selected source."
+                                                <TextBlock Text="When Update Champion List finds champion IDs that are not in your local list, download only those champions' images from the automatic source."
                                                            Style="{StaticResource FieldHintStyle}"
                                                            TextWrapping="Wrap" />
                                             </StackPanel>
@@ -2106,6 +2081,20 @@
                                                       Checked="ChampionDataSettingCheckBox_Changed"
                                                       Unchecked="ChampionDataSettingCheckBox_Changed" />
                                         </Grid>
+
+                                        <TextBlock x:Name="NewChampionPictureDownloadStatusLabel"
+                                                   Foreground="{DynamicResource TextSoftBrush}"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,8,0,0"
+                                                   Visibility="Collapsed" />
+                                        <ProgressBar x:Name="NewChampionPictureDownloadProgressBar"
+                                                     Height="8"
+                                                     Minimum="0"
+                                                     Maximum="100"
+                                                     Margin="0,8,0,0"
+                                                     Visibility="Collapsed" />
 
                                         <Border Height="1"
                                                 Margin="0,14,0,12"
@@ -2133,14 +2122,58 @@
                                                     HorizontalAlignment="Right"
                                                     AutomationProperties.Name="Download default champion pictures" />
                                         </Grid>
-                                        <TextBlock x:Name="ChampionPictureDownloadStatusLabel"
+
+                                        <TextBlock x:Name="DefaultChampionPictureDownloadStatusLabel"
                                                    Foreground="{DynamicResource TextSoftBrush}"
                                                    FontSize="12"
                                                    FontWeight="SemiBold"
                                                    TextWrapping="Wrap"
                                                    Margin="0,8,0,0"
                                                    Visibility="Collapsed" />
-                                        <ProgressBar x:Name="ChampionPictureDownloadProgressBar"
+                                        <ProgressBar x:Name="DefaultChampionPictureDownloadProgressBar"
+                                                     Height="8"
+                                                     Minimum="0"
+                                                     Maximum="100"
+                                                     Margin="0,8,0,0"
+                                                     Visibility="Collapsed" />
+
+                                        <Border Height="1"
+                                                Margin="0,14,0,12"
+                                                Background="{DynamicResource AppSubtleBorderBrush}" />
+
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="14" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="All champion pictures"
+                                                           Style="{StaticResource FieldLabelStyle}" />
+                                                <TextBlock Text="Copy every available LoL and League Classic tile for every champion. This LCU-only action makes many sequential local requests and can take several minutes."
+                                                           Style="{StaticResource FieldHintStyle}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button x:Name="DownloadAllChampionPicturesButton"
+                                                    Grid.Column="2"
+                                                    Content="Download All Pictures"
+                                                    Click="DownloadAllChampionPicturesButton_Click"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    Padding="14,8"
+                                                    HorizontalAlignment="Right"
+                                                    ToolTip="Connect the watcher to enable this local League Client download."
+                                                    ToolTipService.ShowOnDisabled="True"
+                                                    AutomationProperties.Name="Download all champion pictures" />
+                                        </Grid>
+
+                                        <TextBlock x:Name="AllChampionPictureDownloadStatusLabel"
+                                                   Foreground="{DynamicResource TextSoftBrush}"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,8,0,0"
+                                                   Visibility="Collapsed" />
+                                        <ProgressBar x:Name="AllChampionPictureDownloadProgressBar"
                                                      Height="8"
                                                      Minimum="0"
                                                      Maximum="100"
@@ -2454,7 +2487,7 @@
                                                FontWeight="SemiBold"
                                                TextAlignment="Center"
                                                Margin="0,10,0,0" />
-                                    <TextBlock Text="Use Download All Images to fetch this champion's Riot Data Dragon pictures."
+                                    <TextBlock Text="Use Download Images. A connected watcher uses the faster local League Client; otherwise, the app asks before using Data Dragon."
                                                Foreground="{DynamicResource TextSubtleBrush}"
                                                FontSize="11.5"
                                                TextAlignment="Center"
@@ -2476,7 +2509,7 @@
                                            Foreground="{DynamicResource TextSecondaryBrush}"
                                            FontSize="11"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="JoinGameAfk is a free, non-commercial fan project. Champion pictures are Riot Games-owned assets provided through Riot Data Dragon. Riot Games does not endorse or sponsor this project."
+                                <TextBlock Text="JoinGameAfk is a free, non-commercial fan project. Champion pictures are Riot Games-owned assets provided through the League Client or Riot Data Dragon. Riot Games does not endorse or sponsor this project."
                                            Foreground="{DynamicResource TextSubtleBrush}"
                                            FontSize="10.5"
                                            LineHeight="14"

@@ -10,6 +10,7 @@ namespace JoinGameAfk.Services
         private LeagueClientRegionLocaleInfo? _regionLocale;
 
         public event EventHandler? Connected;
+        public event EventHandler? ConnectionChanged;
 
         public bool IsConnected
         {
@@ -25,37 +26,69 @@ namespace JoinGameAfk.Services
             ArgumentNullException.ThrowIfNull(auth);
             ArgumentNullException.ThrowIfNull(regionLocale);
             bool connectionChanged;
+            bool contextChanged;
             lock (_syncRoot)
             {
                 connectionChanged = _auth is null
                     || !string.Equals(_auth.Port, auth.Port, StringComparison.Ordinal)
                     || !string.Equals(_auth.Base64Token, auth.Base64Token, StringComparison.Ordinal);
+                contextChanged = connectionChanged
+                    || !string.Equals(
+                        _regionLocale?.PlatformId,
+                        regionLocale.PlatformId,
+                        StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(
+                        _regionLocale?.Locale,
+                        regionLocale.Locale,
+                        StringComparison.OrdinalIgnoreCase);
                 _auth = new AuthModel(auth.Port, auth.Base64Token);
                 _regionLocale = regionLocale;
             }
 
-            if (connectionChanged)
+            if (contextChanged)
                 Connected?.Invoke(this, EventArgs.Empty);
+            if (contextChanged)
+                ConnectionChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void SetDisconnected()
         {
+            bool connectionChanged;
             lock (_syncRoot)
             {
+                connectionChanged = _auth is not null;
                 _auth = null;
                 _regionLocale = null;
             }
+
+            if (connectionChanged)
+                ConnectionChanged?.Invoke(this, EventArgs.Empty);
         }
 
         public void UpdateRegionLocale(LeagueClientRegionLocaleInfo regionLocale)
         {
             ArgumentNullException.ThrowIfNull(regionLocale);
+            bool contextChanged;
             lock (_syncRoot)
             {
                 if (_auth is null)
                     return;
 
+                contextChanged = !string.Equals(
+                        _regionLocale?.PlatformId,
+                        regionLocale.PlatformId,
+                        StringComparison.OrdinalIgnoreCase)
+                    || !string.Equals(
+                        _regionLocale?.Locale,
+                        regionLocale.Locale,
+                        StringComparison.OrdinalIgnoreCase);
                 _regionLocale = regionLocale;
+            }
+
+            if (contextChanged)
+            {
+                Connected?.Invoke(this, EventArgs.Empty);
+                ConnectionChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

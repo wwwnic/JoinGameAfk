@@ -181,6 +181,132 @@ namespace JoinGameAfk.Services
                 DateTime.UtcNow);
         }
 
+        public static async Task<ChampionCollectionTileDownloadResult> DownloadAllChampionTilesAsync(
+            Lcu.LeagueClientHttp http,
+            IReadOnlyList<ChampionInfo> champions,
+            string tileDirectoryPath,
+            IProgress<ChampionCollectionTileDownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default,
+            bool optimizeForLocalCache = true)
+        {
+            ArgumentNullException.ThrowIfNull(http);
+            ArgumentNullException.ThrowIfNull(champions);
+            Directory.CreateDirectory(tileDirectoryPath);
+
+            string summaryJson = await http.GetChampionSummaryAsync(cancellationToken).ConfigureAwait(false);
+            var summaries = JsonSerializer.Deserialize<List<LeagueClientChampionSummary>>(
+                    summaryJson,
+                    SerializerOptions)
+                ?? [];
+            Dictionary<int, LeagueClientChampionSummary> classicSummariesByCanonicalId = summaries
+                .Where(summary =>
+                    LeagueChampionId.IsClassicVariant(summary.Id)
+                    && summary.Alias?.StartsWith("Jade_", StringComparison.OrdinalIgnoreCase) == true)
+                .GroupBy(summary => LeagueChampionId.ToCanonical(summary.Id))
+                .ToDictionary(group => group.Key, group => group.First());
+            IReadOnlyList<ChampionInfo> orderedChampions = champions
+                .Where(champion => champion.Key > 0 && !string.IsNullOrWhiteSpace(champion.Name))
+                .OrderBy(champion => champion.Key)
+                .ToList();
+            int totalChampionCount = orderedChampions.Count
+                + orderedChampions.Count(champion => champion.SupportsLeagueClassic == true);
+            int checkedChampionCount = 0;
+            int checkedTileCount = 0;
+            int downloadedTileCount = 0;
+            int unchangedTileCount = 0;
+            int failedTileCount = 0;
+            int failedChampionCount = 0;
+
+            async Task DownloadModeAsync(
+                ChampionInfo champion,
+                LeagueGameMode gameMode,
+                LeagueClientChampionSummary? classicChampion)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                string modeName = gameMode == LeagueGameMode.Classic ? "League Classic" : "LoL";
+                string? failureMessage = null;
+                progress?.Report(new ChampionCollectionTileDownloadProgress(
+                    checkedChampionCount,
+                    totalChampionCount,
+                    checkedTileCount,
+                    downloadedTileCount,
+                    unchangedTileCount,
+                    failedTileCount,
+                    failedChampionCount,
+                    $"Reading all {modeName} pictures for {champion.Name} ({checkedChampionCount + 1}/{totalChampionCount})..."));
+
+                try
+                {
+                    if (gameMode == LeagueGameMode.Classic && classicChampion is null)
+                    {
+                        throw new InvalidOperationException(
+                            $"League Client does not list {champion.Name} in League Classic.");
+                    }
+
+                    ChampionTileDownloadResult result = await DownloadChampionTilesCoreAsync(
+                            http,
+                            champion,
+                            gameMode,
+                            classicChampion,
+                            tileDirectoryPath,
+                            progress: null,
+                            cancellationToken: cancellationToken,
+                            optimizeForLocalCache: optimizeForLocalCache)
+                        .ConfigureAwait(false);
+                    checkedTileCount += result.CheckedTileCount;
+                    downloadedTileCount += result.DownloadedTileCount;
+                    unchangedTileCount += result.UnchangedTileCount;
+                    failedTileCount += result.FailedTileCount;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failedChampionCount++;
+                    failureMessage =
+                        $"Unable to read all {modeName} pictures for {champion.Name}: {ex.GetType().Name}: {ex.Message}";
+                }
+                finally
+                {
+                    checkedChampionCount++;
+                }
+
+                progress?.Report(new ChampionCollectionTileDownloadProgress(
+                    checkedChampionCount,
+                    totalChampionCount,
+                    checkedTileCount,
+                    downloadedTileCount,
+                    unchangedTileCount,
+                    failedTileCount,
+                    failedChampionCount,
+                    failureMessage
+                        ?? $"Checked all pictures for {checkedChampionCount}/{totalChampionCount} champion modes..."));
+            }
+
+            foreach (ChampionInfo champion in orderedChampions)
+                await DownloadModeAsync(champion, LeagueGameMode.Modern, classicChampion: null).ConfigureAwait(false);
+
+            foreach (ChampionInfo champion in orderedChampions.Where(champion => champion.SupportsLeagueClassic == true))
+            {
+                classicSummariesByCanonicalId.TryGetValue(
+                    champion.Key,
+                    out LeagueClientChampionSummary? classicChampion);
+                await DownloadModeAsync(champion, LeagueGameMode.Classic, classicChampion).ConfigureAwait(false);
+            }
+
+            return new ChampionCollectionTileDownloadResult(
+                totalChampionCount,
+                checkedTileCount,
+                downloadedTileCount,
+                unchangedTileCount,
+                failedTileCount,
+                failedChampionCount,
+                tileDirectoryPath,
+                DateTime.UtcNow);
+        }
+
         public static async Task<ChampionTileDownloadResult> DownloadChampionTilesAsync(
             Lcu.LeagueClientHttp http,
             ChampionInfo champion,
@@ -208,6 +334,28 @@ namespace JoinGameAfk.Services
                     $"League Client does not list {champion.Name} in League Classic.");
             }
 
+            return await DownloadChampionTilesCoreAsync(
+                    http,
+                    champion,
+                    gameMode,
+                    classicChampion,
+                    tileDirectoryPath,
+                    progress,
+                    cancellationToken,
+                    optimizeForLocalCache)
+                .ConfigureAwait(false);
+        }
+
+        private static async Task<ChampionTileDownloadResult> DownloadChampionTilesCoreAsync(
+            Lcu.LeagueClientHttp http,
+            ChampionInfo champion,
+            LeagueGameMode gameMode,
+            LeagueClientChampionSummary? classicChampion,
+            string tileDirectoryPath,
+            IProgress<ChampionTileDownloadProgress>? progress,
+            CancellationToken cancellationToken,
+            bool optimizeForLocalCache)
+        {
             int detailsChampionId = classicChampion?.Id ?? champion.Key;
             string detailsJson = await http.GetChampionDetailsAsync(detailsChampionId, cancellationToken)
                 .ConfigureAwait(false);
