@@ -9,6 +9,17 @@ namespace LcuClient
         public sealed class LeagueClientEventStream : IDisposable
         {
             private const int ReceiveBufferSize = 32 * 1024;
+            private static readonly string[] FocusedEventNames =
+            [
+                "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase",
+                "OnJsonApiEvent_lol-gameflow_v1_session",
+                "OnJsonApiEvent_lol-lobby_v2_lobby",
+                "OnJsonApiEvent_lol-matchmaking_v1_ready-check",
+                "OnJsonApiEvent_lol-champ-select_v1_session"
+            ];
+            private static readonly HashSet<string> FocusedEventNameSet = new(
+                FocusedEventNames,
+                StringComparer.Ordinal);
             private readonly AuthModel _authToken;
             private readonly Action<LeagueClientEvent>? _eventReceived;
             private readonly Action? _connected;
@@ -39,9 +50,16 @@ namespace LcuClient
                 await webSocket.ConnectAsync(new Uri($"wss://127.0.0.1:{_authToken.Port}/"), cancellationToken)
                     .ConfigureAwait(false);
 
-                _log?.Invoke("LCU websocket request: SUBSCRIBE OnJsonApiEvent");
-                await SendTextAsync(webSocket, "[5,\"OnJsonApiEvent\"]", cancellationToken)
-                    .ConfigureAwait(false);
+                _log?.Invoke(
+                    $"LCU websocket request: SUBSCRIBE {FocusedEventNames.Length} focused champion-flow topics");
+                foreach (string eventName in FocusedEventNames)
+                {
+                    await SendTextAsync(
+                            webSocket,
+                            $"[5,\"{eventName}\"]",
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
 
                 _log?.Invoke("LCU websocket event stream connected.");
                 _connected?.Invoke();
@@ -97,7 +115,9 @@ namespace LcuClient
                 }
             }
 
-            private static bool TryParseJsonApiEvent(string message, out LeagueClientEvent apiEvent)
+            internal static IReadOnlyList<string> EventNames => FocusedEventNames;
+
+            internal static bool TryParseJsonApiEvent(string message, out LeagueClientEvent apiEvent)
             {
                 apiEvent = default;
 
@@ -115,7 +135,7 @@ namespace LcuClient
                         return false;
 
                     string eventName = root[1].GetString() ?? string.Empty;
-                    if (!string.Equals(eventName, "OnJsonApiEvent", StringComparison.Ordinal))
+                    if (!FocusedEventNameSet.Contains(eventName))
                         return false;
 
                     var payload = root[2];
